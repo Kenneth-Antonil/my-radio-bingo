@@ -23,6 +23,8 @@
         
         .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; position: relative; transition: 0.3s; min-height: 120px; }
         .m-card.winner-glow { border: 2px solid var(--win); box-shadow: 0 0 15px var(--win); background: #064e3b !important; }
+        .offline { opacity: 0.5; border-style: dashed; }
+        .online-dot { width: 8px; height: 8px; background: var(--win); border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px var(--win); }
         
         .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 5px; }
         .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; border-radius: 2px; color: rgba(255,255,255,0.3); }
@@ -86,7 +88,7 @@
 
 <div class="monitor-area">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h2 style="margin:0;">PLAYERS ONLINE: <span id="pCount" style="color:var(--neon)">0</span></h2>
+        <h2 style="margin:0;">TOTAL PLAYERS: <span id="pCount" style="color:var(--neon)">0</span></h2>
         <div id="modeDisplay" style="padding:5px 15px; border-radius:20px; background:var(--neon); color:#000; font-weight:800; font-size:12px;">BINGO MODE</div>
     </div>
     <div class="players-grid" id="pGrid"></div>
@@ -107,20 +109,18 @@
     
     let drawn = [], winners = {}, allPlayers = {}, activePresence = {};
 
-    // 1. SYNC PRESENCE (Main basis for counting)
     database.ref('presence').on('value', snap => {
         activePresence = snap.val() || {};
         refreshUI();
     });
 
-    // 2. SYNC PLAYERS (Bingo Cards)
     database.ref('players').on('value', snap => { 
         allPlayers = snap.val() || {}; 
         refreshUI(); 
     });
 
-    // 3. SYNC WINNERS & MODE
     database.ref('winners').on('value', snap => { winners = snap.val() || {}; refreshUI(); });
+
     database.ref('gameStatus/mode').on('value', s => {
         const mode = s.val() || 'bingo';
         const display = document.getElementById('modeDisplay');
@@ -134,17 +134,8 @@
     database.ref('drawnNumbers').on('value', snap => {
         drawn = snap.val() || [];
         document.getElementById('currentNum').innerText = drawn.length ? drawn[drawn.length-1] : "--";
-        const statusEl = document.getElementById('regStatus');
-        if (drawn.length > 0) {
-            statusEl.innerText = "LOCKED: GAME ONGOING";
-            statusEl.style.background = "#450a0a"; statusEl.style.color = "#ff4757";
-        } else {
-            statusEl.innerText = "OPEN: JOINING ALLOWED";
-            statusEl.style.background = "#064e3b"; statusEl.style.color = "#00ff88";
-        }
     });
 
-    // 4. CHAT MONITOR
     database.ref('chat').limitToLast(15).on('child_added', (snap) => {
         const c = snap.val();
         const chatBox = document.getElementById('dashChat');
@@ -154,51 +145,51 @@
         chatBox.appendChild(div); chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    // 5. REFRESH UI (Presence-First Logic)
     function refreshUI() {
         const grid = document.getElementById('pGrid'); 
         grid.innerHTML = '';
-        let count = 0;
         
-        // Loop sa lahat ng nasa presence (Online list)
-        for(let id in activePresence) {
-            count++;
-            
-            const p = allPlayers[id] || {}; 
-            const playerName = activePresence[id].name || p.name || "Guest";
-            const playerCard = p.card || [];
-            const playerMarks = p.marks || [12];
-            
-            const isWinner = (winners[id] || p.isWin) ? ' winner-glow' : '';
-            const cardDiv = document.createElement('div');
-            cardDiv.className = 'm-card' + isWinner;
+        // Pagsamahin ang IDs mula sa Presence at Players
+        const allIds = new Set([...Object.keys(activePresence), ...Object.keys(allPlayers)]);
+        let count = 0;
 
-            if(playerCard.length > 0) {
-                // Render card grid if player has a card
+        allIds.forEach(id => {
+            const isOnline = activePresence[id] ? true : false;
+            const pData = allPlayers[id] || {};
+            const playerCard = pData.card || [];
+            const playerName = pData.name || (activePresence[id] ? activePresence[id].name : "Guest");
+
+            // Skip kung walang pangalan at walang card (invalid data)
+            if (!playerName && playerCard.length === 0) return;
+
+            count++;
+            const isWinner = (winners[id] || pData.isWin) ? ' winner-glow' : '';
+            const offlineClass = !isOnline ? ' offline' : '';
+            
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'm-card' + isWinner + offlineClass;
+
+            let cardHTML = `<span style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${isOnline ? '<span class="online-dot"></span>' : ''}
+                ${(winners[id] || pData.isWin) ? '🏆 ' : ''}${playerName}
+            </span>`;
+
+            if (playerCard.length > 0) {
                 let cells = '';
+                const playerMarks = pData.marks || [12];
                 playerCard.forEach((n, idx) => {
                     const isHit = playerMarks.includes(idx) ? ' active' : '';
                     cells += `<div class="m-cell${isHit}">${idx===12?'FR':n}</div>`;
                 });
-                
-                cardDiv.innerHTML = `
-                    <span style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                        ${(winners[id] || p.isWin) ? '🏆 ' : ''}${playerName}
-                    </span>
-                    <div class="mini-grid">${cells}</div>
-                `;
+                cardHTML += `<div class="mini-grid">${cells}</div>`;
             } else {
-                // Render "Waiting" status if online but no card yet
-                cardDiv.style.opacity = "0.5";
-                cardDiv.innerHTML = `
-                    <span style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">${playerName}</span>
-                    <div style="font-size:10px; color:gray; text-align:center; padding: 25px 0;">
-                        Online: Waiting for card...
-                    </div>
-                `;
+                cardHTML += `<div style="font-size:10px; color:gray; text-align:center; padding: 25px 0;">No Card Yet</div>`;
             }
+
+            cardDiv.innerHTML = cardHTML;
             grid.appendChild(cardDiv);
-        }
+        });
+
         document.getElementById('pCount').innerText = count;
     }
 
@@ -217,7 +208,6 @@
             database.ref('quiz/current').set({ question: q, answer: a });
             document.getElementById('adminQ').value = "";
             document.getElementById('adminA').value = "";
-            alert("Quiz Posted!");
         }
     }
 
