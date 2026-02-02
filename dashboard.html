@@ -2,63 +2,52 @@
 <html lang="tl">
 <head>
     <meta charset="UTF-8">
-    <title>DJ Master Dashboard + Raffle</title>
+    <title>DJ Master Dashboard</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --bg: #0f172a; --panel: #1e293b; --neon: #00f2fe; --danger: #ff4757; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; margin:0; overflow: hidden; }
-        
-        /* Left: Raffle & Controls */
-        .host-controls { width: 320px; background: var(--panel); padding: 20px; border-right: 2px solid #334155; display: flex; flex-direction: column; }
-        .raffle-box { background: #000; padding: 20px; border-radius: 15px; text-align: center; border: 2px solid var(--neon); margin-bottom: 20px; }
-        .last-number { font-size: 5rem; color: var(--neon); font-weight: 800; display: block; line-height: 1; margin: 10px 0; }
-        .btn-draw { width: 100%; padding: 15px; background: var(--neon); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; color: #000; font-size: 1.1rem; }
-        .btn-draw:active { transform: scale(0.98); }
-
-        .number-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; overflow-y: auto; flex: 1; padding: 10px 0; }
-        .n-ball { font-size: 0.75rem; padding: 5px; background: #334155; border-radius: 3px; text-align: center; color: #94a3b8; }
-        .n-ball.drawn { background: var(--neon); color: black; font-weight: bold; box-shadow: 0 0 8px var(--neon); }
-
-        /* Right: Players Monitor */
-        .monitor-area { flex: 1; padding: 20px; overflow-y: auto; background: #0f172a; }
-        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        :root { --bg: #0f172a; --panel: #1e293b; --neon: #00f2fe; --win: #00ff88; }
+        body { font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; margin:0; }
+        .host-controls { width: 300px; background: var(--panel); padding: 20px; border-right: 2px solid #334155; }
+        .raffle-box { background: #000; padding: 20px; border-radius: 15px; text-align: center; border: 2px solid var(--neon); }
+        .last-number { font-size: 4rem; color: var(--neon); font-weight: 800; display: block; }
+        .monitor-area { flex: 1; padding: 20px; overflow-y: auto; }
         .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-        
-        .m-card { background: #1e293b; padding: 10px; border-radius: 8px; border: 1px solid #334155; }
-        .p-name { color: var(--neon); font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; }
-        .m-cell { aspect-ratio: 1; background: #0f172a; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; color: #475569; }
-        .m-cell.active { background: var(--neon); color: #000; font-weight: bold; }
-
-        .btn-reset { background: var(--danger); color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+        .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; transition: 0.3s; }
+        .m-card.winner-glow { border-color: var(--win); box-shadow: 0 0 15px var(--win); background: #064e3b; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+        .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 5px; }
+        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; }
+        .m-cell.active { background: var(--neon); color: #000; }
+        select, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="host-controls">
     <div class="raffle-box">
-        <small style="letter-spacing: 2px; color: #94a3b8;">DRAWN NUMBER</small>
+        <small>LAST NUMBER</small>
         <span class="last-number" id="currentNum">--</span>
-        <button class="btn-draw" onclick="drawNumber()">DRAW NEXT</button>
+        <button style="background:var(--neon)" onclick="drawNumber()">DRAW NEXT</button>
     </div>
-
-    <div class="number-grid" id="allNumbers">
-        </div>
-    
-    <button class="btn-reset" onclick="resetGame()">RESET ROUND</button>
+    <div style="margin-top:20px">
+        <label>Winning Pattern:</label>
+        <select id="pSelect" onchange="database.ref('gameStatus/currentPattern').set(this.value)">
+            <option value="any_line">Any Line</option>
+            <option value="outer_box">Outer Box</option>
+            <option value="letter_x">Letter X</option>
+            <option value="blockout">Blockout</option>
+        </select>
+    </div>
+    <button style="background:#ff4757; color:white; margin-top:50px" onclick="resetGame()">RESET ROUND</button>
 </div>
 
 <div class="monitor-area">
-    <div class="status-header">
-        <h2>LIVE PLAYERS (<span id="pCount">0</span>)</h2>
-        <div id="connectionStatus" style="color: #4ade80; font-size: 0.8rem;">● Database Connected</div>
-    </div>
+    <h2>PLAYERS: <span id="pCount">0</span></h2>
     <div class="players-grid" id="pGrid"></div>
 </div>
 
 <script>
-    // FIREBASE CONFIG (Dapat kapareho ng sa index.html)
     const firebaseConfig = {
       apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
       authDomain: "radiobingo-9ac29.firebaseapp.com",
@@ -69,94 +58,47 @@
       appId: "1:965903993397:web:f6646fa05225f147eebf7c",
       measurementId: "G-RR2EG93C43"
     };
-
-    // Initialize Firebase
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
+    firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
+    let drawn = [], winners = {};
 
-    let drawnNumbers = [];
-
-    // 1. Create 1-75 Visual Grid
-    const numGrid = document.getElementById('allNumbers');
-    for(let i=1; i<=75; i++) {
-        let div = document.createElement('div');
-        div.className = 'n-ball';
-        div.id = 'ball-' + i;
-        div.innerText = i;
-        numGrid.appendChild(div);
-    }
-
-    // 2. Sync Drawn Numbers from Database on Start
-    database.ref('drawnNumbers').on('value', (snap) => {
-        drawnNumbers = snap.val() || [];
-        // Update visual grid
-        document.querySelectorAll('.n-ball').forEach(el => el.classList.remove('drawn'));
-        drawnNumbers.forEach(n => {
-            const ball = document.getElementById('ball-' + n);
-            if(ball) ball.classList.add('drawn');
-        });
-        // Update current number display
-        if(drawnNumbers.length > 0) {
-            document.getElementById('currentNum').innerText = drawnNumbers[drawnNumbers.length - 1];
-        } else {
-            document.getElementById('currentNum').innerText = "--";
-        }
+    database.ref('drawnNumbers').on('value', snap => {
+        drawn = snap.val() || [];
+        document.getElementById('currentNum').innerText = drawn.length ? drawn[drawn.length-1] : "--";
     });
 
-    // 3. Draw Function
-    function drawNumber() {
-        if(drawnNumbers.length >= 75) return alert("All numbers drawn!");
-        let n;
-        do { 
-            n = Math.floor(Math.random() * 75) + 1; 
-        } while (drawnNumbers.includes(n));
-        
-        drawnNumbers.push(n);
-        database.ref('drawnNumbers').set(drawnNumbers)
-            .then(() => console.log("Drawn:", n))
-            .catch(err => alert("Connection Error: " + err.message));
-    }
+    database.ref('winners').on('value', snap => { winners = snap.val() || {}; });
 
-    // 4. Monitor Players in Realtime
-    database.ref('players').on('value', (snap) => {
+    database.ref('players').on('value', snap => {
         const players = snap.val();
         const grid = document.getElementById('pGrid');
         grid.innerHTML = '';
-        if(!players) {
-            document.getElementById('pCount').innerText = "0";
-            return;
-        }
-
         let count = 0;
         for(let id in players) {
             count++;
             const p = players[id];
+            const isWin = winners[id] ? ' winner-glow' : '';
             const card = document.createElement('div');
-            card.className = 'm-card';
-            
+            card.className = 'm-card' + isWin;
             let cells = '';
-            // Render 5x5 Mini Card
-            for(let i=0; i<25; i++) {
-                let active = (p.markedIndices && p.markedIndices.includes(i)) ? 'active' : '';
-                let val = p.cardNumbers ? p.cardNumbers[i] : '';
-                if(val === "FREE") val = "FR";
-                cells += `<div class="m-cell ${active}">${val}</div>`;
-            }
-            
-            card.innerHTML = `<span class="p-name">${p.name}</span><div class="mini-grid">${cells}</div>`;
+            p.cardNumbers.forEach((n, idx) => {
+                let act = p.markedIndices.includes(idx) ? ' active' : '';
+                cells += `<div class="m-cell${act}">${n=='FREE'?'FR':n}</div>`;
+            });
+            card.innerHTML = `<small>${p.name}</small><div class="mini-grid">${cells}</div>`;
             grid.appendChild(card);
         }
         document.getElementById('pCount').innerText = count;
-    }, (error) => {
-        document.getElementById('connectionStatus').innerText = "● Disconnected / Rules Error";
-        document.getElementById('connectionStatus').style.color = "red";
     });
 
-    // 5. Reset Game
+    function drawNumber() {
+        if(drawn.length >= 75) return;
+        let n; do { n = Math.floor(Math.random()*75)+1; } while(drawn.includes(n));
+        drawn.push(n); database.ref('drawnNumbers').set(drawn);
+    }
+
     function resetGame() {
-        if(confirm("Burahin ang lahat ng drawn numbers at i-reset ang cards ng lahat?")) {
+        if(confirm("Reset?")) {
             database.ref('drawnNumbers').remove();
             database.ref('winners').remove();
             database.ref('gameStatus/reset').set(true);
