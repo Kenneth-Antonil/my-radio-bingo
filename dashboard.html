@@ -38,10 +38,10 @@
     
     <div style="margin-top:10px">
         <label style="font-size:0.7rem; color:var(--neon)">SET PATTERN:</label>
-        <select id="pSelect" onchange="database.ref('gameStatus/currentPattern').set(this.value)">
-            <option value="any_line">ANY LINE</option>
-            <option value="outer_box">OUTER BOX</option>
-            <option value="letter_x">LETTER X</option>
+        <select id="pSelect" onchange="database.ref('gameStatus/pattern').set(this.value)">
+            <option value="any line">ANY LINE</option>
+            <option value="outer box">OUTER BOX</option>
+            <option value="letter x">LETTER X</option>
             <option value="blockout">BLOCKOUT</option>
         </select>
     </div>
@@ -86,6 +86,12 @@
 
     database.ref('winners').on('value', snap => { winners = snap.val() || {}; refreshUI(); });
     database.ref('players').on('value', snap => { allPlayers = snap.val() || {}; refreshUI(); });
+    
+    // Sync Select Dropdown with current pattern in DB
+    database.ref('gameStatus/pattern').on('value', snap => {
+        if(snap.val()) document.getElementById('pSelect').value = snap.val();
+    });
+
     database.ref('chat').limitToLast(20).on('child_added', (snap) => {
         const c = snap.val();
         const chatBox = document.getElementById('dashChat');
@@ -112,6 +118,7 @@
         for(let id in allPlayers) {
             count++;
             const p = allPlayers[id];
+            if(!p.cardNumbers) continue; // Skip if card data not yet synced
             const isWinner = winners[id] ? ' winner-glow' : '';
             const card = document.createElement('div');
             card.className = 'm-card' + isWinner;
@@ -133,10 +140,11 @@
     }
 
     function resetGame() {
-        if(confirm("New Game? All balls and winners will be cleared.")) {
+        if(confirm("New Game? All balls, winners, and chat will be cleared.")) {
             database.ref('drawnNumbers').remove();
             database.ref('winners').remove();
             database.ref('chat').remove();
+            database.ref('gameStatus/pattern').set('any line'); // Reset to default pattern
             database.ref('gameStatus/reset').set(true);
             setTimeout(() => database.ref('gameStatus/reset').set(false), 2000);
         }
