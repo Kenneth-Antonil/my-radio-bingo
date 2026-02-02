@@ -47,7 +47,6 @@
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-content { background: var(--surface); border-radius: 20px; width: 100%; max-width: 400px; padding: 25px; position: relative; border: 1px solid var(--surface-br); }
         
-        /* NEW STYLE FOR CHANGE CARD BUTTON */
         .btn-change { background: var(--surface-br); color: var(--gold); border: 1px solid var(--gold); padding: 5px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; cursor: pointer; float: right; margin-bottom: 10px; }
     </style>
 </head>
@@ -128,7 +127,7 @@
             const snap = await db.ref('users/'+u.uid).once('value');
             if(!snap.exists()){
                 const code = u.uid.substring(0,6).toUpperCase();
-                await db.ref('users/'+u.uid).set({ name: u.displayName, points: 0, refCode: code, photo: u.photoURL });
+                await db.ref('users/'+u.uid).set({ name: u.displayName, points: 0, refCode: code, photo: u.photoURL, hasWonCurrent: false });
                 await db.ref('referralCodes/'+code).set(u.uid);
             }
             window.location.reload();
@@ -156,7 +155,6 @@
     });
 
     function initBingo() {
-        // LOAD SAVED CARD OR GENERATE NEW ONE IF EMPTY
         if (userData.currentCard) {
             cardNumbers = userData.currentCard;
             renderCard();
@@ -168,7 +166,8 @@
             gameDrawn = s.val() || [];
             if(gameDrawn.length === 0){ 
                 marks = [12]; 
-                window.won = false;
+                // Reset winning status for a new game
+                db.ref('users/'+userData.uid+'/hasWonCurrent').set(false);
                 document.getElementById('currentBall').innerText = "--";
                 document.getElementById('cardWinNote').style.display = 'none';
                 document.getElementById('winnerBanner').style.display = 'none';
@@ -198,16 +197,16 @@
 
     function generateNewCard() {
         if(gameDrawn.length > 0 && !confirm("May on-going game na. Sigurado ka bang papalitan ang card mo?")) return;
-        
         const getCol = (min, max) => { let n = []; while(n.length<5){ let r=Math.floor(Math.random()*(max-min+1))+min; if(!n.includes(r)) n.push(r); } return n.sort((a,b)=>a-b); };
         let cols = [getCol(1,15), getCol(16,30), getCol(31,45), getCol(46,60), getCol(61,75)];
         let newCard = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) newCard.push(cols[c][r]); }
         newCard[12] = "FREE";
         cardNumbers = newCard;
-        marks = [12]; // Reset marks for new card
-        
-        // SAVE TO FIREBASE TO PREVENT REFRESH RESET
-        if(userData.uid) db.ref('users/'+userData.uid+'/currentCard').set(newCard);
+        marks = [12]; 
+        if(userData.uid) {
+            db.ref('users/'+userData.uid+'/currentCard').set(newCard);
+            db.ref('users/'+userData.uid+'/hasWonCurrent').set(false); // New card = no win yet
+        }
         renderCard();
         updateGridHits();
     }
@@ -237,8 +236,11 @@
         const ways = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
         ways.forEach(w => {
             if(w.every(i => marks.includes(i))) {
-                if(!window.won) {
-                    window.won = true; confetti();
+                // FIXED: Check database if already won for this specific card/game
+                if(!userData.hasWonCurrent) {
+                    confetti();
+                    // Update server immediately to prevent multi-point credit
+                    db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
                     db.ref('lastWinner').set({ name: userData.name, uid: userData.uid, time: firebase.database.ServerValue.TIMESTAMP });
                     db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
                 }
