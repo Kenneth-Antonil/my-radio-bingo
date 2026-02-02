@@ -48,14 +48,20 @@
         .send-btn { background: var(--accent); color: white; border: none; padding: 0 15px; border-radius: 12px; cursor: pointer; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
         .modal-content { background: var(--surface); border-radius: 24px; width: 100%; max-width: 400px; padding: 25px; border: 1px solid var(--surface-br); }
-        
-        /* IMPROVED CHANGE CARD LAYOUT */
         .change-card-wrapper { display: flex; justify-content: center; padding: 10px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px; }
         .btn-change { background: rgba(59, 130, 246, 0.1); color: var(--accent); border: 1px solid var(--accent); height: 40px; padding: 0 20px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
         .btn-change:active { transform: scale(0.95); }
         .btn-change:disabled { opacity: 0.3; cursor: not-allowed; border-color: gray; color: gray; }
 
-        .notif-item { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin-bottom: 10px; border-left: 3px solid var(--accent); }
+        /* MODERN SIGN IN PAGE */
+        #loginOverlay { position: fixed; inset: 0; background: radial-gradient(circle at top right, #1e293b, #0b1120); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .login-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 32px; width: 100%; max-width: 400px; padding: 40px 30px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .login-logo { font-size: 32px; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 10px; }
+        .login-logo span { color: var(--accent); }
+        .login-sub { color: #94a3b8; font-size: 14px; margin-bottom: 30px; line-height: 1.5; }
+        .btn-google { background: #fff; color: #000; border: none; width: 100%; padding: 16px; border-radius: 16px; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; transition: 0.3s; }
+        .btn-google:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255,255,255,0.1); }
+        .btn-google img { width: 20px; }
     </style>
 </head>
 <body>
@@ -87,14 +93,7 @@
     </div>
     <div class="card">
         <div id="cardWinNote" style="display:none; background:var(--success); color:white; text-align:center; padding:12px; border-radius:12px; margin-bottom:15px; font-weight:900;"></div>
-        
-        <div class="change-card-wrapper">
-            <button id="changeCardBtn" class="btn-change" onclick="generateNewCard()">
-                <i data-lucide="refresh-cw" style="width:16px"></i> 
-                GET NEW BINGO CARD
-            </button>
-        </div>
-
+        <div class="change-card-wrapper"><button id="changeCardBtn" class="btn-change" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:16px"></i> GET NEW BINGO CARD</button></div>
         <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
         <div class="grid" id="bingoGrid"></div>
     </div>
@@ -104,10 +103,21 @@
     </div>
 </div>
 
+<div id="loginOverlay">
+    <div class="login-card">
+        <div class="login-logo">RADIO<span>BINGO</span></div>
+        <p class="login-sub">Welcome to the official live stream bingo. Sign in to get your bingo card and start winning points!</p>
+        <button class="btn-google" onclick="login()">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google">
+            Sign in with Google
+        </button>
+        <p style="margin-top:25px; font-size:11px; color:#64748b;">By signing in, you agree to our Terms of Play.</p>
+    </div>
+</div>
+
 <div id="notifModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Notifications</h3><div id="notifList"></div></div></div>
 <div id="menuModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Account</h3><input type="text" id="refLink" readonly style="width:100%; padding:10px; background:#000; border:1px solid #334155; color:var(--gold); border-radius:8px; margin-bottom:15px;"><button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:12px; background:var(--danger); color:white; border:none; border-radius:8px; font-weight:700;">Log Out</button></div></div>
 <div id="storeModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Rewards</h3><div style="background:var(--surface-br); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;"><div><b>₱50 GCash</b><br><small>5,000 Pts</small></div><button onclick="redeem(5000, '50 GCash')" style="background:var(--success); border:none; color:white; padding:8px 15px; border-radius:8px;">Redeem</button></div></div></div>
-<div id="loginOverlay" style="position:fixed; inset:0; background:var(--bg); z-index:2000; display:flex; align-items:center; justify-content:center;"><div class="card" style="text-align:center; padding:40px;"><h2>Radio Bingo</h2><button onclick="login()" style="background:var(--text); color:var(--bg); border:none; padding:15px 30px; border-radius:12px; font-weight:900;">Sign in with Google</button></div></div>
 
 <script>
     lucide.createIcons();
