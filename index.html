@@ -1,65 +1,61 @@
 <!DOCTYPE html>
-<html>
+<html lang="tl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bingo Listener</title>
+    <title>Radio Bingo Live</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: white; text-align: center; }
-        .bingo-card { background: white; padding: 15px; border-radius: 15px; max-width: 320px; margin: 20px auto; }
+        :root { --primary: #00f2fe; --accent: #ff4757; --bg: #0f172a; }
+        body { font-family: sans-serif; background: var(--bg); color: white; text-align: center; margin: 0; padding: 10px; }
+        .bingo-card { background: white; padding: 15px; border-radius: 15px; max-width: 320px; margin: 20px auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
-        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #ddd; display: flex; align-items: center; 
-                justify-content: center; font-weight: bold; color: #333; cursor: pointer; border-radius: 5px; }
-        .cell.marked { background: #00f2fe; color: black; border: none; }
-        .btn-bingo { width: 320px; padding: 15px; background: #ff4757; color: white; border: none; 
-                    border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; cursor: pointer; border-radius: 5px; font-size: 1.1rem; }
+        .cell.marked { background: var(--primary); color: black; border: none; transform: scale(0.95); }
+        .btn-bingo { width: 320px; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1.2rem; cursor: pointer; }
+        #status { font-size: 0.8rem; color: var(--primary); margin-bottom: 10px; }
     </style>
 </head>
 <body>
-    <h2>🎙️ LIVE BINGO</h2>
-    <div id="playerNameDisplay" style="margin-bottom: 10px; color: #00f2fe;"></div>
+
+    <h2 style="color: var(--primary);">🎙️ BINGO LIVE RADIO</h2>
+    <div id="status">Status: Connecting...</div>
 
     <div class="bingo-card">
         <div class="grid" id="bingoGrid"></div>
     </div>
+    
     <button class="btn-bingo" onclick="claimBingo()">BINGO!</button>
 
 <script>
-    // 1. FIREBASE CONFIG
     const firebaseConfig = {
-  apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
-  authDomain: "radiobingo-9ac29.firebaseapp.com",
-  databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "radiobingo-9ac29",
-  storageBucket: "radiobingo-9ac29.firebasestorage.app",
-  messagingSenderId: "965903993397",
-  appId: "1:965903993397:web:f6646fa05225f147eebf7c",
-  measurementId: "G-RR2EG93C43"
-};
+      apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
+      authDomain: "radiobingo-9ac29.firebaseapp.com",
+      databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "radiobingo-9ac29",
+      storageBucket: "radiobingo-9ac29.firebasestorage.app",
+      messagingSenderId: "965903993397",
+      appId: "1:965903993397:web:f6646fa05225f147eebf7c",
+      measurementId: "G-RR2EG93C43"
+    };
 
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const database = firebase.database();
 
-    // 2. PLAYER SETUP
-    let myName = prompt("Anong pangalan mo?", "Guest_" + Math.floor(Math.random()*100));
-    if(!myName) myName = "Anonymous";
-    document.getElementById('playerNameDisplay').innerText = "Player: " + myName;
+    let myName = prompt("Anong pangalan mo, Kabingo?", "Listener_" + Math.floor(Math.random()*99));
+    if(!myName) myName = "Guest";
     const uid = myName.replace(/\s+/g, '_') + "_" + Date.now();
+    document.getElementById('status').innerText = "Player: " + myName + " | Sync: Online";
 
-    // 3. GENERATE BINGO DATA
     let cardNumbers = [];
-    let markedIndices = [12]; // FREE space index
+    let markedIndices = [12];
 
     function initGame() {
         const grid = document.getElementById('bingoGrid');
-        // Simple 25 random numbers (1-75)
-        while(cardNumbers.length < 25) {
-            let r = Math.floor(Math.random() * 75) + 1;
-            if(!cardNumbers.includes(r)) cardNumbers.push(r);
-        }
-        cardNumbers[12] = "FREE"; // Middle
+        let pool = Array.from({length: 75}, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+        cardNumbers = pool.slice(0, 25);
+        cardNumbers[12] = "FREE";
 
         cardNumbers.forEach((num, idx) => {
             let cell = document.createElement('div');
@@ -79,18 +75,15 @@
 
     function sync() {
         database.ref('players/' + uid).set({
-            name: myName,
-            cardNumbers: cardNumbers,
-            markedIndices: markedIndices
+            name: myName, cardNumbers: cardNumbers, markedIndices: markedIndices
         });
     }
 
     function claimBingo() {
         database.ref('winners/').push({ name: myName, time: Date.now() });
-        alert("BINGO SENT!");
+        alert("🎉 BINGO SENT TO DJ!");
     }
 
-    // DJ Reset
     database.ref('gameStatus/reset').on('value', (snap) => {
         if(snap.val() === true) location.reload();
     });
