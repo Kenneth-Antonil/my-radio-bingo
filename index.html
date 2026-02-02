@@ -41,9 +41,9 @@
 <div id="loginScreen">
     <div class="login-box">
         <h1 style="color:var(--primary); margin:0;">BINGO LIVE</h1>
-        <p>Enter your name to play:</p>
+        <p id="lockMsg">Enter your name to play:</p>
         <input type="text" id="userInput" placeholder="Full Name" maxlength="20">
-        <button onclick="joinGame()">JOIN GAME</button>
+        <button id="joinBtn" onclick="joinGame()">JOIN GAME</button>
     </div>
 </div>
 
@@ -94,14 +94,25 @@
     let myName, uid, cardNumbers = [], markedIndices = [12], currentPattern = "any_line", isWinner = false;
 
     function joinGame() {
-        myName = document.getElementById('userInput').value.trim();
-        if (myName.length < 2) return alert("Enter name!");
-        uid = myName.replace(/\s+/g, '_') + "_" + Date.now();
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('gameUI').style.display = 'flex';
-        initCard();
-        setupListeners();
-        database.ref('players/' + uid).onDisconnect().remove();
+        const nameInp = document.getElementById('userInput').value.trim();
+        if (nameInp.length < 2) return alert("Enter name!");
+
+        // LOCK FEATURE: Check if game is already ongoing
+        database.ref('drawnNumbers').once('value', (snap) => {
+            const drawn = snap.val() || [];
+            if (drawn.length > 0) {
+                alert("⚠️ SORRY! Round is ongoing. Join the next game after the current winner is declared!");
+                return;
+            }
+            
+            myName = nameInp;
+            uid = myName.replace(/\s+/g, '_') + "_" + Date.now();
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('gameUI').style.display = 'flex';
+            initCard();
+            setupListeners();
+            database.ref('players/' + uid).onDisconnect().remove();
+        });
     }
 
     function initCard() {
@@ -134,11 +145,11 @@
             sync();
             if(!isWinner) checkWin();
         });
-        database.ref('gameStatus/currentPattern').on('value', (snap) => {
+        database.ref('gameStatus/currentPattern').on('value', snap => {
             currentPattern = snap.val() || "any_line";
             document.getElementById('patternName').innerText = currentPattern.replace('_',' ').toUpperCase();
         });
-        database.ref('chat').limitToLast(15).on('child_added', (snap) => {
+        database.ref('chat').limitToLast(15).on('child_added', snap => {
             const c = snap.val();
             const div = document.createElement('div');
             div.innerHTML = `<b style="color:var(--primary)">${c.name}:</b> ${c.msg}`;
@@ -168,7 +179,7 @@
         if (combos.some(c => c.every(i => markedIndices.includes(i)))) {
             isWinner = true;
             database.ref('winners/' + uid).set({ name: myName, time: Date.now() });
-            alert("🎉 BINGO!!! Pattern Complete!");
+            alert("🎉 BINGO!!! Wait for the DJ to verify!");
         }
     }
 
