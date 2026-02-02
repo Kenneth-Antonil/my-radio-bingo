@@ -24,18 +24,28 @@
         /* --- MONITORING AREA --- */
         .monitor-area { flex: 1; padding: 20px; overflow-y: auto; background: #020617; }
         .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-        .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; position: relative; }
+        
+        /* PLAYER CARD STYLE */
+        .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; position: relative; transition: 0.3s; }
         .m-card.winner-glow { border: 2px solid var(--win); box-shadow: 0 0 15px var(--win); background: #064e3b !important; }
         
+        /* MINI GRID REALTIME PATTERN */
         .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 5px; }
-        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; border-radius: 2px; }
-        .m-cell.active { background: var(--neon); color: #000; font-weight: bold; }
+        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; border-radius: 2px; color: rgba(255,255,255,0.3); }
+        
+        /* Eto yung magpapakita ng marka ng player */
+        .m-cell.active { 
+            background: var(--neon) !important; 
+            color: #000 !important; 
+            font-weight: 900; 
+            box-shadow: 0 0 5px var(--neon);
+        }
 
         /* --- UI ELEMENTS --- */
         .mode-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         select, button { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 12px; }
         .btn-draw { background: var(--neon); color: #000; }
-        .btn-quiz { background: var(--quiz); color: #white; }
+        .btn-quiz { background: var(--quiz); color: white; }
         .btn-reset { background: #450a0a; color: #ff4757; margin-top: 5px; }
         
         .chat-monitor { height: 150px; background: #000; border-radius: 10px; margin-top: 10px; border: 1px solid #334155; overflow-y: auto; font-size: 11px; padding: 8px; }
@@ -129,7 +139,7 @@
         refreshUI();
     });
 
-    // PLAYER MONITORING
+    // PLAYER MONITORING (DITO ANG UPDATE PARA SA REALTIME PATTERN)
     database.ref('players').on('value', snap => { 
         allPlayers = snap.val() || {}; 
         refreshUI(); 
@@ -150,11 +160,15 @@
     function refreshUI() {
         const grid = document.getElementById('pGrid'); grid.innerHTML = '';
         let count = 0;
+        
         for(let id in allPlayers) {
             count++;
             const p = allPlayers[id];
             const playerCard = p.card || [];
-            const playerMarks = p.marks || [];
+            
+            // DITO BINABASA ANG MARKS NG PLAYER
+            const playerMarks = p.marks || [12]; // Default 12 for FREE space
+            
             if(playerCard.length === 0) continue; 
             
             const isWinner = (winners[id] || p.isWin) ? ' winner-glow' : '';
@@ -163,11 +177,17 @@
             
             let cells = '';
             playerCard.forEach((n, idx) => {
-                const act = playerMarks.includes(idx) ? ' active' : '';
-                cells += `<div class="m-cell${act}">${idx===12?'FR':n}</div>`;
+                // I-check kung marked ang cell na ito sa end ng player
+                const isHit = playerMarks.includes(idx) ? ' active' : '';
+                cells += `<div class="m-cell${isHit}">${idx===12?'FR':n}</div>`;
             });
             
-            cardDiv.innerHTML = `<span style="font-size:11px;font-weight:bold;">${p.name}</span><div class="mini-grid">${cells}</div>`;
+            cardDiv.innerHTML = `
+                <span style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    ${(winners[id] || p.isWin) ? '🏆 ' : ''}${p.name}
+                </span>
+                <div class="mini-grid">${cells}</div>
+            `;
             grid.appendChild(cardDiv);
         }
         document.getElementById('pCount').innerText = count;
