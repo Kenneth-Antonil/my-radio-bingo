@@ -99,6 +99,14 @@
     let markedIndices = [12];
     let uid = "";
 
+    // IMPORTANT: Check muna kung naka-TRUE ang reset bago hayaang pumasok ang player
+    // Kung TRUE, i-set natin sa FALSE para matigil ang loop sa lahat.
+    database.ref('gameStatus/reset').once('value', (snap) => {
+        if(snap.val() === true) {
+            database.ref('gameStatus/reset').set(false);
+        }
+    });
+
     function joinGame() {
         const input = document.getElementById('userInput').value.trim();
         if (input.length < 2) return alert("Enter your name!");
@@ -114,7 +122,6 @@
         setupAutoMark();
         setupChat();
         
-        // Auto-remove when the user closes the site
         database.ref('players/' + uid).onDisconnect().remove();
     }
 
@@ -141,7 +148,7 @@
             cardNumbers.forEach((num, idx) => {
                 if (drawn.includes(num) || idx === 12) {
                     const el = document.getElementById('cell-' + idx);
-                    if(el) {
+                    if(el && !el.classList.contains('marked')) {
                         el.classList.add('marked');
                         if (!markedIndices.includes(idx)) {
                             markedIndices.push(idx);
@@ -167,7 +174,6 @@
         database.ref('chat').limitToLast(15).on('child_added', (snap) => {
             const c = snap.val();
             const div = document.createElement('div');
-            div.style.padding = "2px 0";
             div.innerHTML = `<small style="color:var(--primary)">${c.name}:</small> <span style="color:#ddd">${c.msg}</span>`;
             const chatBox = document.getElementById('chatMsgs');
             chatBox.appendChild(div);
@@ -182,13 +188,10 @@
         inp.value = "";
     }
 
-    // FIXED RESET: Listen but don't loop
+    // LISTENER FOR REMOTE RESET (Pang-refresh lang, hindi loop)
     database.ref('gameStatus/reset').on('value', (snap) => {
         if(snap.val() === true) {
-            // Re-sync logic: refresh only once
-            window.location.replace(window.location.href);
+            location.reload(); 
         }
     });
 </script>
-</body>
-</html>
