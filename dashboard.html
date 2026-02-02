@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Bingo | Admin Master Dashboard</title>
+    <title>Radio Bingo | Admin Master</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -11,27 +11,19 @@
     <style>
         :root { --bg: #0f172a; --surface: #1e293b; --accent: #3b82f6; --text: #f8fafc; --success: #10b981; --danger: #ef4444; --gold: #fbbf24; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        
-        .admin-header { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1400px; margin: 0 auto 20px; }
+        .admin-header { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; max-width: 1400px; margin: 0 auto 20px; }
         .card { background: var(--surface); padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
-        
-        /* DRAW CONTROLS */
-        .draw-box { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .current-ball { font-size: 64px; font-weight: 900; color: var(--gold); margin: 10px 0; text-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
-        .btn-draw { background: var(--success); color: white; font-size: 18px; padding: 15px 40px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; width: 100%; transition: 0.2s; }
-        .btn-draw:hover { filter: brightness(1.1); }
-        .btn-reset { background: transparent; color: var(--danger); border: 1px solid var(--danger); margin-top: 10px; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 12px; width: 100%; }
-
-        /* NOTIF & TABLE STYLES */
-        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .draw-box { text-align: center; }
+        .current-ball { font-size: 64px; font-weight: 900; color: var(--gold); margin: 10px 0; }
+        .btn-draw { background: var(--success); color: white; font-size: 18px; padding: 15px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; width: 100%; }
+        .btn-reset { background: transparent; color: var(--danger); border: 1px solid var(--danger); margin-top: 10px; padding: 8px; border-radius: 8px; width: 100%; cursor: pointer; }
+        input, textarea, select { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; font-family: inherit; }
+        table { width: 100%; border-collapse: collapse; }
         th { text-align: left; font-size: 11px; opacity: 0.6; padding: 10px; border-bottom: 1px solid #334155; }
         td { padding: 15px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
-        
-        .status-badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
+        .status-badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; }
         .online { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid var(--success); }
         .offline { background: rgba(100, 116, 139, 0.1); color: #94a3b8; border: 1px solid #475569; }
-        
         .card-list { display: flex; flex-wrap: wrap; gap: 4px; max-width: 350px; }
         .num-tag { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #0f172a; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
         .num-tag.hit { background: var(--success); color: white; border-color: var(--success); }
@@ -40,37 +32,35 @@
 </head>
 <body>
 
-    <h1 style="text-align:center; font-weight:900; margin-bottom:20px;">MASTER <span style="color:var(--accent)">DASHBOARD</span></h1>
+    <h1 style="text-align:center; font-weight:900;">MASTER <span style="color:var(--accent)">DASHBOARD</span></h1>
 
     <div class="admin-header">
         <div class="card draw-box">
-            <h2 style="margin:0; font-size:14px; opacity:0.7;">LIVE DRAW CONTROL</h2>
+            <h2 style="font-size:14px; opacity:0.7; margin:0;">LIVE DRAW</h2>
             <div class="current-ball" id="currentBallDisplay">--</div>
             <button class="btn-draw" onclick="drawNumber()">DRAW NEXT BALL</button>
             <button class="btn-reset" onclick="resetGame()">RESET GAME</button>
-            <p id="drawCount" style="font-size:11px; margin-top:10px; opacity:0.5;">Balls Drawn: 0/75</p>
+            <p id="drawCount" style="font-size:11px; margin-top:10px; opacity:0.5;">Balls: 0/75</p>
         </div>
 
         <div class="card">
-            <h2><i data-lucide="bell" style="width:18px"></i> Announcement</h2>
-            <input type="text" id="notifTitle" placeholder="Announcement Title">
-            <textarea id="notifMsg" rows="2" placeholder="Message content..."></textarea>
+            <h2><i data-lucide="bell" style="width:18px"></i> Broadcast</h2>
+            <select id="notifType">
+                <option value="📢 GENERAL">📢 General Announcement</option>
+                <option value="💰 POINTS">💰 Points Update</option>
+                <option value="⚠️ WARNING">⚠️ Warning</option>
+            </select>
+            <input type="text" id="notifTitle" placeholder="Title">
+            <textarea id="notifMsg" rows="2" placeholder="Message..."></textarea>
             <button onclick="sendGlobalNotif()" style="background:var(--accent); color:white; border:none; padding:10px; border-radius:8px; width:100%; font-weight:700;">Broadcast</button>
         </div>
     </div>
 
     <div class="card" style="max-width:1400px; margin: 0 auto;">
-        <h2><i data-lucide="users" style="width:18px"></i> Live Player Monitor</h2>
+        <h2><i data-lucide="users" style="width:18px"></i> Live Players</h2>
         <div style="overflow-x: auto;">
             <table>
-                <thead>
-                    <tr>
-                        <th>Player</th>
-                        <th>Status</th>
-                        <th>Bingo Card (Live Tracking)</th>
-                        <th>Points</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Player</th><th>Status</th><th>Card Hits</th><th>Points</th></tr></thead>
                 <tbody id="playerTableBody"></tbody>
             </table>
         </div>
@@ -78,102 +68,55 @@
 
 <script>
     lucide.createIcons();
-
-    const firebaseConfig = { 
-        apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", 
-        authDomain: "radiobingo-9ac29.firebaseapp.com", 
-        databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", 
-        projectId: "radiobingo-9ac29", 
-        storageBucket: "radiobingo-9ac29.firebasestorage.app" 
-    };
+    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
     let drawnNumbers = [];
 
-    // --- DRAW LOGIC ---
     db.ref('drawnNumbers').on('value', s => {
         drawnNumbers = s.val() || [];
         document.getElementById('currentBallDisplay').innerText = drawnNumbers.length > 0 ? drawnNumbers[drawnNumbers.length-1] : "--";
-        document.getElementById('drawCount').innerText = `Balls Drawn: ${drawnNumbers.length}/75`;
+        document.getElementById('drawCount').innerText = `Balls: ${drawnNumbers.length}/75`;
         refreshTable();
     });
 
     function drawNumber() {
-        if (drawnNumbers.length >= 75) return alert("Tapos na ang lahat ng numero!");
-        let n;
-        do {
-            n = Math.floor(Math.random() * 75) + 1;
-        } while (drawnNumbers.includes(n));
-        
-        drawnNumbers.push(n);
-        db.ref('drawnNumbers').set(drawnNumbers);
+        if (drawnNumbers.length >= 75) return;
+        let n; do { n = Math.floor(Math.random() * 75) + 1; } while (drawnNumbers.includes(n));
+        drawnNumbers.push(n); db.ref('drawnNumbers').set(drawnNumbers);
     }
 
-    function resetGame() {
-        if(confirm("Sigurado ka? Buburahin nito lahat ng nabunot na bola!")) {
-            db.ref('drawnNumbers').set([]);
-            db.ref('lastWinner').set(null);
-        }
-    }
+    function resetGame() { if(confirm("Reset?")) { db.ref('drawnNumbers').set([]); db.ref('lastWinner').set(null); } }
 
-    // --- NOTIFICATION ---
     function sendGlobalNotif() {
+        const type = document.getElementById('notifType').value;
         const title = document.getElementById('notifTitle').value;
         const message = document.getElementById('notifMsg').value;
-        if(!title || !message) return alert("Fill up all fields!");
-        db.ref('announcements').push({
-            title: title, message: message,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        }).then(() => {
-            alert("Broadcasted!");
-            document.getElementById('notifTitle').value = "";
-            document.getElementById('notifMsg').value = "";
-        });
+        if(!title || !message) return alert("Empty fields!");
+        db.ref('announcements').push({ title: `${type}: ${title}`, message: message, timestamp: firebase.database.ServerValue.TIMESTAMP });
+        alert("Sent!");
     }
 
-    // --- MONITORING ---
     function refreshTable() {
         db.ref('users').once('value', snapshot => {
             const tableBody = document.getElementById('playerTableBody');
             tableBody.innerHTML = "";
-
             snapshot.forEach(child => {
                 const user = child.val();
                 let cardHtml = '<div class="card-list">';
                 if(user.currentCard) {
                     user.currentCard.forEach(num => {
                         const isHit = drawnNumbers.includes(num);
-                        const isFree = num === "FREE";
-                        cardHtml += `<div class="num-tag ${isHit ? 'hit' : ''} ${isFree ? 'free' : ''}">${isFree ? '★' : num}</div>`;
+                        cardHtml += `<div class="num-tag ${isHit ? 'hit' : ''} ${num==='FREE'?'free':''}">${num==='FREE'?'★':num}</div>`;
                     });
-                } else { cardHtml += '<span style="opacity:0.5">No active card</span>'; }
+                } else { cardHtml += '---'; }
                 cardHtml += '</div>';
-
-                const row = `
-                    <tr>
-                        <td>
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <img src="${user.photo}" style="width:30px; height:30px; border-radius:8px;">
-                                <b>${user.name}</b>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="status-badge ${user.isOnline ? 'online' : 'offline'}">
-                                ${user.isOnline ? 'ONLINE' : 'OFFLINE'}
-                            </span>
-                        </td>
-                        <td>${cardHtml}</td>
-                        <td><b style="color:var(--gold)">${(user.points || 0).toLocaleString()}</b></td>
-                    </tr>
-                `;
-                tableBody.innerHTML += row;
+                tableBody.innerHTML += `<tr><td><img src="${user.photo}" style="width:30px; border-radius:5px; vertical-align:middle; margin-right:8px;"><b>${user.name}</b></td><td><span class="status-badge ${user.isOnline ? 'online' : 'offline'}">${user.isOnline ? 'ONLINE' : 'OFFLINE'}</span></td><td>${cardHtml}</td><td>${(user.points||0).toLocaleString()}</td></tr>`;
             });
             lucide.createIcons();
         });
     }
-
-    db.ref('users').on('value', () => { refreshTable(); });
+    db.ref('users').on('value', refreshTable);
 </script>
 </body>
 </html>
