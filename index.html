@@ -32,10 +32,22 @@
         .winner-pulse { display: inline-block; font-size: 14px; font-weight: 800; color: var(--success); text-transform: uppercase; animation: textPulse 1.2s ease-in-out infinite; }
         @keyframes textPulse { 0% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; text-shadow: 0 0 12px rgba(34, 197, 94, 0.6); } 100% { transform: scale(0.95); opacity: 0.8; } }
 
-        /* --- QUIZ UI --- */
-        .quiz-box { background: var(--surface); padding: 25px; border-radius: 20px; border: 1px solid var(--accent); text-align: center; display: none; margin-top: 10px; }
+        /* --- QUIZ UI & GLOW EFFECT --- */
+        .quiz-box { background: var(--surface); padding: 25px; border-radius: 20px; border: 1px solid var(--accent); text-align: center; display: none; margin-top: 10px; transition: 0.3s; }
         .quiz-tag { font-size: 10px; font-weight: 800; color: var(--accent); letter-spacing: 2px; margin-bottom: 10px; }
         .quiz-q { font-size: 20px; font-weight: 800; margin-bottom: 15px; }
+        
+        /* NEW CORRECT GLOW ANIMATION */
+        .quiz-correct { 
+            animation: correctFlash 1.5s ease-in-out; 
+            border: 3px solid var(--success) !important; 
+        }
+        @keyframes correctFlash {
+            0% { box-shadow: 0 0 0px var(--success); transform: scale(1); }
+            50% { box-shadow: 0 0 30px var(--success); transform: scale(1.02); }
+            100% { box-shadow: 0 0 0px var(--success); transform: scale(1); }
+        }
+
         .leaderboard { margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); text-align: left; }
         .leader-item { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
 
@@ -145,7 +157,7 @@
             <div id="quizView" class="quiz-box">
                 <div class="quiz-tag">LIVE QUIZ MODE</div>
                 <div id="currentQuestion" class="quiz-q">Hinihintay ang tanong...</div>
-                <div id="quizWinnerAlert" style="color:var(--success); font-weight:bold; font-size:14px; margin-top:10px;"></div>
+                <div id="quizWinnerAlert" style="color:var(--success); font-weight:800; font-size:18px; margin-top:10px; min-height: 24px; text-transform: uppercase;"></div>
                 <div class="leaderboard">
                     <div style="font-size:11px; font-weight:800; opacity:0.5; margin-bottom:10px;">TOP SCORERS</div>
                     <div id="scoreList"></div>
@@ -247,6 +259,7 @@
                 document.getElementById('currentQuestion').innerText = q.question;
                 currentAnswer = q.answer.toLowerCase().trim();
                 document.getElementById('quizWinnerAlert').innerText = "";
+                document.getElementById('quizView').classList.remove('quiz-correct');
             }
         });
 
@@ -255,7 +268,7 @@
             list.innerHTML = "";
             let arr = [];
             s.forEach(child => { arr.push({name: child.key, pts: child.val()}); });
-            arr.reverse().forEach(p => {
+            arr.sort((a,b) => b.pts - a.pts).forEach(p => {
                 list.innerHTML += `<div class="leader-item"><span>${p.name}</span><b>${p.pts} pts</b></div>`;
             });
         });
@@ -293,14 +306,35 @@
             } else { bar.style.display = 'none'; }
         });
 
-        // CHAT & AUTO-QUIZ LOGIC
+        // UPDATED CHAT & AUTO-QUIZ LOGIC WITH GLOW EFFECT
         database.ref('chat').limitToLast(1).on('child_added', s => {
             const d = s.val();
+            
             if(quizActive && currentAnswer !== "" && d.msg.toLowerCase().trim() === currentAnswer) {
-                document.getElementById('quizWinnerAlert').innerText = `✅ ${d.name} got it right!`;
-                currentAnswer = ""; 
+                const quizBox = document.getElementById('quizView');
+                
+                // Play Sound
                 sfxWin.play().catch(()=>{});
+                
+                // Add Glow Effect
+                quizBox.classList.add('quiz-correct');
+                
+                // Show Winner Announcement
+                document.getElementById('quizWinnerAlert').innerHTML = `🎉 CORRECT: ${d.name}!`;
+                
+                // Remove Glow after 2 seconds
+                setTimeout(() => {
+                    quizBox.classList.remove('quiz-correct');
+                }, 2000);
+
+                // Clear currentAnswer to prevent double-wins
+                currentAnswer = ""; 
+                
+                // Update Firebase Score (using Display Name as key)
+                database.ref('quiz/scores/' + d.name).transaction(pts => (pts || 0) + 1);
             }
+            
+            // Standard Chat Display
             const m = document.createElement('div'); m.className = 'msg';
             m.innerHTML = `<img src="${d.photo}"><div class="bubble"><b>${d.name}</b>${d.msg}</div>`;
             const chatList = document.getElementById('chatList');
