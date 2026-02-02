@@ -21,7 +21,7 @@
         .monitor-area { flex: 1; padding: 20px; overflow-y: auto; background: #020617; }
         .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
         
-        .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; position: relative; transition: 0.3s; }
+        .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; position: relative; transition: 0.3s; min-height: 120px; }
         .m-card.winner-glow { border: 2px solid var(--win); box-shadow: 0 0 15px var(--win); background: #064e3b !important; }
         
         .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 5px; }
@@ -107,26 +107,19 @@
     
     let drawn = [], winners = {}, allPlayers = {}, activePresence = {};
 
-    // 1. SYNC PRESENCE (Eto ang basehan kung sino ang online)
+    // 1. SYNC PRESENCE (Main basis for counting)
     database.ref('presence').on('value', snap => {
         activePresence = snap.val() || {};
-        // Tuwing may nag-offline, linisin din ang players node para hindi tambak ang database
-        database.ref('players').once('value', pSnap => {
-            const players = pSnap.val() || {};
-            for(let id in players) {
-                if(!activePresence[id]) database.ref('players/'+id).remove();
-            }
-        });
         refreshUI();
     });
 
-    // 2. SYNC PLAYERS
+    // 2. SYNC PLAYERS (Bingo Cards)
     database.ref('players').on('value', snap => { 
         allPlayers = snap.val() || {}; 
         refreshUI(); 
     });
 
-    // 3. SYNC WINNERS & GAME STATUS
+    // 3. SYNC WINNERS & MODE
     database.ref('winners').on('value', snap => { winners = snap.val() || {}; refreshUI(); });
     database.ref('gameStatus/mode').on('value', s => {
         const mode = s.val() || 'bingo';
@@ -161,39 +154,49 @@
         chatBox.appendChild(div); chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    // 5. THE REFRESH LOGIC (Strict filtering by presence)
+    // 5. REFRESH UI (Presence-First Logic)
     function refreshUI() {
         const grid = document.getElementById('pGrid'); 
         grid.innerHTML = '';
         let count = 0;
         
-        for(let id in allPlayers) {
-            // FILTER: Kapag wala sa activePresence, wag ipakita at wag bilangin
-            if (!activePresence[id]) continue;
-
-            const p = allPlayers[id];
-            const playerCard = p.card || [];
-            if(playerCard.length === 0) continue; 
-
-            count++; // Bilangin lang ang validated na online
+        // Loop sa lahat ng nasa presence (Online list)
+        for(let id in activePresence) {
+            count++;
             
+            const p = allPlayers[id] || {}; 
+            const playerName = activePresence[id].name || p.name || "Guest";
+            const playerCard = p.card || [];
             const playerMarks = p.marks || [12];
+            
             const isWinner = (winners[id] || p.isWin) ? ' winner-glow' : '';
             const cardDiv = document.createElement('div');
             cardDiv.className = 'm-card' + isWinner;
-            
-            let cells = '';
-            playerCard.forEach((n, idx) => {
-                const isHit = playerMarks.includes(idx) ? ' active' : '';
-                cells += `<div class="m-cell${isHit}">${idx===12?'FR':n}</div>`;
-            });
-            
-            cardDiv.innerHTML = `
-                <span style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                    ${(winners[id] || p.isWin) ? '🏆 ' : ''}${p.name}
-                </span>
-                <div class="mini-grid">${cells}</div>
-            `;
+
+            if(playerCard.length > 0) {
+                // Render card grid if player has a card
+                let cells = '';
+                playerCard.forEach((n, idx) => {
+                    const isHit = playerMarks.includes(idx) ? ' active' : '';
+                    cells += `<div class="m-cell${isHit}">${idx===12?'FR':n}</div>`;
+                });
+                
+                cardDiv.innerHTML = `
+                    <span style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        ${(winners[id] || p.isWin) ? '🏆 ' : ''}${playerName}
+                    </span>
+                    <div class="mini-grid">${cells}</div>
+                `;
+            } else {
+                // Render "Waiting" status if online but no card yet
+                cardDiv.style.opacity = "0.5";
+                cardDiv.innerHTML = `
+                    <span style="font-size:11px;font-weight:bold;display:block;margin-bottom:2px;">${playerName}</span>
+                    <div style="font-size:10px; color:gray; text-align:center; padding: 25px 0;">
+                        Online: Waiting for card...
+                    </div>
+                `;
+            }
             grid.appendChild(cardDiv);
         }
         document.getElementById('pCount').innerText = count;
