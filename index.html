@@ -27,10 +27,28 @@
         .user-btn { display: flex; align-items: center; gap: 10px; cursor: pointer; background: rgba(255,255,255,0.05); padding: 5px 12px; border-radius: 10px; }
         .user-btn img { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; }
 
-        /* --- MARQUEE --- */
-        .marquee-v2 { background: rgba(59, 130, 246, 0.1); padding: 8px 0; border-bottom: 1px solid rgba(59, 130, 246, 0.1); display: none; overflow: hidden; }
-        .marquee-content { display: inline-block; white-space: nowrap; animation: scroll 20s linear infinite; font-size: 13px; font-weight: 700; color: var(--accent); }
-        @keyframes scroll { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+        /* --- UPDATED WINNER BAR (PULSATING) --- */
+        .winner-bar { 
+            background: rgba(34, 197, 94, 0.15); 
+            padding: 10px 0; 
+            border-bottom: 1px solid rgba(34, 197, 94, 0.3); 
+            display: none; 
+            text-align: center;
+        }
+        .winner-pulse { 
+            display: inline-block;
+            font-size: 14px; 
+            font-weight: 800; 
+            color: var(--success); 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: textPulse 1.2s ease-in-out infinite; 
+        }
+        @keyframes textPulse { 
+            0% { transform: scale(0.95); opacity: 0.8; } 
+            50% { transform: scale(1.05); opacity: 1; text-shadow: 0 0 12px rgba(34, 197, 94, 0.6); } 
+            100% { transform: scale(0.95); opacity: 0.8; } 
+        }
 
         /* --- LAYOUT GRID --- */
         .game-wrapper { display: flex; flex-direction: column; max-width: 1400px; margin: 0 auto; padding: 15px; gap: 15px; }
@@ -58,7 +76,6 @@
         .cell { aspect-ratio: 1; background: var(--surface-br); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: var(--text-dim); transition: 0.3s; }
         .cell.hit { background: var(--accent); color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
         
-        /* WINNING PATTERN STYLE */
         .cell.win-line { background: var(--success) !important; color: white !important; border: 2px solid white; transform: scale(1.05); z-index: 2; box-shadow: 0 0 15px var(--success); }
 
         /* --- CHAT --- */
@@ -97,7 +114,9 @@
     </div>
 </div>
 
-<div class="marquee-v2" id="winMarquee"><div class="marquee-content" id="winText"></div></div>
+<div class="winner-bar" id="winMarquee">
+    <div class="winner-pulse" id="winText"></div>
+</div>
 
 <div id="loginOverlay">
     <div class="modal" style="text-align: center;">
@@ -217,7 +236,7 @@
         const grid = document.getElementById('cardGrid'); 
         const cardBox = document.getElementById('mainBingoCard');
         grid.innerHTML = "";
-        cardBox.classList.remove('winner-card'); // Clear glow
+        cardBox.classList.remove('winner-card');
         
         const getCol = (min, max) => {
             let n = []; while(n.length<5){ let r=Math.floor(Math.random()*(max-min+1))+min; if(!n.includes(r)) n.push(r); } return n.sort((a,b)=>a-b);
@@ -262,13 +281,19 @@
             firstLoad = false;
         });
 
+        // UPDATED WINNER LISTENER
         database.ref('winners').on('value', s => {
             const w = s.val();
+            const bar = document.getElementById('winMarquee');
+            const txt = document.getElementById('winText');
             if(w) {
                 if(!firstLoad) sfxWin.play().catch(()=>{});
-                document.getElementById('winMarquee').style.display='block';
-                document.getElementById('winText').innerText = "🏆 HALL OF FAME: " + Object.values(w).map(x=>x.name).join(" • ");
-            } else { document.getElementById('winMarquee').style.display='none'; }
+                bar.style.display = 'block';
+                const names = Object.values(w).map(x => x.name).join(" • ");
+                txt.innerHTML = `🏆 WINNER: ${names} 🏆`;
+            } else { 
+                bar.style.display = 'none'; 
+            }
         });
 
         database.ref('chat').limitToLast(15).on('child_added', s => {
@@ -282,22 +307,15 @@
 
     function check() {
         const ways = [
-            [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], // Hor
-            [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], // Ver
-            [0,6,12,18,24],[4,8,12,16,20] // Diag
+            [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],
+            [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],
+            [0,6,12,18,24],[4,8,12,16,20]
         ];
-
         let winningWay = ways.find(w => w.every(i => marks.includes(i)));
-
         if(winningWay && !isWin) {
             isWin = true;
-            // 1. Light up the winning line
-            winningWay.forEach(index => {
-                document.getElementById('c-' + index).classList.add('win-line');
-            });
-            // 2. Add glow to the whole card
+            winningWay.forEach(index => { document.getElementById('c-' + index).classList.add('win-line'); });
             document.getElementById('mainBingoCard').classList.add('winner-card');
-            
             sync(); 
             database.ref('winners/'+user.uid).set({name: user.displayName, time: firebase.database.ServerValue.TIMESTAMP});
         }
@@ -311,10 +329,6 @@
     function toggleSettings() {
         const m = document.getElementById('settingsModal');
         m.style.display = (m.style.display === 'flex') ? 'none' : 'flex';
-        if(m.style.display === 'flex') {
-            document.getElementById('editN').value = user.displayName;
-            document.getElementById('editP').value = user.photoURL;
-        }
     }
 
     function saveProfile() {
