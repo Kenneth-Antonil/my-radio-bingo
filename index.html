@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Radio Bingo Live | Official</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -14,14 +15,16 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 20px; overflow-x: hidden; }
         
-        .nav { background: var(--surface); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: 65px; }
-        .online-tag { background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; border: 1px solid var(--success); margin-left: 10px; }
+        .nav { background: var(--surface); padding: 0 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: 65px; }
+        .online-tag { background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; border: 1px solid var(--success); display: flex; align-items: center; gap: 4px; }
         
-        /* NOTIFICATION & POINTS AREA */
-        .user-stats { display: flex; align-items: center; gap: 8px; }
-        .notif-btn { background: var(--surface-br); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 10px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; }
-        .notif-badge { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; font-size: 9px; padding: 2px 5px; border-radius: 50%; font-weight: 900; display: none; }
-        .points-badge { background: rgba(251, 191, 36, 0.1); color: var(--gold); padding: 6px 12px; border-radius: 10px; font-weight: 800; border: 1px solid var(--gold); font-size: 13px; cursor: pointer; }
+        /* ALIGNED STATS & BUTTONS */
+        .user-stats { display: flex; align-items: center; gap: 10px; }
+        .icon-btn { background: var(--surface-br); color: white; border: 1px solid rgba(255,255,255,0.1); width: 40px; height: 40px; border-radius: 12px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .icon-btn:active { transform: scale(0.95); }
+        .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--surface); display: none; }
+        
+        .points-badge { background: rgba(251, 191, 36, 0.1); color: var(--gold); padding: 0 15px; height: 40px; border-radius: 12px; font-weight: 800; border: 1px solid var(--gold); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
 
         .disclaimer { background: var(--danger); color: white; padding: 6px 0; font-size: 11px; font-weight: 700; overflow: hidden; white-space: nowrap; border-bottom: 1px solid rgba(0,0,0,0.3); }
         .marquee-content { display: inline-block; animation: marquee 25s linear infinite; padding-left: 100%; }
@@ -47,36 +50,36 @@
         .chat-pfp { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--accent); }
 
         .chat-input { display: flex; gap: 8px; padding: 10px; background: var(--surface); border-top: 1px solid rgba(255,255,255,0.05); }
-        .chat-input input { flex: 1; background: var(--bg); border: 1px solid var(--surface-br); border-radius: 8px; padding: 10px; color: white; outline: none; }
+        .chat-input input { flex: 1; background: var(--bg); border: 1px solid var(--surface-br); border-radius: 10px; padding: 12px; color: white; outline: none; border: none; }
+        .send-btn { background: var(--accent); color: white; border: none; padding: 0 15px; border-radius: 10px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: var(--surface); border-radius: 20px; width: 100%; max-width: 400px; padding: 25px; position: relative; border: 1px solid var(--surface-br); }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--surface); border-radius: 24px; width: 100%; max-width: 400px; padding: 25px; position: relative; border: 1px solid var(--surface-br); }
         
-        .btn-change { background: var(--surface-br); color: var(--gold); border: 1px solid var(--gold); padding: 5px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; cursor: pointer; float: right; margin-bottom: 10px; }
+        .btn-change { background: var(--surface-br); color: var(--gold); border: 1px solid var(--gold); height: 32px; padding: 0 12px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer; float: right; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
         .btn-change:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* NOTIFICATION STYLES */
-        .notif-item { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; margin-bottom: 10px; border-left: 3px solid var(--accent); }
-        .notif-item.redeem { border-left-color: var(--gold); }
-        .notif-title { font-weight: 800; font-size: 13px; margin-bottom: 4px; display: block; }
-        .notif-time { font-size: 10px; opacity: 0.5; }
+        .notif-item { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; margin-bottom: 10px; border-left: 3px solid var(--accent); }
     </style>
 </head>
 <body>
 
 <div class="nav">
     <div style="display:flex; align-items:center;">
-        <span style="font-weight: 900; font-size: 18px;">RADIO<span style="color:var(--accent)">BINGO</span></span>
-        <div class="online-tag">● <span id="onlineCount">1</span></div>
+        <span style="font-weight: 900; font-size: 18px; letter-spacing: -0.5px;">RADIO<span style="color:var(--accent)">BINGO</span></span>
+        <div class="online-tag"><i data-lucide="users" style="width:12px"></i> <span id="onlineCount">1</span></div>
     </div>
     <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
         <div class="user-stats">
-            <div class="notif-btn" onclick="document.getElementById('notifModal').style.display='flex'; document.getElementById('notifDot').style.display='none'">
-                🔔 <span id="notifDot" class="notif-badge">!</span>
+            <div class="icon-btn" onclick="document.getElementById('notifModal').style.display='flex'; document.getElementById('notifDot').style.display='none'">
+                <i data-lucide="bell" style="width:20px"></i>
+                <span id="notifDot" class="notif-badge"></span>
             </div>
-            <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'">💰 <span id="userPoints">0</span></div>
+            <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'">
+                <i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span>
+            </div>
         </div>
-        <img id="userImg" onclick="document.getElementById('menuModal').style.display='flex'" style="width:35px; height:35px; border-radius:10px; cursor: pointer; border: 2px solid var(--accent);">
+        <img id="userImg" onclick="document.getElementById('menuModal').style.display='flex'" style="width:40px; height:40px; border-radius:12px; cursor: pointer; border: 2px solid var(--accent); object-fit: cover;">
     </div>
 </div>
 
@@ -88,21 +91,26 @@
     <div class="draw-panel">
         <div class="prev-balls" id="ballRow"></div>
         <div class="current-ball-box">
-            <span style="font-size:9px; font-weight:800; opacity:0.8; letter-spacing:1px;">NOW DRAWN</span>
+            <span style="font-size:9px; font-weight:800; opacity:0.8; letter-spacing:1px; margin-bottom: 2px;">NOW DRAWN</span>
             <span id="currentBall" style="font-size:32px; font-weight:900;">--</span>
         </div>
     </div>
 
     <div class="card" style="padding:0; overflow:hidden; position:relative; height: 210px;">
-        <div style="position:absolute; top:10px; right:10px; z-index:10; background:rgba(0,0,0,0.8); padding:5px 12px; border-radius:8px; border:1px solid var(--success);">
+        <div style="position:absolute; top:12px; right:12px; z-index:10; background:rgba(0,0,0,0.8); padding:6px 12px; border-radius:8px; border:1px solid var(--success); display: flex; align-items:center; gap:5px;">
+            <i data-lucide="layout-template" style="width:12px; color:var(--success)"></i>
             <span style="font-size:10px; font-weight:800; color:var(--success)">PATTERN: ANY LINE</span>
         </div>
         <iframe src="https://www.youtube.com/embed/36YnV9STBqc?autoplay=1" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
     </div>
 
     <div class="card">
-        <div id="cardWinNote" style="display:none; background:rgba(16,185,129,0.9); color:white; text-align:center; padding:12px; border-radius:10px; margin-bottom:15px; font-weight:900; font-size:14px; border: 2px solid #fff;"></div>
-        <div style="overflow: auto;"><button id="changeCardBtn" class="btn-change" onclick="generateNewCard()">🔄 CHANGE CARD</button></div>
+        <div id="cardWinNote" style="display:none; background:var(--success); color:white; text-align:center; padding:12px; border-radius:12px; margin-bottom:15px; font-weight:900; font-size:14px;"></div>
+        <div style="overflow: auto;">
+            <button id="changeCardBtn" class="btn-change" onclick="generateNewCard()">
+                <i data-lucide="refresh-cw" style="width:12px"></i> CHANGE CARD
+            </button>
+        </div>
         <div class="bingo-header">
             <div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div>
         </div>
@@ -112,33 +120,67 @@
     <div class="chat-box card">
         <div id="chatList"></div>
         <form class="chat-input" onsubmit="event.preventDefault(); sendChat();">
-            <input type="text" id="chatIn" placeholder="Chat dito..." autocomplete="off">
-            <button type="submit" style="background:var(--accent); color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:800; cursor:pointer;">SEND</button>
+            <input type="text" id="chatIn" placeholder="Type a message..." autocomplete="off">
+            <button type="submit" class="send-btn">
+                <i data-lucide="send" style="width:18px"></i>
+            </button>
         </form>
     </div>
 </div>
 
 <div id="notifModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 style="margin-top:0;">Notifications</h3>
+        <h3 style="margin-top:0; display:flex; align-items:center; gap:8px;">
+            <i data-lucide="bell-ring" style="color:var(--accent)"></i> Notifications
+        </h3>
         <div id="notifList" style="max-height:300px; overflow-y:auto;">
-            <p style="text-align:center; opacity:0.5; font-size:12px;">Walang bagong notification.</p>
+            <p style="text-align:center; opacity:0.5; font-size:12px; padding: 20px;">Walang bagong notification.</p>
         </div>
     </div>
 </div>
 
 <div id="menuModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3>Aking Account</h3>
-        <input type="text" id="refLink" readonly style="width:100%; padding:10px; background:var(--bg); border:1px solid var(--surface-br); color:var(--gold); border-radius:8px; margin-bottom:15px; font-size:10px;">
-        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:15px; background:var(--danger); color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Log Out</button>
+        <h3 style="margin-top:0;">Account Settings</h3>
+        <p style="font-size: 11px; opacity: 0.7; margin-bottom:8px;">Your Referral Link:</p>
+        <div style="display:flex; gap:8px; margin-bottom:20px;">
+            <input type="text" id="refLink" readonly style="flex:1; padding:12px; background:var(--bg); border:1px solid var(--surface-br); color:var(--gold); border-radius:10px; font-size:10px; outline:none;">
+        </div>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:15px; background:var(--danger); color:white; border:none; border-radius:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i data-lucide="log-out" style="width:18px"></i> Log Out
+        </button>
     </div>
 </div>
 
-<div id="storeModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; color:var(--gold);">Rewards Store</h3><div style="background:var(--surface-br); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><div><b>₱50 GCash</b><br><small>5,000 Points</small></div><button onclick="redeem(5000, '50 GCash')" style="background:var(--success); border:none; color:white; padding:10px 15px; border-radius:8px; font-weight:700; cursor:pointer;">Redeem</button></div></div></div>
-<div id="loginOverlay" style="position:fixed; inset:0; background:var(--bg); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px;"><div class="card" style="width:100%; text-align:center; max-width: 350px;"><h2>Radio Bingo</h2><button onclick="login()" style="width:100%; background:var(--accent); color:white; border:none; padding:18px; border-radius:12px; font-weight:900; cursor:pointer; font-size:16px;">LOGIN WITH GOOGLE</button></div></div>
+<div id="storeModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0; color:var(--gold); display:flex; align-items:center; gap:8px;">
+            <i data-lucide="shopping-bag"></i> Rewards Store
+        </h3>
+        <div style="background:var(--surface-br); padding:15px; border-radius:16px; display:flex; justify-content:space-between; align-items:center;">
+            <div><b>₱50 GCash</b><br><small style="opacity:0.6">5,000 Points</small></div>
+            <button onclick="redeem(5000, '50 GCash')" style="background:var(--success); border:none; color:white; padding:10px 20px; border-radius:10px; font-weight:800; cursor:pointer;">Redeem</button>
+        </div>
+    </div>
+</div>
+
+<div id="loginOverlay" style="position:fixed; inset:0; background:var(--bg); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px;">
+    <div class="card" style="width:100%; text-align:center; max-width: 350px; padding: 40px 20px;">
+        <div style="background:var(--accent); width:60px; height:60px; border-radius:20px; margin: 0 auto 20px; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 20px rgba(59,130,246,0.3)">
+            <i data-lucide="play" style="fill:white; width:30px; height:30px"></i>
+        </div>
+        <h2 style="margin-bottom:8px">Radio Bingo</h2>
+        <p style="opacity:0.6; font-size:14px; margin-bottom:30px;">Login with Google to start playing.</p>
+        <button onclick="login()" style="width:100%; background:var(--text); color:var(--bg); border:none; padding:16px; border-radius:14px; font-weight:900; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px;">
+             Sign in with Google
+        </button>
+    </div>
+</div>
 
 <script>
+    // Initialize Icons
+    lucide.createIcons();
+
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
@@ -215,7 +257,6 @@
 
     function loadNotifications() {
         const list = document.getElementById('notifList');
-        // Get announcements + user specific redeem status
         db.ref('announcements').limitToLast(5).on('value', snap => {
             list.innerHTML = "";
             let hasNew = false;
@@ -223,16 +264,15 @@
                 hasNew = true;
                 snap.forEach(child => {
                     const n = child.val();
-                    list.innerHTML += `<div class="notif-item"><span class="notif-title">📢 ${n.title}</span><span style="font-size:12px;">${n.message}</span></div>`;
+                    list.innerHTML += `<div class="notif-item"><span style="font-weight:800; font-size:13px; display:block; margin-bottom:4px;">📢 ${n.title}</span><span style="font-size:12px;">${n.message}</span></div>`;
                 });
             }
-            // Add redeem status
             db.ref('redeemRequests').orderByChild('uid').equalTo(userData.uid).limitToLast(5).on('value', rSnap => {
                 if(rSnap.exists()){
                     hasNew = true;
                     rSnap.forEach(rc => {
                         const r = rc.val();
-                        list.innerHTML += `<div class="notif-item redeem"><span class="notif-title">🎁 REDEEM: ${r.item}</span><span style="font-size:12px;">Status: <b>${r.status || 'Pending'}</b></span></div>`;
+                        list.innerHTML += `<div class="notif-item" style="border-left-color:var(--gold)"><span style="font-weight:800; font-size:13px; display:block; margin-bottom:4px;">🎁 REDEEM: ${r.item}</span><span style="font-size:12px;">Status: <b>${r.status || 'Pending'}</b></span></div>`;
                     });
                 }
                 if(hasNew) document.getElementById('notifDot').style.display = 'block';
