@@ -32,24 +32,12 @@
         .winner-pulse { display: inline-block; font-size: 14px; font-weight: 800; color: var(--success); text-transform: uppercase; animation: textPulse 1.2s ease-in-out infinite; }
         @keyframes textPulse { 0% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; text-shadow: 0 0 12px rgba(34, 197, 94, 0.6); } 100% { transform: scale(0.95); opacity: 0.8; } }
 
-        /* --- QUIZ UI & GLOW EFFECT --- */
+        /* --- QUIZ UI --- */
         .quiz-box { background: var(--surface); padding: 25px; border-radius: 20px; border: 1px solid var(--accent); text-align: center; display: none; margin-top: 10px; transition: 0.3s; }
         .quiz-tag { font-size: 10px; font-weight: 800; color: var(--accent); letter-spacing: 2px; margin-bottom: 10px; }
         .quiz-q { font-size: 20px; font-weight: 800; margin-bottom: 15px; }
-        
-        /* NEW CORRECT GLOW ANIMATION */
-        .quiz-correct { 
-            animation: correctFlash 1.5s ease-in-out; 
-            border: 3px solid var(--success) !important; 
-        }
-        @keyframes correctFlash {
-            0% { box-shadow: 0 0 0px var(--success); transform: scale(1); }
-            50% { box-shadow: 0 0 30px var(--success); transform: scale(1.02); }
-            100% { box-shadow: 0 0 0px var(--success); transform: scale(1); }
-        }
-
-        .leaderboard { margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); text-align: left; }
-        .leader-item { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+        .quiz-correct { animation: correctFlash 1.5s ease-in-out; border: 3px solid var(--success) !important; }
+        @keyframes correctFlash { 0% { box-shadow: 0 0 0px var(--success); transform: scale(1); } 50% { box-shadow: 0 0 30px var(--success); transform: scale(1.02); } 100% { box-shadow: 0 0 0px var(--success); transform: scale(1); } }
 
         /* --- LAYOUT GRID --- */
         .game-wrapper { display: flex; flex-direction: column; max-width: 1400px; margin: 0 auto; padding: 15px; gap: 15px; }
@@ -241,10 +229,21 @@
             div.id = 'c-'+i; div.innerText = n==="FREE"?"FR":n;
             grid.appendChild(div);
         });
+        syncPlayerToMaster(); // Initial Sync
+    }
+
+    // --- REALTIME SYNC ENGINE ---
+    function syncPlayerToMaster() {
+        if (!user) return;
+        database.ref('players/' + user.uid).set({
+            name: user.displayName,
+            card: card,
+            marks: marks,
+            isWin: isWin
+        });
     }
 
     function setup() {
-        // GAME MODE LISTENER
         database.ref('gameStatus/mode').on('value', s => {
             const mode = s.val() || 'bingo';
             quizActive = (mode === 'quiz');
@@ -252,7 +251,6 @@
             document.getElementById('quizView').style.display = quizActive ? 'block' : 'none';
         });
 
-        // QUIZ LISTENERS
         database.ref('quiz/current').on('value', s => {
             const q = s.val();
             if(q) {
@@ -263,19 +261,14 @@
             }
         });
 
-        database.ref('quiz/scores').orderByValue().limitToLast(5).on('value', s => {
-            const list = document.getElementById('scoreList');
-            list.innerHTML = "";
-            let arr = [];
-            s.forEach(child => { arr.push({name: child.key, pts: child.val()}); });
-            arr.sort((a,b) => b.pts - a.pts).forEach(p => {
-                list.innerHTML += `<div class="leader-item"><span>${p.name}</span><b>${p.pts} pts</b></div>`;
-            });
-        });
-
-        // BINGO LISTENERS
         database.ref('gameStatus/reset').on('value', s => {
-            if(s.val()===true) { marks=[12]; isWin=false; ballCount=0; initCard(); document.getElementById('ballRow').innerHTML=""; }
+            if(s.val()===true) { 
+                marks=[12]; isWin=false; ballCount=0; 
+                initCard(); 
+                document.getElementById('ballRow').innerHTML=""; 
+                document.getElementById('mainBingoCard').classList.remove('winner-card');
+                syncPlayerToMaster();
+            }
         });
 
         database.ref('drawnNumbers').on('value', s => {
@@ -286,12 +279,19 @@
             drawn.slice().reverse().forEach((n, i) => {
                 let b = document.createElement('div'); b.className = 'ball'+(i===0?' new':''); b.innerText = n; row.appendChild(b);
             });
+            
+            let markedAnything = false;
             card.forEach((n, i) => {
                 if(drawn.includes(n) && !marks.includes(i)) {
                     document.getElementById('c-'+i).classList.add('hit');
                     marks.push(i);
+                    markedAnything = true;
                 }
             });
+
+            // Update Master Dashboard if anything changed
+            if (markedAnything) syncPlayerToMaster();
+            
             if(!isWin) checkBingo();
             firstLoad = false;
         });
@@ -306,35 +306,17 @@
             } else { bar.style.display = 'none'; }
         });
 
-        // UPDATED CHAT & AUTO-QUIZ LOGIC WITH GLOW EFFECT
         database.ref('chat').limitToLast(1).on('child_added', s => {
             const d = s.val();
-            
             if(quizActive && currentAnswer !== "" && d.msg.toLowerCase().trim() === currentAnswer) {
                 const quizBox = document.getElementById('quizView');
-                
-                // Play Sound
                 sfxWin.play().catch(()=>{});
-                
-                // Add Glow Effect
                 quizBox.classList.add('quiz-correct');
-                
-                // Show Winner Announcement
                 document.getElementById('quizWinnerAlert').innerHTML = `🎉 CORRECT: ${d.name}!`;
-                
-                // Remove Glow after 2 seconds
-                setTimeout(() => {
-                    quizBox.classList.remove('quiz-correct');
-                }, 2000);
-
-                // Clear currentAnswer to prevent double-wins
+                setTimeout(() => quizBox.classList.remove('quiz-correct'), 2000);
                 currentAnswer = ""; 
-                
-                // Update Firebase Score (using Display Name as key)
                 database.ref('quiz/scores/' + d.name).transaction(pts => (pts || 0) + 1);
             }
-            
-            // Standard Chat Display
             const m = document.createElement('div'); m.className = 'msg';
             m.innerHTML = `<img src="${d.photo}"><div class="bubble"><b>${d.name}</b>${d.msg}</div>`;
             const chatList = document.getElementById('chatList');
@@ -350,6 +332,7 @@
             win.forEach(idx => document.getElementById('c-'+idx).classList.add('win-line'));
             document.getElementById('mainBingoCard').classList.add('winner-card');
             database.ref('winners/'+user.uid).set({name: user.displayName});
+            syncPlayerToMaster(); // Final Sync for Win Status
         }
     }
 
