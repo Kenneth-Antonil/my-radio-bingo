@@ -19,7 +19,7 @@
         .m-card.winner-glow { border: 3px solid var(--win); box-shadow: 0 0 20px var(--win); background: #064e3b !important; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
         .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 5px; }
-        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; }
+        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; color: #fff; }
         .m-cell.active { background: var(--neon); color: #000; font-weight: bold; }
         select, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
         #regStatus { margin-top:10px; padding:8px; border-radius:5px; font-size:0.7rem; text-align:center; font-weight:bold; }
@@ -57,7 +57,6 @@
 <div class="monitor-area">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
         <h2 style="margin:0;">ONLINE PLAYERS: <span id="pCount" style="color:var(--neon)">0</span></h2>
-        <div style="font-size:0.8rem; background:#1e293b; padding:5px 10px; border-radius:5px;">Real-time Verification</div>
     </div>
     <div class="players-grid" id="pGrid"></div>
 </div>
@@ -70,13 +69,14 @@
       projectId: "radiobingo-9ac29",
       storageBucket: "radiobingo-9ac29.firebasestorage.app",
       messagingSenderId: "965903993397",
-      appId: "1:965903993397:web:f6646fa05225f147eebf7c",
-      measurementId: "G-RR2EG93C43"
+      appId: "1:965903993397:web:f6646fa05225f147eebf7c"
     };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
+    
     let drawn = [], winners = {}, allPlayers = {};
 
+    // 1. Listen for Drawn Numbers
     database.ref('drawnNumbers').on('value', snap => {
         drawn = snap.val() || [];
         document.getElementById('currentNum').innerText = drawn.length ? drawn[drawn.length-1] : "--";
@@ -84,14 +84,20 @@
         refreshUI();
     });
 
+    // 2. Listen for Winners & Players
     database.ref('winners').on('value', snap => { winners = snap.val() || {}; refreshUI(); });
-    database.ref('players').on('value', snap => { allPlayers = snap.val() || {}; refreshUI(); });
+    database.ref('players').on('value', snap => { 
+        allPlayers = snap.val() || {}; 
+        refreshUI(); 
+    });
     
-    // Sync Select Dropdown with current pattern in DB
+    // 3. Sync Pattern Selection
     database.ref('gameStatus/pattern').on('value', snap => {
-        if(snap.val()) document.getElementById('pSelect').value = snap.val();
+        const p = snap.val();
+        if(p) document.getElementById('pSelect').value = p;
     });
 
+    // 4. Chat Monitor
     database.ref('chat').limitToLast(20).on('child_added', (snap) => {
         const c = snap.val();
         const chatBox = document.getElementById('dashChat');
@@ -118,15 +124,19 @@
         for(let id in allPlayers) {
             count++;
             const p = allPlayers[id];
-            if(!p.cardNumbers) continue; // Skip if card data not yet synced
+            if(!p.cardNumbers) continue; 
+            
             const isWinner = winners[id] ? ' winner-glow' : '';
             const card = document.createElement('div');
             card.className = 'm-card' + isWinner;
+            
             let cells = '';
             p.cardNumbers.forEach((n, idx) => {
-                let act = (p.markedIndices && p.markedIndices.includes(idx)) ? ' active' : '';
+                const isMarked = (p.markedIndices && p.markedIndices.includes(idx));
+                const act = isMarked ? ' active' : '';
                 cells += `<div class="m-cell${act}">${n=='FREE'?'FR':n}</div>`;
             });
+            
             card.innerHTML = `<small style="font-weight:bold; font-size:0.7rem;">${winners[id]?'🏆 ':''}${p.name}</small><div class="mini-grid">${cells}</div>`;
             grid.appendChild(card);
         }
@@ -136,15 +146,16 @@
     function drawNumber() {
         if(drawn.length >= 75) return;
         let n; do { n = Math.floor(Math.random()*75)+1; } while(drawn.includes(n));
-        drawn.push(n); database.ref('drawnNumbers').set(drawn);
+        drawn.push(n); 
+        database.ref('drawnNumbers').set(drawn);
     }
 
     function resetGame() {
-        if(confirm("New Game? All balls, winners, and chat will be cleared.")) {
+        if(confirm("New Game? Clear everything?")) {
             database.ref('drawnNumbers').remove();
             database.ref('winners').remove();
             database.ref('chat').remove();
-            database.ref('gameStatus/pattern').set('any line'); // Reset to default pattern
+            database.ref('gameStatus/pattern').set('any line');
             database.ref('gameStatus/reset').set(true);
             setTimeout(() => database.ref('gameStatus/reset').set(false), 2000);
         }
