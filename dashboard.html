@@ -7,19 +7,30 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --neon: #00f2fe; --win: #00ff88; }
-        body { font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; margin:0; }
-        .host-controls { width: 300px; background: var(--panel); padding: 20px; border-right: 2px solid #334155; }
+        body { font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; margin:0; overflow: hidden; }
+        
+        /* Left Panel: Controls & Chat */
+        .host-controls { width: 320px; background: var(--panel); padding: 20px; border-right: 2px solid #334155; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
         .raffle-box { background: #000; padding: 20px; border-radius: 15px; text-align: center; border: 2px solid var(--neon); }
-        .last-number { font-size: 5rem; color: var(--neon); font-weight: 800; display: block; }
+        .last-number { font-size: 5rem; color: var(--neon); font-weight: 800; display: block; line-height: 1; }
+        
+        /* Chat Monitor Inside Dashboard */
+        .chat-monitor { flex: 1; display: flex; flex-direction: column; background: #000; border-radius: 10px; margin-top: 20px; border: 1px solid #334155; overflow: hidden; }
+        #dashChat { flex: 1; overflow-y: auto; padding: 10px; font-size: 0.8rem; color: #cbd5e1; }
+        
+        /* Right Panel: Players Grid */
         .monitor-area { flex: 1; padding: 20px; overflow-y: auto; }
         .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
         .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; position: relative; }
-        /* GREEN GLOW FOR WINNERS */
-        .m-card.winner-glow { border: 3px solid var(--win); box-shadow: 0 0 20px var(--win); background: #064e3b; animation: pulse 1s infinite; }
+        
+        /* WINNER GLOW */
+        .m-card.winner-glow { border: 3px solid var(--win); box-shadow: 0 0 20px var(--win); background: #064e3b !important; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+        
         .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 5px; }
         .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; }
         .m-cell.active { background: var(--neon); color: #000; font-weight: bold; }
+        
         select, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
@@ -31,8 +42,9 @@
         <span class="last-number" id="currentNum">--</span>
         <button style="background:var(--neon); color:#000" onclick="drawNumber()">DRAW BALL</button>
     </div>
-    <div style="margin-top:20px">
-        <label style="font-size:0.8rem">WINNING PATTERN:</label>
+    
+    <div style="margin-top:15px">
+        <label style="font-size:0.7rem; color:var(--neon)">SET PATTERN:</label>
         <select id="pSelect" onchange="database.ref('gameStatus/currentPattern').set(this.value)">
             <option value="any_line">ANY LINE</option>
             <option value="outer_box">OUTER BOX</option>
@@ -40,11 +52,20 @@
             <option value="blockout">BLOCKOUT</option>
         </select>
     </div>
-    <button style="background:#ff4757; color:white; margin-top:50px" onclick="resetGame()">RESET ROUND</button>
+
+    <div class="chat-monitor">
+        <div style="background:#334155; padding:5px; font-size:0.6rem; text-align:center; font-weight:bold;">LIVE CHAT MONITOR</div>
+        <div id="dashChat"></div>
+    </div>
+    
+    <button style="background:#ff4757; color:white; margin-top:15px" onclick="resetGame()">RESET ROUND</button>
 </div>
 
 <div class="monitor-area">
-    <h2>PLAYERS ONLINE: <span id="pCount">0</span></h2>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h2 style="margin:0;">ONLINE PLAYERS: <span id="pCount" style="color:var(--neon)">0</span></h2>
+        <div style="font-size:0.8rem; background:#1e293b; padding:5px 10px; border-radius:5px;">Real-time Monitoring Active</div>
+    </div>
     <div class="players-grid" id="pGrid"></div>
 </div>
 
@@ -63,20 +84,34 @@
     const database = firebase.database();
     let drawn = [], winners = {}, allPlayers = {};
 
+    // 1. Sync Drawn Numbers
     database.ref('drawnNumbers').on('value', snap => {
         drawn = snap.val() || [];
         document.getElementById('currentNum').innerText = drawn.length ? drawn[drawn.length-1] : "--";
         refreshUI();
     });
 
+    // 2. Sync Winners (For Green Glow)
     database.ref('winners').on('value', snap => {
         winners = snap.val() || {};
         refreshUI();
     });
 
+    // 3. Sync All Players
     database.ref('players').on('value', snap => {
         allPlayers = snap.val() || {};
         refreshUI();
+    });
+
+    // 4. Sync Chat for DJ Monitor
+    database.ref('chat').limitToLast(20).on('child_added', (snap) => {
+        const c = snap.val();
+        const chatBox = document.getElementById('dashChat');
+        const div = document.createElement('div');
+        div.style.marginBottom = "5px"; div.style.borderBottom = "1px solid #1e293b";
+        div.innerHTML = `<b style="color:var(--neon); font-size:0.75rem;">${c.name}:</b> <span style="font-size:0.75rem;">${c.msg}</span>`;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
     });
 
     function refreshUI() {
@@ -93,7 +128,7 @@
                 let act = (p.markedIndices && p.markedIndices.includes(idx)) ? ' active' : '';
                 cells += `<div class="m-cell${act}">${n=='FREE'?'FR':n}</div>`;
             });
-            card.innerHTML = `<small style="font-weight:bold;color:${winners[id]?'#fff':'#94a3b8'}">${winners[id]?'🏆 ':''}${p.name}</small><div class="mini-grid">${cells}</div>`;
+            card.innerHTML = `<small style="font-weight:bold; font-size:0.7rem; color:${winners[id]?'#fff':'#94a3b8'}">${winners[id]?'🏆 ':''}${p.name}</small><div class="mini-grid">${cells}</div>`;
             grid.appendChild(card);
         }
         document.getElementById('pCount').innerText = count;
@@ -106,9 +141,10 @@
     }
 
     function resetGame() {
-        if(confirm("Reset everything?")) {
+        if(confirm("Reset everything for a new game?")) {
             database.ref('drawnNumbers').remove();
             database.ref('winners').remove();
+            database.ref('chat').remove(); // Opsyonal: Linisin pati chat sa bagong laro
             database.ref('gameStatus/reset').set(true);
             setTimeout(() => database.ref('gameStatus/reset').set(false), 2000);
         }
