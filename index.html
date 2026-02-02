@@ -7,15 +7,19 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --primary: #00f2fe; --accent: #ff4757; --bg: #0f172a; }
-        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 0; }
+        :root { --primary: #00f2fe; --accent: #ff4757; --bg: #0f172a; --panel: #1e293b; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 0; overflow-x: hidden; }
+        
+        /* LOGIN */
         #loginScreen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; padding: 20px; }
-        .login-box { background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 350px; border: 1px solid var(--primary); }
+        .login-box { background: var(--panel); padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 350px; border: 1px solid var(--primary); }
         .login-box input { width: 90%; padding: 12px; margin: 15px 0; border-radius: 8px; border: none; text-align: center; font-size: 1.1rem; }
         .login-box button { width: 100%; padding: 12px; background: var(--primary); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         
         #gameUI { display: none; flex-direction: column; height: 100vh; }
         .main-layout { display: flex; flex-wrap: wrap; flex: 1; overflow: hidden; }
+        
+        /* LEFT SIDE */
         .left-panel { flex: 1.5; display: flex; flex-direction: column; min-width: 320px; border-right: 1px solid #334155; }
         .video-box { width: 100%; aspect-ratio: 16/9; background: #000; }
         .chat-box { flex: 1; display: flex; flex-direction: column; background: #111827; }
@@ -23,22 +27,37 @@
         .chat-input { display: flex; padding: 10px; gap: 5px; background: #1e293b; }
         .chat-input input { flex: 1; padding: 8px; border-radius: 5px; border: none; background: #0f172a; color: white; }
 
-        .right-panel { flex: 1; min-width: 320px; padding: 10px; display: flex; flex-direction: column; align-items: center; background: #0f172a; }
-        .bingo-card { background: white; padding: 15px; border-radius: 15px; width: 280px; color: #333; }
+        /* RIGHT SIDE */
+        .right-panel { flex: 1; min-width: 320px; padding: 10px; display: flex; flex-direction: column; align-items: center; background: #0f172a; overflow-y: auto; }
+        
+        /* NEW: Drawn Numbers Bar */
+        .draw-history { width: 280px; background: #000; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #334155; }
+        .draw-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; }
+        .draw-ball { min-width: 35px; height: 35px; background: var(--primary); color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; animation: pop 0.3s; }
+
+        /* BINGO CARD */
+        .bingo-card { background: white; padding: 15px; border-radius: 15px; width: 280px; color: #333; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .bingo-header { display: flex; justify-content: space-between; font-weight: 900; font-size: 1.2rem; margin-bottom: 5px; color: #1e293b; letter-spacing: 5px; padding: 0 10px; }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
-        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 5px; font-size: 1rem; }
+        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 5px; font-size: 1rem; position: relative; }
         .cell.marked { background: var(--primary); color: black; border: none; transform: scale(0.95); box-shadow: 0 0 8px var(--primary); }
-        .bingo-header { display: flex; justify-content: space-between; font-weight: 900; font-size: 1.2rem; margin-bottom: 5px; color: #1e293b; }
-        @media (max-width: 768px) { .main-layout { flex-direction: column; overflow-y: auto; } #gameUI { height: auto; } }
+        
+        /* NEW: Pattern Display */
+        .pattern-display { width: 280px; background: var(--panel); border-radius: 10px; padding: 10px; margin-top: 15px; border: 1px solid var(--primary); text-align: center; }
+        .pattern-title { font-size: 0.7rem; text-transform: uppercase; color: var(--primary); letter-spacing: 1px; }
+        .pattern-name { font-size: 1.1rem; font-weight: bold; margin: 2px 0; }
+
+        @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+        @media (max-width: 768px) { .main-layout { flex-direction: column; overflow-y: auto; } #gameUI { height: auto; } .left-panel { border-right: none; } }
     </style>
 </head>
 <body>
 
 <div id="loginScreen">
     <div class="login-box">
-        <h2 style="color:var(--primary); margin:0;">BINGO LIVE</h2>
-        <p>Enter your name to join:</p>
-        <input type="text" id="userInput" placeholder="Full Name" maxlength="20">
+        <h1 style="color:var(--primary); margin:0; font-size: 1.8rem;">BINGO LIVE</h1>
+        <p style="opacity: 0.8;">Radio Station Interactive Game</p>
+        <input type="text" id="userInput" placeholder="Your Full Name" maxlength="20">
         <button onclick="joinGame()">ENTER GAME</button>
     </div>
 </div>
@@ -52,17 +71,30 @@
             <div class="chat-box">
                 <div id="chatMsgs"></div>
                 <div class="chat-input">
-                    <input type="text" id="chatInp" placeholder="Type a comment..." onkeypress="if(event.key==='Enter') sendChat()">
-                    <button onclick="sendChat()" style="background:var(--primary); border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">Send</button>
+                    <input type="text" id="chatInp" placeholder="Say something..." onkeypress="if(event.key==='Enter') sendChat()">
+                    <button onclick="sendChat()" style="background:var(--primary); border:none; padding:8px 12px; border-radius:5px; font-weight:bold;">SEND</button>
                 </div>
             </div>
         </div>
+
         <div class="right-panel">
+            <div class="draw-history">
+                <div style="font-size: 0.6rem; color: #94a3b8; margin-bottom: 5px;">RECENT DRAWS:</div>
+                <div class="draw-list" id="drawList">
+                    <span style="font-size:0.8rem; color:#444">Waiting for first draw...</span>
+                </div>
+            </div>
+
             <div class="bingo-card">
                 <div class="bingo-header"><span>B</span><span>I</span><span>N</span><span>G</span><span>O</span></div>
                 <div class="grid" id="bingoGrid"></div>
             </div>
-            <p id="patternInfo" style="font-size: 0.8rem; color: var(--primary); margin-top: 10px;">Pattern: Loading...</p>
+
+            <div class="pattern-display">
+                <div class="pattern-title">Winning Pattern</div>
+                <div class="pattern-name" id="patternName">Any Line</div>
+                <div style="font-size: 0.6rem; color: #94a3b8;">Automatic verification enabled</div>
+            </div>
         </div>
     </div>
 </div>
@@ -84,8 +116,9 @@
     let myName, uid, cardNumbers = [], markedIndices = [12], currentPattern = "any_line";
 
     function joinGame() {
-        myName = document.getElementById('userInput').value.trim();
-        if (myName.length < 2) return alert("Enter name!");
+        const input = document.getElementById('userInput').value.trim();
+        if (input.length < 2) return alert("Please enter your name!");
+        myName = input;
         uid = myName.replace(/\s+/g, '_') + "_" + Date.now();
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('gameUI').style.display = 'flex';
@@ -113,8 +146,10 @@
     }
 
     function setupListeners() {
+        // Listen to Drawn Numbers
         database.ref('drawnNumbers').on('value', (snap) => {
             const drawn = snap.val() || [];
+            updateDrawHistory(drawn);
             cardNumbers.forEach((num, idx) => {
                 if (drawn.includes(num)) {
                     document.getElementById('cell-'+idx).classList.add('marked');
@@ -124,18 +159,39 @@
             sync();
             checkWin();
         });
+
+        // Listen to Pattern Changes
         database.ref('gameStatus/currentPattern').on('value', (snap) => {
             currentPattern = snap.val() || "any_line";
-            document.getElementById('patternInfo').innerText = "Pattern: " + currentPattern.replace('_',' ').toUpperCase();
+            document.getElementById('patternName').innerText = currentPattern.replace('_', ' ').toUpperCase();
         });
-        database.ref('chat').limitToLast(10).on('child_added', (snap) => {
+
+        // Chat
+        database.ref('chat').limitToLast(15).on('child_added', (snap) => {
             const c = snap.val();
             const div = document.createElement('div');
+            div.style.padding = "3px 0";
             div.innerHTML = `<b style="color:var(--primary)">${c.name}:</b> ${c.msg}`;
-            document.getElementById('chatMsgs').appendChild(div);
-            document.getElementById('chatMsgs').scrollTop = document.getElementById('chatMsgs').scrollHeight;
+            const msgs = document.getElementById('chatMsgs');
+            msgs.appendChild(div);
+            msgs.scrollTop = msgs.scrollHeight;
         });
+
+        // Remote Reset
         database.ref('gameStatus/reset').on('value', (snap) => { if(snap.val() === true) location.reload(); });
+    }
+
+    function updateDrawHistory(drawn) {
+        const list = document.getElementById('drawList');
+        list.innerHTML = "";
+        if(drawn.length === 0) { list.innerHTML = "Waiting..."; return; }
+        // Get last 10 numbers and reverse so latest is first
+        [...drawn].reverse().slice(0, 10).forEach(num => {
+            const ball = document.createElement('div');
+            ball.className = 'draw-ball';
+            ball.innerText = num;
+            list.appendChild(ball);
+        });
     }
 
     function checkWin() {
@@ -148,14 +204,14 @@
         const combos = wins[currentPattern] || wins.any_line;
         if (combos.some(c => c.every(i => markedIndices.includes(i)))) {
             database.ref('winners/' + uid).set({ name: myName, time: Date.now() });
-            alert("🎉 BINGO! You won!");
+            alert("🎉 BINGO! Pattern Complete!");
         }
     }
 
     function sync() { if(uid) database.ref('players/'+uid).set({ name: myName, cardNumbers, markedIndices }); }
     function sendChat() {
         const inp = document.getElementById('chatInp');
-        if(inp.value) { database.ref('chat').push({ name: myName, msg: inp.value }); inp.value = ""; }
+        if(inp.value.trim()) { database.ref('chat').push({ name: myName, msg: inp.value }); inp.value = ""; }
     }
 </script>
 </body>
