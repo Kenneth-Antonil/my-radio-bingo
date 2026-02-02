@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Radio Bingo Live | Premium</title>
+    <title>Radio Bingo Live | Mobile Ready</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -11,153 +11,129 @@
     
     <style>
         :root { 
-            --primary: #00f2fe; 
-            --secondary: #7000ff;
-            --bg: #030712; 
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text: #f8fafc;
+            --primary: #00f2fe; --secondary: #7000ff; --bg: #030712; 
+            --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1);
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); 
-            background-image: radial-gradient(circle at top right, #1e1b4b, transparent), 
-                              radial-gradient(circle at bottom left, #0f172a, transparent);
-            color: var(--text); 
-            margin: 0; 
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); 
+            color: #f8fafc; margin: 0; padding-bottom: 20px;
         }
 
-        /* HEADER & BANNER */
-        .header-container { width: 100%; background: #000; position: relative; }
-        .top-banner { width: 100%; height: 90px; display: flex; justify-content: center; align-items: center; }
-        .top-banner img { height: 100%; width: 100%; object-fit: contain; }
+        /* HEADER */
+        .top-banner { width: 100%; height: 70px; background: #000; display: flex; justify-content: center; }
+        .top-banner img { height: 100%; max-width: 100%; object-fit: contain; }
 
         /* WINNER MARQUEE */
-        .marquee-container {
-            background: rgba(112, 0, 255, 0.2); backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--glass-border); padding: 8px 0;
-            display: none; overflow: hidden;
-        }
-        .marquee-content {
-            display: inline-block; white-space: nowrap; animation: marquee 20s linear infinite;
-            font-weight: 600; color: var(--primary); font-size: 0.9rem; text-transform: uppercase;
-        }
+        .marquee-container { background: rgba(112, 0, 255, 0.2); padding: 8px 0; display: none; overflow: hidden; border-bottom: 1px solid var(--glass-border); }
+        .marquee-content { display: inline-block; white-space: nowrap; animation: marquee 20s linear infinite; color: var(--primary); font-weight: 800; }
         @keyframes marquee { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
 
-        /* DISCLAIMER MARQUEE (Under Video) */
-        .disclaimer-marquee {
-            background: rgba(0, 0, 0, 0.6); color: #94a3b8; font-size: 0.75rem;
-            padding: 5px 0; overflow: hidden; white-space: nowrap; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;
-        }
-        .disclaimer-content { display: inline-block; animation: marquee 25s linear infinite; }
+        /* VIDEO AREA */
+        .video-wrapper { width: 100%; max-width: 800px; margin: 0 auto; }
+        .video-box { position: relative; width: 100%; padding-top: 56.25%; background: #000; }
+        .video-box iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
 
-        /* LOGIN SCREEN */
-        #loginScreen { position: fixed; inset: 0; z-index: 9999; background: var(--bg); display: flex; align-items: center; justify-content: center; }
-        .login-card { background: var(--glass); backdrop-filter: blur(20px); padding: 40px; border-radius: 32px; border: 1px solid var(--glass-border); width: 90%; max-width: 400px; text-align: center; }
-        .google-btn { background: #fff; color: #000; border: none; padding: 14px; border-radius: 16px; font-weight: 800; width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; margin-top: 20px; }
-        .login-card input { width: 100%; padding: 16px; margin-top: 20px; border-radius: 16px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: white; text-align: center; }
+        /* DISCLAIMER */
+        .disclaimer-marquee { background: #ef4444; color: white; font-size: 10px; padding: 4px 0; overflow: hidden; white-space: nowrap; font-weight: bold; }
 
-        /* MAIN GRID */
-        #gameUI { display: none; flex: 1; flex-direction: column; }
-        .main-grid { display: grid; grid-template-columns: 1fr 350px; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; width: 100%; }
+        /* GAME LAYOUT - Mobile First */
+        .main-content { display: flex; flex-direction: column; gap: 15px; padding: 10px; max-width: 800px; margin: 0 auto; }
 
-        .video-box { background: #000; border-radius: 24px 24px 0 0; overflow: hidden; border: 1px solid var(--glass-border); aspect-ratio: 16/9; }
-
-        /* DRAWN NUMBERS HISTORY */
-        .history-container {
-            background: var(--glass); border-radius: 16px; padding: 15px; margin-top: 15px; border: 1px solid var(--glass-border);
-        }
-        .history-title { font-size: 0.7rem; color: var(--primary); font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
-        .history-balls { display: flex; flex-wrap: wrap; gap: 6px; }
-        .ball { width: 30px; height: 30px; background: #fff; color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; }
-        .ball.new { background: var(--primary); animation: pop 0.3s ease; }
-        @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+        /* BALLS HISTORY */
+        .history-container { background: var(--glass); border-radius: 12px; padding: 10px; border: 1px solid var(--glass-border); }
+        .ball-list { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px; }
+        .ball { min-width: 32px; height: 32px; background: white; color: black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; }
+        .ball.new { background: var(--primary); transform: scale(1.1); }
 
         /* BINGO CARD */
-        .card-container { background: #fff; padding: 20px; border-radius: 24px; width: 100%; max-width: 360px; margin: 20px auto; }
-        .bingo-header { display: grid; grid-template-columns: repeat(5, 1fr); text-align: center; font-weight: 900; font-size: 1.8rem; color: #1e293b; margin-bottom: 10px; }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-        .cell { aspect-ratio: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #334155; }
-        .cell.marked { background: var(--secondary); color: #fff; border: none; box-shadow: 0 8px 15px rgba(112, 0, 255, 0.3); }
+        .card-container { background: white; border-radius: 20px; padding: 12px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .pattern-label { color: #1e293b; text-align: center; font-weight: 800; font-size: 12px; margin-bottom: 8px; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+        .cell { aspect-ratio: 1; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #334155; border: 1px solid #e2e8f0; }
+        .cell.marked { background: var(--secondary); color: white; border: none; }
 
         /* CHAT */
-        .chat-box { background: var(--glass); border-radius: 24px; border: 1px solid var(--glass-border); display: flex; flex-direction: column; height: 600px; backdrop-filter: blur(10px); }
-        #chatMsgs { flex: 1; overflow-y: auto; padding: 15px; }
-        .msg { display: flex; gap: 10px; margin-bottom: 15px; }
-        .msg img { width: 32px; height: 32px; border-radius: 12px; }
-        .msg-content { background: rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 0 16px 16px 16px; font-size: 0.85rem; }
+        .chat-container { background: var(--glass); border-radius: 20px; border: 1px solid var(--glass-border); height: 300px; display: flex; flex-direction: column; overflow: hidden; }
+        #chatMsgs { flex: 1; overflow-y: auto; padding: 10px; font-size: 13px; }
+        .msg { margin-bottom: 8px; }
+        .msg b { color: var(--primary); }
+        .chat-input-area { display: flex; padding: 10px; gap: 5px; background: rgba(0,0,0,0.3); }
+        .chat-input-area input { flex: 1; background: transparent; border: 1px solid #334155; color: white; padding: 8px; border-radius: 8px; outline: none; }
+        
+        /* POPUP */
+        #winPopup { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 
-        /* CUSTOM POPUP */
-        #winPopup { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; text-align: center; }
-        .popup-content { background: linear-gradient(to bottom, #7000ff, #030712); padding: 50px; border-radius: 40px; border: 2px solid var(--primary); }
+        /* Desktop Adjustments */
+        @media (min-width: 800px) {
+            .main-content { flex-direction: row; align-items: flex-start; }
+            .left-side { flex: 1.5; }
+            .right-side { flex: 1; position: sticky; top: 10px; }
+        }
 
-        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } .chat-box { height: 400px; } }
+        /* Login */
+        #loginScreen { position: fixed; inset: 0; z-index: 999; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .login-card { background: var(--glass); padding: 30px; border-radius: 24px; text-align: center; width: 100%; max-width: 350px; border: 1px solid var(--glass-border); }
     </style>
 </head>
 <body>
 
-<div class="header-container">
-    <div class="top-banner"><img src="https://i.imgur.com/8QQUx1k.jpeg" alt="Radio Bingo"></div>
-    <div class="marquee-container" id="marqueeSection"><div class="marquee-content" id="marqueeText"></div></div>
-</div>
-
-<div id="winPopup">
-    <div class="popup-content">
-        <h1 style="font-size: 4rem; margin: 0;">BINGO!</h1>
-        <p style="font-size: 1.2rem; color: var(--primary);">Winner ka na! Wait for admin's call.</p>
-        <button onclick="document.getElementById('winPopup').style.display='none'" class="google-btn" style="width: auto; padding: 10px 40px;">AWESOME!</button>
-    </div>
-</div>
-
 <div id="loginScreen">
     <div class="login-card">
-        <h1>Radio Bingo Live</h1>
-        <button id="googleBtn" class="google-btn" onclick="loginGoogle()">Sign in with Google</button>
-        <div id="gcashStep" style="display:none;">
-            <p>Welcome, <span id="userName"></span></p>
-            <input type="tel" id="gcashInput" placeholder="GCash Number" maxlength="11">
-            <button onclick="joinGame()" class="google-btn" style="background:var(--primary);">Enter Hall</button>
+        <h2 style="margin-top:0">Radio Bingo</h2>
+        <button onclick="loginGoogle()" style="width:100%; padding:15px; border-radius:12px; font-weight:800; cursor:pointer;">Sign in with Google</button>
+        <div id="gcashStep" style="display:none; margin-top:20px;">
+            <input type="tel" id="gcashInput" placeholder="GCash Number" style="width:100%; padding:12px; border-radius:8px; margin-bottom:10px;">
+            <button onclick="joinGame()" style="width:100%; padding:12px; background:var(--primary); border-radius:8px; font-weight:800;">JOIN GAME</button>
         </div>
     </div>
 </div>
 
-<div id="gameUI">
-    <div class="main-grid">
-        <div class="left-col">
-            <div class="video-box">
-                <iframe src="https://www.youtube.com/embed/36YnV9STBqc?autoplay=1" style="width:100%; height:100%; border:none;" allow="autoplay; fullscreen"></iframe>
-            </div>
-            <div class="disclaimer-marquee">
-                <div class="disclaimer-content">NOTICE: THIS IS NOT A GAMBLING SITE • WE DO NOT ASK FOR ANY KIND OF PAYMENT • EVERYTHING IS FREE FOR ENTERTAINMENT PURPOSES ONLY • DO NOT GIVE MONEY TO ANYONE •</div>
-            </div>
+<div class="top-banner"><img src="https://i.imgur.com/8QQUx1k.jpeg"></div>
+<div class="marquee-container" id="marqueeSection"><div class="marquee-content" id="marqueeText"></div></div>
 
+<div id="gameUI" style="display:none;">
+    <div class="video-wrapper">
+        <div class="video-box">
+            <iframe src="https://www.youtube.com/embed/36YnV9STBqc?autoplay=1" allowfullscreen></iframe>
+        </div>
+        <div class="disclaimer-marquee">
+            <div style="display:inline-block; animation: marquee 30s linear infinite;">
+                NOTICE: THIS IS NOT A GAMBLING SITE • ALL GAMES ARE FREE • WE NEVER ASK FOR PAYMENTS • ENTERTAINMENT ONLY •
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="left-side" style="width: 100%;">
             <div class="history-container">
-                <div class="history-title">Balls History</div>
-                <div class="history-balls" id="ballHistory"></div>
+                <div style="font-size:10px; font-weight:800; margin-bottom:5px; color:var(--primary)">BALL HISTORY</div>
+                <div class="ball-list" id="ballHistory"></div>
             </div>
 
             <div class="card-container">
-                <div style="text-align: center; font-weight: 800; color: #1e293b; margin-bottom: 5px;" id="pNameDisp">PATTERN: ANY LINE</div>
-                <div class="bingo-header"><span>B</span><span>I</span><span>N</span><span>G</span><span>O</span></div>
+                <div class="pattern-label" id="pNameDisp">PATTERN: ANY LINE</div>
                 <div class="grid" id="bingoGrid"></div>
             </div>
         </div>
 
-        <div class="right-col">
-            <div class="chat-box">
+        <div class="right-side" style="width: 100%;">
+            <div class="chat-container">
                 <div id="chatMsgs"></div>
-                <div style="padding: 10px; display: flex; gap: 5px;">
-                    <input type="text" id="chatInp" style="flex:1; background:rgba(0,0,0,0.5); border:1px solid #334155; color:white; border-radius:10px; padding:10px;" placeholder="Message...">
-                    <button onclick="sendChat()" style="background:var(--primary); border:none; border-radius:10px; padding:10px 20px; font-weight:800; cursor:pointer;">Send</button>
+                <div class="chat-input-area">
+                    <input type="text" id="chatInp" placeholder="Say hello...">
+                    <button onclick="sendChat()" style="background:var(--primary); border:none; border-radius:8px; padding:0 15px; font-weight:800;">Send</button>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+<div id="winPopup">
+    <h1 style="color:var(--primary); font-size:3rem;">BINGO!</h1>
+    <p>Wait for Admin to verify your card.</p>
+    <button onclick="document.getElementById('winPopup').style.display='none'" style="padding:10px 30px; border-radius:10px;">CLOSE</button>
 </div>
 
 <script>
@@ -174,33 +150,23 @@
     const database = firebase.database();
     const auth = firebase.auth();
 
-    let currentUser = null, myGcash, cardNumbers = [], markedIndices = [12], isWinner = false;
-
-    function syncToDashboard() {
-        if(currentUser) {
-            database.ref('players/' + currentUser.uid).set({
-                name: currentUser.displayName, photo: currentUser.photoURL,
-                cardNumbers, markedIndices, online: true, gcash: myGcash || ""
-            });
-        }
-    }
+    let currentUser = null, myGcash = "", cardNumbers = [], markedIndices = [12], isWinner = false;
 
     function loginGoogle() {
-        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then((res) => {
+        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(res => {
             currentUser = res.user;
-            document.getElementById('userName').innerText = currentUser.displayName;
-            document.getElementById('googleBtn').style.display = 'none';
             document.getElementById('gcashStep').style.display = 'block';
+            document.querySelector('#loginScreen button').style.display = 'none';
         });
     }
 
     function joinGame() {
-        myGcash = document.getElementById('gcashInput').value.trim();
-        if(myGcash.length < 11) return alert("GCash required!");
+        myGcash = document.getElementById('gcashInput').value;
+        if(myGcash.length < 11) return alert("Enter GCash");
         document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('gameUI').style.display = 'flex';
+        document.getElementById('gameUI').style.display = 'block';
         initCard(); setupListeners();
-        database.ref('players/' + currentUser.uid).onDisconnect().remove();
+        database.ref('players/'+currentUser.uid).onDisconnect().remove();
     }
 
     function initCard() {
@@ -217,71 +183,77 @@
             cell.innerText = num === "FREE" ? "FR" : num;
             grid.appendChild(cell);
         });
-        syncToDashboard();
+        sync();
+    }
+
+    function sync() {
+        if(currentUser) {
+            database.ref('players/' + currentUser.uid).set({
+                name: currentUser.displayName, gcash: myGcash,
+                cardNumbers, markedIndices
+            });
+        }
     }
 
     function setupListeners() {
-        // Pattern & Winners
-        database.ref('gameStatus/pattern').on('value', snap => { if(snap.val()) document.getElementById('pNameDisp').innerText = "PATTERN: " + snap.val().toUpperCase(); });
-        database.ref('winners').on('value', s => {
-            const w = s.val();
-            if(w) {
-                document.getElementById('marqueeText').innerText = "WINNERS: " + Object.values(w).map(x => x.name).join(" • ");
-                document.getElementById('marqueeSection').style.display = 'block';
-            } else { document.getElementById('marqueeSection').style.display = 'none'; }
-        });
-
-        // Drawn Numbers History
+        database.ref('gameStatus/pattern').on('value', s => { if(s.val()) document.getElementById('pNameDisp').innerText = "PATTERN: "+s.val().toUpperCase(); });
+        
         database.ref('drawnNumbers').on('value', s => {
             const drawn = s.val() || [];
             const history = document.getElementById('ballHistory');
             history.innerHTML = "";
             drawn.slice().reverse().forEach((n, i) => {
-                const b = document.createElement('div');
-                b.className = 'ball' + (i === 0 ? ' new' : '');
-                b.innerText = n;
-                history.appendChild(b);
+                let ball = document.createElement('div');
+                ball.className = 'ball' + (i===0?' new':'');
+                ball.innerText = n;
+                history.appendChild(ball);
             });
 
             let updated = false;
             cardNumbers.forEach((num, idx) => {
-                if(drawn.includes(num)) {
-                    const el = document.getElementById('cell-'+idx);
-                    if(el && !el.classList.contains('marked')) {
-                        el.classList.add('marked');
-                        markedIndices.push(idx); updated = true;
-                    }
+                if(drawn.includes(num) && !markedIndices.includes(idx)) {
+                    document.getElementById('cell-'+idx).classList.add('marked');
+                    markedIndices.push(idx); updated = true;
                 }
             });
-            if(updated) syncToDashboard();
+            if(updated) sync();
             if(!isWinner) checkWin();
         });
 
-        // Chat & Reset
-        database.ref('chat').limitToLast(15).on('child_added', s => {
-            const c = s.val();
-            const div = document.createElement('div');
-            div.className = 'msg';
-            div.innerHTML = `<img src="${c.photo}"><div class="msg-content"><b>${c.name}</b><br>${c.msg}</div>`;
-            const box = document.getElementById('chatMsgs'); box.appendChild(div); box.scrollTop = box.scrollHeight;
+        database.ref('winners').on('value', s => {
+            const w = s.val();
+            if(w) {
+                document.getElementById('marqueeSection').style.display = 'block';
+                document.getElementById('marqueeText').innerText = "WINNERS: " + Object.values(w).map(x=>x.name).join(" • ");
+            }
         });
-        database.ref('gameStatus/reset').on('value', s => { if(s.val() === true) location.reload(); });
+
+        database.ref('chat').limitToLast(10).on('child_added', s => {
+            const c = s.val();
+            const msg = document.createElement('div');
+            msg.className = 'msg';
+            msg.innerHTML = `<b>${c.name}:</b> ${c.msg}`;
+            const box = document.getElementById('chatMsgs');
+            box.appendChild(msg); box.scrollTop = box.scrollHeight;
+        });
+
+        database.ref('gameStatus/reset').on('value', s => { if(s.val()===true) location.reload(); });
     }
 
     function checkWin() {
         const wins = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
         if(wins.some(c => c.every(i => markedIndices.includes(i)))) {
             isWinner = true;
-            database.ref('winners/'+currentUser.uid).set({name: currentUser.displayName, gcash: myGcash});
+            database.ref('winners/'+currentUser.uid).set({name: currentUser.displayName});
             document.getElementById('winPopup').style.display = 'flex';
-            syncToDashboard();
+            sync();
         }
     }
 
     function sendChat() {
         const inp = document.getElementById('chatInp');
-        if(inp.value.trim() && currentUser) {
-            database.ref('chat').push({name: currentUser.displayName, photo: currentUser.photoURL, msg: inp.value});
+        if(inp.value.trim()) {
+            database.ref('chat').push({name: currentUser.displayName, msg: inp.value});
             inp.value = "";
         }
     }
