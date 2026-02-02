@@ -2,66 +2,65 @@
 <html lang="tl">
 <head>
     <meta charset="UTF-8">
-    <title>Bingo Master Dashboard | Live Monitor</title>
+    <title>Bingo Master | Admin Control</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --bg: #0f172a; --panel: #1e293b; --neon: #00f2fe; --win: #00ff88; --quiz: #3b82f6; }
-        body { font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; margin:0; overflow: hidden; }
+        :root { --bg: #020617; --panel: #0f172a; --neon: #3b82f6; --win: #10b981; }
+        body { font-family: sans-serif; background: var(--bg); color: white; margin:0; display: flex; height: 100vh; }
         
-        .host-controls { width: 320px; background: var(--panel); padding: 15px; border-right: 2px solid #334155; display: flex; flex-direction: column; overflow-y: auto; }
-        .section-title { font-size: 10px; font-weight: 800; color: var(--neon); letter-spacing: 1px; margin: 15px 0 8px 0; text-transform: uppercase; }
+        .sidebar { width: 350px; background: var(--panel); border-right: 1px solid #1e293b; padding: 20px; display: flex; flex-direction: column; }
+        .main-view { flex: 1; padding: 25px; overflow-y: auto; }
+
+        .draw-box { background: #000; padding: 30px; border-radius: 20px; text-align: center; border: 2px solid var(--neon); margin-bottom: 20px; }
+        .num-display { font-size: 80px; font-weight: 900; color: var(--neon); display: block; }
         
-        .raffle-box { background: #000; padding: 20px; border-radius: 15px; text-align: center; border: 2px solid var(--neon); margin-bottom:10px; }
-        .last-number { font-size: 4rem; color: var(--neon); font-weight: 800; display: block; }
-        
-        .monitor-area { flex: 1; padding: 20px; overflow-y: auto; background: #020617; }
+        .pattern-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+        .p-btn { background: #1e293b; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 11px; }
+        .p-btn.active { background: var(--neon); color: black; font-weight: 800; }
+
         .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
-        
-        .m-card { background: #111827; padding: 12px; border-radius: 12px; border: 1px solid #334155; position: relative; }
-        .m-card.winner-glow { border: 2px solid var(--win); box-shadow: 0 0 20px var(--win); background: #064e3b !important; }
-        .m-card.is-offline { opacity: 0.5; grayscale: 1; }
+        .m-card { background: #0f172a; padding: 12px; border-radius: 12px; border: 1px solid #334155; }
+        .m-card.winner { border: 2px solid var(--win); box-shadow: 0 0 15px var(--win); }
 
-        .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 8px; }
-        .m-cell { aspect-ratio: 1; background: #334155; font-size: 9px; display: flex; align-items: center; justify-content: center; border-radius: 3px; color: rgba(255,255,255,0.4); }
-        .m-cell.active { background: var(--neon) !important; color: #000 !important; font-weight: 900; box-shadow: 0 0 5px var(--neon); }
+        .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 10px; }
+        .m-cell { aspect-ratio: 1; background: #1e293b; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #475569; }
+        .m-cell.hit { background: var(--neon); color: black; font-weight: 800; }
 
-        button { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; margin-top: 5px; }
-        .btn-draw { background: var(--neon); color: #000; font-size: 16px; }
-        .btn-reset { background: #450a0a; color: #ff4757; font-size: 11px; margin-top: 20px; }
-        
-        .status-tag { font-size: 8px; padding: 2px 6px; border-radius: 4px; float: right; }
-        .tag-online { background: var(--win); color: #000; }
-        .tag-offline { background: #444; color: #aaa; }
+        button.draw-btn { background: var(--neon); color: white; padding: 15px; border-radius: 12px; font-weight: 800; font-size: 18px; border: none; cursor: pointer; width: 100%; }
+        button.reset-btn { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; margin-top: auto; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="host-controls">
-    <div class="section-title">GAME CONTROL</div>
-    <div class="raffle-box">
-        <span class="last-number" id="currentNum">--</span>
-        <button class="btn-draw" onclick="drawNumber()">DRAW BALL</button>
+<div class="sidebar">
+    <h2 style="margin-top:0">Bingo Master</h2>
+    
+    <div class="draw-box">
+        <span class="num-display" id="currentNum">--</span>
+        <button class="draw-btn" onclick="drawNumber()">DRAW BALL</button>
     </div>
 
-    <div class="section-title">PATTERN</div>
-    <select id="pSelect" style="width:100%; padding:10px; border-radius:8px;" onchange="db.ref('gameStatus/pattern').set(this.value)">
-        <option value="any line">ANY LINE</option>
-        <option value="blockout">BLOCKOUT</option>
-    </select>
-
-    <div class="section-title">LIVE MONITORING</div>
-    <div id="stats" style="font-size:12px; color:var(--text-dim)">
-        Online: <span id="onCount">0</span> | Cards: <span id="cardCount">0</span>
+    <label style="font-size:10px; font-weight:800; color:var(--neon)">SET GAME PATTERN</label>
+    <div class="pattern-grid" id="patternGrid">
+        <button class="p-btn" onclick="setPattern('ANY LINE')">ANY LINE</button>
+        <button class="p-btn" onclick="setPattern('LETTER X')">LETTER X</button>
+        <button class="p-btn" onclick="setPattern('OUTER BOX')">OUTER BOX</button>
+        <button class="p-btn" onclick="setPattern('BLOCKOUT')">BLOCKOUT</button>
     </div>
 
-    <button class="btn-reset" onclick="resetGame()">RESET FULL ROUND</button>
+    <div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; font-size:12px">
+        Players Online: <b id="onCount">0</b><br>
+        Cards Active: <b id="cardCount">0</b>
+    </div>
+
+    <button class="reset-btn" onclick="resetGame()">RESET ROUND</button>
 </div>
 
-<div class="monitor-area">
-    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-        <h2 style="margin:0">LIVE PLAYER CARDS</h2>
-        <div id="drawnList" style="font-size:12px; color:var(--neon); max-width:50%; text-align:right"></div>
+<div class="main-view">
+    <div style="margin-bottom:20px">
+        <h3 id="patternTitle">PATTERN: ANY LINE</h3>
+        <div id="history" style="font-size:12px; color:#64748b; word-wrap: break-word;">History: </div>
     </div>
     <div class="players-grid" id="pGrid"></div>
 </div>
@@ -79,58 +78,44 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let drawn = [], allPlayers = {}, activePresence = {};
+    let drawn = [], players = {}, presence = {};
 
-    // 1. Monitor Presence
-    db.ref('presence').on('value', s => { 
-        activePresence = s.val() || {}; 
-        document.getElementById('onCount').innerText = s.numChildren();
-        refreshUI(); 
-    });
-
-    // 2. Monitor Drawn Numbers
+    db.ref('presence').on('value', s => { presence = s.val() || {}; document.getElementById('onCount').innerText = s.numChildren(); refreshUI(); });
+    db.ref('players').on('value', s => { players = s.val() || {}; document.getElementById('cardCount').innerText = s.numChildren(); refreshUI(); });
     db.ref('drawnNumbers').on('value', s => {
         drawn = s.val() || [];
         document.getElementById('currentNum').innerText = drawn.length ? drawn[drawn.length-1] : "--";
-        document.getElementById('drawnList').innerText = "Drawn: " + drawn.join(", ");
+        document.getElementById('history').innerText = "History: " + drawn.join(", ");
         refreshUI();
     });
-
-    // 3. Monitor Players (Bingo Cards & Marks)
-    db.ref('players').on('value', s => {
-        allPlayers = s.val() || {};
-        document.getElementById('cardCount').innerText = s.numChildren();
-        refreshUI();
+    db.ref('gameStatus/pattern').on('value', s => {
+        document.getElementById('patternTitle').innerText = "PATTERN: " + (s.val() || "ANY LINE");
     });
 
     function refreshUI() {
         const grid = document.getElementById('pGrid'); grid.innerHTML = '';
-        for(let id in allPlayers) {
-            const p = allPlayers[id];
-            if(!p.card) continue;
-
-            const isOnline = activePresence[id] ? true : false;
+        for(let id in players) {
+            const p = players[id];
             const marks = p.marks || [12];
-            const isWinner = p.isWin ? ' winner-glow' : '';
-
-            const cardDiv = document.createElement('div');
-            cardDiv.className = `m-card ${isWinner} ${isOnline ? '' : 'is-offline'}`;
+            const isOnline = presence[id] ? true : false;
             
-            let cellsHtml = '';
-            p.card.forEach((num, idx) => {
-                const active = marks.includes(idx) ? ' active' : '';
-                cellsHtml += `<div class="m-cell${active}">${idx===12?'FR':num}</div>`;
+            const card = document.createElement('div');
+            card.className = `m-card ${p.isWin ? 'winner' : ''} ${!isOnline ? 'offline' : ''}`;
+            
+            let cells = '';
+            p.card.forEach((n, i) => {
+                const hit = marks.includes(i) ? ' hit' : '';
+                cells += `<div class="m-cell${hit}">${i===12?'FR':n}</div>`;
             });
 
-            cardDiv.innerHTML = `
-                <span class="status-tag ${isOnline ? 'tag-online' : 'tag-offline'}">${isOnline ? 'LIVE' : 'OFF'}</span>
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
-                    <img src="${p.photo}" style="width:20px; height:20px; border-radius:50%">
-                    <span style="font-size:11px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100px">${p.name}</span>
+            card.innerHTML = `
+                <div style="font-size:10px; display:flex; align-items:center; gap:5px">
+                    <img src="${p.photo}" style="width:18px; border-radius:50%">
+                    <b>${p.name.split(" ")[0]}</b>
                 </div>
-                <div class="mini-grid">${cellsHtml}</div>
+                <div class="mini-grid">${cells}</div>
             `;
-            grid.appendChild(cardDiv);
+            grid.appendChild(card);
         }
     }
 
@@ -140,12 +125,14 @@
         drawn.push(n); db.ref('drawnNumbers').set(drawn);
     }
 
+    function setPattern(p) { db.ref('gameStatus/pattern').set(p); }
+
     function resetGame() {
-        if(confirm("Warning: This will delete ALL cards and reset the game!")) {
+        if(confirm("New Game? All cards will be deleted.")) {
             db.ref('drawnNumbers').remove();
-            db.ref('players').remove(); // Eto yung magbubura ng cards ng lahat
+            db.ref('players').remove();
             db.ref('gameStatus/reset').set(true);
-            setTimeout(() => db.ref('gameStatus/reset').set(false), 2000);
+            setTimeout(() => db.ref('gameStatus/reset').set(false), 1500);
         }
     }
 </script>
