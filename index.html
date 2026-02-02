@@ -99,17 +99,9 @@
     let markedIndices = [12];
     let uid = "";
 
-    // IMPORTANT: Check muna kung naka-TRUE ang reset bago hayaang pumasok ang player
-    // Kung TRUE, i-set natin sa FALSE para matigil ang loop sa lahat.
-    database.ref('gameStatus/reset').once('value', (snap) => {
-        if(snap.val() === true) {
-            database.ref('gameStatus/reset').set(false);
-        }
-    });
-
     function joinGame() {
         const input = document.getElementById('userInput').value.trim();
-        if (input.length < 2) return alert("Enter your name!");
+        if (input.length < 2) return alert("Please enter your name!");
         
         myName = input;
         uid = myName.replace(/\s+/g, '_') + "_" + Date.now();
@@ -152,17 +144,21 @@
                         el.classList.add('marked');
                         if (!markedIndices.includes(idx)) {
                             markedIndices.push(idx);
-                            sync();
                         }
                     }
                 }
             });
+            sync(); // Isang beses na sync lang pagkatapos i-check lahat
         });
     }
 
     function sync() {
         if(!uid) return;
-        database.ref('players/' + uid).set({ name: myName, cardNumbers, markedIndices });
+        database.ref('players/' + uid).update({ 
+            name: myName, 
+            cardNumbers: cardNumbers, 
+            markedIndices: markedIndices 
+        });
     }
 
     function claimBingo() {
@@ -188,10 +184,12 @@
         inp.value = "";
     }
 
-    // LISTENER FOR REMOTE RESET (Pang-refresh lang, hindi loop)
+    // --- REMOVED THE AUTO-REFRESH TO STOP THE LOOP ---
+    // Sa halip na mag-refresh, magpapakita na lang tayo ng alert kung kailangan na nilang i-refresh manually
     database.ref('gameStatus/reset').on('value', (snap) => {
         if(snap.val() === true) {
-            location.reload(); 
+            console.log("Game reset signal received.");
+            // Optional: Maaari kang mag-alert dito o hayaan na lang na ikaw ang magsabi sa live.
         }
     });
 </script>
