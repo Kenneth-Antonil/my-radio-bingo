@@ -1,46 +1,31 @@
 <!DOCTYPE html>
-<html lang="tl">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>DJ MASTER DASHBOARD v4.0</title>
+    <title>DJ Master Dashboard</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --bg: #0f172a; --panel: #1e293b; --neon: #00f2fe; --danger: #ff4757; }
-        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 15px 30px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .controls { display: flex; gap: 10px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; }
-        .btn-reset { background: #ffa502; }
-        .btn-clear { background: var(--danger); }
-        
-        .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
-        .monitor-card { background: var(--panel); padding: 12px; border-radius: 15px; border: 2px solid transparent; transition: 0.3s; }
-        .monitor-card.near-bingo { border-color: #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.4); }
-        
-        .mini-bingo { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 10px; }
-        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; border-radius: 3px; }
-        .m-cell.active { background: var(--neon); color: black; font-weight: bold; }
-        .player-name { font-weight: bold; color: var(--neon); display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        
-        #winAlert { position: fixed; top: 20px; right: 20px; z-index: 999; }
-        .alert-box { background: var(--danger); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); animation: shake 0.5s; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; }
+        .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .monitor-card { background: #1e293b; padding: 10px; border-radius: 10px; border: 2px solid #334155; }
+        .monitor-card.near-bingo { border-color: #f1c40f; box-shadow: 0 0 10px #f1c40f; }
+        .mini-bingo { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 5px; }
+        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.7rem; display: flex; 
+                 align-items: center; justify-content: center; border-radius: 2px; }
+        .m-cell.active { background: #00f2fe; color: black; font-weight: bold; }
+        .player-name { font-size: 0.8rem; font-weight: bold; color: #00f2fe; display: block; margin-bottom: 5px; }
+        .controls { margin-bottom: 20px; background: #1e293b; padding: 15px; border-radius: 10px; }
+        button { padding: 10px; cursor: pointer; font-weight: bold; border: none; border-radius: 5px; margin-right: 10px; }
     </style>
 </head>
 <body>
-
-    <div id="winAlert"></div>
-
-    <div class="header">
-        <div>
-            <h1 style="margin:0; font-size: 1.5rem;">🎙️ DJ MASTER DASHBOARD</h1>
-            <small>Live Players: <span id="pCount">0</span></small>
-        </div>
-        <div class="controls">
-            <button class="btn btn-reset" onclick="resetGame()">RESET ROUND</button>
-            <button class="btn btn-clear" onclick="clearPlayers()">CLEAR LIST</button>
-        </div>
+    <h1>🎙️ DJ MONITOR</h1>
+    
+    <div class="controls">
+        <button style="background: #ffa502;" onclick="resetGame()">RESET CARDS</button>
+        <button style="background: #ff4757;" onclick="clearList()">CLEAR LIST</button>
+        <span>Players: <b id="pCount">0</b></span>
     </div>
 
     <div class="players-grid" id="mainMonitor"></div>
@@ -56,20 +41,8 @@
   appId: "1:965903993397:web:f6646fa05225f147eebf7c",
   measurementId: "G-RR2EG93C43"
 };
-
-    // Listen to Players
     database.ref('players').on('value', (snap) => {
-        const data = snap.val();
-        renderDashboard(data);
-    });
-
-    // Listen to Bingo Calls
-    database.ref('winners').on('child_added', (snap) => {
-        const winner = snap.val();
-        showWinAlert(winner.name);
-    });
-
-    function renderDashboard(players) {
+        const players = snap.val();
         const grid = document.getElementById('mainMonitor');
         grid.innerHTML = '';
         if(!players) { document.getElementById('pCount').innerText = "0"; return; }
@@ -78,50 +51,41 @@
         for (let id in players) {
             count++;
             const p = players[id];
-            const isNear = checkNearBingo(p.markedIndices);
+            const isNear = checkNear(p.markedIndices);
             const card = document.createElement('div');
-            card.className = `monitor-card ${isNear ? 'near-bingo' : ''}`;
+            card.className = 'monitor-card' + (isNear ? ' near-bingo' : '');
             
             let cells = '';
-            for(let i=0; i<25; i++) {
-                const isActive = p.markedIndices && p.markedIndices.includes(i) ? 'active' : '';
-                const num = p.cardNumbers ? (i === 12 ? 'FR' : p.cardNumbers[i]) : '';
-                cells += `<div class="m-cell ${isActive}">${num}</div>`;
+            for(let i=0; i<25; i++){
+                let active = p.markedIndices && p.markedIndices.includes(i) ? ' active' : '';
+                let num = p.cardNumbers ? p.cardNumbers[i] : '?';
+                cells += `<div class="m-cell${active}">${num === 'FREE' ? 'FR' : num}</div>`;
             }
-
             card.innerHTML = `<span class="player-name">${p.name}</span><div class="mini-bingo">${cells}</div>`;
             grid.appendChild(card);
         }
         document.getElementById('pCount').innerText = count;
-    }
+    });
 
-    function checkNearBingo(marked) {
+    function checkNear(marked) {
         if(!marked || marked.length < 4) return false;
         const wins = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
-        for (let combo of wins) {
-            let matches = combo.filter(idx => marked.includes(idx)).length;
+        for(let combo of wins) {
+            let matches = combo.filter(i => marked.includes(i)).length;
             if(matches === 4) return true;
         }
         return false;
     }
 
-    function showWinAlert(name) {
-        const box = document.createElement('div');
-        box.className = 'alert-box';
-        box.innerHTML = `<strong>🚨 BINGO!</strong><br>${name} is shouting Bingo!`;
-        document.getElementById('winAlert').appendChild(box);
-        setTimeout(() => box.remove(), 8000);
-    }
-
     function resetGame() {
-        if(confirm("Simulan ang bagong round? Lahat ng listener ay magre-refresh.")){
+        if(confirm("Refresh all listener cards?")) {
             database.ref('gameStatus/reset').set(true);
-            setTimeout(() => database.ref('gameStatus/reset').set(false), 2000);
+            setTimeout(() => database.ref('gameStatus/reset').set(false), 1000);
         }
     }
 
-    function clearPlayers() {
-        if(confirm("Buburahin lahat ng records sa listahan?")){
+    function clearList() {
+        if(confirm("Clear players from dashboard?")) {
             database.ref('players').remove();
             database.ref('winners').remove();
         }
