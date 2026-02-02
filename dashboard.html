@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Bingo | Admin Dashboard</title>
+    <title>Radio Bingo | Admin Master Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -11,60 +11,68 @@
     <style>
         :root { --bg: #0f172a; --surface: #1e293b; --accent: #3b82f6; --text: #f8fafc; --success: #10b981; --danger: #ef4444; --gold: #fbbf24; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .grid-admin { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .card { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
-        h2 { margin-top: 0; font-size: 18px; display: flex; align-items: center; gap: 10px; }
         
-        /* NOTIFICATION FORM */
-        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; font-family: inherit; }
-        button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        button:active { transform: scale(0.98); }
+        .admin-header { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1400px; margin: 0 auto 20px; }
+        .card { background: var(--surface); padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        
+        /* DRAW CONTROLS */
+        .draw-box { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .current-ball { font-size: 64px; font-weight: 900; color: var(--gold); margin: 10px 0; text-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
+        .btn-draw { background: var(--success); color: white; font-size: 18px; padding: 15px 40px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; width: 100%; transition: 0.2s; }
+        .btn-draw:hover { filter: brightness(1.1); }
+        .btn-reset { background: transparent; color: var(--danger); border: 1px solid var(--danger); margin-top: 10px; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 12px; width: 100%; }
 
-        /* PLAYER TABLE */
+        /* NOTIF & TABLE STYLES */
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; font-size: 12px; opacity: 0.6; padding: 10px; border-bottom: 1px solid #334155; }
-        td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+        th { text-align: left; font-size: 11px; opacity: 0.6; padding: 10px; border-bottom: 1px solid #334155; }
+        td { padding: 15px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
         
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .online { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        .offline { background: #64748b; }
+        .status-badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
+        .online { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid var(--success); }
+        .offline { background: rgba(100, 116, 139, 0.1); color: #94a3b8; border: 1px solid #475569; }
         
-        .bingo-mini-card { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; background: #0f172a; padding: 4px; border-radius: 4px; width: 100px; }
-        .mini-cell { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 8px; background: #1e293b; border-radius: 2px; }
-        .mini-cell.hit { background: var(--accent); color: white; }
-
-        @media (max-width: 768px) { .grid-admin { grid-template-columns: 1fr; } }
+        .card-list { display: flex; flex-wrap: wrap; gap: 4px; max-width: 350px; }
+        .num-tag { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #0f172a; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
+        .num-tag.hit { background: var(--success); color: white; border-color: var(--success); }
+        .num-tag.free { background: var(--gold); color: #000; }
     </style>
 </head>
 <body>
 
-    <h1 style="text-align:center; font-weight:900;">ADMIN <span style="color:var(--accent)">PANEL</span></h1>
+    <h1 style="text-align:center; font-weight:900; margin-bottom:20px;">MASTER <span style="color:var(--accent)">DASHBOARD</span></h1>
 
-    <div class="grid-admin">
-        <div class="card">
-            <h2><i data-lucide="bell-ring"></i> Send Global Announcement</h2>
-            <p style="font-size: 12px; opacity: 0.7;">Lalabas ito sa Notification tab ng lahat ng players.</p>
-            <input type="text" id="notifTitle" placeholder="Announcement Title (e.g. Game Start!)">
-            <textarea id="notifMsg" rows="4" placeholder="Message content..."></textarea>
-            <button onclick="sendGlobalNotif()">Broadcast Notification</button>
+    <div class="admin-header">
+        <div class="card draw-box">
+            <h2 style="margin:0; font-size:14px; opacity:0.7;">LIVE DRAW CONTROL</h2>
+            <div class="current-ball" id="currentBallDisplay">--</div>
+            <button class="btn-draw" onclick="drawNumber()">DRAW NEXT BALL</button>
+            <button class="btn-reset" onclick="resetGame()">RESET GAME</button>
+            <p id="drawCount" style="font-size:11px; margin-top:10px; opacity:0.5;">Balls Drawn: 0/75</p>
         </div>
 
         <div class="card">
-            <h2><i data-lucide="users"></i> Live Player Monitor</h2>
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Player</th>
-                            <th>Status</th>
-                            <th>Current Card</th>
-                            <th>Points</th>
-                        </tr>
-                    </thead>
-                    <tbody id="playerTableBody">
-                        </tbody>
-                </table>
-            </div>
+            <h2><i data-lucide="bell" style="width:18px"></i> Announcement</h2>
+            <input type="text" id="notifTitle" placeholder="Announcement Title">
+            <textarea id="notifMsg" rows="2" placeholder="Message content..."></textarea>
+            <button onclick="sendGlobalNotif()" style="background:var(--accent); color:white; border:none; padding:10px; border-radius:8px; width:100%; font-weight:700;">Broadcast</button>
+        </div>
+    </div>
+
+    <div class="card" style="max-width:1400px; margin: 0 auto;">
+        <h2><i data-lucide="users" style="width:18px"></i> Live Player Monitor</h2>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Status</th>
+                        <th>Bingo Card (Live Tracking)</th>
+                        <th>Points</th>
+                    </tr>
+                </thead>
+                <tbody id="playerTableBody"></tbody>
+            </table>
         </div>
     </div>
 
@@ -81,67 +89,91 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 1. SEND GLOBAL NOTIFICATION
+    let drawnNumbers = [];
+
+    // --- DRAW LOGIC ---
+    db.ref('drawnNumbers').on('value', s => {
+        drawnNumbers = s.val() || [];
+        document.getElementById('currentBallDisplay').innerText = drawnNumbers.length > 0 ? drawnNumbers[drawnNumbers.length-1] : "--";
+        document.getElementById('drawCount').innerText = `Balls Drawn: ${drawnNumbers.length}/75`;
+        refreshTable();
+    });
+
+    function drawNumber() {
+        if (drawnNumbers.length >= 75) return alert("Tapos na ang lahat ng numero!");
+        let n;
+        do {
+            n = Math.floor(Math.random() * 75) + 1;
+        } while (drawnNumbers.includes(n));
+        
+        drawnNumbers.push(n);
+        db.ref('drawnNumbers').set(drawnNumbers);
+    }
+
+    function resetGame() {
+        if(confirm("Sigurado ka? Buburahin nito lahat ng nabunot na bola!")) {
+            db.ref('drawnNumbers').set([]);
+            db.ref('lastWinner').set(null);
+        }
+    }
+
+    // --- NOTIFICATION ---
     function sendGlobalNotif() {
         const title = document.getElementById('notifTitle').value;
         const message = document.getElementById('notifMsg').value;
-
-        if(!title || !message) return alert("Paki-fill up lahat ng fields!");
-
+        if(!title || !message) return alert("Fill up all fields!");
         db.ref('announcements').push({
-            title: title,
-            message: message,
+            title: title, message: message,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         }).then(() => {
-            alert("Notification Sent!");
+            alert("Broadcasted!");
             document.getElementById('notifTitle').value = "";
             document.getElementById('notifMsg').value = "";
         });
     }
 
-    // 2. MONITOR PLAYERS
-    let drawnNumbers = [];
-    db.ref('drawnNumbers').on('value', s => { drawnNumbers = s.val() || []; });
+    // --- MONITORING ---
+    function refreshTable() {
+        db.ref('users').once('value', snapshot => {
+            const tableBody = document.getElementById('playerTableBody');
+            tableBody.innerHTML = "";
 
-    db.ref('users').on('value', snapshot => {
-        const tableBody = document.getElementById('playerTableBody');
-        tableBody.innerHTML = "";
+            snapshot.forEach(child => {
+                const user = child.val();
+                let cardHtml = '<div class="card-list">';
+                if(user.currentCard) {
+                    user.currentCard.forEach(num => {
+                        const isHit = drawnNumbers.includes(num);
+                        const isFree = num === "FREE";
+                        cardHtml += `<div class="num-tag ${isHit ? 'hit' : ''} ${isFree ? 'free' : ''}">${isFree ? '★' : num}</div>`;
+                    });
+                } else { cardHtml += '<span style="opacity:0.5">No active card</span>'; }
+                cardHtml += '</div>';
 
-        snapshot.forEach(child => {
-            const user = child.val();
-            const isOnline = user.isOnline || false; // Make sure you update this in your main site
-            
-            // Create mini card display
-            let cardHtml = '<div class="bingo-mini-card">';
-            if(user.currentCard) {
-                user.currentCard.forEach(num => {
-                    const isHit = drawnNumbers.includes(num) || num === "FREE";
-                    cardHtml += `<div class="mini-cell ${isHit ? 'hit' : ''}">${num === "FREE" ? '★' : num}</div>`;
-                });
-            } else {
-                cardHtml += '<span style="font-size:10px; grid-column: span 5;">No Card</span>';
-            }
-            cardHtml += '</div>';
-
-            const row = `
-                <tr>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <img src="${user.photo}" style="width:24px; height:24px; border-radius:50%;">
-                            <b>${user.name}</b>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span>
-                        ${isOnline ? 'Online' : 'Offline'}
-                    </td>
-                    <td>${cardHtml}</td>
-                    <td><b style="color:var(--gold)">${(user.points || 0).toLocaleString()}</b></td>
-                </tr>
-            `;
-            tableBody.innerHTML += row;
+                const row = `
+                    <tr>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <img src="${user.photo}" style="width:30px; height:30px; border-radius:8px;">
+                                <b>${user.name}</b>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-badge ${user.isOnline ? 'online' : 'offline'}">
+                                ${user.isOnline ? 'ONLINE' : 'OFFLINE'}
+                            </span>
+                        </td>
+                        <td>${cardHtml}</td>
+                        <td><b style="color:var(--gold)">${(user.points || 0).toLocaleString()}</b></td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+            lucide.createIcons();
         });
-    });
+    }
+
+    db.ref('users').on('value', () => { refreshTable(); });
 </script>
 </body>
 </html>
