@@ -6,40 +6,59 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --bg: #0f172a; --panel: #1e293b; --neon: #00f2fe; --win: #00ff88; }
+        :root { --bg: #0f172a; --panel: #1e293b; --neon: #00f2fe; --win: #00ff88; --quiz: #3b82f6; }
         body { font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; margin:0; overflow: hidden; }
-        .host-controls { width: 320px; background: var(--panel); padding: 20px; border-right: 2px solid #334155; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
-        .raffle-box { background: #000; padding: 20px; border-radius: 15px; text-align: center; border: 2px solid var(--neon); }
-        .last-number { font-size: 5rem; color: var(--neon); font-weight: 800; display: block; line-height: 1; }
-        .chat-monitor { flex: 1; display: flex; flex-direction: column; background: #000; border-radius: 10px; margin-top: 15px; border: 1px solid #334155; overflow: hidden; }
-        #dashChat { flex: 1; overflow-y: auto; padding: 10px; font-size: 0.75rem; color: #cbd5e1; }
-        .monitor-area { flex: 1; padding: 20px; overflow-y: auto; }
-        .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
-        .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; position: relative; transition: 0.3s; }
-        .m-card.winner-glow { border: 3px solid var(--win); box-shadow: 0 0 20px var(--win); background: #064e3b !important; transform: scale(1.05); z-index: 10; }
+        
+        /* --- SIDEBAR --- */
+        .host-controls { width: 320px; background: var(--panel); padding: 15px; border-right: 2px solid #334155; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; overflow-y: auto; }
+        .section-title { font-size: 10px; font-weight: 800; color: var(--neon); letter-spacing: 1px; margin: 15px 0 8px 0; text-transform: uppercase; }
+        
+        /* --- BINGO CONTROLS --- */
+        .raffle-box { background: #000; padding: 15px; border-radius: 15px; text-align: center; border: 2px solid var(--neon); }
+        .last-number { font-size: 4rem; color: var(--neon); font-weight: 800; display: block; line-height: 1; }
+        
+        /* --- QUIZ CONTROLS --- */
+        .quiz-box { background: #0f172a; padding: 15px; border-radius: 12px; border: 1px solid var(--quiz); }
+        .quiz-box input { width: 100%; padding: 8px; margin-bottom: 5px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 5px; font-size: 12px; }
+        
+        /* --- MONITORING AREA --- */
+        .monitor-area { flex: 1; padding: 20px; overflow-y: auto; background: #020617; }
+        .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+        .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; position: relative; }
+        .m-card.winner-glow { border: 2px solid var(--win); box-shadow: 0 0 15px var(--win); background: #064e3b !important; }
+        
         .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 5px; }
-        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; color: #fff; border-radius: 2px; }
-        .m-cell.active { background: var(--neon); color: #000; font-weight: bold; box-shadow: 0 0 5px var(--neon); }
-        select, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:active { transform: scale(0.98); }
-        #regStatus { margin-top:10px; padding:8px; border-radius:5px; font-size:0.7rem; text-align:center; font-weight:bold; }
-        .p-name { font-weight: bold; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; margin-bottom: 2px; }
+        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; border-radius: 2px; }
+        .m-cell.active { background: var(--neon); color: #000; font-weight: bold; }
+
+        /* --- UI ELEMENTS --- */
+        .mode-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        select, button { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .btn-draw { background: var(--neon); color: #000; }
+        .btn-quiz { background: var(--quiz); color: #white; }
+        .btn-reset { background: #450a0a; color: #ff4757; margin-top: 5px; }
+        
+        .chat-monitor { height: 150px; background: #000; border-radius: 10px; margin-top: 10px; border: 1px solid #334155; overflow-y: auto; font-size: 11px; padding: 8px; }
+        #regStatus { margin-top:10px; padding:5px; border-radius:5px; font-size:0.65rem; text-align:center; font-weight:bold; }
     </style>
 </head>
 <body>
 
 <div class="host-controls">
-    <div class="raffle-box">
-        <small style="color:#94a3b8">CURRENT BALL</small>
-        <span class="last-number" id="currentNum">--</span>
-        <button style="background:var(--neon); color:#000" onclick="drawNumber()">DRAW BALL</button>
+    <div class="section-title">GAME MODE</div>
+    <div class="mode-btns">
+        <button onclick="setMode('bingo')" style="background:var(--neon)">BINGO</button>
+        <button onclick="setMode('quiz')" style="background:var(--quiz); color:white">QUIZ</button>
     </div>
-    
-    <div id="regStatus">REGISTRATION OPEN</div>
-    
-    <div style="margin-top:10px">
-        <label style="font-size:0.7rem; color:var(--neon)">SET PATTERN:</label>
-        <select id="pSelect" onchange="database.ref('gameStatus/pattern').set(this.value)">
+
+    <div id="bingoControls">
+        <div class="section-title">BINGO CONTROL</div>
+        <div class="raffle-box">
+            <span class="last-number" id="currentNum">--</span>
+            <button class="btn-draw" onclick="drawNumber()">DRAW BALL</button>
+        </div>
+        <div id="regStatus">OPEN</div>
+        <select id="pSelect" style="margin-top:10px" onchange="database.ref('gameStatus/pattern').set(this.value)">
             <option value="any line">ANY LINE</option>
             <option value="outer box">OUTER BOX</option>
             <option value="letter x">LETTER X</option>
@@ -47,17 +66,26 @@
         </select>
     </div>
 
-    <div class="chat-monitor">
-        <div style="background:#334155; padding:5px; font-size:0.6rem; text-align:center; font-weight:bold;">LIVE CHAT</div>
-        <div id="dashChat"></div>
+    <div id="quizControls">
+        <div class="section-title">QUIZ CONTROL</div>
+        <div class="quiz-box">
+            <input type="text" id="adminQ" placeholder="Question...">
+            <input type="text" id="adminA" placeholder="Answer...">
+            <button class="btn-quiz" onclick="postQuiz()">POST QUESTION</button>
+            <button onclick="resetScores()" style="background:none; color:gray; font-size:10px; margin-top:5px;">Reset All Scores</button>
+        </div>
     </div>
+
+    <div class="section-title">LIVE MONITOR</div>
+    <div class="chat-monitor" id="dashChat"></div>
     
-    <button style="background:#ff4757; color:white; margin-top:10px" onclick="resetGame()">RESET ROUND</button>
+    <button class="btn-reset" onclick="resetGame()">RESET ROUND</button>
 </div>
 
 <div class="monitor-area">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h2 style="margin:0;">ONLINE PLAYERS: <span id="pCount" style="color:var(--neon)">0</span></h2>
+        <h2 style="margin:0;">PLAYERS: <span id="pCount" style="color:var(--neon)">0</span></h2>
+        <div id="modeDisplay" style="padding:5px 15px; border-radius:20px; background:var(--neon); color:#000; font-weight:800; font-size:12px;">BINGO MODE</div>
     </div>
     <div class="players-grid" id="pGrid"></div>
 </div>
@@ -77,43 +105,19 @@
     
     let drawn = [], winners = {}, allPlayers = {};
 
-    // 1. Listen for Drawn Numbers
+    // SYNC GAME STATUS & MODE
+    database.ref('gameStatus/mode').on('value', s => {
+        const mode = s.val() || 'bingo';
+        const display = document.getElementById('modeDisplay');
+        display.innerText = mode.toUpperCase() + " MODE";
+        display.style.background = mode === 'quiz' ? 'var(--quiz)' : 'var(--neon)';
+        display.style.color = mode === 'quiz' ? 'white' : 'black';
+    });
+
+    // BINGO LOGIC
     database.ref('drawnNumbers').on('value', snap => {
         drawn = snap.val() || [];
         document.getElementById('currentNum').innerText = drawn.length ? drawn[drawn.length-1] : "--";
-        updateStatus();
-        refreshUI();
-    });
-
-    // 2. Listen for Winners
-    database.ref('winners').on('value', snap => { 
-        winners = snap.val() || {}; 
-        refreshUI(); 
-    });
-
-    // 3. Listen for Players (Fixed Sync with Player Code)
-    database.ref('players').on('value', snap => { 
-        allPlayers = snap.val() || {}; 
-        refreshUI(); 
-    });
-    
-    // 4. Sync Pattern Selection
-    database.ref('gameStatus/pattern').on('value', snap => {
-        const p = snap.val();
-        if(p) document.getElementById('pSelect').value = p;
-    });
-
-    // 5. Chat Monitor
-    database.ref('chat').limitToLast(20).on('child_added', (snap) => {
-        const c = snap.val();
-        const chatBox = document.getElementById('dashChat');
-        const div = document.createElement('div');
-        div.style.padding = "4px"; div.style.borderBottom = "1px solid #1e293b";
-        div.innerHTML = `<b style="color:var(--neon); font-size:0.7rem;">${c.name}:</b> <span style="font-size:0.7rem;">${c.msg}</span>`;
-        chatBox.appendChild(div); chatBox.scrollTop = chatBox.scrollHeight;
-    });
-
-    function updateStatus() {
         const statusEl = document.getElementById('regStatus');
         if (drawn.length > 0) {
             statusEl.innerText = "LOCKED: GAME ONGOING";
@@ -122,21 +126,35 @@
             statusEl.innerText = "OPEN: JOINING ALLOWED";
             statusEl.style.background = "#064e3b"; statusEl.style.color = "#00ff88";
         }
-    }
+        refreshUI();
+    });
+
+    // PLAYER MONITORING
+    database.ref('players').on('value', snap => { 
+        allPlayers = snap.val() || {}; 
+        refreshUI(); 
+    });
+
+    database.ref('winners').on('value', snap => { winners = snap.val() || {}; refreshUI(); });
+
+    // CHAT MONITOR
+    database.ref('chat').limitToLast(15).on('child_added', (snap) => {
+        const c = snap.val();
+        const chatBox = document.getElementById('dashChat');
+        const div = document.createElement('div');
+        div.style.marginBottom = "5px";
+        div.innerHTML = `<b style="color:var(--neon)">${c.name}:</b> ${c.msg}`;
+        chatBox.appendChild(div); chatBox.scrollTop = chatBox.scrollHeight;
+    });
 
     function refreshUI() {
-        const grid = document.getElementById('pGrid'); 
-        grid.innerHTML = '';
+        const grid = document.getElementById('pGrid'); grid.innerHTML = '';
         let count = 0;
-
         for(let id in allPlayers) {
             count++;
             const p = allPlayers[id];
-            
-            // Sync check: Player code uses 'card' and 'marks'
             const playerCard = p.card || [];
             const playerMarks = p.marks || [];
-
             if(playerCard.length === 0) continue; 
             
             const isWinner = (winners[id] || p.isWin) ? ' winner-glow' : '';
@@ -145,41 +163,42 @@
             
             let cells = '';
             playerCard.forEach((n, idx) => {
-                const isMarked = playerMarks.includes(idx);
-                const act = isMarked ? ' active' : '';
-                // 'FR' for Free Space at index 12
-                const displayNum = (idx === 12) ? 'FR' : n;
-                cells += `<div class="m-cell${act}">${displayNum}</div>`;
+                const act = playerMarks.includes(idx) ? ' active' : '';
+                cells += `<div class="m-cell${act}">${idx===12?'FR':n}</div>`;
             });
             
-            cardDiv.innerHTML = `
-                <span class="p-name">${(winners[id] || p.isWin)?'🏆 ':''}${p.name}</span>
-                <div class="mini-grid">${cells}</div>
-            `;
+            cardDiv.innerHTML = `<span style="font-size:11px;font-weight:bold;">${p.name}</span><div class="mini-grid">${cells}</div>`;
             grid.appendChild(cardDiv);
         }
         document.getElementById('pCount').innerText = count;
     }
 
+    function setMode(m) { database.ref('gameStatus/mode').set(m); }
+
     function drawNumber() {
         if(drawn.length >= 75) return;
-        let n; 
-        do { 
-            n = Math.floor(Math.random()*75)+1; 
-        } while(drawn.includes(n));
-        
-        drawn.push(n); 
-        database.ref('drawnNumbers').set(drawn);
+        let n; do { n = Math.floor(Math.random()*75)+1; } while(drawn.includes(n));
+        drawn.push(n); database.ref('drawnNumbers').set(drawn);
     }
 
+    function postQuiz() {
+        const q = document.getElementById('adminQ').value;
+        const a = document.getElementById('adminA').value;
+        if(q && a) {
+            database.ref('quiz/current').set({ question: q, answer: a });
+            document.getElementById('adminQ').value = "";
+            document.getElementById('adminA').value = "";
+            alert("Quiz Posted!");
+        }
+    }
+
+    function resetScores() { if(confirm("Clear leaderboard?")) database.ref('quiz/scores').remove(); }
+
     function resetGame() {
-        if(confirm("New Game? This will clear balls, winners, and chat.")) {
+        if(confirm("New Game?")) {
             database.ref('drawnNumbers').remove();
             database.ref('winners').remove();
             database.ref('chat').remove();
-            // Optional: wag i-remove ang players para hindi mawala ang baraha nila agad
-            // Pero i-reset ang marks nila via the reset trigger
-            database.ref('gameStatus/pattern').set('any line');
             database.ref('gameStatus/reset').set(true);
             setTimeout(() => database.ref('gameStatus/reset').set(false), 2000);
         }
