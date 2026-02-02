@@ -45,7 +45,11 @@
 
     let myName = prompt("Anong pangalan mo, Kabingo?", "Listener_" + Math.floor(Math.random()*99));
     if(!myName) myName = "Guest";
+    
+    // Unique ID for the session
     const uid = myName.replace(/\s+/g, '_') + "_" + Date.now();
+    const playerRef = database.ref('players/' + uid);
+
     document.getElementById('status').innerText = "Player: " + myName + " | Sync: Online";
 
     let cardNumbers = [];
@@ -70,12 +74,18 @@
             };
             grid.appendChild(cell);
         });
+
+        // Eto ang magic: Kapag nag-leave ang player, buburahin ang data nila
+        playerRef.onDisconnect().remove();
+        
         sync();
     }
 
     function sync() {
-        database.ref('players/' + uid).set({
-            name: myName, cardNumbers: cardNumbers, markedIndices: markedIndices
+        playerRef.set({
+            name: myName, 
+            cardNumbers: cardNumbers, 
+            markedIndices: markedIndices
         });
     }
 
