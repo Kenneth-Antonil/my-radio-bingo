@@ -2,198 +2,142 @@
 <html lang="tl">
 <head>
     <meta charset="UTF-8">
-    <title>Bingo Master Dashboard - Realtime Monitor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Dashboard | Radio Bingo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --bg: #0f172a; --panel: #1e293b; --neon: #00f2fe; --win: #00ff88; --quiz: #3b82f6; }
-        body { font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; margin:0; overflow: hidden; }
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #3b82f6; --danger: #ef4444; --success: #10b981; --text: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .panel { background: var(--card); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        h2 { margin-top: 0; color: var(--accent); display: flex; justify-content: space-between; align-items: center; }
         
-        .host-controls { width: 320px; background: var(--panel); padding: 15px; border-right: 2px solid #334155; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; overflow-y: auto; }
-        .section-title { font-size: 10px; font-weight: 800; color: var(--neon); letter-spacing: 1px; margin: 15px 0 8px 0; text-transform: uppercase; }
+        /* Control Buttons */
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; color: white; transition: 0.2s; }
+        .btn-draw { background: var(--accent); width: 100%; font-size: 1.2rem; margin-bottom: 10px; }
+        .btn-reset { background: var(--danger); font-size: 0.9rem; }
         
-        .raffle-box { background: #000; padding: 15px; border-radius: 15px; text-align: center; border: 2px solid var(--neon); }
-        .last-number { font-size: 4rem; color: var(--neon); font-weight: 800; display: block; line-height: 1; }
-        
-        .monitor-area { flex: 1; padding: 20px; overflow-y: auto; background: #020617; }
-        .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
-        
-        /* PLAYER CARD STYLE */
-        .m-card { background: #111827; padding: 10px; border-radius: 12px; border: 1px solid #334155; position: relative; transition: all 0.3s; }
-        .m-card.winner-glow { border: 2px solid var(--win); box-shadow: 0 0 15px var(--win); background: #064e3b !important; }
-        .p-name { font-size: 11px; font-weight: bold; display: block; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* Drawn Numbers */
+        .drawn-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px; }
+        .ball { width: 40px; height: 40px; background: #334155; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+        .ball.latest { background: var(--success); transform: scale(1.1); box-shadow: 0 0 10px var(--success); }
 
-        /* MINI GRID SYNC */
-        .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; }
-        .m-cell { aspect-ratio: 1; background: #1e293b; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; border-radius: 2px; color: #64748b; }
-        .m-cell.active { background: var(--neon); color: #000; font-weight: 900; box-shadow: 0 0 5px var(--neon); }
-        .m-cell.free-space { background: #334155; color: var(--neon); }
-
-        select, button { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 12px; margin-top: 5px; }
-        .btn-draw { background: var(--neon); color: #000; }
-        .btn-reset { background: #450a0a; color: #ff4757; }
-        
-        .chat-monitor { height: 150px; background: #000; border-radius: 10px; margin-top: 10px; border: 1px solid #334155; overflow-y: auto; font-size: 11px; padding: 8px; }
+        /* Store Requests Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; color: #94a3b8; font-size: 0.8rem; padding: 10px; border-bottom: 1px solid #334155; }
+        td { padding: 12px 10px; border-bottom: 1px solid #334155; font-size: 0.9rem; }
+        .btn-done { background: var(--success); padding: 5px 10px; font-size: 0.7rem; }
     </style>
 </head>
 <body>
 
-<div class="host-controls">
-    <div class="section-title">GAME MODE</div>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
-        <button onclick="setMode('bingo')" style="background:var(--neon)">BINGO</button>
-        <button onclick="setMode('quiz')" style="background:var(--quiz); color:white">QUIZ</button>
+<div class="container">
+    <h1>Master Controller</h1>
+
+    <div class="panel">
+        <h2>Game Control <button class="btn btn-reset" onclick="resetGame()">RESET NEW GAME</button></h2>
+        <button class="btn btn-draw" onclick="drawBall()">DRAW NEXT BALL</button>
+        <div id="latestBall" style="text-align:center; font-size: 4rem; font-weight: 900; margin: 10px 0;">--</div>
+        <div class="drawn-list" id="drawnList"></div>
     </div>
 
-    <div class="section-title">BINGO CONTROL</div>
-    <div class="raffle-box">
-        <span class="last-number" id="currentNum">--</span>
-        <button class="btn-draw" onclick="drawNumber()">DRAW BALL</button>
+    <div class="panel">
+        <h2>Store Requests <span id="reqCount" style="font-size: 0.8rem; background: var(--danger); padding: 2px 8px; border-radius: 10px;">0</span></h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Item</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="requestTable">
+                </tbody>
+        </table>
     </div>
-
-    <div class="section-title">PATTERN</div>
-    <select id="pSelect" onchange="database.ref('gameStatus/pattern').set(this.value)">
-        <option value="any line">ANY LINE</option>
-        <option value="outer box">OUTER BOX</option>
-        <option value="letter x">LETTER X</option>
-        <option value="blockout">BLOCKOUT</option>
-    </select>
-
-    <div class="section-title">QUIZ CONTROL</div>
-    <input type="text" id="adminQ" placeholder="Question" style="width:100%; padding:8px; background:#000; border:1px solid #334155; color:white; border-radius:5px; font-size:12px;">
-    <input type="text" id="adminA" placeholder="Answer" style="width:100%; padding:8px; background:#000; border:1px solid #334155; color:white; border-radius:5px; font-size:12px; margin-top:5px;">
-    <button onclick="postQuiz()" style="background:var(--quiz); color:white">POST QUIZ</button>
-
-    <div class="section-title">LIVE CHAT</div>
-    <div class="chat-monitor" id="dashChat"></div>
-    
-    <button class="btn-reset" onclick="resetGame()">RESET ROUND</button>
-</div>
-
-<div class="monitor-area">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h2 style="margin:0; font-size: 1.2rem;">LIVE MONITOR: <span id="pCount" style="color:var(--neon)">0</span> PLAYERS</h2>
-        <div id="modeDisplay" style="padding:5px 15px; border-radius:20px; background:var(--neon); color:#000; font-weight:800; font-size:12px;">BINGO MODE</div>
-    </div>
-    <div class="players-grid" id="pGrid"></div>
 </div>
 
 <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
-      authDomain: "radiobingo-9ac29.firebaseapp.com",
-      databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "radiobingo-9ac29",
-      storageBucket: "radiobingo-9ac29.firebasestorage.app",
-      messagingSenderId: "965903993397",
-      appId: "1:965903993397:web:f6646fa05225f147eebf7c"
+        apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
+        databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "radiobingo-9ac29"
     };
     firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    
-    let drawn = [], winners = {}, allPlayers = {};
+    const db = firebase.database();
 
-    // 1. SYNC PLAYERS DATA (The Core of Real-time Monitoring)
-    database.ref('players').on('value', snap => {
-        allPlayers = snap.val() || {};
-        refreshUI();
-    });
-
-    database.ref('drawnNumbers').on('value', snap => {
-        drawn = snap.val() || [];
-        document.getElementById('currentNum').innerText = drawn.length ? drawn[drawn.length-1] : "--";
-    });
-
-    database.ref('winners').on('value', snap => { 
-        winners = snap.val() || {}; 
-        refreshUI(); 
-    });
-
-    database.ref('gameStatus/mode').on('value', s => {
-        const mode = s.val() || 'bingo';
-        const display = document.getElementById('modeDisplay');
-        display.innerText = mode.toUpperCase() + " MODE";
-        display.style.background = mode === 'quiz' ? 'var(--quiz)' : 'var(--neon)';
-        display.style.color = mode === 'quiz' ? 'white' : 'black';
-    });
-
-    // 2. REFRESH UI - Dito ipapakita ang minarkahan ng player
-    function refreshUI() {
-        const grid = document.getElementById('pGrid');
-        grid.innerHTML = '';
-        let count = 0;
-
-        for (let id in allPlayers) {
-            count++;
-            const p = allPlayers[id];
-            const playerCard = p.card || [];
-            // Kunin ang 'marks' galing sa player data sa Firebase
-            const playerMarks = p.marks || [12]; 
+    // DRAW LOGIC
+    function drawBall() {
+        db.ref('drawnNumbers').once('value', s => {
+            let drawn = s.val() || [];
+            if(drawn.length >= 75) return alert("Tapos na ang bola!");
             
-            if (playerCard.length === 0) continue;
-
-            const isWinner = (winners[id] || p.isWin) ? ' winner-glow' : '';
-            const cardDiv = document.createElement('div');
-            cardDiv.className = 'm-card' + isWinner;
+            let newBall;
+            do { newBall = Math.floor(Math.random() * 75) + 1; } 
+            while (drawn.includes(newBall));
             
-            let cells = '';
-            playerCard.forEach((num, idx) => {
-                // I-check kung ang index na ito ay nasa 'marks' array ng player
-                const isMarked = playerMarks.includes(idx);
-                const activeClass = isMarked ? ' active' : '';
-                const displayNum = (idx === 12) ? 'FR' : num;
-                const freeClass = (idx === 12) ? ' free-space' : '';
-                
-                cells += `<div class="m-cell${activeClass}${freeClass}">${displayNum}</div>`;
-            });
-            
-            cardDiv.innerHTML = `
-                <span class="p-name">${(winners[id] || p.isWin) ? '🏆 ' : ''}${p.name}</span>
-                <div class="mini-grid">${cells}</div>
-            `;
-            grid.appendChild(cardDiv);
-        }
-        document.getElementById('pCount').innerText = count;
+            drawn.push(newBall);
+            db.ref('drawnNumbers').set(drawn);
+        });
     }
 
-    // CONTROL FUNCTIONS
-    function setMode(m) { database.ref('gameStatus/mode').set(m); }
-
-    function drawNumber() {
-        if(drawn.length >= 75) return;
-        let n; do { n = Math.floor(Math.random()*75)+1; } while(drawn.includes(n));
-        drawn.push(n); database.ref('drawnNumbers').set(drawn);
-    }
-
-    function postQuiz() {
-        const q = document.getElementById('adminQ').value;
-        const a = document.getElementById('adminA').value;
-        if(q && a) {
-            database.ref('quiz/current').set({ question: q, answer: a });
-            document.getElementById('adminQ').value = ""; document.getElementById('adminA').value = "";
-        }
-    }
-
+    // RESET LOGIC (Maglilinis ng cards ng lahat)
     function resetGame() {
-        if(confirm("New Game?")) {
-            database.ref('drawnNumbers').remove();
-            database.ref('winners').remove();
-            database.ref('chat').remove();
-            database.ref('gameStatus/reset').set(true);
-            setTimeout(() => database.ref('gameStatus/reset').set(false), 2000);
+        if(confirm("Sigurado ka? Marereset ang cards ng LAHAT ng players.")) {
+            db.ref('drawnNumbers').set([]); // Emptying the list triggers the reset on index.html
+            document.getElementById('latestBall').innerText = "--";
         }
     }
 
-    // CHAT MONITOR
-    database.ref('chat').limitToLast(10).on('child_added', (snap) => {
-        const c = snap.val();
-        const chatBox = document.getElementById('dashChat');
-        const div = document.createElement('div');
-        div.style.borderBottom = "1px solid #1e293b";
-        div.style.padding = "2px 0";
-        div.innerHTML = `<b style="color:var(--neon)">${c.name}:</b> ${c.msg}`;
-        chatBox.appendChild(div); chatBox.scrollTop = chatBox.scrollHeight;
+    // LISTENER FOR DRAWN BALLS
+    db.ref('drawnNumbers').on('value', s => {
+        const drawn = s.val() || [];
+        const list = document.getElementById('drawnList');
+        list.innerHTML = "";
+        
+        if(drawn.length > 0) {
+            const latest = drawn[drawn.length - 1];
+            document.getElementById('latestBall').innerText = latest;
+            drawn.slice().reverse().forEach((num, idx) => {
+                const b = document.createElement('div');
+                b.className = 'ball' + (idx === 0 ? ' latest' : '');
+                b.innerText = num;
+                list.appendChild(b);
+            });
+        }
     });
+
+    // STORE REQUESTS MANAGER
+    db.ref('redeemRequests').on('value', s => {
+        const table = document.getElementById('requestTable');
+        const count = document.getElementById('reqCount');
+        table.innerHTML = "";
+        
+        let requests = s.val();
+        if(requests) {
+            count.innerText = Object.keys(requests).length;
+            for(let id in requests) {
+                const r = requests[id];
+                const row = `<tr>
+                    <td><b>${r.name}</b></td>
+                    <td>${r.item}</td>
+                    <td><button class="btn btn-done" onclick="completeRequest('${id}')">DONE</button></td>
+                </tr>`;
+                table.innerHTML += row;
+            }
+        } else {
+            count.innerText = "0";
+            table.innerHTML = "<tr><td colspan='3' style='text-align:center; color:#64748b;'>No pending requests</td></tr>";
+        }
+    });
+
+    function completeRequest(id) {
+        if(confirm("Mark as done? Mawawala na ito sa listahan.")) {
+            db.ref('redeemRequests/' + id).remove();
+        }
+    }
 </script>
 </body>
 </html>
