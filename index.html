@@ -38,8 +38,6 @@
 
         .chat-box { height: 300px; display: flex; flex-direction: column; background: rgba(0,0,0,0.2); border-radius: 15px; overflow: hidden; }
         #chatList { flex: 1; overflow-y: auto; padding: 12px; font-size: 13px; display: flex; flex-direction: column; gap: 8px; }
-        
-        /* CHAT STYLE WITH ICON */
         .msg { background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px; border-left: 4px solid var(--accent); word-wrap: break-word; display: flex; align-items: center; gap: 8px; }
         .chat-pfp { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--accent); }
 
@@ -110,7 +108,15 @@
     </div>
 </div>
 
-<div id="menuModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Aking Account</h3><button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:15px; background:var(--danger); color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Log Out</button></div></div>
+<div id="menuModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3>Aking Account</h3>
+        <p style="font-size: 11px; opacity: 0.8; margin-bottom:5px;">Share link (500 pts bonus for new users):</p>
+        <input type="text" id="refLink" readonly style="width:100%; padding:10px; background:var(--bg); border:1px solid var(--surface-br); color:var(--gold); border-radius:8px; margin-bottom:15px; font-size:10px;">
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:15px; background:var(--danger); color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Log Out</button>
+    </div>
+</div>
+
 <div id="storeModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; color:var(--gold);">Rewards Store</h3><div style="background:var(--surface-br); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><div><b>₱50 GCash</b><br><small>5,000 Points</small></div><button onclick="redeem(5000, '50 GCash')" style="background:var(--success); border:none; color:white; padding:10px 15px; border-radius:8px; font-weight:700; cursor:pointer;">Redeem</button></div></div></div>
 <div id="loginOverlay" style="position:fixed; inset:0; background:var(--bg); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px;"><div class="card" style="width:100%; text-align:center; max-width: 350px;"><h2>Radio Bingo</h2><p style="opacity:0.7; font-size:14px; margin-bottom:20px;">Mag-login gamit ang Google para makasali.</p><button onclick="login()" style="width:100%; background:var(--accent); color:white; border:none; padding:18px; border-radius:12px; font-weight:900; cursor:pointer; font-size:16px;">LOGIN WITH GOOGLE</button></div></div>
 
@@ -122,16 +128,32 @@
 
     async function login() {
         const provider = new firebase.auth.GoogleAuthProvider();
+        const urlParams = new URLSearchParams(window.location.search);
+        const refBy = urlParams.get('ref');
+
         try {
             const res = await auth.signInWithPopup(provider);
             const u = res.user;
             const snap = await db.ref('users/'+u.uid).once('value');
+            
             if(!snap.exists()){
+                // NEW ACCOUNT DETECTED
                 const code = u.uid.substring(0,6).toUpperCase();
                 await db.ref('users/'+u.uid).set({ name: u.displayName, points: 0, refCode: code, photo: u.photoURL, hasWonCurrent: false });
                 await db.ref('referralCodes/'+code).set(u.uid);
+
+                if(refBy) {
+                    const ownerUidSnap = await db.ref('referralCodes/'+refBy).once('value');
+                    if(ownerUidSnap.exists()) {
+                        const ownerUid = ownerUidSnap.val();
+                        if(ownerUid !== u.uid) {
+                            // AWARD 500 POINTS TO REFERRER
+                            db.ref('users/'+ownerUid+'/points').transaction(p => (p||0) + 500);
+                        }
+                    }
+                }
             }
-            window.location.reload();
+            window.location.href = window.location.pathname; 
         } catch(e) { console.error(e); }
     }
 
@@ -145,6 +167,7 @@
                     userData = s.val(); 
                     userData.uid = u.uid; 
                     document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
+                    document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + userData.refCode;
                     initBingo();
                 }
             });
@@ -166,17 +189,16 @@
         db.ref('drawnNumbers').on('value', s => {
             gameDrawn = s.val() || [];
             const btn = document.getElementById('changeCardBtn');
-            
             if(gameDrawn.length === 0){ 
                 marks = [12]; 
                 db.ref('users/'+userData.uid+'/hasWonCurrent').set(false);
                 document.getElementById('currentBall').innerText = "--";
                 document.getElementById('cardWinNote').style.display = 'none';
                 clearHighlights();
-                btn.disabled = false; // Enable button if no game
+                if(btn) btn.disabled = false;
             } else {
                 document.getElementById('currentBall').innerText = gameDrawn[gameDrawn.length-1];
-                btn.disabled = true; // LOCK CARD DURING GAME
+                if(btn) btn.disabled = true;
             }
             updateGridHits();
             const row = document.getElementById('ballRow'); row.innerHTML = "";
@@ -198,7 +220,6 @@
 
     function generateNewCard() {
         if(gameDrawn.length > 0) return alert("Bawal magpalit ng card kapag may on-going game!");
-        
         const getCol = (min, max) => { let n = []; while(n.length<5){ let r=Math.floor(Math.random()*(max-min+1))+min; if(!n.includes(r)) n.push(r); } return n.sort((a,b)=>a-b); };
         let cols = [getCol(1,15), getCol(16,30), getCol(31,45), getCol(46,60), getCol(61,75)];
         let newCard = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) newCard.push(cols[c][r]); }
@@ -250,7 +271,6 @@
                     const el = document.getElementById('c-'+idx);
                     if(el) { el.style.border = "3px solid #fbbf24"; el.style.boxShadow = "0 0 15px #fbbf24"; }
                 });
-
                 if(!userData.hasWonCurrent) {
                     confetti();
                     db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
@@ -267,11 +287,7 @@
             const d = s.val();
             if(d && d.name && d.text) {
                 const div = document.createElement('div'); div.className = 'msg';
-                // ADDED PHOTO ICON TO CHAT
-                div.innerHTML = `
-                    <img src="${d.photo || 'https://via.placeholder.com/24'}" class="chat-pfp">
-                    <div><b>${d.name}:</b> ${d.text}</div>
-                `;
+                div.innerHTML = `<img src="${d.photo || 'https://via.placeholder.com/24'}" class="chat-pfp"><div><b>${d.name}:</b> ${d.text}</div>`;
                 list.appendChild(div);
                 list.scrollTop = list.scrollHeight;
             }
@@ -284,8 +300,7 @@
         const name = userData.name || (auth.currentUser ? auth.currentUser.displayName : "Guest");
         const photo = userData.photo || (auth.currentUser ? auth.currentUser.photoURL : "");
         if(!txt) return;
-        db.ref('chat').push({ name: name, photo: photo, text: txt, timestamp: firebase.database.ServerValue.TIMESTAMP })
-        .then(() => { input.value = ""; });
+        db.ref('chat').push({ name: name, photo: photo, text: txt, timestamp: firebase.database.ServerValue.TIMESTAMP }).then(() => { input.value = ""; });
     }
 
     function redeem(cost, item) {
