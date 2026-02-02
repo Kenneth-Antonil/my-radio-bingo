@@ -25,6 +25,28 @@
         }
         .top-banner img { width: 100%; height: auto; max-height: 120px; object-fit: contain; }
 
+        /* WINNER ROLLING TEXT (MARQUEE) */
+        .winner-marquee {
+            background: #1e293b;
+            color: var(--primary);
+            padding: 8px 0;
+            font-weight: bold;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #334155;
+            white-space: nowrap;
+            overflow: hidden;
+            display: none; /* Hidden if no winners */
+        }
+        .marquee-content {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 15s linear infinite;
+        }
+        @keyframes marquee {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-100%, 0); }
+        }
+
         /* LOGIN SCREEN */
         #loginScreen { 
             position: fixed; inset: 0; background: var(--bg); 
@@ -73,7 +95,7 @@
         .card-panel { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-y: auto; }
         .bingo-card { background: white; padding: 15px; border-radius: 15px; width: 100%; max-width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 10px; }
-        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 8px; color: #334155; font-size: 1.1rem; transition: 0.3s; }
+        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 8px; color: #334155; font-size: 1.1rem; }
         .cell.marked { background: var(--primary); color: #0f172a; border: none; transform: scale(0.9); box-shadow: 0 0 10px var(--primary); }
 
         /* CHAT PANEL */
@@ -107,6 +129,10 @@
 
 <div class="top-banner">
     <img src="https://i.imgur.com/8QQUx1k.jpeg" alt="Radio Bingo Banner">
+</div>
+
+<div class="winner-marquee" id="marqueeSection">
+    <div class="marquee-content" id="marqueeText"></div>
 </div>
 
 <div id="loginScreen">
@@ -160,13 +186,12 @@
             <small style="color: var(--primary); font-weight: bold;">REGISTERED GCASH:</small>
             <span id="displayGcash">09123456789</span>
         </div>
-        <button onclick="document.getElementById('winnerModal').style.display='none'" style="background:var(--primary); border:none; padding:12px 30px; border-radius:50px; font-weight:bold; cursor:pointer; color:#0f172a; box-shadow: 0 4px 15px rgba(0,242,254,0.3);">STAY ON PAGE</button>
-        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 15px;">The game will reset automatically when the next round starts.</p>
+        <button onclick="document.getElementById('winnerModal').style.display='none'" style="background:var(--primary); border:none; padding:12px 30px; border-radius:50px; font-weight:bold; cursor:pointer; color:#0f172a;">STAY ON PAGE</button>
+        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 15px;">Game resets when the host starts a new round.</p>
     </div>
 </div>
 
 <script>
-    // --- FIREBASE CONFIG ---
     const firebaseConfig = {
       apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
       authDomain: "radiobingo-9ac29.firebaseapp.com",
@@ -184,10 +209,10 @@
     function joinGame() {
         const name = document.getElementById('userInput').value.trim();
         const gcash = document.getElementById('gcashInput').value.trim();
-        if (name.length < 2 || gcash.length < 11) return alert("Enter your Name and 11-digit GCash number!");
+        if (name.length < 2 || gcash.length < 11) return alert("Enter Name and 11-digit GCash!");
 
         database.ref('drawnNumbers').once('value', snap => {
-            if ((snap.val() || []).length > 0) return alert("Game in progress! Wait for next round.");
+            if ((snap.val() || []).length > 0) return alert("Game in progress! Wait.");
             myName = name; myGcash = gcash;
             uid = name.replace(/\s+/g, '_') + "_" + Date.now();
             document.getElementById('loginScreen').style.display = 'none';
@@ -215,7 +240,21 @@
     }
 
     function setupListeners() {
-        // DRAWN NUMBERS LISTENER
+        // WINNERS LISTENER (For Rolling Text)
+        database.ref('winners').on('value', snap => {
+            const winners = snap.val();
+            const marqueeSection = document.getElementById('marqueeSection');
+            const marqueeText = document.getElementById('marqueeText');
+            
+            if (winners) {
+                const names = Object.values(winners).map(w => `🏆 ${w.name.toUpperCase()}`).join(" — ");
+                marqueeText.innerText = "LATEST WINNERS: " + names + " — Congratulations!";
+                marqueeSection.style.display = 'block';
+            } else {
+                marqueeSection.style.display = 'none';
+            }
+        });
+
         database.ref('drawnNumbers').on('value', snap => {
             const drawn = snap.val() || [];
             const list = document.getElementById('drawList'); list.innerHTML = "";
@@ -232,29 +271,20 @@
             sync(); if(!isWinner) checkWin();
         });
 
-        // PATTERN LISTENER
         database.ref('gameStatus/currentPattern').on('value', snap => {
             currentPattern = snap.val() || "any_line";
             document.getElementById('patternName').innerText = "PATTERN: " + currentPattern.replace('_',' ').toUpperCase();
         });
 
-        // CHAT LISTENER
         database.ref('chat').limitToLast(20).on('child_added', snap => {
             const c = snap.val();
             const div = document.createElement('div');
-            div.style.marginBottom = "5px";
             div.innerHTML = `<b style="color:var(--primary)">${c.name}:</b> <span style="color:white">${c.msg}</span>`;
             const box = document.getElementById('chatMsgs'); box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         });
 
-        // RESET LISTENER (Dito magre-reload ang lahat ng sabay-sabay)
-        database.ref('gameStatus/reset').on('value', snap => { 
-            if(snap.val() === true) {
-                // Pinindot ang reset sa dashboard, reload na lahat!
-                location.reload(); 
-            }
-        });
+        database.ref('gameStatus/reset').on('value', snap => { if(snap.val() === true) location.reload(); });
     }
 
     function checkWin() {
@@ -274,13 +304,9 @@
     }
 
     function sync() { if(uid) database.ref('players/'+uid).set({ name: myName, gcash: myGcash, cardNumbers, markedIndices }); }
-    
     function sendChat() {
         const inp = document.getElementById('chatInp');
-        if(inp.value.trim()) { 
-            database.ref('chat').push({ name: myName, msg: inp.value }); 
-            inp.value = ""; 
-        }
+        if(inp.value.trim()) { database.ref('chat').push({ name: myName, msg: inp.value }); inp.value = ""; }
     }
 </script>
 </body>
