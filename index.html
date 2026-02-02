@@ -3,40 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Live Bingo | Listener Page</title>
-    
+    <title>Radio Live Bingo | Interactive Stream</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #00f2fe; --accent: #ff4757; --bg: #0f172a; }
-        body { font-family: sans-serif; background: var(--bg); color: white; text-align: center; margin: 0; padding: 10px; }
-        .stream-box { width: 100%; max-width: 800px; aspect-ratio: 16/9; background: #000; margin: 10px auto; border-radius: 10px; overflow: hidden; }
+        :root { --primary: #00f2fe; --secondary: #4facfe; --accent: #ff4757; --bg: #0f172a; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); color: white; margin: 0; padding: 0; }
+        .container { max-width: 1000px; margin: auto; padding: 20px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
+        .stream-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 15px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .video-box { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; }
         iframe { width: 100%; height: 100%; border: none; }
-        .bingo-card { background: white; color: #333; padding: 15px; border-radius: 15px; max-width: 350px; margin: 20px auto; }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
-        .cell { aspect-ratio: 1; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; border-radius: 5px; }
-        .cell.marked { background: var(--primary); color: white; border: none; }
-        .status { font-size: 0.8rem; color: #64748b; margin-top: 10px; }
+        .bingo-card { background: white; border-radius: 20px; padding: 20px; color: #333; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .cell { aspect-ratio: 1; background: #f1f5f9; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-weight: 700; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 1.1rem; }
+        .cell.marked { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; transform: scale(0.95); }
+        .cell.free { background: #ffeaa7; font-size: 0.8rem; color: #d63031; }
+        .btn-bingo { width: 100%; padding: 15px; border: none; border-radius: 12px; background: var(--accent); color: white; font-weight: 800; font-size: 1.3rem; cursor: pointer; margin-top: 15px; box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4); }
+        .user-tag { background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; margin-top: 10px; display: inline-block; }
+        @media (max-width: 850px) { .container { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
-    <h2>🎙️ RADIO BINGO LIVE</h2>
-    
-    <div class="stream-box">
-        <iframe src="PASTE_YOUR_STREAM_LINK_HERE"></iframe>
+<header style="padding: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
+    <h1 style="margin:0; font-weight:800; color:var(--primary);">🎙️ BINGO LIVE RADIO</h1>
+</header>
+
+<div class="container">
+    <div class="stream-card">
+        <div class="video-box">
+            <iframe src="PASTE_YOUR_EMBED_LINK_HERE"></iframe>
+        </div>
+        <div class="user-tag">Player: <span id="userName">Guest</span></div>
     </div>
 
     <div class="bingo-card">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-weight:800; color:var(--accent);">
+            <span>B</span><span>I</span><span>N</span><span>G</span><span>O</span>
+        </div>
         <div class="grid" id="bingoGrid"></div>
+        <button class="btn-bingo" onclick="claimBingo()">BINGO!</button>
     </div>
-    
-    <div class="status">ID: <span id="uid">...</span> | Status: <span id="dbStatus">Connecting...</span></div>
+</div>
 
 <script>
-    // 1. I-PASTE ANG IYONG FIREBASE CONFIG DITO
-    const firebaseConfig = {
+   const firebaseConfig = {
   apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
   authDomain: "radiobingo-9ac29.firebaseapp.com",
   databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -47,61 +59,66 @@
   measurementId: "G-RR2EG93C43"
 };
 
-    // 2. INITIALIZE FIREBASE
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    const uid = "User_" + Math.floor(1000 + Math.random() * 9000);
-    document.getElementById('uid').innerText = uid;
+    // Ask for Name
+    let name = prompt("Anong pangalan mo, Kabingo?", "Listener_" + Math.floor(Math.random()*999));
+    if(!name) name = "Guest_" + Math.floor(Math.random()*999);
+    document.getElementById('userName').innerText = name;
+    const uid = name + "_" + Date.now();
 
     let cardNumbers = [];
-    let markedIndices = [12]; // FREE space is middle
+    let markedIndices = [12];
 
-    // 3. GENERATE BINGO CARD
-    function createCard() {
+    function generateCard() {
         const grid = document.getElementById('bingoGrid');
-        // Generate random numbers for the card
-        for(let i=0; i<25; i++) {
-            cardNumbers.push(Math.floor(Math.random() * 75) + 1);
+        for(let i=0; i<5; i++) {
+            let min = (i*15)+1; let max = (i*15)+15;
+            let col = [];
+            while(col.length<5){
+                let r = Math.floor(Math.random()*(max-min+1))+min;
+                if(!col.includes(r)) col.push(r);
+            }
+            cardNumbers.push(...col);
         }
 
-        cardNumbers.forEach((num, idx) => {
-            let cell = document.createElement('div');
-            cell.className = 'cell';
-            if(idx === 12) {
-                cell.innerText = "FREE";
-                cell.classList.add('marked');
-            } else {
-                cell.innerText = num;
-                cell.onclick = () => {
-                    cell.classList.toggle('marked');
-                    if(cell.classList.contains('marked')) {
-                        markedIndices.push(idx);
-                    } else {
-                        markedIndices = markedIndices.filter(i => i !== idx);
+        for(let row=0; row<5; row++) {
+            for(let col=0; col<5; col++) {
+                let idx = col * 5 + row;
+                let cell = document.createElement('div');
+                cell.className = 'cell';
+                if(row === 2 && col === 2) {
+                    cell.innerText = "FREE"; cell.classList.add('marked', 'free');
+                } else {
+                    cell.innerText = cardNumbers[idx];
+                    cell.onclick = () => {
+                        cell.classList.toggle('marked');
+                        if(cell.classList.contains('marked')) markedIndices.push(idx);
+                        else markedIndices = markedIndices.filter(i => i !== idx);
+                        sync();
                     }
-                    sendToFirebase();
-                };
+                }
+                grid.appendChild(cell);
             }
-            grid.appendChild(cell);
-        });
-        sendToFirebase(); // Initial send
+        }
+        sync();
     }
 
-    // 4. SEND TO FIREBASE
-    function sendToFirebase() {
+    function sync() {
         database.ref('players/' + uid).set({
-            name: uid,
-            cardNumbers: cardNumbers,
-            markedIndices: markedIndices,
-            lastSeen: Date.now()
-        }).then(() => {
-            document.getElementById('dbStatus').innerText = "Connected & Syncing!";
-        }).catch((err) => {
-            document.getElementById('dbStatus').innerText = "Error: " + err.message;
+            name: name, cardNumbers: cardNumbers, markedIndices: markedIndices, lastSeen: firebase.database.ServerValue.TIMESTAMP
         });
     }
 
-    createCard();
+    function claimBingo() {
+        database.ref('winners/').push({ name: name, time: Date.now() });
+        alert("🎉 BINGO CLAIM SENT TO DJ!");
+    }
+
+    // Reset Listener: Kapag nag-reset ang DJ, lilinisin ang card ng listener
+    database.ref('gameStatus/reset').on('value', (snap) => {
+        if(snap.val() === true) location.reload();
+    });
+
+    generateCard();
 </script>
 </body>
 </html>
