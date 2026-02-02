@@ -2,142 +2,71 @@
 <html lang="tl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master Dashboard | Radio Bingo</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <title>Master Dashboard</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --accent: #3b82f6; --danger: #ef4444; --success: #10b981; --text: #f8fafc; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .panel { background: var(--card); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        h2 { margin-top: 0; color: var(--accent); display: flex; justify-content: space-between; align-items: center; }
-        
-        /* Control Buttons */
-        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; color: white; transition: 0.2s; }
-        .btn-draw { background: var(--accent); width: 100%; font-size: 1.2rem; margin-bottom: 10px; }
-        .btn-reset { background: var(--danger); font-size: 0.9rem; }
-        
-        /* Drawn Numbers */
-        .drawn-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px; }
-        .ball { width: 40px; height: 40px; background: #334155; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; }
-        .ball.latest { background: var(--success); transform: scale(1.1); box-shadow: 0 0 10px var(--success); }
-
-        /* Store Requests Table */
+        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; }
+        .panel { background: #1e293b; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .ball { display: inline-block; width: 40px; height: 40px; line-height: 40px; text-align: center; background: #334155; border-radius: 50%; margin: 5px; font-weight: bold; }
+        .latest { background: #10b981; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; color: #94a3b8; font-size: 0.8rem; padding: 10px; border-bottom: 1px solid #334155; }
-        td { padding: 12px 10px; border-bottom: 1px solid #334155; font-size: 0.9rem; }
-        .btn-done { background: var(--success); padding: 5px 10px; font-size: 0.7rem; }
+        th, td { padding: 10px; border-bottom: 1px solid #334155; text-align: left; }
+        .btn-done { background: #10b981; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <h1>Master Controller</h1>
-
     <div class="panel">
-        <h2>Game Control <button class="btn btn-reset" onclick="resetGame()">RESET NEW GAME</button></h2>
-        <button class="btn btn-draw" onclick="drawBall()">DRAW NEXT BALL</button>
-        <div id="latestBall" style="text-align:center; font-size: 4rem; font-weight: 900; margin: 10px 0;">--</div>
-        <div class="drawn-list" id="drawnList"></div>
+        <h2>Game Control</h2>
+        <button onclick="drawBall()" style="padding:15px; background:#3b82f6; color:white; border:none; border-radius:5px; width:100%; font-weight:bold;">DRAW BALL</button>
+        <button onclick="db.ref('drawnNumbers').set([])" style="margin-top:10px; background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:5px;">Reset Cards</button>
+        <div id="drawnList"></div>
     </div>
 
     <div class="panel">
-        <h2>Store Requests <span id="reqCount" style="font-size: 0.8rem; background: var(--danger); padding: 2px 8px; border-radius: 10px;">0</span></h2>
+        <h2>Redemption Requests</h2>
         <table>
-            <thead>
-                <tr>
-                    <th>Player</th>
-                    <th>Item</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="requestTable">
-                </tbody>
+            <thead><tr><th>Player</th><th>Item</th><th>Action</th></tr></thead>
+            <tbody id="requestTable"></tbody>
         </table>
     </div>
-</div>
 
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
-        databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "radiobingo-9ac29"
-    };
+    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // DRAW LOGIC
     function drawBall() {
         db.ref('drawnNumbers').once('value', s => {
             let drawn = s.val() || [];
-            if(drawn.length >= 75) return alert("Tapos na ang bola!");
-            
-            let newBall;
-            do { newBall = Math.floor(Math.random() * 75) + 1; } 
-            while (drawn.includes(newBall));
-            
-            drawn.push(newBall);
-            db.ref('drawnNumbers').set(drawn);
+            if(drawn.length >= 75) return;
+            let newBall; do { newBall = Math.floor(Math.random()*75)+1; } while(drawn.includes(newBall));
+            drawn.push(newBall); db.ref('drawnNumbers').set(drawn);
         });
     }
 
-    // RESET LOGIC (Maglilinis ng cards ng lahat)
-    function resetGame() {
-        if(confirm("Sigurado ka? Marereset ang cards ng LAHAT ng players.")) {
-            db.ref('drawnNumbers').set([]); // Emptying the list triggers the reset on index.html
-            document.getElementById('latestBall').innerText = "--";
-        }
-    }
-
-    // LISTENER FOR DRAWN BALLS
     db.ref('drawnNumbers').on('value', s => {
-        const drawn = s.val() || [];
-        const list = document.getElementById('drawnList');
-        list.innerHTML = "";
-        
-        if(drawn.length > 0) {
-            const latest = drawn[drawn.length - 1];
-            document.getElementById('latestBall').innerText = latest;
-            drawn.slice().reverse().forEach((num, idx) => {
-                const b = document.createElement('div');
-                b.className = 'ball' + (idx === 0 ? ' latest' : '');
-                b.innerText = num;
-                list.appendChild(b);
-            });
-        }
+        const drawn = s.val() || []; const list = document.getElementById('drawnList'); list.innerHTML = "";
+        drawn.slice().reverse().forEach((n, i) => { list.innerHTML += `<div class="ball ${i===0?'latest':''}">${n}</div>`; });
     });
 
-    // STORE REQUESTS MANAGER
+    // Eto ang inayos ko para lumabas ang requests
     db.ref('redeemRequests').on('value', s => {
-        const table = document.getElementById('requestTable');
-        const count = document.getElementById('reqCount');
-        table.innerHTML = "";
-        
-        let requests = s.val();
-        if(requests) {
-            count.innerText = Object.keys(requests).length;
-            for(let id in requests) {
-                const r = requests[id];
-                const row = `<tr>
-                    <td><b>${r.name}</b></td>
+        const table = document.getElementById('requestTable'); table.innerHTML = "";
+        const data = s.val();
+        if(data) {
+            Object.keys(data).forEach(key => {
+                const r = data[key];
+                table.innerHTML += `<tr>
+                    <td>${r.name}</td>
                     <td>${r.item}</td>
-                    <td><button class="btn btn-done" onclick="completeRequest('${id}')">DONE</button></td>
+                    <td><button class="btn-done" onclick="db.ref('redeemRequests/${key}').remove()">DONE</button></td>
                 </tr>`;
-                table.innerHTML += row;
-            }
+            });
         } else {
-            count.innerText = "0";
-            table.innerHTML = "<tr><td colspan='3' style='text-align:center; color:#64748b;'>No pending requests</td></tr>";
+            table.innerHTML = "<tr><td colspan='3'>Walang pending requests.</td></tr>";
         }
     });
-
-    function completeRequest(id) {
-        if(confirm("Mark as done? Mawawala na ito sa listahan.")) {
-            db.ref('redeemRequests/' + id).remove();
-        }
-    }
 </script>
 </body>
 </html>
