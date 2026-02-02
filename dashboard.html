@@ -2,88 +2,145 @@
 <html lang="tl">
 <head>
     <meta charset="UTF-8">
-    <title>Master Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Bingo | Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
-        .panel { background: #1e293b; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .ball { display: inline-block; width: 40px; height: 40px; line-height: 40px; text-align: center; background: #334155; border-radius: 50%; margin: 5px; font-weight: bold; }
-        .latest { background: #10b981; transform: scale(1.2); }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; border-bottom: 1px solid #334155; text-align: left; font-size: 14px; }
-        .btn { padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; }
+        :root { --bg: #0f172a; --surface: #1e293b; --accent: #3b82f6; --text: #f8fafc; --success: #10b981; --danger: #ef4444; --gold: #fbbf24; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .grid-admin { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
+        h2 { margin-top: 0; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        
+        /* NOTIFICATION FORM */
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; font-family: inherit; }
+        button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        button:active { transform: scale(0.98); }
+
+        /* PLAYER TABLE */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; font-size: 12px; opacity: 0.6; padding: 10px; border-bottom: 1px solid #334155; }
+        td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+        
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .offline { background: #64748b; }
+        
+        .bingo-mini-card { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; background: #0f172a; padding: 4px; border-radius: 4px; width: 100px; }
+        .mini-cell { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 8px; background: #1e293b; border-radius: 2px; }
+        .mini-cell.hit { background: var(--accent); color: white; }
+
+        @media (max-width: 768px) { .grid-admin { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <div class="main">
-        <div class="panel">
-            <h2>Game Control</h2>
-            <button onclick="drawBall()" class="btn" style="background:#3b82f6; width:100%; font-size:20px;">DRAW BALL</button>
-            <button onclick="resetGame()" class="btn" style="background:#ef4444; margin-top:10px;">RESET GAME & CARDS</button>
-            <div id="drawnList" style="margin-top:20px;"></div>
+
+    <h1 style="text-align:center; font-weight:900;">ADMIN <span style="color:var(--accent)">PANEL</span></h1>
+
+    <div class="grid-admin">
+        <div class="card">
+            <h2><i data-lucide="bell-ring"></i> Send Global Announcement</h2>
+            <p style="font-size: 12px; opacity: 0.7;">Lalabas ito sa Notification tab ng lahat ng players.</p>
+            <input type="text" id="notifTitle" placeholder="Announcement Title (e.g. Game Start!)">
+            <textarea id="notifMsg" rows="4" placeholder="Message content..."></textarea>
+            <button onclick="sendGlobalNotif()">Broadcast Notification</button>
         </div>
 
-        <div class="panel">
-            <h2>Redemption Requests</h2>
-            <table>
-                <thead><tr><th>Player</th><th>Item</th><th>Action</th></tr></thead>
-                <tbody id="requestTable"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="sidebar">
-        <div class="panel">
-            <h2>Recent Winners 🏆</h2>
-            <div id="winnerLog"></div>
-        </div>
-        <div class="panel">
-            <h2>Chat Monitor</h2>
-            <div id="chatBox" style="height:300px; overflow-y:auto; font-size:12px;"></div>
+        <div class="card">
+            <h2><i data-lucide="users"></i> Live Player Monitor</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Status</th>
+                            <th>Current Card</th>
+                            <th>Points</th>
+                        </tr>
+                    </thead>
+                    <tbody id="playerTableBody">
+                        </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
 <script>
-    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29" };
+    lucide.createIcons();
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", 
+        authDomain: "radiobingo-9ac29.firebaseapp.com", 
+        databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", 
+        projectId: "radiobingo-9ac29", 
+        storageBucket: "radiobingo-9ac29.firebasestorage.app" 
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function drawBall() {
-        db.ref('drawnNumbers').once('value', s => {
-            let drawn = s.val() || [];
-            if(drawn.length >= 75) return;
-            let n; do { n = Math.floor(Math.random()*75)+1; } while(drawn.includes(n));
-            drawn.push(n); db.ref('drawnNumbers').set(drawn);
+    // 1. SEND GLOBAL NOTIFICATION
+    function sendGlobalNotif() {
+        const title = document.getElementById('notifTitle').value;
+        const message = document.getElementById('notifMsg').value;
+
+        if(!title || !message) return alert("Paki-fill up lahat ng fields!");
+
+        db.ref('announcements').push({
+            title: title,
+            message: message,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            alert("Notification Sent!");
+            document.getElementById('notifTitle').value = "";
+            document.getElementById('notifMsg').value = "";
         });
     }
 
-    function resetGame() {
-        if(confirm("Reset everything?")){
-            db.ref('drawnNumbers').set([]);
-            db.ref('lastWinner').remove();
-        }
-    }
+    // 2. MONITOR PLAYERS
+    let drawnNumbers = [];
+    db.ref('drawnNumbers').on('value', s => { drawnNumbers = s.val() || []; });
 
-    db.ref('drawnNumbers').on('value', s => {
-        const drawn = s.val() || []; const list = document.getElementById('drawnList'); list.innerHTML = "";
-        drawn.slice().reverse().forEach((n, i) => { list.innerHTML += `<div class="ball ${i===0?'latest':''}">${n}</div>`; });
-    });
+    db.ref('users').on('value', snapshot => {
+        const tableBody = document.getElementById('playerTableBody');
+        tableBody.innerHTML = "";
 
-    db.ref('redeemRequests').on('value', s => {
-        const table = document.getElementById('requestTable'); table.innerHTML = "";
-        const data = s.val();
-        if(data) Object.keys(data).forEach(k => {
-            table.innerHTML += `<tr><td>${data[k].name}</td><td>${data[k].item}</td><td><button class="btn" style="background:#10b981; font-size:10px;" onclick="db.ref('redeemRequests/${k}').remove()">DONE</button></td></tr>`;
+        snapshot.forEach(child => {
+            const user = child.val();
+            const isOnline = user.isOnline || false; // Make sure you update this in your main site
+            
+            // Create mini card display
+            let cardHtml = '<div class="bingo-mini-card">';
+            if(user.currentCard) {
+                user.currentCard.forEach(num => {
+                    const isHit = drawnNumbers.includes(num) || num === "FREE";
+                    cardHtml += `<div class="mini-cell ${isHit ? 'hit' : ''}">${num === "FREE" ? '★' : num}</div>`;
+                });
+            } else {
+                cardHtml += '<span style="font-size:10px; grid-column: span 5;">No Card</span>';
+            }
+            cardHtml += '</div>';
+
+            const row = `
+                <tr>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <img src="${user.photo}" style="width:24px; height:24px; border-radius:50%;">
+                            <b>${user.name}</b>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span>
+                        ${isOnline ? 'Online' : 'Offline'}
+                    </td>
+                    <td>${cardHtml}</td>
+                    <td><b style="color:var(--gold)">${(user.points || 0).toLocaleString()}</b></td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
         });
-    });
-
-    db.ref('lastWinner').on('value', s => {
-        const w = s.val(); if(w) document.getElementById('winnerLog').innerHTML = `<div style="color:#fbbf24"><b>${w.name}</b> just won!</div>` + document.getElementById('winnerLog').innerHTML;
-    });
-
-    db.ref('chat').limitToLast(20).on('child_added', s => {
-        const d = s.val(); document.getElementById('chatBox').innerHTML += `<div><b>${d.name}:</b> ${d.text}</div>`;
     });
 </script>
 </body>
