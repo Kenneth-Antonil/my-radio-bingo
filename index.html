@@ -53,6 +53,11 @@
         .btn-change:active { transform: scale(0.95); }
         .btn-change:disabled { opacity: 0.3; cursor: not-allowed; border-color: gray; color: gray; }
 
+        /* NOTIFICATION STYLES WITH DELETE */
+        .notif-item { position: relative; background: rgba(255,255,255,0.03); padding: 12px 35px 12px 12px; border-radius: 12px; margin-bottom: 10px; border-left: 3px solid var(--accent); }
+        .notif-del { position: absolute; top: 10px; right: 10px; color: var(--danger); opacity: 0.6; cursor: pointer; border: none; background: none; padding: 0; }
+        .notif-del:hover { opacity: 1; }
+
         /* MODERN SIGN IN PAGE */
         #loginOverlay { position: fixed; inset: 0; background: radial-gradient(circle at top right, #1e293b, #0b1120); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .login-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 32px; width: 100%; max-width: 400px; padding: 40px 30px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
@@ -111,7 +116,6 @@
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google">
             Sign in with Google
         </button>
-        <p style="margin-top:25px; font-size:11px; color:#64748b;">By signing in, you agree to our Terms of Play.</p>
     </div>
 </div>
 
@@ -155,13 +159,11 @@
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('userPanel').style.display = 'flex';
             document.getElementById('userImg').src = u.photoURL;
-
             const myStatusRef = db.ref('users/' + u.uid + '/isOnline');
             db.ref('.info/connected').on('value', (snap) => {
                 if (snap.val() === false) return;
                 myStatusRef.onDisconnect().set(false).then(() => { myStatusRef.set(true); });
             });
-
             db.ref('users/'+u.uid).on('value', s => { 
                 if(s.exists()){
                     userData = s.val(); userData.uid = u.uid; 
@@ -201,16 +203,28 @@
 
     function loadNotifications() {
         const list = document.getElementById('notifList');
-        db.ref('announcements').limitToLast(5).on('value', snap => {
+        db.ref('announcements').limitToLast(10).on('value', snap => {
             list.innerHTML = "";
             if(snap.exists()){
                 document.getElementById('notifDot').style.display = 'block';
                 snap.forEach(child => {
-                    const n = child.val();
-                    list.innerHTML += `<div class="notif-item"><b>${n.title}</b><p style="margin:5px 0 0; font-size:12px; opacity:0.8;">${n.message}</p></div>`;
+                    const n = child.val(); const key = child.key;
+                    list.innerHTML += `
+                        <div class="notif-item" id="notif-${key}">
+                            <button class="notif-del" onclick="deleteNotif('${key}')"><i data-lucide="x" style="width:16px"></i></button>
+                            <b>${n.title}</b>
+                            <p style="margin:5px 0 0; font-size:12px; opacity:0.8;">${n.message}</p>
+                        </div>`;
                 });
+                lucide.createIcons();
             }
         });
+    }
+
+    function deleteNotif(key) {
+        // Hide only for the user locally for better UX
+        const el = document.getElementById('notif-'+key);
+        if(el) el.style.display = 'none';
     }
 
     function setupChat() {
