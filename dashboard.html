@@ -14,15 +14,16 @@
         .chat-monitor { flex: 1; display: flex; flex-direction: column; background: #000; border-radius: 10px; margin-top: 15px; border: 1px solid #334155; overflow: hidden; }
         #dashChat { flex: 1; overflow-y: auto; padding: 10px; font-size: 0.75rem; color: #cbd5e1; }
         .monitor-area { flex: 1; padding: 20px; overflow-y: auto; }
-        .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-        .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; position: relative; }
-        .m-card.winner-glow { border: 3px solid var(--win); box-shadow: 0 0 20px var(--win); background: #064e3b !important; animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+        .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; position: relative; transition: 0.3s; }
+        .m-card.winner-glow { border: 3px solid var(--win); box-shadow: 0 0 20px var(--win); background: #064e3b !important; transform: scale(1.05); z-index: 10; }
         .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 5px; }
-        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; color: #fff; }
-        .m-cell.active { background: var(--neon); color: #000; font-weight: bold; }
-        select, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; color: #fff; border-radius: 2px; }
+        .m-cell.active { background: var(--neon); color: #000; font-weight: bold; box-shadow: 0 0 5px var(--neon); }
+        select, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:active { transform: scale(0.98); }
         #regStatus { margin-top:10px; padding:8px; border-radius:5px; font-size:0.7rem; text-align:center; font-weight:bold; }
+        .p-name { font-weight: bold; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; margin-bottom: 2px; }
     </style>
 </head>
 <body>
@@ -84,26 +85,31 @@
         refreshUI();
     });
 
-    // 2. Listen for Winners & Players
-    database.ref('winners').on('value', snap => { winners = snap.val() || {}; refreshUI(); });
+    // 2. Listen for Winners
+    database.ref('winners').on('value', snap => { 
+        winners = snap.val() || {}; 
+        refreshUI(); 
+    });
+
+    // 3. Listen for Players (Fixed Sync with Player Code)
     database.ref('players').on('value', snap => { 
         allPlayers = snap.val() || {}; 
         refreshUI(); 
     });
     
-    // 3. Sync Pattern Selection
+    // 4. Sync Pattern Selection
     database.ref('gameStatus/pattern').on('value', snap => {
         const p = snap.val();
         if(p) document.getElementById('pSelect').value = p;
     });
 
-    // 4. Chat Monitor
+    // 5. Chat Monitor
     database.ref('chat').limitToLast(20).on('child_added', (snap) => {
         const c = snap.val();
         const chatBox = document.getElementById('dashChat');
         const div = document.createElement('div');
-        div.style.marginBottom = "5px"; div.style.borderBottom = "1px solid #1e293b";
-        div.innerHTML = `<b style="color:var(--neon)">${c.name}:</b> <span>${c.msg}</span>`;
+        div.style.padding = "4px"; div.style.borderBottom = "1px solid #1e293b";
+        div.innerHTML = `<b style="color:var(--neon); font-size:0.7rem;">${c.name}:</b> <span style="font-size:0.7rem;">${c.msg}</span>`;
         chatBox.appendChild(div); chatBox.scrollTop = chatBox.scrollHeight;
     });
 
@@ -119,42 +125,60 @@
     }
 
     function refreshUI() {
-        const grid = document.getElementById('pGrid'); grid.innerHTML = '';
+        const grid = document.getElementById('pGrid'); 
+        grid.innerHTML = '';
         let count = 0;
+
         for(let id in allPlayers) {
             count++;
             const p = allPlayers[id];
-            if(!p.cardNumbers) continue; 
             
-            const isWinner = winners[id] ? ' winner-glow' : '';
-            const card = document.createElement('div');
-            card.className = 'm-card' + isWinner;
+            // Sync check: Player code uses 'card' and 'marks'
+            const playerCard = p.card || [];
+            const playerMarks = p.marks || [];
+
+            if(playerCard.length === 0) continue; 
+            
+            const isWinner = (winners[id] || p.isWin) ? ' winner-glow' : '';
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'm-card' + isWinner;
             
             let cells = '';
-            p.cardNumbers.forEach((n, idx) => {
-                const isMarked = (p.markedIndices && p.markedIndices.includes(idx));
+            playerCard.forEach((n, idx) => {
+                const isMarked = playerMarks.includes(idx);
                 const act = isMarked ? ' active' : '';
-                cells += `<div class="m-cell${act}">${n=='FREE'?'FR':n}</div>`;
+                // 'FR' for Free Space at index 12
+                const displayNum = (idx === 12) ? 'FR' : n;
+                cells += `<div class="m-cell${act}">${displayNum}</div>`;
             });
             
-            card.innerHTML = `<small style="font-weight:bold; font-size:0.7rem;">${winners[id]?'🏆 ':''}${p.name}</small><div class="mini-grid">${cells}</div>`;
-            grid.appendChild(card);
+            cardDiv.innerHTML = `
+                <span class="p-name">${(winners[id] || p.isWin)?'🏆 ':''}${p.name}</span>
+                <div class="mini-grid">${cells}</div>
+            `;
+            grid.appendChild(cardDiv);
         }
         document.getElementById('pCount').innerText = count;
     }
 
     function drawNumber() {
         if(drawn.length >= 75) return;
-        let n; do { n = Math.floor(Math.random()*75)+1; } while(drawn.includes(n));
+        let n; 
+        do { 
+            n = Math.floor(Math.random()*75)+1; 
+        } while(drawn.includes(n));
+        
         drawn.push(n); 
         database.ref('drawnNumbers').set(drawn);
     }
 
     function resetGame() {
-        if(confirm("New Game? Clear everything?")) {
+        if(confirm("New Game? This will clear balls, winners, and chat.")) {
             database.ref('drawnNumbers').remove();
             database.ref('winners').remove();
             database.ref('chat').remove();
+            // Optional: wag i-remove ang players para hindi mawala ang baraha nila agad
+            // Pero i-reset ang marks nila via the reset trigger
             database.ref('gameStatus/pattern').set('any line');
             database.ref('gameStatus/reset').set(true);
             setTimeout(() => database.ref('gameStatus/reset').set(false), 2000);
