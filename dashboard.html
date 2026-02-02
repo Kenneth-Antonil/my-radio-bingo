@@ -6,29 +6,42 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; }
-        .panel { background: #1e293b; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+        .panel { background: #1e293b; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
         .ball { display: inline-block; width: 40px; height: 40px; line-height: 40px; text-align: center; background: #334155; border-radius: 50%; margin: 5px; font-weight: bold; }
-        .latest { background: #10b981; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; border-bottom: 1px solid #334155; text-align: left; }
-        .btn-done { background: #10b981; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .latest { background: #10b981; transform: scale(1.2); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; border-bottom: 1px solid #334155; text-align: left; font-size: 14px; }
+        .btn { padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; }
     </style>
 </head>
 <body>
-    <div class="panel">
-        <h2>Game Control</h2>
-        <button onclick="drawBall()" style="padding:15px; background:#3b82f6; color:white; border:none; border-radius:5px; width:100%; font-weight:bold;">DRAW BALL</button>
-        <button onclick="db.ref('drawnNumbers').set([])" style="margin-top:10px; background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:5px;">Reset Cards</button>
-        <div id="drawnList"></div>
+    <div class="main">
+        <div class="panel">
+            <h2>Game Control</h2>
+            <button onclick="drawBall()" class="btn" style="background:#3b82f6; width:100%; font-size:20px;">DRAW BALL</button>
+            <button onclick="resetGame()" class="btn" style="background:#ef4444; margin-top:10px;">RESET GAME & CARDS</button>
+            <div id="drawnList" style="margin-top:20px;"></div>
+        </div>
+
+        <div class="panel">
+            <h2>Redemption Requests</h2>
+            <table>
+                <thead><tr><th>Player</th><th>Item</th><th>Action</th></tr></thead>
+                <tbody id="requestTable"></tbody>
+            </table>
+        </div>
     </div>
 
-    <div class="panel">
-        <h2>Redemption Requests</h2>
-        <table>
-            <thead><tr><th>Player</th><th>Item</th><th>Action</th></tr></thead>
-            <tbody id="requestTable"></tbody>
-        </table>
+    <div class="sidebar">
+        <div class="panel">
+            <h2>Recent Winners 🏆</h2>
+            <div id="winnerLog"></div>
+        </div>
+        <div class="panel">
+            <h2>Chat Monitor</h2>
+            <div id="chatBox" style="height:300px; overflow-y:auto; font-size:12px;"></div>
+        </div>
     </div>
 
 <script>
@@ -40,9 +53,16 @@
         db.ref('drawnNumbers').once('value', s => {
             let drawn = s.val() || [];
             if(drawn.length >= 75) return;
-            let newBall; do { newBall = Math.floor(Math.random()*75)+1; } while(drawn.includes(newBall));
-            drawn.push(newBall); db.ref('drawnNumbers').set(drawn);
+            let n; do { n = Math.floor(Math.random()*75)+1; } while(drawn.includes(n));
+            drawn.push(n); db.ref('drawnNumbers').set(drawn);
         });
+    }
+
+    function resetGame() {
+        if(confirm("Reset everything?")){
+            db.ref('drawnNumbers').set([]);
+            db.ref('lastWinner').remove();
+        }
     }
 
     db.ref('drawnNumbers').on('value', s => {
@@ -50,22 +70,20 @@
         drawn.slice().reverse().forEach((n, i) => { list.innerHTML += `<div class="ball ${i===0?'latest':''}">${n}</div>`; });
     });
 
-    // Eto ang inayos ko para lumabas ang requests
     db.ref('redeemRequests').on('value', s => {
         const table = document.getElementById('requestTable'); table.innerHTML = "";
         const data = s.val();
-        if(data) {
-            Object.keys(data).forEach(key => {
-                const r = data[key];
-                table.innerHTML += `<tr>
-                    <td>${r.name}</td>
-                    <td>${r.item}</td>
-                    <td><button class="btn-done" onclick="db.ref('redeemRequests/${key}').remove()">DONE</button></td>
-                </tr>`;
-            });
-        } else {
-            table.innerHTML = "<tr><td colspan='3'>Walang pending requests.</td></tr>";
-        }
+        if(data) Object.keys(data).forEach(k => {
+            table.innerHTML += `<tr><td>${data[k].name}</td><td>${data[k].item}</td><td><button class="btn" style="background:#10b981; font-size:10px;" onclick="db.ref('redeemRequests/${k}').remove()">DONE</button></td></tr>`;
+        });
+    });
+
+    db.ref('lastWinner').on('value', s => {
+        const w = s.val(); if(w) document.getElementById('winnerLog').innerHTML = `<div style="color:#fbbf24"><b>${w.name}</b> just won!</div>` + document.getElementById('winnerLog').innerHTML;
+    });
+
+    db.ref('chat').limitToLast(20).on('child_added', s => {
+        const d = s.val(); document.getElementById('chatBox').innerHTML += `<div><b>${d.name}:</b> ${d.text}</div>`;
     });
 </script>
 </body>
