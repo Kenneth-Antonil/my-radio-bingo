@@ -23,7 +23,7 @@
             overflow-x: hidden;
         }
 
-        /* --- FIXED BANNER SYSTEM --- */
+        /* BANNER */
         .top-banner {
             width: 100%;
             background: #000;
@@ -31,7 +31,7 @@
             justify-content: center;
             align-items: center;
             border-bottom: 2px solid var(--primary);
-            flex-shrink: 0; /* Para hindi siya lumiit/ma-squeeze */
+            flex-shrink: 0;
         }
         .top-banner img {
             width: 100%;
@@ -58,7 +58,6 @@
             display: none; 
             flex-direction: column; 
             flex: 1;
-            height: 100%;
         }
 
         /* VIDEO SECTION */
@@ -80,13 +79,11 @@
             font-size: 0.9rem; flex-shrink: 0;
         }
 
-        /* SCROLLABLE CONTENT FOR MOBILE */
+        /* CONTENT AREA */
         .bottom-section { 
             display: flex; 
             flex: 1; 
-            overflow: hidden; /* Desktop default */
         }
-
         .card-panel { 
             flex: 1; display: flex; flex-direction: column; 
             align-items: center; padding: 20px 10px; 
@@ -96,34 +93,21 @@
             background: white; padding: 15px; border-radius: 15px; 
             width: 100%; max-width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .bingo-header { 
-            display: flex; justify-content: space-between; font-weight: 900; 
-            font-size: 1.5rem; color: #1e293b; margin-bottom: 10px;
-        }
+        .bingo-header { display: flex; justify-content: space-between; font-weight: 900; font-size: 1.5rem; color: #1e293b; margin-bottom: 10px; }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
-        .cell { 
-            aspect-ratio: 1; background: #f1f5f9; border: 1px solid #cbd5e1; 
-            display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; border-radius: 8px; font-size: 1.2rem; color: #334155;
-        }
+        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 8px; font-size: 1.2rem; color: #334155; }
         .cell.marked { background: var(--primary); color: #0f172a; border: none; transform: scale(0.9); box-shadow: 0 0 10px var(--primary); }
 
-        .chat-panel { 
-            width: 320px; display: flex; flex-direction: column; 
-            background: #111827; border-left: 1px solid #334155; 
-        }
+        .chat-panel { width: 320px; display: flex; flex-direction: column; background: #111827; border-left: 1px solid #334155; }
         #chatMsgs { flex: 1; overflow-y: auto; padding: 15px; font-size: 0.9rem; }
         .chat-input-area { padding: 10px; background: var(--panel); display: flex; gap: 5px; }
         .chat-input-area input { flex: 1; padding: 10px; border-radius: 5px; border: none; background: #0f172a; color: white; }
         .chat-input-area button { background: var(--primary); border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; }
 
-        /* MOBILE ADJUSTMENTS */
         @media (max-width: 850px) {
-            body { overflow-y: auto; } /* Hayaan ang buong page na mag-scroll */
-            #gameUI { display: none; height: auto; }
-            .bottom-section { flex-direction: column; overflow: visible; }
+            body { overflow-y: auto; }
+            .bottom-section { flex-direction: column; }
             .chat-panel { width: 100%; height: 350px; border-left: none; border-top: 1px solid #334155; }
-            .card-panel { overflow-y: visible; }
             .top-banner img { max-height: 100px; }
         }
     </style>
@@ -146,7 +130,12 @@
 <div id="gameUI">
     <div class="top-section">
         <div class="video-container">
-            <iframe src="PASTE_YOUR_VIDEO_EMBED_URL" allowfullscreen></iframe>
+            <iframe 
+                src="https://www.youtube.com/embed/36YnV9STBqc?autoplay=1" 
+                title="The Good Life Radio Feed" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+            </iframe>
         </div>
     </div>
 
@@ -197,7 +186,6 @@
     function joinGame() {
         const nameInp = document.getElementById('userInput').value.trim();
         if (nameInp.length < 2) return alert("Enter your name!");
-        
         database.ref('drawnNumbers').once('value', (snap) => {
             if ((snap.val() || []).length > 0) {
                 alert("Game ongoing! Wait for the next round.");
@@ -246,12 +234,10 @@
             });
             sync(); if(!isWinner) checkWin();
         });
-
         database.ref('gameStatus/currentPattern').on('value', snap => {
             currentPattern = snap.val() || "any_line";
             document.getElementById('patternName').innerText = "PATTERN: " + currentPattern.replace('_',' ').toUpperCase();
         });
-
         database.ref('chat').limitToLast(15).on('child_added', snap => {
             const c = snap.val();
             const div = document.createElement('div');
@@ -259,7 +245,6 @@
             document.getElementById('chatMsgs').appendChild(div);
             document.getElementById('chatMsgs').scrollTop = 99999;
         });
-
         database.ref('gameStatus/reset').on('value', snap => { if(snap.val() === true) location.reload(); });
     }
 
