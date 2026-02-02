@@ -2,83 +2,194 @@
 <html lang="tl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Radio Bingo Live - Player</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { --primary: #00f2fe; --accent: #ff4757; --bg: #0f172a; --panel: #1e293b; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 0; overflow-x: hidden; }
-        #loginScreen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; padding: 20px; }
-        .login-box { background: var(--panel); padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 350px; border: 1px solid var(--primary); }
-        .login-box input { width: 90%; padding: 12px; margin: 15px 0; border-radius: 8px; border: none; text-align: center; font-size: 1.1rem; }
-        .login-box button { width: 100%; padding: 12px; background: var(--primary); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        #gameUI { display: none; flex-direction: column; height: 100vh; }
-        .main-layout { display: flex; flex-wrap: wrap; flex: 1; overflow: hidden; }
-        .left-panel { flex: 1.5; display: flex; flex-direction: column; min-width: 320px; border-right: 1px solid #334155; }
-        .video-box { width: 100%; aspect-ratio: 16/9; background: #000; }
-        .chat-box { flex: 1; display: flex; flex-direction: column; background: #111827; }
-        #chatMsgs { flex: 1; overflow-y: auto; padding: 10px; font-size: 0.85rem; }
-        .chat-input { display: flex; padding: 10px; gap: 5px; background: #1e293b; }
-        .chat-input input { flex: 1; padding: 8px; border-radius: 5px; border: none; background: #0f172a; color: white; }
-        .right-panel { flex: 1; min-width: 320px; padding: 10px; display: flex; flex-direction: column; align-items: center; background: #0f172a; overflow-y: auto; }
-        .draw-history { width: 280px; background: #000; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #334155; }
-        .draw-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; min-height: 40px; }
-        .draw-ball { min-width: 35px; height: 35px; background: var(--primary); color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; animation: pop 0.3s; }
-        .bingo-card { background: white; padding: 15px; border-radius: 15px; width: 280px; color: #333; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        .bingo-header { display: flex; justify-content: space-between; font-weight: 900; font-size: 1.2rem; margin-bottom: 5px; color: #1e293b; letter-spacing: 5px; padding: 0 10px; }
+        :root { --primary: #00f2fe; --accent: #ff4757; --bg: #0f172a; --panel: #1e293b; --text: #f8fafc; }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 0; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* LOGIN SCREEN */
+        #loginScreen { 
+            position: fixed; inset: 0; background: var(--bg); 
+            display: flex; align-items: center; justify-content: center; 
+            z-index: 2000; padding: 20px; 
+        }
+        .login-box { 
+            background: var(--panel); padding: 30px; border-radius: 20px; 
+            text-align: center; width: 100%; max-width: 400px; 
+            border: 1px solid var(--primary); box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .login-box h1 { color: var(--primary); margin: 0 0 10px 0; font-size: 2rem; }
+        .login-box input { 
+            width: 100%; padding: 15px; margin: 20px 0; border-radius: 10px; 
+            border: none; text-align: center; font-size: 1.1rem; background: #0f172a; color: white;
+        }
+        .login-box button { 
+            width: 100%; padding: 15px; background: var(--primary); 
+            color: #0f172a; border: none; border-radius: 10px; 
+            font-weight: bold; cursor: pointer; font-size: 1.1rem;
+        }
+
+        /* MAIN APP LAYOUT */
+        #gameUI { display: none; height: 100vh; flex-direction: column; }
+
+        /* VIDEO SECTION (Top on Mobile) */
+        .top-section { width: 100%; background: #000; position: relative; z-index: 10; }
+        .video-container { width: 100%; aspect-ratio: 16/9; max-height: 40vh; }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* MIDDLE SECTION (History & Pattern) */
+        .info-bar { 
+            background: #111827; padding: 8px 12px; border-bottom: 1px solid #334155;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .draw-history-container { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+        .draw-label { font-size: 0.65rem; font-weight: bold; color: #94a3b8; white-space: nowrap; }
+        .draw-list { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; flex: 1; scrollbar-width: none; }
+        .draw-list::-webkit-scrollbar { display: none; }
+        .draw-ball { 
+            min-width: 32px; height: 32px; background: var(--primary); 
+            color: #0f172a; border-radius: 50%; display: flex; 
+            align-items: center; justify-content: center; font-weight: bold; 
+            font-size: 0.85rem; animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+
+        /* BOTTOM SECTION (Main Interaction) */
+        .bottom-section { 
+            flex: 1; display: flex; overflow: hidden; background: var(--bg);
+        }
+
+        /* BINGO CARD AREA */
+        .card-panel { 
+            flex: 1; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; padding: 10px; 
+            overflow-y: auto;
+        }
+        .bingo-card { 
+            background: white; padding: 12px; border-radius: 12px; 
+            width: 100%; max-width: 340px; box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+        }
+        .bingo-header { 
+            display: flex; justify-content: space-between; font-weight: 900; 
+            font-size: 1.4rem; margin-bottom: 8px; color: #1e293b; 
+            padding: 0 10px; letter-spacing: 2px;
+        }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
-        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 5px; font-size: 1rem; }
-        .cell.marked { background: var(--primary); color: black; border: none; transform: scale(0.95); box-shadow: 0 0 8px var(--primary); }
-        .pattern-display { width: 280px; background: var(--panel); border-radius: 10px; padding: 10px; margin-top: 15px; border: 1px solid var(--primary); text-align: center; }
-        .pattern-name { font-size: 1.1rem; font-weight: bold; color: var(--primary); text-transform: uppercase; }
+        .cell { 
+            aspect-ratio: 1; background: #f1f5f9; border: 1px solid #e2e8f0; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; border-radius: 6px; font-size: 1.1rem; color: #334155;
+        }
+        .cell.marked { 
+            background: var(--primary); color: #0f172a; border: none; 
+            transform: scale(0.92); box-shadow: 0 0 12px var(--primary); 
+            transition: all 0.2s ease;
+        }
+
+        .pattern-tag { 
+            margin-top: 10px; padding: 6px 15px; background: var(--panel); 
+            border: 1px solid var(--primary); border-radius: 20px; 
+            font-size: 0.8rem; font-weight: bold; color: var(--primary);
+        }
+
+        /* CHAT PANEL (Right on Desktop, Bottom Toggle or Hidden on Mobile) */
+        .chat-panel { 
+            width: 300px; display: flex; flex-direction: column; 
+            background: #111827; border-left: 1px solid #334155; 
+        }
+        #chatMsgs { flex: 1; overflow-y: auto; padding: 15px; font-size: 0.9rem; }
+        .chat-input-area { 
+            padding: 10px; background: var(--panel); display: flex; gap: 8px; 
+        }
+        .chat-input-area input { 
+            flex: 1; padding: 10px; border-radius: 8px; border: none; 
+            background: #0f172a; color: white; font-size: 0.9rem;
+        }
+        .chat-input-area button { 
+            padding: 0 15px; background: var(--primary); color: #0f172a; 
+            border: none; border-radius: 8px; font-weight: bold;
+        }
+
         @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
-        @media (max-width: 768px) { .main-layout { flex-direction: column; overflow-y: auto; } #gameUI { height: auto; } .left-panel { border-right: none; } }
+
+        /* RESPONSIVE BREAKPOINTS */
+        @media (max-width: 850px) {
+            .bottom-section { flex-direction: column; }
+            .chat-panel { width: 100%; height: 25vh; border-left: none; border-top: 1px solid #334155; }
+            .card-panel { padding: 15px 10px; }
+            .bingo-card { max-width: 310px; }
+            .cell { font-size: 1rem; }
+        }
+
+        @media (max-height: 600px) {
+            .video-container { max-height: 30vh; }
+            .chat-panel { height: 20vh; }
+        }
     </style>
 </head>
 <body>
 
 <div id="loginScreen">
     <div class="login-box">
-        <h1 style="color:var(--primary); margin:0;">BINGO LIVE</h1>
-        <p id="lockMsg">Enter your name to play:</p>
-        <input type="text" id="userInput" placeholder="Full Name" maxlength="20">
-        <button id="joinBtn" onclick="joinGame()">JOIN GAME</button>
+        <h1>BINGO LIVE</h1>
+        <p id="lockMsg" style="color: #94a3b8;">Enter your name to join the game</p>
+        <input type="text" id="userInput" placeholder="Full Name" maxlength="15" autocomplete="off">
+        <button id="joinBtn" onclick="joinGame()">JOIN NOW</button>
     </div>
 </div>
 
 <div id="gameUI">
-    <div class="main-layout">
-        <div class="left-panel">
-            <div class="video-box">
-                <iframe src="PASTE_YOUR_VIDEO_EMBED_URL" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>
-            </div>
-            <div class="chat-box">
-                <div id="chatMsgs"></div>
-                <div class="chat-input">
-                    <input type="text" id="chatInp" placeholder="Comment..." onkeypress="if(event.key==='Enter') sendChat()">
-                    <button onclick="sendChat()" style="background:var(--primary); border:none; padding:8px 15px; border-radius:5px; font-weight:bold;">SEND</button>
-                </div>
-            </div>
+    <div class="top-section">
+        <div class="video-container">
+            <iframe src="PASTE_YOUR_VIDEO_EMBED_URL" allowfullscreen></iframe>
         </div>
-        <div class="right-panel">
-            <div class="draw-history">
-                <div style="font-size: 0.6rem; color: #94a3b8; margin-bottom: 5px;">RECENT DRAWS:</div>
-                <div class="draw-list" id="drawList"></div>
-            </div>
+    </div>
+
+    <div class="info-bar">
+        <div class="draw-history-container">
+            <span class="draw-label">DRAWS:</span>
+            <div class="draw-list" id="drawList"></div>
+        </div>
+    </div>
+
+    <div class="bottom-section">
+        <div class="card-panel">
             <div class="bingo-card">
-                <div class="bingo-header"><span>B</span><span>I</span><span>N</span><span>G</span><span>O</span></div>
+                <div class="bingo-header">
+                    <span>B</span><span>I</span><span>N</span><span>G</span><span>O</span>
+                </div>
                 <div class="grid" id="bingoGrid"></div>
             </div>
-            <div class="pattern-display">
-                <div style="font-size:0.6rem; color:#94a3b8;">WINNING PATTERN:</div>
-                <div class="pattern-name" id="patternName">ANY LINE</div>
+            <div class="pattern-tag" id="patternName">PATTERN: ANY LINE</div>
+        </div>
+
+        <div class="chat-panel">
+            <div id="chatMsgs"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInp" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendChat()">
+                <button onclick="sendChat()">SEND</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+    // --- FIREBASE CONFIG ---
     const firebaseConfig = {
       apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
       authDomain: "radiobingo-9ac29.firebaseapp.com",
@@ -91,17 +202,18 @@
     };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
+    
     let myName, uid, cardNumbers = [], markedIndices = [12], currentPattern = "any_line", isWinner = false;
 
+    // --- JOIN LOGIC (WITH LOCK) ---
     function joinGame() {
         const nameInp = document.getElementById('userInput').value.trim();
-        if (nameInp.length < 2) return alert("Enter name!");
+        if (nameInp.length < 2) return alert("Please enter your name!");
 
-        // LOCK FEATURE: Check if game is already ongoing
         database.ref('drawnNumbers').once('value', (snap) => {
             const drawn = snap.val() || [];
             if (drawn.length > 0) {
-                alert("⚠️ SORRY! Round is ongoing. Join the next game after the current winner is declared!");
+                alert("⚠️ SORRY! Round is ongoing. Join the next game after this round ends!");
                 return;
             }
             
@@ -115,12 +227,16 @@
         });
     }
 
+    // --- CARD GENERATION ---
     function initCard() {
-        const grid = document.getElementById('bingoGrid'); grid.innerHTML = "";
+        const grid = document.getElementById('bingoGrid'); 
+        grid.innerHTML = "";
         const getCol = (min, max) => Array.from({length: max-min+1}, (_, i) => i+min).sort(() => Math.random()-0.5).slice(0,5);
+        
         let b=getCol(1,15), i=getCol(16,30), n=getCol(31,45), g=getCol(46,60), o=getCol(61,75);
         cardNumbers = [];
         for(let r=0; r<5; r++) cardNumbers.push(b[r], i[r], n[r], g[r], o[r]);
+        
         cardNumbers[12] = "FREE";
         cardNumbers.forEach((num, idx) => {
             let cell = document.createElement('div');
@@ -132,7 +248,9 @@
         sync();
     }
 
+    // --- FIREBASE LISTENERS ---
     function setupListeners() {
+        // Numbers Drawn
         database.ref('drawnNumbers').on('value', (snap) => {
             const drawn = snap.val() || [];
             updateDrawHistory(drawn);
@@ -145,26 +263,35 @@
             sync();
             if(!isWinner) checkWin();
         });
+
+        // Pattern
         database.ref('gameStatus/currentPattern').on('value', snap => {
             currentPattern = snap.val() || "any_line";
-            document.getElementById('patternName').innerText = currentPattern.replace('_',' ').toUpperCase();
+            document.getElementById('patternName').innerText = "PATTERN: " + currentPattern.replace('_',' ').toUpperCase();
         });
-        database.ref('chat').limitToLast(15).on('child_added', snap => {
+
+        // Chat
+        database.ref('chat').limitToLast(20).on('child_added', snap => {
             const c = snap.val();
             const div = document.createElement('div');
-            div.innerHTML = `<b style="color:var(--primary)">${c.name}:</b> ${c.msg}`;
+            div.style.marginBottom = "8px";
+            div.innerHTML = `<b style="color:var(--primary)">${c.name}:</b> <span style="color:#cbd5e1">${c.msg}</span>`;
             const msgs = document.getElementById('chatMsgs');
             msgs.appendChild(div);
             msgs.scrollTop = msgs.scrollHeight;
         });
+
+        // Reset Round
         database.ref('gameStatus/reset').on('value', snap => { if(snap.val() === true) location.reload(); });
     }
 
     function updateDrawHistory(drawn) {
         const list = document.getElementById('drawList'); list.innerHTML = "";
-        [...drawn].reverse().slice(0, 10).forEach(num => {
-            const ball = document.createElement('div'); ball.className = 'draw-ball';
-            ball.innerText = num; list.appendChild(ball);
+        [...drawn].reverse().slice(0, 15).forEach(num => {
+            const ball = document.createElement('div'); 
+            ball.className = 'draw-ball';
+            ball.innerText = num; 
+            list.appendChild(ball);
         });
     }
 
@@ -179,14 +306,18 @@
         if (combos.some(c => c.every(i => markedIndices.includes(i)))) {
             isWinner = true;
             database.ref('winners/' + uid).set({ name: myName, time: Date.now() });
-            alert("🎉 BINGO!!! Wait for the DJ to verify!");
+            alert("🎉 BINGO! Pattern Complete! Verification sent to DJ.");
         }
     }
 
     function sync() { if(uid) database.ref('players/'+uid).set({ name: myName, cardNumbers, markedIndices }); }
+    
     function sendChat() {
         const inp = document.getElementById('chatInp');
-        if(inp.value.trim()) { database.ref('chat').push({ name: myName, msg: inp.value }); inp.value = ""; }
+        if(inp.value.trim()) { 
+            database.ref('chat').push({ name: myName, msg: inp.value }); 
+            inp.value = ""; 
+        }
     }
 </script>
 </body>
