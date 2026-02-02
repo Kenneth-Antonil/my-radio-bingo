@@ -82,6 +82,7 @@
     </div>
 
     <div class="card">
+        <div id="cardWinNote" style="display:none; background:rgba(16,185,129,0.9); color:white; text-align:center; padding:5px; border-radius:8px; margin-bottom:10px; font-weight:bold; font-size:12px;"></div>
         <div class="bingo-header">
             <div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div>
         </div>
@@ -120,7 +121,6 @@
     const db = firebase.database(); const auth = firebase.auth();
     let userData = {}; let cardNumbers = []; let marks = [12];
 
-    // ONLINE LOGIC
     db.ref('presence').on('value', s => { document.getElementById('onlineCount').innerText = s.numChildren() || 1; });
 
     async function login() {
@@ -159,7 +159,13 @@
         generateCard();
         db.ref('drawnNumbers').on('value', s => {
             const drawn = s.val() || [];
-            if(drawn.length === 0){ marks = [12]; generateCard(); window.won = false; document.getElementById('currentBall').innerText = "--"; }
+            if(drawn.length === 0){ 
+                marks = [12]; 
+                generateCard(); 
+                window.won = false; 
+                document.getElementById('currentBall').innerText = "--";
+                document.getElementById('cardWinNote').style.display = 'none';
+            }
             const row = document.getElementById('ballRow'); row.innerHTML = "";
             if(drawn.length > 0) {
                 document.getElementById('currentBall').innerText = drawn[drawn.length-1];
@@ -175,7 +181,10 @@
             if(winner && (Date.now() - winner.time < 30000)) {
                 document.getElementById('winnerName').innerText = winner.name.toUpperCase();
                 document.getElementById('winnerBanner').style.display = 'block';
-                setTimeout(() => { document.getElementById('winnerBanner').style.display = 'none'; }, 15000);
+                const cNote = document.getElementById('cardWinNote');
+                cNote.innerText = "🏆 LATEST WINNER: " + winner.name.toUpperCase();
+                cNote.style.display = 'block';
+                setTimeout(() => { document.getElementById('winnerBanner').style.display = 'none'; cNote.style.display = 'none'; }, 15000);
             }
         });
     }
@@ -194,12 +203,21 @@
 
     function checkWin() {
         const ways = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
-        if(ways.some(w => w.every(i => marks.includes(i))) && !window.won) {
-            window.won = true; confetti();
-            db.ref('lastWinner').set({ name: userData.name, time: Date.now() });
-            db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
-            alert("BINGO! +500 PTS");
-        }
+        ways.forEach(w => {
+            if(w.every(i => marks.includes(i))) {
+                w.forEach(idx => {
+                    const el = document.getElementById('c-'+idx);
+                    el.style.border = "2px solid #fbbf24";
+                    el.style.boxShadow = "0 0 15px #fbbf24";
+                });
+                if(!window.won) {
+                    window.won = true; confetti();
+                    db.ref('lastWinner').set({ name: userData.name, time: Date.now() });
+                    db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
+                    alert("BINGO! +500 PTS");
+                }
+            }
+        });
     }
 
     function setupChat() {
