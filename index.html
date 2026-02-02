@@ -216,7 +216,6 @@
 
     let currentUser = null, myGcash, cardNumbers = [], markedIndices = [12], isWinner = false;
 
-    // --- DASHBOARD SYNC ENGINE ---
     function syncToDashboard() {
         if(currentUser) {
             database.ref('players/' + currentUser.uid).set({
@@ -264,12 +263,20 @@
             cell.innerText = num === "FREE" ? "FREE" : num;
             grid.appendChild(cell);
         });
-        syncToDashboard(); // Initial push to dashboard
+        syncToDashboard();
     }
 
     function setupListeners() {
+        // Player Counter
         database.ref('players').on('value', s => document.getElementById('pCount').innerText = s.numChildren());
         
+        // Pattern Sync (Dashboard to Player)
+        database.ref('gameStatus/pattern').on('value', snap => {
+            const p = snap.val();
+            if(p) document.getElementById('patternName').innerText = "PATTERN: " + p.toUpperCase();
+        });
+
+        // Winners Marquee
         database.ref('winners').on('value', s => {
             const w = s.val();
             if(w) {
@@ -278,6 +285,7 @@
             } else { document.getElementById('marqueeSection').style.display = 'none'; }
         });
 
+        // Drawn Numbers & Sync
         database.ref('drawnNumbers').on('value', s => {
             const drawn = s.val() || [];
             let needsSync = false;
@@ -293,10 +301,11 @@
                     }
                 }
             });
-            if(needsSync) syncToDashboard(); // Sync marks to admin
+            if(needsSync) syncToDashboard();
             if(!isWinner) checkWin();
         });
 
+        // Chat
         database.ref('chat').limitToLast(15).on('child_added', s => {
             const c = s.val();
             const div = document.createElement('div');
@@ -307,6 +316,7 @@
             box.scrollTop = box.scrollHeight;
         });
 
+        // Game Reset
         database.ref('gameStatus/reset').on('value', s => { if(s.val() === true) location.reload(); });
     }
 
@@ -316,7 +326,7 @@
             isWinner = true;
             database.ref('winners/'+currentUser.uid).set({name: currentUser.displayName, gcash: myGcash});
             syncToDashboard();
-            alert("BINGO! Checked by Admin.");
+            alert("BINGO! Winners list updated.");
         }
     }
 
