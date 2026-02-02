@@ -2,7 +2,7 @@
 <html lang="tl">
 <head>
     <meta charset="UTF-8">
-    <title>DJ Master Dashboard</title>
+    <title>Bingo Master Dashboard</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -10,40 +10,41 @@
         body { font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; margin:0; }
         .host-controls { width: 300px; background: var(--panel); padding: 20px; border-right: 2px solid #334155; }
         .raffle-box { background: #000; padding: 20px; border-radius: 15px; text-align: center; border: 2px solid var(--neon); }
-        .last-number { font-size: 4rem; color: var(--neon); font-weight: 800; display: block; }
+        .last-number { font-size: 5rem; color: var(--neon); font-weight: 800; display: block; }
         .monitor-area { flex: 1; padding: 20px; overflow-y: auto; }
-        .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-        .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; transition: 0.3s; }
-        .m-card.winner-glow { border-color: var(--win); box-shadow: 0 0 15px var(--win); background: #064e3b; animation: pulse 1s infinite; }
+        .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+        .m-card { background: #111827; padding: 10px; border-radius: 8px; border: 1px solid #334155; position: relative; }
+        /* GREEN GLOW FOR WINNERS */
+        .m-card.winner-glow { border: 3px solid var(--win); box-shadow: 0 0 20px var(--win); background: #064e3b; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
         .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 5px; }
         .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; }
-        .m-cell.active { background: var(--neon); color: #000; }
-        select, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
+        .m-cell.active { background: var(--neon); color: #000; font-weight: bold; }
+        select, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="host-controls">
     <div class="raffle-box">
-        <small>LAST NUMBER</small>
+        <small style="color:#94a3b8">CURRENT BALL</small>
         <span class="last-number" id="currentNum">--</span>
-        <button style="background:var(--neon)" onclick="drawNumber()">DRAW NEXT</button>
+        <button style="background:var(--neon); color:#000" onclick="drawNumber()">DRAW BALL</button>
     </div>
     <div style="margin-top:20px">
-        <label>Winning Pattern:</label>
+        <label style="font-size:0.8rem">WINNING PATTERN:</label>
         <select id="pSelect" onchange="database.ref('gameStatus/currentPattern').set(this.value)">
-            <option value="any_line">Any Line</option>
-            <option value="outer_box">Outer Box</option>
-            <option value="letter_x">Letter X</option>
-            <option value="blockout">Blockout</option>
+            <option value="any_line">ANY LINE</option>
+            <option value="outer_box">OUTER BOX</option>
+            <option value="letter_x">LETTER X</option>
+            <option value="blockout">BLOCKOUT</option>
         </select>
     </div>
     <button style="background:#ff4757; color:white; margin-top:50px" onclick="resetGame()">RESET ROUND</button>
 </div>
 
 <div class="monitor-area">
-    <h2>PLAYERS: <span id="pCount">0</span></h2>
+    <h2>PLAYERS ONLINE: <span id="pCount">0</span></h2>
     <div class="players-grid" id="pGrid"></div>
 </div>
 
@@ -60,45 +61,52 @@
     };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
-    let drawn = [], winners = {};
+    let drawn = [], winners = {}, allPlayers = {};
 
     database.ref('drawnNumbers').on('value', snap => {
         drawn = snap.val() || [];
         document.getElementById('currentNum').innerText = drawn.length ? drawn[drawn.length-1] : "--";
+        refreshUI();
     });
 
-    database.ref('winners').on('value', snap => { winners = snap.val() || {}; });
+    database.ref('winners').on('value', snap => {
+        winners = snap.val() || {};
+        refreshUI();
+    });
 
     database.ref('players').on('value', snap => {
-        const players = snap.val();
-        const grid = document.getElementById('pGrid');
-        grid.innerHTML = '';
+        allPlayers = snap.val() || {};
+        refreshUI();
+    });
+
+    function refreshUI() {
+        const grid = document.getElementById('pGrid'); grid.innerHTML = '';
         let count = 0;
-        for(let id in players) {
+        for(let id in allPlayers) {
             count++;
-            const p = players[id];
-            const isWin = winners[id] ? ' winner-glow' : '';
+            const p = allPlayers[id];
+            const isWinner = winners[id] ? ' winner-glow' : '';
             const card = document.createElement('div');
-            card.className = 'm-card' + isWin;
+            card.className = 'm-card' + isWinner;
             let cells = '';
             p.cardNumbers.forEach((n, idx) => {
-                let act = p.markedIndices.includes(idx) ? ' active' : '';
+                let act = (p.markedIndices && p.markedIndices.includes(idx)) ? ' active' : '';
                 cells += `<div class="m-cell${act}">${n=='FREE'?'FR':n}</div>`;
             });
-            card.innerHTML = `<small>${p.name}</small><div class="mini-grid">${cells}</div>`;
+            card.innerHTML = `<small style="font-weight:bold;color:${winners[id]?'#fff':'#94a3b8'}">${winners[id]?'🏆 ':''}${p.name}</small><div class="mini-grid">${cells}</div>`;
             grid.appendChild(card);
         }
         document.getElementById('pCount').innerText = count;
-    });
+    }
 
     function drawNumber() {
-        if(drawn.length >= 75) return;
+        if(drawn.length >= 75) return alert("All numbers drawn!");
         let n; do { n = Math.floor(Math.random()*75)+1; } while(drawn.includes(n));
         drawn.push(n); database.ref('drawnNumbers').set(drawn);
     }
 
     function resetGame() {
-        if(confirm("Reset?")) {
+        if(confirm("Reset everything?")) {
             database.ref('drawnNumbers').remove();
             database.ref('winners').remove();
             database.ref('gameStatus/reset').set(true);
