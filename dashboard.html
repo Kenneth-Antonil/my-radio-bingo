@@ -2,7 +2,7 @@
 <html lang="tl">
 <head>
     <meta charset="UTF-8">
-    <title>Bingo Master Dashboard</title>
+    <title>Bingo Master Dashboard | Live Monitor</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -33,7 +33,6 @@
         .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 5px; }
         .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; border-radius: 2px; color: rgba(255,255,255,0.3); }
         
-        /* Eto yung magpapakita ng marka ng player */
         .m-cell.active { 
             background: var(--neon) !important; 
             color: #000 !important; 
@@ -115,6 +114,22 @@
     
     let drawn = [], winners = {}, allPlayers = {};
 
+    // --- AUTOMATIC CLEANUP SYSTEM ---
+    // Binabantayan ang presence node. Kapag nag-disconnect ang player,
+    // buburahin ang card nila sa players list para mawala sa grid.
+    database.ref('presence').on('value', (presenceSnap) => {
+        const activeUsers = presenceSnap.val() || {};
+        database.ref('players').once('value', (playerSnap) => {
+            const currentPlayers = playerSnap.val() || {};
+            for (let uid in currentPlayers) {
+                if (!activeUsers[uid]) {
+                    // Kung wala sa presence but nasa players, delete card.
+                    database.ref('players/' + uid).remove();
+                }
+            }
+        });
+    });
+
     // SYNC GAME STATUS & MODE
     database.ref('gameStatus/mode').on('value', s => {
         const mode = s.val() || 'bingo';
@@ -122,6 +137,9 @@
         display.innerText = mode.toUpperCase() + " MODE";
         display.style.background = mode === 'quiz' ? 'var(--quiz)' : 'var(--neon)';
         display.style.color = mode === 'quiz' ? 'white' : 'black';
+        
+        document.getElementById('bingoControls').style.display = mode === 'bingo' ? 'block' : 'none';
+        document.getElementById('quizControls').style.display = mode === 'quiz' ? 'block' : 'none';
     });
 
     // BINGO LOGIC
@@ -139,7 +157,7 @@
         refreshUI();
     });
 
-    // PLAYER MONITORING (DITO ANG UPDATE PARA SA REALTIME PATTERN)
+    // PLAYER MONITORING
     database.ref('players').on('value', snap => { 
         allPlayers = snap.val() || {}; 
         refreshUI(); 
@@ -165,9 +183,7 @@
             count++;
             const p = allPlayers[id];
             const playerCard = p.card || [];
-            
-            // DITO BINABASA ANG MARKS NG PLAYER
-            const playerMarks = p.marks || [12]; // Default 12 for FREE space
+            const playerMarks = p.marks || [12];
             
             if(playerCard.length === 0) continue; 
             
@@ -177,7 +193,6 @@
             
             let cells = '';
             playerCard.forEach((n, idx) => {
-                // I-check kung marked ang cell na ito sa end ng player
                 const isHit = playerMarks.includes(idx) ? ' active' : '';
                 cells += `<div class="m-cell${isHit}">${idx===12?'FR':n}</div>`;
             });
