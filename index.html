@@ -8,25 +8,51 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         :root { --primary: #00f2fe; --accent: #ff4757; --bg: #0f172a; }
-        body { font-family: sans-serif; background: var(--bg); color: white; text-align: center; margin: 0; padding: 10px; }
-        .bingo-card { background: white; padding: 15px; border-radius: 15px; max-width: 320px; margin: 20px auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .main-layout { display: flex; flex-wrap: wrap; flex: 1; overflow: hidden; }
+        
+        /* Left: Stream & Chat */
+        .left-panel { flex: 1.5; display: flex; flex-direction: column; min-width: 350px; border-right: 1px solid #1e293b; }
+        .video-box { width: 100%; aspect-ratio: 16/9; background: #000; }
+        .chat-box { flex: 1; display: flex; flex-direction: column; background: #111827; }
+        #chatMsgs { flex: 1; overflow-y: auto; padding: 10px; font-size: 0.9rem; }
+        .chat-input { display: flex; padding: 10px; gap: 5px; background: #1e293b; }
+        .chat-input input { flex: 1; padding: 8px; border-radius: 5px; border: none; }
+
+        /* Right: Bingo Card */
+        .right-panel { flex: 1; min-width: 320px; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .bingo-card { background: white; padding: 15px; border-radius: 15px; width: 300px; }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
-        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; cursor: pointer; border-radius: 5px; font-size: 1.1rem; }
-        .cell.marked { background: var(--primary); color: black; border: none; transform: scale(0.95); }
-        .btn-bingo { width: 320px; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1.2rem; cursor: pointer; }
-        #status { font-size: 0.8rem; color: var(--primary); margin-bottom: 10px; }
+        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; border-radius: 5px; font-size: 1.1rem; }
+        .cell.marked { background: var(--primary); color: black; border: none; animation: pop 0.3s; }
+        @keyframes pop { 0% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        .btn-bingo { width: 300px; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 12px; font-weight: bold; margin-top: 15px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h2 style="color: var(--primary);">🎙️ BINGO LIVE RADIO</h2>
-    <div id="status">Status: Connecting...</div>
-
-    <div class="bingo-card">
-        <div class="grid" id="bingoGrid"></div>
+<div class="main-layout" id="gameUI" style="display:none;">
+    <div class="left-panel">
+        <div class="video-box">
+            <iframe src="PASTE_YOUR_EMBED_URL_HERE" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>
+        </div>
+        <div class="chat-box">
+            <div id="chatMsgs"></div>
+            <div class="chat-input">
+                <input type="text" id="chatInp" placeholder="Say something...">
+                <button onclick="sendChat()">Send</button>
+            </div>
+        </div>
     </div>
-    
-    <button class="btn-bingo" onclick="claimBingo()">BINGO!</button>
+
+    <div class="right-panel">
+        <h3 id="pNameDisp" style="color:var(--primary)">---</h3>
+        <div class="bingo-card">
+            <div class="grid" id="bingoGrid"></div>
+        </div>
+        <button class="btn-bingo" onclick="claimBingo()">BINGO!</button>
+    </div>
+</div>
 
 <script>
     const firebaseConfig = {
@@ -40,22 +66,23 @@
       measurementId: "G-RR2EG93C43"
     };
 
-    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    let myName = prompt("Anong pangalan mo, Kabingo?", "Listener_" + Math.floor(Math.random()*99));
-    if(!myName) myName = "Guest";
+    let myName = "";
+    while(!myName) { myName = prompt("REQUIRED: Please enter your name to join the Bingo Live:"); }
     
-    // Unique ID for the session
+    document.getElementById('gameUI').style.display = 'flex';
+    document.getElementById('pNameDisp').innerText = "Player: " + myName;
+
     const uid = myName.replace(/\s+/g, '_') + "_" + Date.now();
     const playerRef = database.ref('players/' + uid);
-
-    document.getElementById('status').innerText = "Player: " + myName + " | Sync: Online";
+    playerRef.onDisconnect().remove();
 
     let cardNumbers = [];
     let markedIndices = [12];
 
-    function initGame() {
+    function initCard() {
         const grid = document.getElementById('bingoGrid');
         let pool = Array.from({length: 75}, (_, i) => i + 1).sort(() => Math.random() - 0.5);
         cardNumbers = pool.slice(0, 25);
@@ -64,41 +91,47 @@
         cardNumbers.forEach((num, idx) => {
             let cell = document.createElement('div');
             cell.className = 'cell' + (idx === 12 ? ' marked' : '');
+            cell.id = 'cell-' + idx;
             cell.innerText = num;
-            cell.onclick = () => {
-                if(idx === 12) return;
-                cell.classList.toggle('marked');
-                if(cell.classList.contains('marked')) markedIndices.push(idx);
-                else markedIndices = markedIndices.filter(i => i !== idx);
-                sync();
-            };
             grid.appendChild(cell);
         });
-
-        // Eto ang magic: Kapag nag-leave ang player, buburahin ang data nila
-        playerRef.onDisconnect().remove();
-        
         sync();
     }
 
-    function sync() {
-        playerRef.set({
-            name: myName, 
-            cardNumbers: cardNumbers, 
-            markedIndices: markedIndices
+    // LISTENING TO DJ'S DRAWN NUMBERS
+    database.ref('drawnNumbers').on('value', (snap) => {
+        const drawn = snap.val() || [];
+        cardNumbers.forEach((num, idx) => {
+            if (drawn.includes(num) || idx === 12) {
+                document.getElementById('cell-' + idx).classList.add('marked');
+                if (!markedIndices.includes(idx)) markedIndices.push(idx);
+            }
         });
-    }
-
-    function claimBingo() {
-        database.ref('winners/').push({ name: myName, time: Date.now() });
-        alert("🎉 BINGO SENT TO DJ!");
-    }
-
-    database.ref('gameStatus/reset').on('value', (snap) => {
-        if(snap.val() === true) location.reload();
+        sync();
     });
 
-    initGame();
+    function sync() { playerRef.set({ name: myName, cardNumbers, markedIndices }); }
+    function claimBingo() { database.ref('winners/').push({ name: myName }); alert("BINGO SHOUTED!"); }
+
+    // CHAT SYSTEM
+    function sendChat() {
+        const msg = document.getElementById('chatInp').value;
+        if(!msg) return;
+        database.ref('chat').push({ name: myName, msg });
+        document.getElementById('chatInp').value = "";
+    }
+
+    database.ref('chat').limitToLast(20).on('child_added', (snap) => {
+        const c = snap.val();
+        const div = document.createElement('div');
+        div.innerHTML = `<b style="color:var(--primary)">${c.name}:</b> ${c.msg}`;
+        document.getElementById('chatMsgs').appendChild(div);
+        document.getElementById('chatMsgs').scrollTop = document.getElementById('chatMsgs').scrollHeight;
+    });
+
+    database.ref('gameStatus/reset').on('value', (snap) => { if(snap.val() === true) location.reload(); });
+
+    initCard();
 </script>
 </body>
 </html>
