@@ -25,7 +25,7 @@
         .online-dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; box-shadow: 0 0 8px var(--success); }
         
         .user-btn { display: flex; align-items: center; gap: 10px; cursor: pointer; background: rgba(255,255,255,0.05); padding: 5px 12px; border-radius: 10px; }
-        .user-btn img { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--accent); }
+        .user-btn img { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; }
 
         /* --- MARQUEE --- */
         .marquee-v2 { background: rgba(59, 130, 246, 0.1); padding: 8px 0; border-bottom: 1px solid rgba(59, 130, 246, 0.1); display: none; overflow: hidden; }
@@ -52,7 +52,7 @@
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
         .header-cell { text-align: center; font-size: 24px; font-weight: 800; padding-bottom: 10px; }
         .cell { aspect-ratio: 1; background: var(--surface-br); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: var(--text-dim); transition: 0.2s; }
-        .cell.hit { background: var(--accent); color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); border: none; }
+        .cell.hit { background: var(--accent) !important; color: white !important; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); border: none; }
 
         /* --- CHAT --- */
         .chat-box { background: var(--surface); border-radius: 20px; height: 500px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
@@ -160,13 +160,11 @@
     const database = firebase.database();
     const auth = firebase.auth();
 
-    // SOUNDS
     const sfxBall = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
     const sfxWin = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
 
     let user = null, card = [], marks = [12], isWin = false, ballCount = 0, firstLoad = true;
 
-    // UNLOCK AUDIO ON FIRST CLICK
     function unlockAudio() {
         sfxBall.play().then(() => { sfxBall.pause(); sfxBall.currentTime = 0; });
         sfxWin.play().then(() => { sfxWin.pause(); sfxWin.currentTime = 0; });
@@ -187,26 +185,19 @@
 
     function login() {
         unlockAudio(); 
-        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
-            return auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-        });
+        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
     }
 
-    // --- ONLINE PLAYERS LOGIC ---
     function handleOnlineStatus() {
-        const onlineRef = database.ref('.info/connected');
         const userStatusRef = database.ref('presence/' + user.uid);
-
-        onlineRef.on('value', snapshot => {
-            if (snapshot.val() === false) return;
-            userStatusRef.onDisconnect().remove().then(() => {
-                userStatusRef.set(true);
-            });
+        database.ref('.info/connected').on('value', snap => {
+            if (snap.val() === true) {
+                userStatusRef.onDisconnect().remove();
+                userStatusRef.set({ name: user.displayName, lastActive: firebase.database.ServerValue.TIMESTAMP });
+            }
         });
-
-        database.ref('presence').on('value', snapshot => {
-            const count = snapshot.numChildren() || 0;
-            document.getElementById('playerCount').innerText = count;
+        database.ref('presence').on('value', snap => {
+            document.getElementById('playerCount').innerText = snap.numChildren();
         });
     }
 
@@ -217,9 +208,7 @@
         };
         let cols = [getCol(1,15), getCol(16,30), getCol(31,45), getCol(46,60), getCol(61,75)];
         card = []; 
-        for(let r=0; r<5; r++) {
-            for(let c=0; c<5; c++) card.push(cols[c][r]);
-        }
+        for(let r=0; r<5; r++) { for(let c=0; c<5; c++) card.push(cols[c][r]); }
         card[12] = "FREE";
         card.forEach((n, i) => {
             let div = document.createElement('div');
@@ -230,40 +219,47 @@
         sync();
     }
 
+    // DASHBOARD SYNC FIX
     function sync() {
-        if(user) database.ref('players/'+user.uid).update({ name: user.displayName, photo: user.photoURL, card, marks });
+        if(user) {
+            database.ref('players/' + user.uid).update({
+                name: user.displayName,
+                photo: user.photoURL,
+                card: card,
+                marks: marks,
+                lastSync: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
     }
 
     function setup() {
-        // RESET
         database.ref('gameStatus/reset').on('value', s => {
-            if(s.val()===true) { marks=[12]; isWin=false; ballCount=0; initCard(); document.getElementById('ballRow').innerHTML=""; }
+            if(s.val()===true) { marks=[12]; isWin=false; ballCount=0; initCard(); }
         });
 
-        // BALLS & SOUND
         database.ref('drawnNumbers').on('value', s => {
             const drawn = s.val() || [];
-            // Play sound only if ball count increased and it's not the initial load
             if(drawn.length > ballCount) {
                 if(!firstLoad) sfxBall.play().catch(()=>{});
                 ballCount = drawn.length;
             }
-            
             const row = document.getElementById('ballRow'); row.innerHTML = "";
             drawn.slice().reverse().forEach((n, i) => {
                 let b = document.createElement('div'); b.className = 'ball'+(i===0?' new':''); b.innerText = n; row.appendChild(b);
             });
+            let newlyMarked = false;
             card.forEach((n, i) => {
                 if(drawn.includes(n) && !marks.includes(i)) {
                     document.getElementById('c-'+i).classList.add('hit');
                     marks.push(i);
+                    newlyMarked = true;
                 }
             });
-            sync(); if(!isWin) check();
+            if(newlyMarked) sync(); // Sync agad pag may bagong hit
+            if(!isWin) check();
             firstLoad = false;
         });
 
-        // WINNERS & SOUND
         database.ref('winners').on('value', s => {
             const w = s.val();
             if(w) {
@@ -273,13 +269,12 @@
             } else { document.getElementById('winMarquee').style.display='none'; }
         });
 
-        // CHAT
-        database.ref('chat').limitToLast(20).on('child_added', s => {
+        database.ref('chat').limitToLast(15).on('child_added', s => {
             const d = s.val();
             const m = document.createElement('div'); m.className = 'msg';
             m.innerHTML = `<img src="${d.photo}"><div class="bubble"><b>${d.name}</b>${d.msg}</div>`;
-            document.getElementById('chatList').appendChild(m);
-            document.getElementById('chatList').scrollTop = document.getElementById('chatList').scrollHeight;
+            const list = document.getElementById('chatList');
+            list.appendChild(m); list.scrollTop = list.scrollHeight;
         });
     }
 
@@ -287,7 +282,7 @@
         const ways = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
         if(ways.some(w => w.every(i => marks.includes(i)))) {
             isWin = true;
-            database.ref('winners/'+user.uid).set({name: user.displayName});
+            database.ref('winners/'+user.uid).set({name: user.displayName, time: firebase.database.ServerValue.TIMESTAMP});
             alert("BINGO!");
         }
     }
@@ -300,16 +295,10 @@
     function toggleSettings() {
         const m = document.getElementById('settingsModal');
         m.style.display = (m.style.display === 'flex') ? 'none' : 'flex';
-        if(m.style.display === 'flex') {
-            document.getElementById('editN').value = user.displayName;
-            document.getElementById('editP').value = user.photoURL;
-        }
     }
 
     function saveProfile() {
-        user.updateProfile({ displayName: document.getElementById('editN').value, photoURL: document.getElementById('editP').value }).then(() => {
-            location.reload();
-        });
+        user.updateProfile({ displayName: document.getElementById('editN').value, photoURL: document.getElementById('editP').value }).then(() => location.reload());
     }
 </script>
 </body>
