@@ -145,8 +145,7 @@
             document.getElementById('userImg').src = u.photoURL;
             db.ref('users/'+u.uid).on('value', s => { 
                 if(s.exists()){
-                    userData = s.val(); 
-                    userData.uid = u.uid; 
+                    userData = s.val(); userData.uid = u.uid; 
                     document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString(); 
                 }
             });
@@ -177,6 +176,7 @@
             checkWin();
         });
 
+        // FIXED: WINNER NOTIFICATION
         db.ref('lastWinner').on('value', s => {
             const w = s.val();
             if(w && w.name) {
@@ -220,7 +220,7 @@
             if(w.every(i => marks.includes(i))) {
                 w.forEach(idx => {
                     const el = document.getElementById('c-'+idx);
-                    el.style.border = "3px solid #fbbf24"; el.style.boxShadow = "0 0 15px #fbbf24";
+                    if(el) { el.style.border = "3px solid #fbbf24"; el.style.boxShadow = "0 0 15px #fbbf24"; }
                 });
                 if(!window.won) {
                     window.won = true; confetti();
@@ -231,18 +231,30 @@
         });
     }
 
+    // FIXED: CHAT LISTENER & SENDER
     function setupChat() {
+        const list = document.getElementById('chatList');
+        db.ref('chat').limitToLast(20).off(); // Reset listener to avoid duplicates
         db.ref('chat').limitToLast(20).on('child_added', s => {
-            const d = s.val(); const list = document.getElementById('chatList');
-            const div = document.createElement('div'); div.className = 'msg';
-            div.innerHTML = `<b>${d.name}:</b> ${d.text}`;
-            list.appendChild(div); list.scrollTop = list.scrollHeight;
+            const d = s.val();
+            if(d && d.name && d.text) {
+                const div = document.createElement('div'); div.className = 'msg';
+                div.innerHTML = `<b>${d.name}:</b> ${d.text}`;
+                list.appendChild(div);
+                list.scrollTop = list.scrollHeight;
+            }
         });
     }
 
     function sendChat() {
-        const input = document.getElementById('chatIn'); if(!input.value.trim()) return;
-        db.ref('chat').push({ name: userData.name, text: input.value });
+        const input = document.getElementById('chatIn'); 
+        const msg = input.value.trim();
+        if(!msg || !userData.name) return;
+        db.ref('chat').push({ 
+            name: userData.name, 
+            text: msg,
+            time: firebase.database.ServerValue.TIMESTAMP 
+        });
         input.value = "";
     }
 
