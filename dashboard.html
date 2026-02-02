@@ -1,52 +1,66 @@
 <!DOCTYPE html>
-<html>
+<html lang="tl">
 <head>
     <meta charset="UTF-8">
     <title>DJ Master Dashboard</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; }
+        :root { --bg: #0f172a; --panel: #1e293b; --neon: #00f2fe; --danger: #ff4757; }
+        body { font-family: sans-serif; background: var(--bg); color: white; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; margin-left: 10px; }
         .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
-        .monitor-card { background: #1e293b; padding: 10px; border-radius: 10px; border: 2px solid #334155; }
-        .monitor-card.near-bingo { border-color: #f1c40f; box-shadow: 0 0 10px #f1c40f; }
-        .mini-bingo { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 5px; }
-        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.7rem; display: flex; 
-                 align-items: center; justify-content: center; border-radius: 2px; }
-        .m-cell.active { background: #00f2fe; color: black; font-weight: bold; }
-        .player-name { font-size: 0.8rem; font-weight: bold; color: #00f2fe; display: block; margin-bottom: 5px; }
-        .controls { margin-bottom: 20px; background: #1e293b; padding: 15px; border-radius: 10px; }
-        button { padding: 10px; cursor: pointer; font-weight: bold; border: none; border-radius: 5px; margin-right: 10px; }
+        .monitor-card { background: var(--panel); padding: 10px; border-radius: 10px; border: 2px solid #334155; position: relative; transition: 0.3s; }
+        .monitor-card.near-bingo { border-color: #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.5); }
+        .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 8px; }
+        .m-cell { aspect-ratio: 1; background: #334155; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; border-radius: 2px; }
+        .m-cell.active { background: var(--neon); color: black; font-weight: bold; }
+        .p-name { color: var(--neon); font-size: 0.8rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis; display: block; white-space: nowrap; }
+        #winAlert { position: fixed; top: 10px; right: 10px; z-index: 999; }
+        .alert { background: var(--danger); padding: 15px; border-radius: 10px; margin-bottom: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); animation: flash 0.5s infinite; }
+        @keyframes flash { from { opacity: 1; } to { opacity: 0.7; } }
     </style>
 </head>
 <body>
-    <h1>🎙️ DJ MONITOR</h1>
-    
-    <div class="controls">
-        <button style="background: #ffa502;" onclick="resetGame()">RESET CARDS</button>
-        <button style="background: #ff4757;" onclick="clearList()">CLEAR LIST</button>
-        <span>Players: <b id="pCount">0</b></span>
+
+    <div id="winAlert"></div>
+
+    <div class="header">
+        <div>
+            <h1 style="margin:0; font-size: 1.3rem;">🎙️ DJ MASTER MONITOR</h1>
+            <small>Active Players: <span id="pCount" style="color:var(--neon)">0</span></small>
+        </div>
+        <div>
+            <button class="btn" style="background: #ffa502;" onclick="resetRound()">RESET ROUND</button>
+            <button class="btn" style="background: var(--danger);" onclick="clearAll()">CLEAR LIST</button>
+        </div>
     </div>
 
-    <div class="players-grid" id="mainMonitor"></div>
+    <div class="players-grid" id="monitorGrid"></div>
 
 <script>
     const firebaseConfig = {
-  apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
-  authDomain: "radiobingo-9ac29.firebaseapp.com",
-  databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "radiobingo-9ac29",
-  storageBucket: "radiobingo-9ac29.firebasestorage.app",
-  messagingSenderId: "965903993397",
-  appId: "1:965903993397:web:f6646fa05225f147eebf7c",
-  measurementId: "G-RR2EG93C43"
-};
+      apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
+      authDomain: "radiobingo-9ac29.firebaseapp.com",
+      databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "radiobingo-9ac29",
+      storageBucket: "radiobingo-9ac29.firebasestorage.app",
+      messagingSenderId: "965903993397",
+      appId: "1:965903993397:web:f6646fa05225f147eebf7c",
+      measurementId: "G-RR2EG93C43"
+    };
+
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    const database = firebase.database();
+
+    // Player Sync
     database.ref('players').on('value', (snap) => {
         const players = snap.val();
-        const grid = document.getElementById('mainMonitor');
+        const grid = document.getElementById('monitorGrid');
         grid.innerHTML = '';
         if(!players) { document.getElementById('pCount').innerText = "0"; return; }
-        
+
         let count = 0;
         for (let id in players) {
             count++;
@@ -56,15 +70,25 @@
             card.className = 'monitor-card' + (isNear ? ' near-bingo' : '');
             
             let cells = '';
-            for(let i=0; i<25; i++){
+            for(let i=0; i<25; i++) {
                 let active = p.markedIndices && p.markedIndices.includes(i) ? ' active' : '';
-                let num = p.cardNumbers ? p.cardNumbers[i] : '?';
-                cells += `<div class="m-cell${active}">${num === 'FREE' ? 'FR' : num}</div>`;
+                let val = p.cardNumbers ? p.cardNumbers[i] : '?';
+                cells += `<div class="m-cell${active}">${val == 'FREE' ? 'FR' : val}</div>`;
             }
-            card.innerHTML = `<span class="player-name">${p.name}</span><div class="mini-bingo">${cells}</div>`;
+            card.innerHTML = `<span class="p-name">${p.name}</span><div class="mini-grid">${cells}</div>`;
             grid.appendChild(card);
         }
         document.getElementById('pCount').innerText = count;
+    });
+
+    // Bingo Winner Notifier
+    database.ref('winners').on('child_added', (snap) => {
+        const w = snap.val();
+        const alertBox = document.createElement('div');
+        alertBox.className = 'alert';
+        alertBox.innerHTML = `<strong>🚨 BINGO CALL!</strong><br>${w.name}`;
+        document.getElementById('winAlert').appendChild(alertBox);
+        setTimeout(() => alertBox.remove(), 10000);
     });
 
     function checkNear(marked) {
@@ -77,15 +101,15 @@
         return false;
     }
 
-    function resetGame() {
-        if(confirm("Refresh all listener cards?")) {
+    function resetRound() {
+        if(confirm("Simulan ang bagong round? Lahat ng players ay mag-re-refresh.")){
             database.ref('gameStatus/reset').set(true);
-            setTimeout(() => database.ref('gameStatus/reset').set(false), 1000);
+            setTimeout(() => database.ref('gameStatus/reset').set(false), 2000);
         }
     }
 
-    function clearList() {
-        if(confirm("Clear players from dashboard?")) {
+    function clearAll() {
+        if(confirm("Lilinisin ang listahan ng players sa dashboard?")){
             database.ref('players').remove();
             database.ref('winners').remove();
         }
