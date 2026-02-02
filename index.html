@@ -3,77 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Radio Bingo Live - Professional</title>
+    <title>Radio Bingo Live - Pro</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --primary: #00f2fe; --accent: #ff4757; --bg: #0f172a; --panel: #1e293b; --text: #f8fafc; --success: #22c55e; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
 
-        /* BANNER */
-        .top-banner { width: 100%; background: #000; border-bottom: 2px solid var(--primary); text-align: center; line-height: 0; }
-        .top-banner img { width: 100%; max-height: 100px; object-fit: contain; }
+        /* RE-SIZED AUTO-FIT BANNER */
+        .top-banner { 
+            width: 100%; height: 100px; background: #000; 
+            border-bottom: 2px solid var(--primary); display: flex; 
+            justify-content: center; align-items: center; overflow: hidden;
+        }
+        .top-banner img { width: 100%; height: 100%; object-fit: contain; }
 
         /* PLAYER COUNT BADGE */
         .player-count-badge {
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
-            padding: 5px 12px; border-radius: 20px; border: 1px solid var(--primary);
-            font-size: 0.8rem; font-weight: bold; display: flex; align-items: center; gap: 8px;
-            position: fixed; top: 115px; right: 15px; z-index: 100;
+            background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px);
+            padding: 6px 15px; border-radius: 30px; border: 1px solid var(--primary);
+            font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; gap: 8px;
+            position: fixed; top: 110px; right: 15px; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-        .pulse { width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+        .pulse { width: 10px; height: 10px; background: var(--success); border-radius: 50%; animation: pulseAnim 1.5s infinite; }
+        @keyframes pulseAnim { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
 
-        /* WINNER MARQUEE */
+        /* MARQUEE */
         .winner-marquee { background: #1e293b; color: var(--primary); padding: 8px 0; font-weight: bold; font-size: 0.85rem; border-bottom: 1px solid #334155; white-space: nowrap; overflow: hidden; display: none; }
-        .marquee-content { display: inline-block; padding-left: 100%; animation: marquee 15s linear infinite; }
+        .marquee-content { display: inline-block; padding-left: 100%; animation: marquee 18s linear infinite; }
         @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
 
-        /* LOGIN SCREEN UPGRADED */
-        #loginScreen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
-        .login-card { 
-            background: var(--panel); width: 100%; max-width: 400px; border-radius: 24px; 
-            overflow: hidden; border: 1px solid rgba(0, 242, 254, 0.3);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: center;
-        }
-        .login-banner { width: 100%; background: #000; padding: 20px; border-bottom: 1px solid var(--primary); }
-        .login-content { padding: 30px; }
-        .google-btn { 
-            width: 100%; padding: 14px; background: white; color: #1e293b; border: none; 
-            border-radius: 12px; font-weight: bold; cursor: pointer; display: flex; 
-            align-items: center; justify-content: center; gap: 10px; transition: 0.3s;
-        }
-        .google-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,255,255,0.1); }
-        .login-card input { 
-            width: 100%; padding: 14px; margin: 15px 0; border-radius: 12px; 
-            border: 1px solid #334155; background: #0f172a; color: white; text-align: center; font-size: 1rem;
-        }
+        /* LOGIN SCREEN */
+        #loginScreen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+        .login-card { background: var(--panel); width: 100%; max-width: 400px; border-radius: 25px; overflow: hidden; border: 1px solid rgba(0, 242, 254, 0.3); box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        .login-banner { width: 100%; height: 100px; background: #000; border-bottom: 1px solid var(--primary); display: flex; justify-content: center; align-items: center; }
+        .login-banner img { width: 100%; height: 100%; object-fit: contain; }
+        .login-content { padding: 30px; text-align: center; }
+        .google-btn { width: 100%; padding: 15px; background: white; color: #1e293b; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; }
+        .login-card input { width: 100%; padding: 14px; margin: 15px 0; border-radius: 12px; border: 1px solid #334155; background: #0f172a; color: white; text-align: center; font-size: 1rem; outline: none; }
 
-        /* GAME UI */
+        /* GAME LAYOUT */
         #gameUI { display: none; flex-direction: column; flex: 1; }
-        .video-frame { width: 92%; max-width: 800px; margin: 15px auto; padding: 6px; background: #000; border: 2px solid var(--primary); border-radius: 16px; box-shadow: 0 0 25px rgba(0, 242, 254, 0.2); }
-        .video-container { width: 100%; aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; }
+        .video-frame { width: 95%; max-width: 850px; margin: 15px auto; padding: 5px; background: #000; border: 2px solid var(--primary); border-radius: 15px; box-shadow: 0 0 20px rgba(0, 242, 254, 0.2); }
+        .video-container { width: 100%; aspect-ratio: 16/9; }
+        iframe { width: 100%; height: 100%; border: none; }
 
-        /* CARD & CHAT */
-        .bottom-section { display: flex; flex: 1; gap: 10px; padding: 0 15px 15px; }
+        .bottom-section { display: flex; flex: 1; gap: 15px; padding: 0 20px 20px; }
         .card-panel { flex: 1.2; display: flex; flex-direction: column; align-items: center; }
-        .bingo-card { background: white; padding: 12px; border-radius: 16px; width: 100%; max-width: 340px; }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 8px; }
-        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 6px; color: #1e293b; font-size: 1rem; }
-        .cell.marked { background: var(--primary); color: #0f172a; border: none; transform: scale(0.92); transition: 0.2s; }
+        .bingo-card { background: white; padding: 15px; border-radius: 18px; width: 100%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 10px; }
+        .cell { aspect-ratio: 1; background: #f1f5f9; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-weight: 800; border-radius: 8px; color: #1e293b; font-size: 1.1rem; }
+        .cell.marked { background: var(--primary); color: #0f172a; border: none; transform: scale(0.9); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
-        .chat-panel { flex: 1; background: #111827; border-radius: 16px; display: flex; flex-direction: column; border: 1px solid #334155; overflow: hidden; max-height: 450px; }
-        #chatMsgs { flex: 1; overflow-y: auto; padding: 12px; font-size: 0.85rem; }
-        .chat-msg { display: flex; gap: 8px; margin-bottom: 12px; }
+        .chat-panel { flex: 1; background: #111827; border-radius: 20px; display: flex; flex-direction: column; border: 1px solid #334155; overflow: hidden; height: 450px; }
+        #chatMsgs { flex: 1; overflow-y: auto; padding: 15px; font-size: 0.85rem; }
+        .chat-msg { display: flex; gap: 10px; margin-bottom: 12px; }
         .chat-avatar { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--primary); }
-        .chat-text { background: #1e293b; padding: 8px 12px; border-radius: 0 12px 12px 12px; color: white; }
+        .chat-text { background: #1e293b; padding: 10px 14px; border-radius: 0 15px 15px 15px; color: white; line-height: 1.4; }
+
+        /* MODAL */
+        #winnerModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--panel); width: 100%; max-width: 400px; padding: 40px 20px; border-radius: 30px; text-align: center; border: 2px solid var(--primary); animation: pop 0.4s ease; }
+        @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
         @media (max-width: 850px) {
             .bottom-section { flex-direction: column; align-items: center; }
-            .chat-panel { width: 100%; height: 300px; }
-            .player-count-badge { top: auto; bottom: 80px; right: 15px; }
+            .chat-panel { width: 100%; height: 350px; }
+            .player-count-badge { top: auto; bottom: 90px; right: 10px; padding: 4px 10px; font-size: 0.75rem; }
+            .top-banner { height: 70px; }
         }
     </style>
 </head>
@@ -90,26 +90,24 @@
 
 <div class="player-count-badge" id="playerCountDiv" style="display:none;">
     <div class="pulse"></div>
-    <span id="pCount">0</span> Players Live
+    <span id="pCount">0</span> PLAYERS LIVE
 </div>
 
 <div id="loginScreen">
     <div class="login-card">
         <div class="login-banner">
-            <img src="https://i.imgur.com/8QQUx1k.jpeg" style="width:100%; max-height:80px; object-fit:contain;">
+            <img src="https://i.imgur.com/8QQUx1k.jpeg" alt="Banner">
         </div>
         <div class="login-content">
-            <h2 style="margin-top:0; color:var(--primary); letter-spacing:1px;">BINGO PORTAL</h2>
-            <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:25px;">Please verify your identity to play.</p>
-            
+            <h2 style="color:var(--primary); margin:0 0 10px;">WELCOME PLAYER</h2>
+            <p style="color:#94a3b8; font-size:0.9rem; margin-bottom:25px;">Please sign in to join the live game.</p>
             <button id="googleBtn" class="google-btn" onclick="loginGoogle()">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Continue with Google
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Sign in with Google
             </button>
-            
-            <div id="gcashStep" style="display:none; margin-top:20px; animation: fadeIn 0.5s;">
-                <p style="color:var(--success); font-weight:bold;">✔ Verified as <span id="userNameDisplay"></span></p>
-                <input type="tel" id="gcashInput" placeholder="Enter GCash Number (11 digits)" maxlength="11">
-                <button class="google-btn" style="background:var(--primary); color:#0f172a; margin-top:10px;" onclick="joinGame()">ENTER BINGO HALL</button>
+            <div id="gcashStep" style="display:none; margin-top:20px;">
+                <p style="color:var(--success); font-weight:bold; margin-bottom:15px;">Verified: <span id="userNameDisplay"></span></p>
+                <input type="tel" id="gcashInput" placeholder="Enter GCash Number (11-digits)" maxlength="11">
+                <button class="google-btn" style="background:var(--primary); color:#0f172a;" onclick="joinGame()">JOIN BINGO NOW</button>
             </div>
         </div>
     </div>
@@ -121,9 +119,7 @@
             <iframe src="https://www.youtube.com/embed/36YnV9STBqc?autoplay=1" allow="autoplay; fullscreen"></iframe>
         </div>
     </div>
-    
-    <div id="patternName" style="text-align:center; color:var(--primary); font-weight:bold; padding:8px; font-size:0.85rem; letter-spacing:1px;">PATTERN: ANY LINE</div>
-
+    <div id="patternName" style="text-align:center; color:var(--primary); font-weight:bold; padding:8px; font-size:0.8rem; letter-spacing:2px;">PATTERN: ANY LINE</div>
     <div class="bottom-section">
         <div class="card-panel">
             <div class="bingo-card">
@@ -133,12 +129,11 @@
                 <div class="grid" id="bingoGrid"></div>
             </div>
         </div>
-
         <div class="chat-panel">
             <div id="chatMsgs"></div>
             <div class="chat-input-area">
-                <input type="text" id="chatInp" placeholder="Send a message..." style="flex:1; padding:12px; border-radius:10px; border:none; background:#0f172a; color:white; outline:none;">
-                <button onclick="sendChat()" style="background:var(--primary); border:none; padding:10px 18px; border-radius:10px; font-weight:bold; color:#0f172a;">SEND</button>
+                <input type="text" id="chatInp" placeholder="Say something..." style="flex:1; padding:12px; border-radius:12px; border:none; background:#0f172a; color:white; outline:none;">
+                <button onclick="sendChat()" style="background:var(--primary); border:none; padding:0 15px; border-radius:12px; font-weight:bold; color:#0f172a;">SEND</button>
             </div>
         </div>
     </div>
@@ -146,16 +141,18 @@
 
 <div id="winnerModal">
     <div class="modal-content">
-        <h1 style="color:var(--primary); font-size:2.5rem; margin-bottom:10px;">BINGO! 🏆</h1>
-        <p>Congratulations, Winner! Prize will be sent to:</p>
+        <h1 style="color:var(--primary); font-size:2.8rem; margin:0;">BINGO!</h1>
+        <p style="color:#94a3b8;">You won the round! Prize will be sent to:</p>
         <div style="background:rgba(0,242,254,0.1); padding:20px; border-radius:20px; margin:20px 0; border:2px solid var(--primary);">
             <span id="displayGcash" style="font-size:1.8rem; font-weight:bold; color: white;"></span>
         </div>
-        <button onclick="document.getElementById('winnerModal').style.display='none'" style="background:var(--primary); padding:15px 40px; border:none; border-radius:50px; font-weight:bold; cursor:pointer; color:#0f172a;">OKAY, GOT IT!</button>
+        <button onclick="document.getElementById('winnerModal').style.display='none'" style="background:var(--primary); padding:15px 40px; border:none; border-radius:50px; font-weight:bold; cursor:pointer; color:#0f172a;">STAY ON PAGE</button>
+        <p style="font-size:0.75rem; color:#94a3b8; margin-top:15px;">Game will auto-reset for the next round.</p>
     </div>
 </div>
 
 <script>
+    // FIREBASE CONFIG
     const firebaseConfig = {
       apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
       authDomain: "radiobingo-9ac29.firebaseapp.com",
@@ -178,12 +175,12 @@
             document.getElementById('userNameDisplay').innerText = currentUser.displayName;
             document.getElementById('googleBtn').style.display = 'none';
             document.getElementById('gcashStep').style.display = 'block';
-        }).catch(err => alert("Error: " + err.message));
+        }).catch(err => alert("Login Error: " + err.message));
     }
 
     function joinGame() {
         myGcash = document.getElementById('gcashInput').value.trim();
-        if(myGcash.length < 11) return alert("Please enter valid 11-digit GCash!");
+        if(myGcash.length < 11) return alert("Enter valid 11-digit GCash!");
 
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainTop').style.display = 'block';
@@ -192,7 +189,7 @@
         
         initCard();
         setupListeners();
-        // Online Presence
+        
         const pRef = database.ref('players/' + currentUser.uid);
         pRef.set({ name: currentUser.displayName, photo: currentUser.photoURL, online: true });
         pRef.onDisconnect().remove();
@@ -209,24 +206,21 @@
             let cell = document.createElement('div');
             cell.className = 'cell' + (idx === 12 ? ' marked' : '');
             cell.id = 'cell-' + idx;
-            cell.innerText = num === "FREE" ? "FREE" : num;
+            cell.innerText = num === "FREE" ? "FR" : num;
             grid.appendChild(cell);
         });
         sync();
     }
 
     function setupListeners() {
-        // Player Counter
         database.ref('players').on('value', snap => {
-            const count = snap.numChildren();
-            document.getElementById('pCount').innerText = count;
+            document.getElementById('pCount').innerText = snap.numChildren();
         });
 
-        // Winners Marquee
         database.ref('winners').on('value', snap => {
-            const winners = snap.val();
-            if(winners) {
-                const names = Object.values(winners).map(w => `🏆 ${w.name.toUpperCase()}`).join(" — ");
+            const w = snap.val();
+            if(w) {
+                const names = Object.values(w).map(x => `🏆 ${x.name.toUpperCase()}`).join(" — ");
                 document.getElementById('marqueeText').innerText = "LIVE WINNERS: " + names;
                 document.getElementById('marqueeSection').style.display = 'block';
             } else {
@@ -234,7 +228,6 @@
             }
         });
 
-        // Drawing Numbers
         database.ref('drawnNumbers').on('value', snap => {
             const drawn = snap.val() || [];
             cardNumbers.forEach((num, idx) => {
@@ -246,7 +239,6 @@
             if(!isWinner) checkWin();
         });
 
-        // Chat
         database.ref('chat').limitToLast(15).on('child_added', snap => {
             const c = snap.val();
             const div = document.createElement('div');
@@ -266,6 +258,7 @@
             database.ref('winners/' + currentUser.uid).set({ name: currentUser.displayName, gcash: myGcash });
             document.getElementById('displayGcash').innerText = myGcash;
             document.getElementById('winnerModal').style.display = 'flex';
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         }
     }
 
