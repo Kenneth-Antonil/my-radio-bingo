@@ -56,13 +56,18 @@
         .send-btn { background: var(--accent); color: white; border: none; padding: 0 15px; border-radius: 12px; cursor: pointer; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
         .modal-content { background: var(--surface); border-radius: 24px; width: 100%; max-width: 400px; padding: 25px; border: 1px solid var(--surface-br); }
+        
+        /* Notif Style */
+        .notif-item { background: var(--surface-br); padding: 12px; border-radius: 12px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+        .notif-item:hover { border-color: var(--accent); }
+        .notif-title { font-weight: 800; font-size: 13px; display: block; margin-bottom: 2px; }
+        .notif-body { font-size: 12px; opacity: 0.8; }
+
         .change-card-wrapper { display: flex; justify-content: center; padding: 10px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px; }
-        .btn-change { background: rgba(59, 130, 246, 0.1); color: var(--accent); border: 1px solid var(--accent); height: 40px; padding: 0 20px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
-        .btn-change:active { transform: scale(0.95); }
-        .btn-change:disabled { opacity: 0.3; cursor: not-allowed; border-color: gray; color: gray; }
+        .btn-change { background: rgba(59, 130, 246, 0.1); color: var(--accent); border: 1px solid var(--accent); height: 40px; padding: 0 20px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 
         .ref-container { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1)); border: 1px solid var(--accent); padding: 15px; border-radius: 16px; margin-bottom: 15px; text-align: center; }
-        .ref-header { font-size: 12px; font-weight: 800; color: var(--success); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .ref-header { font-size: 12px; font-weight: 800; color: var(--success); text-transform: uppercase; margin-bottom: 8px; }
     </style>
 </head>
 <body>
@@ -70,7 +75,7 @@
 <div id="loginOverlay">
     <div class="login-card">
         <div class="login-logo">RADIO<span>BINGO</span></div>
-        <p class="login-sub">Welcome to the official live stream bingo. Sign in to get your bingo card and start winning points!</p>
+        <p class="login-sub">Welcome to the official live stream bingo. Sign in to start winning points!</p>
         <button class="btn-google" onclick="login()">
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:18px">
             Sign in with Google
@@ -79,10 +84,10 @@
 </div>
 
 <div class="nav">
-    <div style="display:flex; align-items:center;"><span style="font-weight: 900; font-size: 18px; letter-spacing: -0.5px;">RADIO<span style="color:var(--accent)">BINGO</span></span></div>
+    <div style="display:flex; align-items:center;"><span style="font-weight: 900; font-size: 18px;">RADIO<span style="color:var(--accent)">BINGO</span></span></div>
     <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
         <div class="user-stats">
-            <div class="icon-btn" onclick="document.getElementById('notifModal').style.display='flex'"><i data-lucide="bell" style="width:20px"></i><span id="notifDot" class="notif-badge"></span></div>
+            <div class="icon-btn" onclick="openNotifs()"><i data-lucide="bell" style="width:20px"></i><span id="notifDot" class="notif-badge"></span></div>
             <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'"><i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span></div>
         </div>
         <img id="userImg" onclick="document.getElementById('menuModal').style.display='flex'" style="width:40px; height:40px; border-radius:12px; cursor: pointer; border: 2px solid var(--accent); object-fit: cover;">
@@ -99,18 +104,16 @@
 <div class="container">
     <div class="draw-panel">
         <div class="prev-balls" id="ballRow"></div>
-        <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8; letter-spacing:1px;">NOW DRAWN</span><span id="currentBall" style="font-size:32px; font-weight:900;">--</span></div>
+        <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8;">NOW DRAWN</span><span id="currentBall" style="font-size:32px; font-weight:900;">--</span></div>
     </div>
     <div class="card" style="padding:0; overflow:hidden;">
         <div class="video-container">
-            <div class="video-overlay-tl"><i data-lucide="layout-template" style="width:12px; color:var(--success)"></i><span style="font-size:10px; font-weight:800; color:var(--success)">PATTERN: ANY LINE</span></div>
-            <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">1</span> ONLINE</div>
+            <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
             <iframe src="https://www.youtube.com/embed/36YnV9STBqc?autoplay=1" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
         </div>
     </div>
     <div class="card">
-        <div id="cardWinNote" style="display:none; background:var(--success); color:white; text-align:center; padding:12px; border-radius:12px; margin-bottom:15px; font-weight:900;"></div>
-        <div class="change-card-wrapper"><button id="changeCardBtn" class="btn-change" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:16px"></i> GET NEW BINGO CARD</button></div>
+        <div class="change-card-wrapper"><button class="btn-change" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:16px"></i> GET NEW BINGO CARD</button></div>
         <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
         <div class="grid" id="bingoGrid"></div>
     </div>
@@ -125,14 +128,13 @@
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3>Account</h3>
         <div class="ref-container">
-            <div class="ref-header"><i data-lucide="gift" style="width:14px"></i> Invite & Earn</div>
-            <p style="font-size: 11px; margin: 5px 0 12px; opacity: 0.9;">Share link. Get 500 Pts!</p>
-            <input type="text" id="refLink" readonly style="width:100%; padding:10px; background:#000; color:var(--gold); border-radius:8px; font-size:12px; text-align:center; cursor:pointer;" onclick="this.select(); document.execCommand('copy'); alert('Copied!')">
+            <div class="ref-header">Your Referral Link</div>
+            <input type="text" id="refLink" readonly style="width:100%; padding:10px; background:#000; color:var(--gold); border-radius:8px; font-size:12px; text-align:center; cursor:pointer;" onclick="this.select(); document.execCommand('copy'); alert('Copied!');">
         </div>
         <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:12px; background:var(--danger); color:white; border:none; border-radius:8px; font-weight:700;">Log Out</button>
     </div>
 </div>
-<div id="storeModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Rewards</h3><div style="background:var(--surface-br); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;"><div><b>₱50 GCash</b><br><small>5,000 Pts</small></div><button onclick="redeem(5000, '50 GCash')" style="background:var(--success); border:none; color:white; padding:8px 15px; border-radius:8px;">Redeem</button></div></div></div>
+<div id="storeModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Rewards</h3><div style="background:var(--surface-br); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;"><div><b>₱50 GCash</b><br><small>5,000 Pts</small></div><button style="background:var(--success); border:none; color:white; padding:8px 15px; border-radius:8px;">Redeem</button></div></div></div>
 
 <script>
     lucide.createIcons();
@@ -140,6 +142,29 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = [];
+
+    // --- ONLINE COUNTER ---
+    const onlineRef = db.ref('onlineCount');
+    const myPresenceRef = db.ref('presence/' + Math.random().toString(36).substr(2, 9));
+    db.ref('.info/connected').on('value', (s) => { if(s.val()){ onlineRef.transaction(c=>(c||0)+1); myPresenceRef.onDisconnect().remove(); myPresenceRef.set(true); myPresenceRef.onDisconnect().then(()=>onlineRef.transaction(c=>Math.max((c||1)-1,0))); }});
+    onlineRef.on('value', s => { document.getElementById('onlineCount').innerText = s.val() || 0; });
+
+    // --- NOTIFICATIONS ---
+    function openNotifs() {
+        document.getElementById('notifModal').style.display='flex';
+        document.getElementById('notifDot').style.display='none';
+        const list = document.getElementById('notifList'); list.innerHTML = "";
+        db.ref('notifications').limitToLast(10).once('value', s => {
+            s.forEach(child => {
+                const n = child.val();
+                const div = document.createElement('div'); div.className = 'notif-item';
+                div.innerHTML = `<span class="notif-title">${n.title}</span><span class="notif-body">${n.body}</span>`;
+                div.onclick = () => { if(n.link) window.open(n.link, '_blank'); };
+                list.prepend(div);
+            });
+        });
+    }
+    db.ref('notifications').limitToLast(1).on('child_added', () => { document.getElementById('notifDot').style.display='block'; });
 
     async function login() {
         const provider = new firebase.auth.GoogleAuthProvider();
@@ -172,7 +197,8 @@
                     userData = s.val(); userData.uid = u.uid; 
                     document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
                     document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + userData.refCode;
-                    initBingo(); 
+                    if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); initBingo(); } 
+                    else { generateNewCard(); }
                 }
             });
             setupChat();
@@ -180,7 +206,6 @@
     });
 
     function initBingo() {
-        if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
         db.ref('drawnNumbers').on('value', s => {
             gameDrawn = s.val() || [];
             document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
@@ -199,6 +224,7 @@
             let d = document.createElement('div'); d.className = 'cell' + (i===12?' hit':'');
             d.id = 'c-'+i; d.innerText = n==="FREE"?"★":n; grid.appendChild(d);
         });
+        updateGridHits();
     }
 
     function updateGridHits() {
