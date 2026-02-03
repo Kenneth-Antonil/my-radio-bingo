@@ -32,6 +32,20 @@
         .marquee-content { display: inline-block; animation: marquee 25s linear infinite; padding-left: 100%; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
+        /* NEXT DRAW BANNER STYLE */
+        .next-draw-container { 
+            background: linear-gradient(135deg, #1e293b, #0f172a); 
+            border: 2px solid var(--gold); 
+            padding: 15px; 
+            border-radius: 20px; 
+            margin-bottom: 15px; 
+            text-align: center; 
+            box-shadow: 0 10px 25px rgba(251, 191, 36, 0.1);
+            display: none; 
+        }
+        .next-draw-label { font-size: 10px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
+        .next-draw-time { font-size: 24px; font-weight: 900; color: white; margin: 5px 0; }
+
         .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 12px; }
         .card { background: var(--surface); border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative; }
         .video-container { position: relative; height: 210px; border-radius: 20px; overflow: hidden; background: #000; }
@@ -49,17 +63,11 @@
         .cell.hit { background: var(--accent); color: white; transform: scale(1.02); }
 
         .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
-
         .cell.win-glow { background: var(--success) !important; color: white; z-index: 3; position: relative; border: 2px solid white; box-shadow: 0 0 15px var(--success); }
         .cell.win-glow::after { content: ''; position: absolute; inset: -3px; border: 2px solid white; border-radius: 10px; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        .late-overlay {
-            position: absolute; inset: 0; background: rgba(15, 23, 42, 0.8); 
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            z-index: 100; display: none; flex-direction: column; align-items: center; 
-            justify-content: center; text-align: center; padding: 20px; border-radius: 20px;
-        }
+        .late-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; }
         .late-text { font-weight: 800; font-size: 18px; color: white; margin-bottom: 8px; }
         .late-subtext { font-size: 13px; opacity: 0.8; color: var(--text); }
 
@@ -131,6 +139,12 @@
 <div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang.</div></div>
 
 <div class="container">
+    <div id="nextDrawBanner" class="next-draw-container">
+        <div class="next-draw-label">Next Bingo Game</div>
+        <div id="nextDrawTime" class="next-draw-time">--:-- --</div>
+        <div style="font-size: 10px; opacity: 0.7;">Handa na ba ang iyong card?</div>
+    </div>
+
     <div id="winnerBanner">
         <span>🎉 BINGO WINNER! 🎉</span>
         <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
@@ -241,13 +255,16 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo";
+    let lastNotifiedDraw = ""; // To prevent multiple notifications for the same draw
 
-    // --- DATE FIXER FUNCTION (DAGDAG LANG ITO) ---
     function fixDate(timestamp) {
         if(!timestamp) return "No Date";
         const d = new Date(parseInt(timestamp));
         return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) + " " + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
     }
+
+    // REQUEST NOTIFICATION PERMISSION
+    if ("Notification" in window) { Notification.requestPermission(); }
 
     function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
 
@@ -295,16 +312,11 @@
                     if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none';
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
                     
-                    if (userData.currentCard) { 
-                        cardNumbers = userData.currentCard; 
-                        renderCard(); 
-                    } else { 
-                        generateNewCard(); 
-                    }
+                    if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
                     checkLateJoiner();
                 }
             });
-            initBingo(); setupChat();
+            initBingo(); setupChat(); listenForNextDraw(); // Added next draw listener
             
             db.ref('.info/connected').on('value', snap => {
                 if (snap.val() === true) { const p = db.ref('presence').push(); p.onDisconnect().remove(); p.set(true); }
@@ -312,6 +324,57 @@
             db.ref('presence').on('value', s => { document.getElementById('onlineCount').innerText = s.numChildren() || 0; });
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
+
+    // LISTEN FOR NEXT DRAW AND SEND NOTIFICATIONS
+    function listenForNextDraw() {
+        db.ref('gameState/nextDraw').on('value', s => {
+            const nextDrawVal = s.val();
+            const banner = document.getElementById('nextDrawBanner');
+            const timeEl = document.getElementById('nextDrawTime');
+
+            if(nextDrawVal) {
+                banner.style.display = 'block';
+                timeEl.innerText = nextDrawVal;
+
+                // Notification Logic (10 minutes before)
+                checkNotificationTime(nextDrawVal);
+            } else {
+                banner.style.display = 'none';
+            }
+        });
+    }
+
+    function checkNotificationTime(timeString) {
+        // Run check every 30 seconds
+        setInterval(() => {
+            if(lastNotifiedDraw === timeString) return;
+
+            const now = new Date();
+            const drawTime = new Date();
+            const [time, modifier] = timeString.split(' ');
+            let [hours, minutes] = time.split(':');
+
+            if (hours === '12') hours = '00';
+            if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+            
+            drawTime.setHours(hours);
+            drawTime.setMinutes(minutes);
+            drawTime.setSeconds(0);
+
+            const diff = drawTime.getTime() - now.getTime();
+            const minutesLeft = Math.floor(diff / 60000);
+
+            if (minutesLeft === 10) {
+                if (Notification.permission === "granted") {
+                    new Notification("Radio Bingo Live", {
+                        body: "Handa na ba ang card mo? 10 minutes na lang, magsisimula na ang bola!",
+                        icon: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg"
+                    });
+                    lastNotifiedDraw = timeString;
+                }
+            }
+        }, 30000);
+    }
 
     function initBingo() {
         db.ref('gameState/latestWinner').on('value', s => {
@@ -510,7 +573,6 @@
                 const val = n.val();
                 const div = document.createElement('div');
                 div.style.cssText = "background:var(--surface-br); padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid var(--accent)";
-                // GUMAGAMIT NG fixDate PARA SA ORAS
                 div.innerHTML = `<div style="font-size:13px;">${val.msg}</div><div style="font-size:10px; opacity:0.5; margin-top:5px;">${fixDate(val.time || val.timestamp)}</div>`;
                 list.prepend(div);
             });
@@ -571,7 +633,6 @@
                 const v = child.val();
                 const d = document.createElement('div');
                 d.style.cssText = "display:flex; flex-direction:column; font-size:12px; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05)";
-                // GUMAGAMIT NG fixDate PARA SA HISTORY
                 d.innerHTML = `<div style="display:flex; justify-content:space-between;"><span>${v.item}</span><span style="color:${v.status==='pending'?'var(--gold)':'var(--success)'}">${v.status.toUpperCase()}</span></div>
                                <small style="opacity:0.4; font-size:9px; margin-top:2px;">${fixDate(v.time || v.timestamp)}</small>`;
                 hist.prepend(d);
