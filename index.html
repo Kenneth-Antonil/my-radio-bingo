@@ -66,12 +66,15 @@
         .btn-google:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255,255,255,0.1); }
         .btn-google img { width: 20px; }
 
-        /* Status Styling (Addition) */
         .status-card { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; margin-top: 15px; border: 1px dashed #334155; }
         .status-item { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .status-tag { padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase; font-size: 9px; }
         .pending { background: var(--gold); color: black; }
         .sent { background: var(--success); color: white; }
+
+        /* Referral Box Styling (Addition) */
+        .ref-container { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1)); border: 1px solid var(--accent); padding: 15px; border-radius: 16px; margin-bottom: 15px; text-align: center; }
+        .ref-header { font-size: 12px; font-weight: 800; color: var(--success); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; }
     </style>
 </head>
 <body>
@@ -125,7 +128,22 @@
 </div>
 
 <div id="notifModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Notifications</h3><div id="notifList"></div></div></div>
-<div id="menuModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Account</h3><input type="text" id="refLink" readonly style="width:100%; padding:10px; background:#000; border:1px solid #334155; color:var(--gold); border-radius:8px; margin-bottom:15px;"><button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:12px; background:var(--danger); color:white; border:none; border-radius:8px; font-weight:700;">Log Out</button></div></div>
+
+<div id="menuModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3>Account</h3>
+        
+        <div class="ref-container">
+            <div class="ref-header"><i data-lucide="gift" style="width:14px"></i> Invite & Earn</div>
+            <p style="font-size: 11px; margin: 5px 0 12px; opacity: 0.9;">I-share ang link mo. Kapag may nag-login sa unang pagkakataon gamit ito, makakakuha ka ng <b>500 Points</b>!</p>
+            <input type="text" id="refLink" readonly style="width:100%; padding:12px; background:#000; border:1px solid var(--accent); color:var(--gold); border-radius:8px; font-size:12px; text-align:center; cursor:pointer;" onclick="this.select(); document.execCommand('copy'); alert('Referral link copied!')">
+            <small style="font-size: 9px; opacity: 0.5; margin-top: 5px; display: block;">Tap box to copy link</small>
+        </div>
+
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:12px; background:var(--danger); color:white; border:none; border-radius:8px; font-weight:700;">Log Out</button>
+    </div>
+</div>
+
 <div id="storeModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Rewards</h3><div style="background:var(--surface-br); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;"><div><b>₱50 GCash</b><br><small>5,000 Pts</small></div><button onclick="redeem(5000, '50 GCash')" style="background:var(--success); border:none; color:white; padding:8px 15px; border-radius:8px;">Redeem</button></div></div></div>
 
 <div id="gcashModal" class="modal" onclick="this.style.display='none'">
@@ -189,7 +207,6 @@
             });
             setupChat();
             
-            // Addition: Inject Redemption History to Account Modal
             const menuContent = document.querySelector('#menuModal .modal-content');
             if(menuContent && !document.getElementById('statusBox')) {
                 const div = document.createElement('div');
@@ -320,7 +337,6 @@
         });
     }
 
-    // Updated Redeem Function (Overriding original logic)
     function redeem(cost, item) {
         if(userData.points < cost) return alert("Kulang points!");
         document.getElementById('gcashModal').style.display = 'flex';
