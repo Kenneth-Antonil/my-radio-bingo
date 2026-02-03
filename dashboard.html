@@ -73,6 +73,13 @@
             text-align: center;
             font-size: 18px;
         }
+
+        /* Scheduler Styling */
+        .scheduler-box {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid var(--accent);
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -97,6 +104,22 @@
                 <button class="btn-reset" style="margin-top:0; color:var(--gold); border-color:var(--gold);" onclick="clearWinner()">CLEAR WINNER</button>
             </div>
             <p id="drawCount" style="font-size:12px; margin-top:15px; font-weight:700; opacity:0.6;">Balls Drawn: 0/75</p>
+        </div>
+
+        <div class="card scheduler-box">
+            <h2><i data-lucide="calendar-clock"></i> Schedule Next Draw</h2>
+            <label style="font-size:11px; font-weight:800; opacity:0.6;">DATE & TIME</label>
+            <input type="datetime-local" id="scheduleTime">
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button onclick="setSchedule()" style="background:var(--accent); color:white; border:none; padding:12px; border-radius:12px; font-weight:800; cursor:pointer;">SAVE SCHEDULE</button>
+                <button onclick="notifyUpcoming()" style="background:var(--gold); color:black; border:none; padding:12px; border-radius:12px; font-weight:800; cursor:pointer;">NOTIFY PLAYERS</button>
+            </div>
+            
+            <div id="countdownDisplay" style="margin-top:15px; font-size:13px; text-align:center; font-weight:bold; color:var(--success);">
+                No active schedule.
+            </div>
+            <button onclick="cancelSchedule()" style="background:none; border:none; color:var(--danger); font-size:10px; text-decoration:underline; cursor:pointer; width:100%; margin-top:5px;">Cancel Auto-Draw</button>
         </div>
 
         <div class="card">
@@ -158,6 +181,68 @@
     let drawnNumbers = [];
     let currentWinnerUID = "";
     let currentPattern = "Normal Bingo";
+    let activeSchedule = null;
+
+    // --- SCHEDULER LOGIC ---
+    function setSchedule() {
+        const timeVal = document.getElementById('scheduleTime').value;
+        if(!timeVal) return alert("Select a time first");
+        const timestamp = new Date(timeVal).getTime();
+        db.ref('gameState/nextDraw').set(timestamp);
+        alert("Schedule Saved!");
+    }
+
+    function cancelSchedule() {
+        if(confirm("Cancel the scheduled draw?")) {
+            db.ref('gameState/nextDraw').set(null);
+        }
+    }
+
+    function notifyUpcoming() {
+        const timeVal = document.getElementById('scheduleTime').value;
+        if(!timeVal) return alert("No schedule set.");
+        const formattedTime = new Date(timeVal).toLocaleTimeString();
+        
+        db.ref('notifications').push({ 
+            title: "Upcoming Draw! 🎰", 
+            body: `The next Bingo draw starts at ${formattedTime}. Be ready!`, 
+            timestamp: firebase.database.ServerValue.TIMESTAMP 
+        });
+        alert("Notification sent to all players!");
+    }
+
+    db.ref('gameState/nextDraw').on('value', s => {
+        activeSchedule = s.val();
+        updateCountdown();
+    });
+
+    function updateCountdown() {
+        const display = document.getElementById('countdownDisplay');
+        if(!activeSchedule) {
+            display.innerText = "No active schedule.";
+            return;
+        }
+
+        const now = Date.now();
+        const diff = activeSchedule - now;
+
+        if(diff <= 0) {
+            display.innerText = "DRAWING NOW...";
+            // Auto trigger draw and clear schedule
+            drawNumber();
+            db.ref('notifications').push({ 
+                title: "Game Started!", 
+                body: "A new ball has been drawn. Check your cards!", 
+                timestamp: firebase.database.ServerValue.TIMESTAMP 
+            });
+            db.ref('gameState/nextDraw').set(null);
+        } else {
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            display.innerText = `Starts in: ${mins}m ${secs}s`;
+        }
+    }
+    setInterval(updateCountdown, 1000);
 
     // Update searchable list for points tool
     db.ref('users').on('value', snapshot => {
