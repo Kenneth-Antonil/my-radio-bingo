@@ -48,8 +48,7 @@
         .cell { aspect-ratio: 1; background: var(--surface-br); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; z-index: 2; }
         .cell.hit { background: var(--accent); color: white; transform: scale(1.02); }
 
-        .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); animation: cardGlow 1.5s infinite alternate; }
-        @keyframes cardGlow { from { box-shadow: 0 0 10px rgba(16, 185, 129, 0.3); } to { box-shadow: 0 0 30px rgba(16, 185, 129, 0.7); } }
+        .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
 
         .cell.win-glow { background: var(--success) !important; color: white; z-index: 3; position: relative; border: 2px solid white; box-shadow: 0 0 15px var(--success); }
         .cell.win-glow::after { content: ''; position: absolute; inset: -3px; border: 2px solid white; border-radius: 10px; animation: pulse 1s infinite; }
@@ -83,6 +82,8 @@
         .styled-input { width: 100%; background: var(--bg); border: 1px solid var(--surface-br); padding: 12px; border-radius: 12px; color: white; font-weight: 700; outline: none; }
 
         .btn-change { background: rgba(59, 130, 246, 0.1); color: var(--accent); border: 1px solid var(--accent); height: 40px; padding: 0 15px; border-radius: 12px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .btn-change:disabled { opacity: 0.5; cursor: not-allowed; border-color: #475569; color: #475569; }
+        
         .pattern-box { background: var(--surface-br); height: 40px; padding: 0 15px; border-radius: 12px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.1); }
         .pattern-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
         .pattern-text { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; }
@@ -137,7 +138,7 @@
                 <div class="pattern-dot"></div>
                 <span class="pattern-text" id="patternName">Normal Bingo</span>
             </div>
-            <button class="btn-change" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
+            <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
         </div>
         <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
         <div class="grid" id="bingoGrid"></div>
@@ -222,7 +223,7 @@
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('userPanel').style.display = 'flex';
             document.getElementById('userImg').src = u.photoURL;
-            db.ref('users/'+u.uid).update({ last_seen: Date.now() });
+            db.ref('users/'+u.uid).update({ last_seen: Date.now(), name: u.displayName, photo: u.photoURL });
             
             db.ref('users/'+u.uid).on('value', s => { 
                 if(s.exists()){ 
@@ -231,8 +232,12 @@
                     document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString();
                     document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + userData.refCode;
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
-                    if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } 
-                    else { generateNewCard(); }
+                    if (userData.currentCard) { 
+                        cardNumbers = userData.currentCard; 
+                        renderCard(); 
+                    } else { 
+                        generateNewCard(); 
+                    }
                 }
             });
             initBingo(); setupChat();
@@ -250,8 +255,16 @@
             if(win && win.name) {
                 banner.innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`;
                 banner.style.display = 'block';
-                if(win.uid === auth.currentUser.uid) { confetti(); document.getElementById('bingoCardContainer').classList.add('card-win'); }
-            } else { banner.style.display = 'none'; document.getElementById('bingoCardContainer').classList.remove('card-win'); }
+                if(win.uid === auth.currentUser.uid) { 
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); 
+                    document.getElementById('bingoCardContainer').classList.add('card-win'); 
+                }
+            } else { 
+                banner.style.display = 'none'; 
+                document.getElementById('bingoCardContainer').classList.remove('card-win'); 
+                // Clear win-glow classes if no winner
+                document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow'));
+            }
         });
 
         db.ref('gameState/currentPattern').on('value', s => {
@@ -261,9 +274,24 @@
         });
 
         db.ref('drawnNumbers').on('value', s => {
-            const val = s.val(); gameDrawn = val ? Object.values(val).map(n => n.toString()) : [];
+            const val = s.val(); 
+            gameDrawn = val ? Object.values(val).map(n => n.toString()) : [];
             document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
-            updateGridHits(); renderPrevBalls(); checkWin();
+            
+            // PREVENT CHANGE CARD: Disable button if game has started
+            const btn = document.getElementById('newCardBtn');
+            if(gameDrawn.length > 0) {
+                btn.disabled = true;
+                btn.innerHTML = `<i data-lucide="lock" style="width:14px"></i> IN GAME`;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`;
+            }
+            lucide.createIcons();
+
+            updateGridHits(); 
+            renderPrevBalls(); 
+            checkWin();
         });
     }
 
@@ -272,8 +300,12 @@
         cardNumbers.forEach((n, i) => {
             const el = document.getElementById('c-'+i);
             if(i === 12) { if(el) el.classList.add('hit'); return; }
-            if(gameDrawn.includes(n.toString())) { marks.push(i); if(el) el.classList.add('hit'); } 
-            else { if(el) el.classList.remove('hit'); }
+            if(gameDrawn.includes(n.toString())) { 
+                marks.push(i); 
+                if(el) el.classList.add('hit'); 
+            } else { 
+                if(el) el.classList.remove('hit'); 
+            }
         });
     }
 
@@ -287,19 +319,33 @@
 
         for(let w of winningWays) { 
             if(w.every(i => marks.includes(i))) { 
-                w.forEach(idx => document.getElementById('c-'+idx)?.classList.add('win-glow'));
-                triggerWin(); break; 
+                // Force UI update for winning line
+                w.forEach(idx => {
+                    const el = document.getElementById('c-'+idx);
+                    if(el) el.classList.add('win-glow');
+                });
+                triggerWin(); 
+                break; 
             } 
         }
     }
 
     function triggerWin() {
-        db.ref('gameState/latestWinner').set({ name: auth.currentUser.displayName, uid: auth.currentUser.uid, time: Date.now() });
-        db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
-        db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
+        db.ref('gameState/latestWinner').once('value', s => {
+            if(!s.exists()) { // Only trigger if no winner yet
+                db.ref('gameState/latestWinner').set({ 
+                    name: auth.currentUser.displayName, 
+                    uid: auth.currentUser.uid, 
+                    time: Date.now() 
+                });
+                db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
+                db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
+            }
+        });
     }
 
     function generateNewCard() {
+        if(gameDrawn.length > 0) return alert("Bawal mag palit ng card kapag may bola na!");
         const getCol = (min, max) => {
             let nums = []; while(nums.length < 5) {
                 let r = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -317,8 +363,11 @@
     function renderCard() {
         const grid = document.getElementById('bingoGrid'); grid.innerHTML = "";
         cardNumbers.forEach((n, i) => {
-            let d = document.createElement('div'); d.className = 'cell' + (i===12?' hit':''); d.id = 'c-'+i; 
-            d.innerText = n==="FREE"?"★":n; grid.appendChild(d);
+            let d = document.createElement('div'); 
+            d.className = 'cell' + (i===12?' hit':''); 
+            d.id = 'c-'+i; 
+            d.innerText = n==="FREE"?"★":n; 
+            grid.appendChild(d);
         });
         updateGridHits();
     }
