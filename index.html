@@ -287,23 +287,37 @@
 
     function updateGridHits() {
         marks = [12];
+        document.querySelectorAll('.cell').forEach(el => el.classList.remove('win-glow')); // Reset glow before re-check
         cardNumbers.forEach((n, i) => {
             const el = document.getElementById('c-'+i);
             if(i === 12) { if(el) el.classList.add('hit'); return; }
             if(gameDrawn.includes(n.toString())) { marks.push(i); if(el) el.classList.add('hit'); } 
             else { if(el) el.classList.remove('hit'); }
         });
+        
+        // FIX: Always check for patterns to show line indicator (glow) even before winning
+        const ways = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
+        ways.forEach(w => {
+            if(w.every(idx => marks.includes(idx))) {
+                w.forEach(idx => document.getElementById('c-'+idx)?.classList.add('win-glow'));
+            }
+        });
     }
 
     function checkWin() {
         if(userData.hasWonCurrent) return;
         const ways = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
-        for(let w of ways) { if(w.every(i => marks.includes(i))) { triggerWin(w); break; } }
+        for(let w of ways) { 
+            if(w.every(i => marks.includes(i))) { 
+                triggerWin(w); 
+                break; 
+            } 
+        }
     }
 
     function triggerWin(pattern) {
         db.ref('gameState/latestWinner').set({ name: userData.name, uid: userData.uid, time: Date.now() });
-        pattern.forEach(idx => { document.getElementById('c-'+idx)?.classList.add('win-glow'); });
+        // Pattern glow is now handled by updateGridHits for better reactivity
         db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
         db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
         db.ref('users/'+userData.uid+'/history').push({ type: 'Bingo Win', amount: 500 });
@@ -326,6 +340,7 @@
 
     function renderPrevBalls() {
         const row = document.getElementById('ballRow'); row.innerHTML = "";
+        if(!gameDrawn) return;
         [...gameDrawn].reverse().slice(1,10).forEach(n => { if(n) { const b = document.createElement('div'); b.className = 'ball-small'; b.innerText = n; row.appendChild(b); } });
     }
 
