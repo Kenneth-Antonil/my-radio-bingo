@@ -245,7 +245,12 @@
                 }
             });
             initBingo(); setupChat();
-            db.ref('notifications').limitToLast(1).on('child_added', () => { document.getElementById('notifDot').style.display='block'; });
+            db.ref('notifications').limitToLast(1).on('child_added', (snap) => { 
+                const n = snap.val();
+                if (!n.uid || n.uid === auth.currentUser.uid) {
+                    document.getElementById('notifDot').style.display='block'; 
+                }
+            });
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
@@ -278,7 +283,6 @@
             updateGridHits(); renderPrevBalls(); checkWin();
         });
 
-        // Listen for global pattern change
         db.ref('gameState/currentPattern').on('value', s => {
             const pName = s.val() || "Normal Bingo";
             document.getElementById('patternName').innerText = pName;
@@ -287,7 +291,7 @@
 
     function updateGridHits() {
         marks = [12];
-        document.querySelectorAll('.cell').forEach(el => el.classList.remove('win-glow')); // Reset glow before re-check
+        document.querySelectorAll('.cell').forEach(el => el.classList.remove('win-glow'));
         cardNumbers.forEach((n, i) => {
             const el = document.getElementById('c-'+i);
             if(i === 12) { if(el) el.classList.add('hit'); return; }
@@ -295,7 +299,6 @@
             else { if(el) el.classList.remove('hit'); }
         });
         
-        // FIX: Always check for patterns to show line indicator (glow) even before winning
         const ways = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
         ways.forEach(w => {
             if(w.every(idx => marks.includes(idx))) {
@@ -317,7 +320,6 @@
 
     function triggerWin(pattern) {
         db.ref('gameState/latestWinner').set({ name: userData.name, uid: userData.uid, time: Date.now() });
-        // Pattern glow is now handled by updateGridHits for better reactivity
         db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
         db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
         db.ref('users/'+userData.uid+'/history').push({ type: 'Bingo Win', amount: 500 });
@@ -353,16 +355,25 @@
         renderCard();
     }
 
+    // UPDATED PRIVATE NOTIF LOGIC
     function openNotifs() {
         document.getElementById('notifModal').style.display='flex';
         document.getElementById('notifDot').style.display='none';
         const list = document.getElementById('notifList'); list.innerHTML = "";
-        db.ref('notifications').limitToLast(15).once('value', s => {
+        
+        const currentUserUID = auth.currentUser.uid;
+
+        db.ref('notifications').limitToLast(20).once('value', s => {
             s.forEach(child => {
-                const n = child.val(); const key = child.key;
-                const div = document.createElement('div'); div.className = 'notif-item';
-                div.innerHTML = `<div class="notif-title"><span>${n.title}</span><i data-lucide="trash-2" class="btn-del-notif" style="width:16px;" onclick="deleteNotif('${key}', event)"></i></div><div class="notif-body">${n.body}</div>`;
-                list.prepend(div);
+                const n = child.val();
+                const key = child.key;
+
+                // Check if global announcement or private payout status
+                if (!n.uid || n.uid === currentUserUID) {
+                    const div = document.createElement('div'); div.className = 'notif-item';
+                    div.innerHTML = `<div class="notif-title"><span>${n.title}</span><i data-lucide="trash-2" class="btn-del-notif" style="width:16px;" onclick="deleteNotif('${key}', event)"></i></div><div class="notif-body">${n.body}</div>`;
+                    list.prepend(div);
+                }
             });
             lucide.createIcons();
         });
