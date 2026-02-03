@@ -41,7 +41,7 @@
         #chatList { flex: 1; overflow-y: auto; padding-right: 10px; font-size: 12px; }
         .chat-msg { margin-bottom: 8px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border-left: 2px solid var(--accent); }
 
-        /* REDEMPTION SECTION (Addition) */
+        /* REDEMPTION SECTION */
         .redeem-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
         .redeem-item { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
         .redeem-actions { display: flex; gap: 5px; margin-top: 10px; }
@@ -112,14 +112,22 @@
         drawnNumbers.push(n); db.ref('drawnNumbers').set(drawnNumbers);
     }
 
-    function resetGame() { if(confirm("Reset Game? Lahat ng bola ay mawawala.")) { db.ref('drawnNumbers').set([]); db.ref('lastWinner').set(null); } }
+    function resetGame() { 
+        if(confirm("Reset Game? Lahat ng bola at hits ng players ay mawawala.")) { 
+            db.ref('drawnNumbers').set([]); 
+        } 
+    }
 
     function sendGlobalNotif() {
         const type = document.getElementById('notifType').value;
         const title = document.getElementById('notifTitle').value;
         const message = document.getElementById('notifMsg').value;
         if(!title || !message) return alert("Fill up fields!");
-        db.ref('announcements').push({ title: `${type}: ${title}`, message: message, timestamp: firebase.database.ServerValue.TIMESTAMP });
+        db.ref('notifications').push({ 
+            title: `${type}: ${title}`, 
+            body: message, 
+            timestamp: firebase.database.ServerValue.TIMESTAMP 
+        });
         alert("Sent!");
     }
 
@@ -135,7 +143,7 @@
                     user.currentCard.forEach(num => {
                         const isHit = drawnNumbers.includes(num);
                         const isFree = num === 'FREE';
-                        gridHtml += `<div class="mini-cell ${isHit ? 'hit' : ''} ${isFree ? 'free' : ''}">${isFree ? '★' : num}</div>`;
+                        gridHtml += `<div class="mini-cell ${isHit || isFree ? 'hit' : ''} ${isFree ? 'free' : ''}">${isFree ? '★' : num}</div>`;
                     });
                 } else {
                     for(let i=0; i<25; i++) gridHtml += `<div class="mini-cell">--</div>`;
@@ -144,7 +152,7 @@
 
                 container.innerHTML += `
                     <div class="player-mini-card">
-                        <div class="status-dot ${user.isOnline ? 'online-dot' : 'offline-dot'}"></div>
+                        <div class="status-dot ${user.status === 'online' ? 'online-dot' : 'offline-dot'}"></div>
                         <div class="player-info">
                             <img src="${user.photo}" class="player-pfp">
                             <div>
@@ -171,25 +179,27 @@
 
     db.ref('users').on('value', refreshPlayers);
 
-    // --- REDEMPTION MONITOR LOGIC (Addition) ---
-    db.ref('redemptions').on('value', snap => {
+    // PAYOUT MONITOR LOGIC (Synced with index.html)
+    db.ref('redeemRequests').on('value', snap => {
         const list = document.getElementById('payoutList');
         list.innerHTML = "";
-        if(!snap.exists()) list.innerHTML = "<p style='opacity:0.5; font-size:12px;'>No pending payouts.</p>";
+        if(!snap.exists()) {
+            list.innerHTML = "<p style='opacity:0.5; font-size:12px;'>No pending payouts.</p>";
+            return;
+        }
         
         snap.forEach(child => {
             const r = child.val();
             const key = child.key;
-            if(r.status === 'sent') return; // Hide completed payouts
+            if(r.status === 'sent' || r.status === 'denied') return;
 
             list.innerHTML += `
                 <div class="redeem-item">
                     <b style="color:var(--gold)">${r.item}</b><br>
-                    User: ${r.userName}<br>
-                    <span style="color:var(--success)">GCash: ${r.gcashNumber}</span><br>
-                    <small style="opacity:0.7">Name: ${r.gcashName}</small>
+                    User: ${r.name}<br>
+                    <small style="opacity:0.7">UID: ${r.uid}</small>
                     <div class="redeem-actions">
-                        <button class="btn-status" style="background:var(--success); color:white" onclick="updateStatus('${key}', 'sent')">MARK AS SENT</button>
+                        <button class="btn-status" style="background:var(--success); color:white" onclick="updateStatus('${key}', 'sent')">DONE</button>
                         <button class="btn-status" style="background:var(--danger); color:white" onclick="updateStatus('${key}', 'denied')">DENY</button>
                     </div>
                 </div>
@@ -199,7 +209,7 @@
 
     function updateStatus(key, status) {
         if(confirm(`Update status to ${status}?`)) {
-            db.ref('redemptions/' + key).update({ status: status });
+            db.ref('redeemRequests/' + key).update({ status: status });
         }
     }
 </script>
