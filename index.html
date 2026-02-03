@@ -14,7 +14,7 @@
         :root { --bg: #0b1120; --surface: #1e293b; --surface-br: #334155; --accent: #3b82f6; --text: #f8fafc; --gold: #fbbf24; --success: #10b981; --danger: #ef4444; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 20px; overflow-x: hidden; }
-        
+
         #loginOverlay { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .login-card { background: var(--surface); padding: 40px 30px; border-radius: 30px; width: 100%; max-width: 400px; text-align: center; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         .login-logo { font-size: 32px; font-weight: 900; margin-bottom: 15px; letter-spacing: -1px; }
@@ -44,9 +44,15 @@
         .cell { aspect-ratio: 1; background: var(--surface-br); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; z-index: 2; }
         .cell.hit { background: var(--accent); color: white; transform: scale(1.02); }
 
-        .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
+        .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); animation: cardGlow 1.5s infinite alternate; }
+        @keyframes cardGlow { from { box-shadow: 0 0 10px rgba(16, 185, 129, 0.3); } to { box-shadow: 0 0 30px rgba(16, 185, 129, 0.7); } }
+
         .cell.win-glow { background: var(--success) !important; color: white; z-index: 3; position: relative; border: 2px solid white; box-shadow: 0 0 15px var(--success); }
-        #winnerBanner { display: none; background: var(--success); color: white; padding: 10px; border-radius: 10px; text-align: center; font-weight: 900; margin-bottom: 10px; }
+        .cell.win-glow::after { content: ''; position: absolute; inset: -3px; border: 2px solid white; border-radius: 10px; animation: pulse 1s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        #winnerBanner { display: none; background: var(--success); color: white; padding: 10px; border-radius: 10px; text-align: center; font-weight: 900; margin-bottom: 10px; animation: slideDown 0.5s ease; }
+        @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
         .chat-box { height: 350px; display: flex; flex-direction: column; background: rgba(0,0,0,0.2); border-radius: 20px; overflow: hidden; }
         #chatList { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
@@ -61,16 +67,33 @@
 
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(10px); }
         .modal-content { background: var(--surface); border-radius: 28px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.1); max-height: 90vh; overflow-y: auto; }
-        
-        .reward-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 15px; }
-        .reward-item { background: var(--surface-br); padding: 16px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.05); }
-        .btn-redeem { background: var(--success); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; }
-        .gcash-section { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 18px; margin-bottom: 20px; border: 1px solid var(--accent); }
-        .styled-input { width: 100%; background: var(--bg); border: 1px solid var(--surface-br); padding: 12px; border-radius: 12px; color: white; font-weight: 700; outline: none; margin-bottom: 10px; }
 
-        .btn-change { background: rgba(59, 130, 246, 0.1); color: var(--accent); border: 1px solid var(--accent); height: 40px; padding: 0 15px; border-radius: 12px; font-size: 11px; font-weight: 800; cursor: pointer; }
+        .notif-item { background: rgba(255,255,255,0.03); padding: 16px; border-radius: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .notif-title { font-weight: 800; font-size: 14px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; color: var(--accent); }
+        .notif-body { font-size: 13px; opacity: 0.8; margin-top: 8px; line-height: 1.5; color: var(--text); }
+        .btn-del-notif { color: var(--danger); padding: 5px; opacity: 0.6; cursor: pointer; }
+
+        .reward-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 15px; }
+        .reward-item { background: var(--surface-br); padding: 16px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
+        .reward-info b { font-size: 16px; display: block; color: var(--text); }
+        .reward-info small { color: var(--gold); font-weight: 700; font-size: 12px; }
+        .btn-redeem { background: var(--success); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+
+        .gcash-section { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 18px; margin-bottom: 20px; border: 1px solid var(--accent); }
+        .input-label { font-size: 11px; font-weight: 800; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; display: block; }
+        .styled-input { width: 100%; background: var(--bg); border: 1px solid var(--surface-br); padding: 12px; border-radius: 12px; color: white; font-weight: 700; outline: none; }
+
+        .btn-change { background: rgba(59, 130, 246, 0.1); color: var(--accent); border: 1px solid var(--accent); height: 40px; padding: 0 15px; border-radius: 12px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .pattern-box { background: var(--surface-br); height: 40px; padding: 0 15px; border-radius: 12px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.1); }
-        .pattern-text { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; }
+        .pattern-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+        .pattern-text { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .pattern-legend { margin-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); }
+        .legend-item { font-size: 10px; opacity: 0.6; display: flex; align-items: center; gap: 4px; font-weight: 600; }
+
+        .ref-container { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1)); border: 1px solid var(--accent); padding: 15px; border-radius: 16px; margin-bottom: 15px; text-align: center; }
+        .history-box { margin-top: 15px; background: rgba(0,0,0,0.2); border-radius: 15px; padding: 12px; max-height: 200px; overflow-y: auto; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .history-item { display: flex; justify-content: space-between; font-size: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
@@ -79,7 +102,10 @@
     <div class="login-card">
         <div class="login-logo">RADIO<span>BINGO</span></div>
         <p class="login-sub">Welcome to the official live stream bingo. Sign in to start winning points!</p>
-        <button class="btn-google" onclick="login()">Sign in with Google</button>
+        <button class="btn-google" onclick="login()">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:18px">
+            Sign in with Google
+        </button>
     </div>
 </div>
 
@@ -90,7 +116,7 @@
             <div class="icon-btn" onclick="openNotifs()"><i data-lucide="bell" style="width:20px"></i><span id="notifDot" class="notif-badge"></span></div>
             <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'"><i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span></div>
         </div>
-        <img id="userImg" onclick="document.getElementById('menuModal').style.display='flex'" style="width:40px; height:40px; border-radius:12px; cursor: pointer; border: 2px solid var(--accent); object-fit: cover;">
+        <img id="userImg" onclick="openMenuModal()" style="width:40px; height:40px; border-radius:12px; cursor: pointer; border: 2px solid var(--accent); object-fit: cover;">
     </div>
 </div>
 
@@ -100,165 +126,213 @@
     <div id="winnerBanner">🎉 BINGO! 🎉</div>
     <div class="draw-panel">
         <div class="prev-balls" id="ballRow"></div>
-        <div class="current-ball-box"><span id="currentBall" style="font-size:32px; font-weight:900;">--</span></div>
+        <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8;">NOW DRAWN</span><span id="currentBall" style="font-size:32px; font-weight:900;">--</span></div>
     </div>
     <div class="card" style="padding:0; overflow:hidden;">
         <div class="video-container">
             <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
-            <iframe src="https://www.youtube.com/embed/36YnV9STBqc?autoplay=1" style="width:100%; height:100%; border:none;"></iframe>
+            <iframe src="https://www.youtube.com/embed/36YnV9STBqc?autoplay=1" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
         </div>
     </div>
     <div class="card" id="bingoCardContainer">
-        <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
+        <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px; gap:8px;">
             <div class="pattern-box">
-                <div style="width:8px; height:8px; border-radius:50%; background:var(--gold);"></div>
-                <span class="pattern-text" id="patternName">Normal Bingo</span>
+                <div class="pattern-dot"></div>
+                <span class="pattern-text" id="patternName">Any Row/Col</span>
             </div>
-            <button class="btn-change" onclick="generateNewCard()">NEW CARD</button>
+            <button class="btn-change" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
         </div>
         <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
         <div class="grid" id="bingoGrid"></div>
+        <div class="pattern-legend">
+            <div class="legend-item"><i data-lucide="minus" style="width:10px"></i> Horizontal</div>
+            <div class="legend-item"><i data-lucide="separator-vertical" style="width:10px"></i> Vertical</div>
+            <div class="legend-item"><i data-lucide="x" style="width:10px"></i> Diagonal</div>
+        </div>
     </div>
     <div class="chat-box card">
         <div id="chatList"></div>
-        <form class="chat-input" onsubmit="event.preventDefault(); sendChat();"><input type="text" id="chatIn" placeholder="Say something..."><button type="submit" class="send-btn">SEND</button></form>
+        <form class="chat-input" onsubmit="event.preventDefault(); sendChat();"><input type="text" id="chatIn" placeholder="Say something..." autocomplete="off"><button type="submit" class="send-btn"><i data-lucide="send" style="width:18px"></i></button></form>
     </div>
 </div>
 
-<div id="notifModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Notifications</h3><div id="notifList"></div></div></div>
-<div id="menuModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Profile</h3><div class="gcash-section"><input type="number" id="gcashInput" class="styled-input" placeholder="GCash Number"><button onclick="saveGcash()" style="width:100%; padding:10px; background:var(--accent); color:white; border:none; border-radius:10px;">SAVE</button></div><button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:10px; background:var(--danger); color:white; border:none; border-radius:10px;">Sign Out</button></div></div>
-<div id="storeModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Store</h3><p>Points: <span id="storePoints">0</span></p><div class="reward-grid"><div class="reward-item"><span>₱20 GCash</span><button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">2,500 Pts</button></div><div class="reward-item"><span>₱50 GCash</span><button class="btn-redeem" onclick="redeemItem('₱50 GCash', 6000)">6,000 Pts</button></div></div></div></div>
+<div id="notifModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0">Inbox</h3>
+            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+        </div>
+        <div id="notifList"></div>
+    </div>
+</div>
+
+<div id="menuModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0">My Profile</h3>
+        <div class="gcash-section">
+            <span class="input-label">My GCash Number (For Rewards)</span>
+            <div style="display:flex; gap:8px;">
+                <input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx">
+                <button onclick="saveGcash()" style="background:var(--accent); border:none; color:white; padding:0 15px; border-radius:12px; font-weight:800;">SAVE</button>
+            </div>
+        </div>
+        <div class="ref-container">
+            <div style="font-size:12px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:8px;">Referral Link</div>
+            <input type="text" id="refLink" readonly class="styled-input" style="text-align:center; cursor:pointer;" onclick="this.select(); document.execCommand('copy'); alert('Copied!');">
+        </div>
+        <div class="history-box">
+            <span style="font-size:11px; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:8px; display:block;">Recent Transactions</span>
+            <div id="historyList"></div>
+        </div>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid var(--danger); border-radius:16px; font-weight:800; margin-top:10px;">Sign Out</button>
+    </div>
+</div>
+
+<div id="storeModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0">Rewards Shop</h3>
+            <div class="points-badge" style="height:32px"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
+        </div>
+        <p style="font-size:12px; opacity:0.6; margin-bottom:20px;">Make sure your GCash number is correct in your profile before redeeming.</p>
+        <div class="reward-grid">
+            <div class="reward-item">
+                <div class="reward-info"><b>₱20 GCash</b><small>2,500 Pts</small></div>
+                <button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">Redeem</button>
+            </div>
+            <div class="reward-item">
+                <div class="reward-info"><b>₱50 GCash</b><small>6,000 Pts</small></div>
+                <button class="btn-redeem" onclick="redeemItem('₱50 GCash', 6000)">Redeem</button>
+            </div>
+            <div class="reward-item">
+                <div class="reward-info"><b>₱100 GCash</b><small>11,500 Pts</small></div>
+                <button class="btn-redeem" onclick="redeemItem('₱100 GCash', 11500)">Redeem</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     lucide.createIcons();
-    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app" };
+    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
-    let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo";
+    let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = [];
+    let currentPattern = "Normal Bingo";
+
+    const presenceRef = db.ref('presence');
+    db.ref('.info/connected').on('value', snap => {
+        if (snap.val() === true) { const myUserRef = presenceRef.push(); myUserRef.onDisconnect().remove(); myUserRef.set(true); }
+    });
+    presenceRef.on('value', snap => { document.getElementById('onlineCount').innerText = snap.numChildren() || 0; });
 
     auth.onAuthStateChanged(u => {
         if(u) {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('userPanel').style.display = 'flex';
             document.getElementById('userImg').src = u.photoURL;
-            db.ref('users/'+u.uid).update({ last_seen: Date.now(), name: u.displayName, photo: u.photoURL });
             db.ref('users/'+u.uid).on('value', s => { 
                 if(s.exists()){ 
                     userData = s.val(); userData.uid = u.uid; 
                     document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
                     document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString();
-                    if(userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
+                    document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + userData.refCode;
+                    if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
+                    if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } 
+                    else { generateNewCard(); }
                 }
             });
-            initBingo(); setupChat(); listenNotifs();
+            initBingo(); setupChat();
+            db.ref('notifications').limitToLast(1).on('child_added', (snap) => { 
+                const n = snap.val(); const key = snap.key;
+                const deletedIds = JSON.parse(localStorage.getItem('deletedNotifs') || "[]");
+                if ((!n.uid || n.uid === u.uid) && !deletedIds.includes(key)) {
+                    document.getElementById('notifDot').style.display='block'; 
+                }
+            });
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
+
+    function saveGcash() {
+        const num = document.getElementById('gcashInput').value;
+        if(num.length < 10) return alert("Invalid GCash number!");
+        db.ref('users/'+userData.uid).update({ gcash: num }).then(() => alert("GCash Saved!"));
+    }
 
     function initBingo() {
         db.ref('gameState/latestWinner').on('value', s => {
             const win = s.val(); const banner = document.getElementById('winnerBanner');
             if(win && win.name) {
-                banner.innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`; banner.style.display = 'block';
+                banner.innerText = `🎉 BINGO! WINNER: ${win.name.toUpperCase()} 🎉`;
+                banner.style.display = 'block';
                 if(win.uid === auth.currentUser.uid) { confetti(); document.getElementById('bingoCardContainer').classList.add('card-win'); }
-            } else { banner.style.display = 'none'; document.getElementById('bingoCardContainer').classList.remove('card-win'); }
+            } else {
+                banner.style.display = 'none';
+                document.getElementById('bingoCardContainer').classList.remove('card-win');
+            }
         });
-        db.ref('gameState/currentPattern').on('value', s => { 
-            currentPattern = s.val() || "Normal Bingo"; 
-            document.getElementById('patternName').innerText = currentPattern; checkWin(); 
-        });
+
         db.ref('drawnNumbers').on('value', s => {
-            gameDrawn = s.val() ? Object.values(s.val()).map(n => n.toString()) : [];
+            const val = s.val();
+            gameDrawn = val ? (Array.isArray(val) ? val : Object.values(val)).map(n => n.toString()) : [];
             document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
             updateGridHits(); renderPrevBalls(); checkWin();
         });
-    }
 
-    function checkWin() {
-        if(userData.hasWonCurrent || gameDrawn.length === 0) return;
-        let ways = [];
-        if (currentPattern === "Blackout") ways = [Array.from({length: 25}, (_, i) => i)];
-        else if (currentPattern === "Letter X") ways = [[0,4,6,8,12,16,18,20,24]];
-        else if (currentPattern === "Four Corners") ways = [[0,4,20,24]];
-        else ways = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
-
-        for(let w of ways) {
-            if(w.every(i => marks.includes(i))) {
-                w.forEach(idx => document.getElementById('c-'+idx)?.classList.add('win-glow'));
-                db.ref('gameState/latestWinner').set({ name: userData.name, uid: userData.uid });
-                db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
-                db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
-                break;
-            }
-        }
-    }
-
-    function renderCard() {
-        const grid = document.getElementById('bingoGrid'); grid.innerHTML = "";
-        cardNumbers.forEach((n, i) => {
-            let d = document.createElement('div'); d.className = 'cell' + (i===12?' hit':''); d.id = 'c-'+i; d.innerText = n==="FREE"?"★":n; grid.appendChild(d);
+        db.ref('gameState/currentPattern').on('value', s => {
+            currentPattern = s.val() || "Normal Bingo";
+            document.getElementById('patternName').innerText = currentPattern;
+            checkWin();
         });
-        updateGridHits();
     }
 
     function updateGridHits() {
         marks = [12];
         cardNumbers.forEach((n, i) => {
-            if(i === 12) return;
-            if(gameDrawn.includes(n.toString())) { marks.push(i); document.getElementById('c-'+i)?.classList.add('hit'); }
-            else { document.getElementById('c-'+i)?.classList.remove('hit'); }
+            const el = document.getElementById('c-'+i);
+            if(i === 12) { if(el) el.classList.add('hit'); return; }
+            if(gameDrawn.includes(n.toString())) { marks.push(i); if(el) el.classList.add('hit'); } 
+            else { if(el) el.classList.remove('hit'); }
         });
     }
 
-    function generateNewCard() {
-        const getCol = (min, max) => { let n = []; while(n.length<5){ let r=Math.floor(Math.random()*(max-min+1))+min; if(!n.includes(r)) n.push(r); } return n.sort((a,b)=>a-b); };
-        let cols = [getCol(1,15), getCol(16,30), getCol(31,45), getCol(46,60), getCol(61,75)];
-        let newCard = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) newCard.push(cols[c][r]); }
-        newCard[12] = "FREE";
-        db.ref('users/'+auth.currentUser.uid).update({ currentCard: newCard, hasWonCurrent: false });
+    function checkWin() {
+        if(userData.hasWonCurrent || gameDrawn.length === 0) return;
+        let winningWays = [];
+
+        if (currentPattern === "Normal Bingo") {
+            winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
+        } else if (currentPattern === "Blackout") {
+            winningWays = [Array.from({length: 25}, (_, i) => i)];
+        } else if (currentPattern === "Letter X") {
+            winningWays = [[0,4,6,8,12,16,18,20,24]];
+        } else if (currentPattern === "Four Corners") {
+            winningWays = [[0,4,20,24]];
+        }
+
+        for(let w of winningWays) { 
+            if(w.every(i => marks.includes(i))) { 
+                w.forEach(idx => document.getElementById('c-'+idx)?.classList.add('win-glow'));
+                triggerWin(); 
+                break; 
+            } 
+        }
     }
 
-    function saveGcash() {
-        const val = document.getElementById('gcashInput').value;
-        if(val.length < 10) return alert("Invalid number");
-        db.ref('users/'+userData.uid).update({ gcash: val }).then(()=>alert("Saved!"));
+    function triggerWin() {
+        db.ref('gameState/latestWinner').set({ name: userData.name, uid: userData.uid, time: Date.now() });
+        db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
+        db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
+        db.ref('users/'+userData.uid+'/history').push({ type: 'Bingo Win', amount: 500 });
     }
 
-    function redeemItem(item, cost) {
-        if(!userData.gcash) return alert("Save GCash first!");
-        if((userData.points||0) < cost) return alert("Not enough points!");
-        db.ref('users/'+userData.uid+'/points').transaction(p => p - cost);
-        db.ref('redeemRequests').push({ uid: userData.uid, name: userData.name, item: item, gcash: userData.gcash, cost: cost, status: 'pending', time: Date.now() });
-        alert("Requested!");
-    }
-
-    function listenNotifs() {
-        db.ref('notifications').on('value', s => {
-            const list = document.getElementById('notifList'); list.innerHTML = "";
-            let count = 0;
-            s.forEach(c => {
-                const n = c.val();
-                if(!n.uid || n.uid === userData.uid) {
-                    const d = document.createElement('div'); d.style.padding="10px"; d.innerHTML = `<b>${n.title}</b><p>${n.body}</p>`;
-                    list.prepend(d); count++;
-                }
-            });
-            document.getElementById('notifDot').style.display = count > 0 ? 'block' : 'none';
+    function renderCard() {
+        const grid = document.getElementById('bingoGrid'); grid.innerHTML = "";
+        cardNumbers.forEach((n, i) => {
+            let d = document.createElement('div'); d.className = 'cell' + (i===12?' hit':''); d.id = 'c-'+i; 
+            d.innerText = n==="FREE"?"★":n; grid.appendChild(d);
         });
-    }
-
-    function setupChat() {
-        db.ref('chat').limitToLast(15).on('child_added', s => {
-            const d = s.val(); const row = document.createElement('div'); row.className = 'chat-row';
-            row.innerHTML = `<img src="${d.photo}" class="chat-pfp"><div class="bubble"><span class="chat-name">${d.name}</span><div class="chat-text">${d.text}</div></div>`;
-            document.getElementById('chatList').appendChild(row);
-            document.getElementById('chatList').scrollTop = document.getElementById('chatList').scrollHeight;
-        });
-    }
-
-    function sendChat() {
-        const i = document.getElementById('chatIn'); if(!i.value.trim()) return;
-        db.ref('chat').push({ name: userData.name, photo: userData.photo, text: i.value.trim() });
-        i.value = "";
+        updateGridHits();
     }
 
     function renderPrevBalls() {
@@ -266,12 +340,87 @@
         [...gameDrawn].reverse().slice(1,10).forEach(n => { const b = document.createElement('div'); b.className = 'ball-small'; b.innerText = n; row.appendChild(b); });
     }
 
-    async function login() {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        await auth.signInWithPopup(provider);
+    function generateNewCard() {
+        const getCol = (min, max) => { let n = []; while(n.length<5){ let r=Math.floor(Math.random()*(max-min+1))+min; if(!n.includes(r)) n.push(r); } return n.sort((a,b)=>a-b); };
+        let cols = [getCol(1,15), getCol(16,30), getCol(31,45), getCol(46,60), getCol(61,75)];
+        let newCard = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) newCard.push(cols[c][r]); }
+        newCard[12] = "FREE"; cardNumbers = newCard;
+        db.ref('users/'+auth.currentUser.uid).update({ currentCard: newCard, hasWonCurrent: false });
+        renderCard();
     }
 
-    function openNotifs() { document.getElementById('notifModal').style.display='flex'; }
+    function openNotifs() {
+        document.getElementById('notifModal').style.display='flex';
+        document.getElementById('notifDot').style.display='none';
+        const list = document.getElementById('notifList'); list.innerHTML = "";
+        const deletedIds = JSON.parse(localStorage.getItem('deletedNotifs') || "[]");
+        db.ref('notifications').limitToLast(50).once('value', s => {
+            s.forEach(child => {
+                const n = child.val(); const key = child.key;
+                if(deletedIds.includes(key)) return;
+                if (!n.uid || n.uid === auth.currentUser.uid) {
+                    const div = document.createElement('div'); div.className = 'notif-item';
+                    div.innerHTML = `<div class="notif-title"><span>${n.title}</span><i data-lucide="trash-2" class="btn-del-notif" style="width:16px;" onclick="deleteNotif('${key}', event)"></i></div><div class="notif-body">${n.body}</div>`;
+                    list.prepend(div);
+                }
+            });
+            lucide.createIcons();
+        });
+    }
+
+    function deleteNotif(key, e) { 
+        e.stopPropagation(); 
+        const deletedIds = JSON.parse(localStorage.getItem('deletedNotifs') || "[]");
+        deletedIds.push(key);
+        localStorage.setItem('deletedNotifs', JSON.stringify(deletedIds));
+        e.target.closest('.notif-item').remove(); 
+    }
+
+    function openMenuModal() {
+        document.getElementById('menuModal').style.display = 'flex';
+        const hList = document.getElementById('historyList'); hList.innerHTML = "";
+        db.ref('users/'+userData.uid+'/history').limitToLast(10).once('value', s => {
+            s.forEach(c => {
+                const h = c.val(); const div = document.createElement('div'); div.className='history-item';
+                div.innerHTML = `<span>${h.type}</span><span style="color:${h.amount>0?'#10b981':'#ef4444'}">${h.amount>0?'+':''}${h.amount}</span>`;
+                hList.prepend(div);
+            });
+        });
+    }
+
+    function setupChat() {
+        const list = document.getElementById('chatList');
+        db.ref('chat').limitToLast(20).on('child_added', s => {
+            const d = s.val(); const row = document.createElement('div'); row.className = 'chat-row';
+            row.innerHTML = `<img src="${d.photo}" class="chat-pfp"><div class="bubble"><span class="chat-name">${d.name}</span><div class="chat-text">${d.text}</div></div>`;
+            list.appendChild(row); list.scrollTop = list.scrollHeight;
+        });
+    }
+
+    function sendChat() {
+        const input = document.getElementById('chatIn'); if(!input.value.trim()) return;
+        db.ref('chat').push({ name: userData.name, photo: userData.photo, text: input.value.trim() });
+        input.value = "";
+    }
+
+    function redeemItem(item, cost) {
+        if(!userData.gcash) return alert("Save GCash first!");
+        if((userData.points||0) < cost) return alert("Not enough points!");
+        db.ref('users/'+userData.uid+'/points').transaction(p => p - cost);
+        db.ref('redeemRequests').push({ uid: userData.uid, name: userData.name, item: item, gcash: userData.gcash, status: 'pending', time: Date.now() });
+        db.ref('users/'+userData.uid+'/history').push({ type: 'Redeem: '+item, amount: -cost });
+        alert("Redemption requested!");
+    }
+
+    async function login() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        const res = await auth.signInWithPopup(provider);
+        const snap = await db.ref('users/'+res.user.uid).once('value');
+        if(!snap.exists()){
+            const code = res.user.uid.substring(0,6).toUpperCase();
+            await db.ref('users/'+res.user.uid).set({ name: res.user.displayName, points: 0, refCode: code, photo: res.user.photoURL });
+        }
+    }
 </script>
 </body>
 </html>
