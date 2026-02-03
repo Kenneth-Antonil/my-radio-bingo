@@ -157,11 +157,7 @@
         </div>
         <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
         <div class="grid" id="bingoGrid"></div>
-        <div class="pattern-legend">
-            <div class="legend-item"><i data-lucide="minus" style="width:10px"></i> Horizontal</div>
-            <div class="legend-item"><i data-lucide="separator-vertical" style="width:10px"></i> Vertical</div>
-            <div class="legend-item"><i data-lucide="x" style="width:10px"></i> Diagonal</div>
-        </div>
+        <div class="pattern-legend"><br>            <div class="legend-item"><i data-lucide="minus" style="width:10px"></i> Horizontal</div><br>            <div class="legend-item"><i data-lucide="separator-vertical" style="width:10px"></i> Vertical</div><br>            <div class="legend-item"><i data-lucide="x" style="width:10px"></i> Diagonal</div><br>        </div>
     </div>
     <div class="chat-box card">
         <div id="chatList"></div>
@@ -201,6 +197,7 @@
             const userRef = db.ref('users/'+u.uid);
             userRef.once('value', snapshot => {
                 if (!snapshot.exists()) {
+                    // Generate code for NEW players
                     const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                     const urlParams = new URLSearchParams(window.location.search);
                     const referredBy = urlParams.get('ref');
@@ -219,7 +216,15 @@
                         });
                     }
                 } else {
-                    userRef.update({ last_seen: Date.now(), name: u.displayName, photo: u.photoURL });
+                    // Update existing players logic
+                    const data = snapshot.val();
+                    const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL };
+                    
+                    // FIX: If existing player has no refCode, add it now
+                    if (!data.refCode) {
+                        updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    }
+                    userRef.update(updates);
                 }
             });
             
@@ -326,7 +331,6 @@
         db.ref('gameState/gameStartTime').once('value', s => {
             const startTime = s.val() || 0;
             const cardTime = userData.cardTimestamp || 0;
-            // Overlay only shows if game is active AND your card was made AFTER the balls started
             if(gameDrawn.length > 0 && cardTime > startTime) {
                 overlay.style.display = 'flex';
             } else {
@@ -429,27 +433,6 @@
             row.innerHTML = `<img src="${c.pfp}" class="chat-pfp"><div class="bubble"><span class="chat-name">${c.name}</span><span class="chat-text">${c.msg}</span></div>`;
             list.appendChild(row); list.scrollTop = list.scrollHeight;
         });
-    }
-
-    function sendChat() {
-        const inp = document.getElementById('chatIn'); if(!inp.value.trim()) return;
-        db.ref('chats').push({ name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: inp.value });
-        inp.value = "";
-    }
-
-    function openNotifs() { document.getElementById('notifModal').style.display='flex'; document.getElementById('notifDot').style.display='none'; }
-    function openMenuModal() { document.getElementById('menuModal').style.display='flex'; }
-    function saveGcash() {
-        const num = document.getElementById('gcashInput').value;
-        if(num.length < 10) return alert("Invalid GCash!");
-        db.ref('users/'+userData.uid).update({ gcash: num }).then(() => alert("GCash Saved!"));
-    }
-    function redeemItem(item, cost) {
-        if((userData.points||0) < cost) return alert("Insufficient Points!");
-        if(!userData.gcash) return alert("Please set GCash number first!");
-        db.ref('redemptions').push({ uid: userData.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item, cost, status: 'pending', time: Date.now() });
-        db.ref('users/'+userData.uid+'/points').transaction(p => p - cost);
-        alert("Redemption Request Sent!");
     }
 </script>
 </body>
