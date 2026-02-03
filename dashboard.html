@@ -40,6 +40,12 @@
         .chat-monitor { height: 600px; display: flex; flex-direction: column; }
         #chatList { flex: 1; overflow-y: auto; padding-right: 10px; font-size: 12px; }
         .chat-msg { margin-bottom: 8px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; border-left: 2px solid var(--accent); }
+
+        /* REDEMPTION SECTION (Addition) */
+        .redeem-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        .redeem-item { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+        .redeem-actions { display: flex; gap: 5px; margin-top: 10px; }
+        .btn-status { flex: 1; padding: 6px; border-radius: 6px; border: none; font-size: 11px; font-weight: 700; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -65,6 +71,11 @@
             <input type="text" id="notifTitle" placeholder="Title">
             <textarea id="notifMsg" rows="2" placeholder="Message..."></textarea>
             <button onclick="sendGlobalNotif()" style="background:var(--accent); color:white; border:none; padding:10px; border-radius:8px; width:100%; font-weight:700;">Broadcast</button>
+        </div>
+
+        <div class="card" style="max-height: 350px; overflow-y: auto;">
+            <h2><i data-lucide="wallet" style="width:18px"></i> Payout Queue</h2>
+            <div id="payoutList" class="redeem-list"></div>
         </div>
     </div>
 
@@ -159,6 +170,38 @@
     });
 
     db.ref('users').on('value', refreshPlayers);
+
+    // --- REDEMPTION MONITOR LOGIC (Addition) ---
+    db.ref('redemptions').on('value', snap => {
+        const list = document.getElementById('payoutList');
+        list.innerHTML = "";
+        if(!snap.exists()) list.innerHTML = "<p style='opacity:0.5; font-size:12px;'>No pending payouts.</p>";
+        
+        snap.forEach(child => {
+            const r = child.val();
+            const key = child.key;
+            if(r.status === 'sent') return; // Hide completed payouts
+
+            list.innerHTML += `
+                <div class="redeem-item">
+                    <b style="color:var(--gold)">${r.item}</b><br>
+                    User: ${r.userName}<br>
+                    <span style="color:var(--success)">GCash: ${r.gcashNumber}</span><br>
+                    <small style="opacity:0.7">Name: ${r.gcashName}</small>
+                    <div class="redeem-actions">
+                        <button class="btn-status" style="background:var(--success); color:white" onclick="updateStatus('${key}', 'sent')">MARK AS SENT</button>
+                        <button class="btn-status" style="background:var(--danger); color:white" onclick="updateStatus('${key}', 'denied')">DENY</button>
+                    </div>
+                </div>
+            `;
+        });
+    });
+
+    function updateStatus(key, status) {
+        if(confirm(`Update status to ${status}?`)) {
+            db.ref('redemptions/' + key).update({ status: status });
+        }
+    }
 </script>
 </body>
 </html>
