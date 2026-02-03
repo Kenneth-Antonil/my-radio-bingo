@@ -75,6 +75,16 @@
         .history-item { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .history-item:last-child { border: none; }
         .hist-val { font-weight: 700; color: var(--gold); }
+
+        /* Enhanced Rewards Style */
+        .reward-tier { margin-bottom: 15px; }
+        .tier-label { font-size: 10px; font-weight: 900; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block; }
+        .reward-item { background: var(--surface-br); padding: 12px 15px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; margin-bottom: 8px; }
+        .reward-item:hover { transform: scale(1.02); border-color: var(--gold); }
+        .reward-info b { font-size: 15px; display: block; }
+        .reward-info small { color: var(--gold); font-weight: 700; font-size: 11px; }
+        .btn-redeem { background: var(--success); border: none; color: white; padding: 10px 18px; border-radius: 10px; font-weight: 800; font-size: 12px; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2); }
+        .btn-redeem:disabled { background: #475569; opacity: 0.6; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -151,7 +161,38 @@
     </div>
 </div>
 
-<div id="storeModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Rewards</h3><div style="background:var(--surface-br); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;"><div><b>₱50 GCash</b><br><small>5,000 Pts</small></div><button style="background:var(--success); border:none; color:white; padding:8px 15px; border-radius:8px;">Redeem</button></div></div></div>
+<div id="storeModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-height: 80vh; overflow-y: auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <h3 style="margin:0;">Points Store</h3>
+            <div style="color:var(--gold); font-weight:800; font-size:14px;"><i data-lucide="wallet" style="width:14px; vertical-align:middle;"></i> <span class="current-pts-display">0</span></div>
+        </div>
+
+        <div class="reward-tier">
+            <span class="tier-label">Starter Rewards</span>
+            <div class="reward-item">
+                <div class="reward-info"><b>₱20 GCash</b><small>2,500 Pts</small></div>
+                <button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">Redeem</button>
+            </div>
+            <div class="reward-item">
+                <div class="reward-info"><b>₱50 GCash</b><small>5,000 Pts</small></div>
+                <button class="btn-redeem" onclick="redeemItem('₱50 GCash', 5000)">Redeem</button>
+            </div>
+        </div>
+
+        <div class="reward-tier">
+            <span class="tier-label">Pro Rewards</span>
+            <div class="reward-item">
+                <div class="reward-info"><b>₱100 GCash</b><small>9,500 Pts</small></div>
+                <button class="btn-redeem" onclick="redeemItem('₱100 GCash', 9500)">Redeem</button>
+            </div>
+            <div class="reward-item">
+                <div class="reward-info"><b>₱500 GCash</b><small>45,000 Pts</small></div>
+                <button class="btn-redeem" onclick="redeemItem('₱500 GCash', 45000)">Redeem</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     lucide.createIcons();
@@ -169,6 +210,13 @@
             const myUserRef = presenceRef.push();
             myUserRef.onDisconnect().remove();
             myUserRef.set(true);
+
+            // --- DASHBOARD STATUS LOGIC ---
+            if(auth.currentUser) {
+                const statusRef = db.ref('users/' + auth.currentUser.uid + '/status');
+                statusRef.set('online');
+                statusRef.onDisconnect().set('offline');
+            }
         }
     });
 
@@ -215,6 +263,26 @@
         });
     }
 
+    // --- REDEEM LOGIC ---
+    function redeemItem(name, cost) {
+        if(userData.points < cost) {
+            alert("Insufficient points! Keep playing to earn more.");
+            return;
+        }
+        if(confirm(`Redeem ${name} for ${cost} points?`)) {
+            db.ref('users/'+userData.uid+'/points').transaction(p => (p || 0) - cost);
+            db.ref('users/'+userData.uid+'/history').push({ type: 'Redeem: ' + name, amount: -cost });
+            db.ref('redeemRequests').push({ 
+                uid: userData.uid, 
+                name: userData.name, 
+                item: name, 
+                cost: cost, 
+                timestamp: firebase.database.ServerValue.TIMESTAMP 
+            });
+            alert("Request sent! Please wait for admin processing.");
+        }
+    }
+
     async function login() {
         const provider = new firebase.auth.GoogleAuthProvider();
         const urlParams = new URLSearchParams(window.location.search);
@@ -225,7 +293,7 @@
             const snap = await db.ref('users/'+u.uid).once('value');
             if(!snap.exists()){
                 const code = u.uid.substring(0,6).toUpperCase();
-                await db.ref('users/'+u.uid).set({ name: u.displayName, points: 0, refCode: code, photo: u.photoURL });
+                await db.ref('users/'+u.uid).set({ name: u.displayName, points: 0, refCode: code, photo: u.photoURL, status: 'online' });
                 await db.ref('referralCodes/'+code).set(u.uid);
                 if(refBy) {
                     const ownerSnap = await db.ref('referralCodes/'+refBy).once('value');
@@ -247,7 +315,9 @@
             db.ref('users/'+u.uid).on('value', s => { 
                 if(s.exists()){ 
                     userData = s.val(); userData.uid = u.uid; 
-                    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
+                    const pts = (userData.points || 0);
+                    document.getElementById('userPoints').innerText = pts.toLocaleString();
+                    document.querySelectorAll('.current-pts-display').forEach(el => el.innerText = pts.toLocaleString());
                     document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + userData.refCode;
                     if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); initBingo(); } 
                     else { generateNewCard(); }
