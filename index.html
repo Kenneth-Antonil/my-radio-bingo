@@ -245,9 +245,15 @@
                 }
             });
             initBingo(); setupChat();
+            
+            // FIXED REAL-TIME NOTIF LISTENER
             db.ref('notifications').limitToLast(1).on('child_added', (snap) => { 
                 const n = snap.val();
-                if (!n.uid || n.uid === auth.currentUser.uid) {
+                const key = snap.key;
+                const deletedIds = JSON.parse(localStorage.getItem('deletedNotifs') || "[]");
+                
+                // Dapat private (uid match) o global (no uid), at HINDI pa na-delete
+                if ((!n.uid || n.uid === u.uid) && !deletedIds.includes(key)) {
                     document.getElementById('notifDot').style.display='block'; 
                 }
             });
@@ -355,21 +361,24 @@
         renderCard();
     }
 
-    // UPDATED PRIVATE NOTIF LOGIC
+    // FIXED PRIVATE NOTIF & DELETE PERMANENTLY LOGIC
     function openNotifs() {
         document.getElementById('notifModal').style.display='flex';
         document.getElementById('notifDot').style.display='none';
         const list = document.getElementById('notifList'); list.innerHTML = "";
-        
-        const currentUserUID = auth.currentUser.uid;
+        const u = auth.currentUser;
+        const deletedIds = JSON.parse(localStorage.getItem('deletedNotifs') || "[]");
 
-        db.ref('notifications').limitToLast(20).once('value', s => {
+        db.ref('notifications').limitToLast(50).once('value', s => {
             s.forEach(child => {
                 const n = child.val();
                 const key = child.key;
 
-                // Check if global announcement or private payout status
-                if (!n.uid || n.uid === currentUserUID) {
+                // 1. Check if deleted by player
+                if(deletedIds.includes(key)) return;
+
+                // 2. Filter: UID match o Global (no UID)
+                if (!n.uid || n.uid === u.uid) {
                     const div = document.createElement('div'); div.className = 'notif-item';
                     div.innerHTML = `<div class="notif-title"><span>${n.title}</span><i data-lucide="trash-2" class="btn-del-notif" style="width:16px;" onclick="deleteNotif('${key}', event)"></i></div><div class="notif-body">${n.body}</div>`;
                     list.prepend(div);
@@ -379,7 +388,14 @@
         });
     }
 
-    function deleteNotif(key, e) { e.stopPropagation(); db.ref('notifications/'+key).remove(); e.target.closest('.notif-item').remove(); }
+    // Per player ang deletion sa browser level
+    function deleteNotif(key, e) { 
+        e.stopPropagation(); 
+        const deletedIds = JSON.parse(localStorage.getItem('deletedNotifs') || "[]");
+        deletedIds.push(key);
+        localStorage.setItem('deletedNotifs', JSON.stringify(deletedIds));
+        e.target.closest('.notif-item').remove(); 
+    }
 
     function openMenuModal() {
         document.getElementById('menuModal').style.display = 'flex';
