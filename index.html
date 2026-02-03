@@ -142,7 +142,7 @@
         </div>
         <div class="card" style="padding:0; overflow:hidden;">
             <div class="video-container">
-                <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
+                <div class="video-overlay-bl"><span style="width:8px; height:8px; background:var(--success); border-radius:50%; display:inline-block; margin-right:5px; box-shadow:0 0 8px var(--success)"></span> <span id="onlineCount">0</span> LIVE</div>
                 <iframe src="https://www.youtube.com/embed/36YnV9STBqc?autoplay=1" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
             </div>
         </div>
@@ -267,6 +267,27 @@
             auth.signInWithPopup(provider);
         }
 
+        // --- PRESENCE SYSTEM FOR ACCURATE COUNTER ---
+        function setupPresence() {
+            const onlineRef = db.ref('status/onlineCount');
+            const myPresenceRef = db.ref('status/connections').push();
+
+            db.ref('.info/connected').on('value', (snap) => {
+                if (snap.val() === true) {
+                    // Decrement when disconnected
+                    myPresenceRef.onDisconnect().remove();
+                    onlineRef.onDisconnect().transaction(c => (c || 1) - 1);
+                    // Increment when connected
+                    onlineRef.transaction(c => (c || 0) + 1);
+                }
+            });
+
+            // Listen for changes to update UI
+            onlineRef.on('value', (snapshot) => {
+                document.getElementById('onlineCount').innerText = snapshot.val() || 0;
+            });
+        }
+
         auth.onAuthStateChanged(user => {
             if (user) {
                 document.getElementById('loginOverlay').style.display = 'none';
@@ -295,7 +316,7 @@
                     renderHistory();
                 });
                 
-                setupRealtimeCounter();
+                setupPresence(); // Start the presence counter
                 listenForGame();
                 listenForChat();
                 listenForNotifs();
@@ -303,21 +324,57 @@
             }
         });
 
-        function setupRealtimeCounter() {
-            const onlineRef = db.ref('status/onlineCount');
-            const myStatusRef = db.ref('status/connections').push();
-            db.ref('.info/connected').on('value', (snap) => {
-                if (snap.val() === true) {
-                    myStatusRef.onDisconnect().remove();
-                    onlineRef.onDisconnect().transaction(c => (c || 1) - 1);
-                    onlineRef.transaction(c => (c || 0) + 1);
-                }
-            });
-            onlineRef.on('value', snap => {
-                document.getElementById('onlineCount').innerText = snap.val() || 0;
+        // --- NOTIFICATION PERSISTENCE ---
+        function listenForNotifs() {
+            db.ref('notifications').limitToLast(10).on('value', snap => {
+                let hasNew = false;
+                snap.forEach(child => {
+                    if (!deletedNotifs.includes(child.key)) hasNew = true;
+                });
+                document.getElementById('notifDot').style.display = hasNew ? 'block' : 'none';
             });
         }
 
+        function openNotifs() {
+            document.getElementById('notifModal').style.display = 'flex';
+            document.getElementById('notifDot').style.display = 'none';
+            renderNotifications();
+        }
+
+        function renderNotifications() {
+            const list = document.getElementById('notifList');
+            db.ref('notifications').limitToLast(10).once('value', snapshot => {
+                let html = '';
+                snapshot.forEach(child => {
+                    const id = child.key;
+                    if (!deletedNotifs.includes(id)) {
+                        const n = child.val();
+                        html += `
+                            <div id="notif-${id}" style="background:var(--surface-br); padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <div style="font-size:13px; font-weight:700;">${n.title || 'Bingo Update'}</div>
+                                    <div style="font-size:12px; opacity:0.8;">${n.msg}</div>
+                                </div>
+                                <button onclick="deleteNotif('${id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;">
+                                    <i data-lucide="trash-2" style="width:18px"></i>
+                                </button>
+                            </div>`;
+                    }
+                });
+                list.innerHTML = html || '<div style="text-align:center; opacity:0.5; padding:20px;">Walang bagong notification.</div>';
+                lucide.createIcons();
+            });
+        }
+
+        function deleteNotif(id) {
+            deletedNotifs.push(id);
+            localStorage.setItem('deletedNotifs', JSON.stringify(deletedNotifs));
+            const el = document.getElementById(`notif-${id}`);
+            if (el) el.remove();
+            renderNotifications();
+        }
+
+        // --- EXISTING BINGO LOGIC ---
         function listenForGame() {
             db.ref('gameState').on('value', snap => {
                 const state = snap.val() || {};
@@ -459,57 +516,6 @@
             if(!inp.value.trim()) return;
             db.ref('chat').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: inp.value });
             inp.value = "";
-        }
-
-        function listenForNotifs() {
-            db.ref('notifications').limitToLast(10).on('value', snap => {
-                let hasNew = false;
-                snap.forEach(child => {
-                    if(!deletedNotifs.includes(child.key)) hasNew = true;
-                });
-                document.getElementById('notifDot').style.display = hasNew ? 'block' : 'none';
-            });
-        }
-
-        function openNotifs() {
-            document.getElementById('notifModal').style.display = 'flex';
-            document.getElementById('notifDot').style.display = 'none';
-            renderNotifications();
-        }
-
-        function renderNotifications() {
-            const list = document.getElementById('notifList');
-            db.ref('notifications').limitToLast(10).once('value', snapshot => {
-                let html = '';
-                snapshot.forEach(child => {
-                    const id = child.key;
-                    if (!deletedNotifs.includes(id)) {
-                        const n = child.val();
-                        html += `
-                            <div id="notif-${id}" style="background:var(--surface-br); padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                                <div>
-                                    <div style="font-size:13px; font-weight:700;">${n.title || 'Notification'}</div>
-                                    <div style="font-size:12px; opacity:0.8;">${n.msg}</div>
-                                </div>
-                                <button onclick="deleteNotif('${id}')" style="background:none; border:none; color:var(--danger); cursor:pointer;">
-                                    <i data-lucide="trash-2" style="width:18px"></i>
-                                </button>
-                            </div>`;
-                    }
-                });
-                list.innerHTML = html || '<div style="text-align:center; opacity:0.5; padding:20px;">Walang bagong notification.</div>';
-                lucide.createIcons();
-            });
-        }
-
-        function deleteNotif(id) {
-            if (confirm("I-delete ang notification na ito?")) {
-                deletedNotifs.push(id);
-                localStorage.setItem('deletedNotifs', JSON.stringify(deletedNotifs));
-                const el = document.getElementById(`notif-${id}`);
-                if (el) el.remove();
-                renderNotifications();
-            }
         }
 
         function openMenuModal() { document.getElementById('menuModal').style.display='flex'; }
