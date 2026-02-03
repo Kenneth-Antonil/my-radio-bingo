@@ -255,7 +255,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo";
-    let lastNotifiedDraw = ""; // To prevent multiple notifications for the same draw
+    let lastNotifiedDraw = "";
 
     function fixDate(timestamp) {
         if(!timestamp) return "No Date";
@@ -263,7 +263,6 @@
         return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) + " " + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
     }
 
-    // REQUEST NOTIFICATION PERMISSION
     if ("Notification" in window) { Notification.requestPermission(); }
 
     function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
@@ -316,7 +315,7 @@
                     checkLateJoiner();
                 }
             });
-            initBingo(); setupChat(); listenForNextDraw(); // Added next draw listener
+            initBingo(); setupChat(); listenForNextDraw();
             
             db.ref('.info/connected').on('value', snap => {
                 if (snap.val() === true) { const p = db.ref('presence').push(); p.onDisconnect().remove(); p.set(true); }
@@ -325,7 +324,6 @@
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
-    // LISTEN FOR NEXT DRAW AND SEND NOTIFICATIONS
     function listenForNextDraw() {
         db.ref('gameState/nextDraw').on('value', s => {
             const nextDrawVal = s.val();
@@ -334,9 +332,8 @@
 
             if(nextDrawVal) {
                 banner.style.display = 'block';
-                timeEl.innerText = nextDrawVal;
-
-                // Notification Logic (10 minutes before)
+                // AYOS NA DITO: Gumagamit na ng fixDate para hindi numbers ang lumabas
+                timeEl.innerText = isNaN(nextDrawVal) ? nextDrawVal : fixDate(nextDrawVal);
                 checkNotificationTime(nextDrawVal);
             } else {
                 banner.style.display = 'none';
@@ -344,24 +341,25 @@
         });
     }
 
-    function checkNotificationTime(timeString) {
-        // Run check every 30 seconds
+    function checkNotificationTime(timeInput) {
         setInterval(() => {
-            if(lastNotifiedDraw === timeString) return;
+            if(lastNotifiedDraw === timeInput) return;
+            
+            let drawDate;
+            if(!isNaN(timeInput)) {
+                drawDate = new Date(parseInt(timeInput));
+            } else {
+                const now = new Date();
+                const [time, modifier] = timeInput.split(' ');
+                let [hours, minutes] = time.split(':');
+                if (hours === '12') hours = '00';
+                if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+                drawDate = new Date();
+                drawDate.setHours(hours, minutes, 0);
+            }
 
             const now = new Date();
-            const drawTime = new Date();
-            const [time, modifier] = timeString.split(' ');
-            let [hours, minutes] = time.split(':');
-
-            if (hours === '12') hours = '00';
-            if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
-            
-            drawTime.setHours(hours);
-            drawTime.setMinutes(minutes);
-            drawTime.setSeconds(0);
-
-            const diff = drawTime.getTime() - now.getTime();
+            const diff = drawDate.getTime() - now.getTime();
             const minutesLeft = Math.floor(diff / 60000);
 
             if (minutesLeft === 10) {
@@ -370,7 +368,7 @@
                         body: "Handa na ba ang card mo? 10 minutes na lang, magsisimula na ang bola!",
                         icon: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg"
                     });
-                    lastNotifiedDraw = timeString;
+                    lastNotifiedDraw = timeInput;
                 }
             }
         }, 30000);
