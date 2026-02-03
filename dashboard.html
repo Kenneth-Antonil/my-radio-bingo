@@ -132,8 +132,7 @@
     let currentWinnerUID = "";
     let currentPattern = "Normal Bingo";
 
-    // --- NEW FIX: Dedicated Player Search List Listener ---
-    // Hinila ko ito palabas para laging updated ang listahan kahit sino pa ang mag-register.
+    // --- FIX: Real-time Player List Listener for Search ---
     db.ref('users').on('value', snapshot => {
         const dataList = document.getElementById('playerList');
         dataList.innerHTML = "";
@@ -141,6 +140,7 @@
             const user = child.val();
             if(user.refCode) {
                 const option = document.createElement('option');
+                // Ito ang magpapakita ng Name at RefCode para searchable pareho
                 option.value = `${user.name || 'Unknown'} - ${user.refCode}`;
                 dataList.appendChild(option);
             }
@@ -200,13 +200,16 @@
         const threshold = Date.now() - (5 * 60 * 1000); 
         db.ref('users').once('value', snapshot => {
             const container = document.getElementById('playersGrid');
+            const dataList = document.getElementById('playerList');
             container.innerHTML = "";
+            // Binura ang dataList.innerHTML dito para hindi mag-conflict sa real-time listener sa itaas
             
             snapshot.forEach(child => {
                 const user = child.val();
                 const uid = child.key;
 
                 const isOnline = user.last_seen && user.last_seen > threshold;
+
                 const marks = [12];
                 let isBingo = false;
                 let winningCells = [];
