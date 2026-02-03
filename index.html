@@ -157,7 +157,11 @@
         </div>
         <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
         <div class="grid" id="bingoGrid"></div>
-        <div class="pattern-legend"><br>            <div class="legend-item"><i data-lucide="minus" style="width:10px"></i> Horizontal</div><br>            <div class="legend-item"><i data-lucide="separator-vertical" style="width:10px"></i> Vertical</div><br>            <div class="legend-item"><i data-lucide="x" style="width:10px"></i> Diagonal</div><br>        </div>
+        <div class="pattern-legend">
+            <div class="legend-item"><i data-lucide="minus" style="width:10px"></i> Horizontal</div>
+            <div class="legend-item"><i data-lucide="separator-vertical" style="width:10px"></i> Vertical</div>
+            <div class="legend-item"><i data-lucide="x" style="width:10px"></i> Diagonal</div>
+        </div>
     </div>
     <div class="chat-box card">
         <div id="chatList"></div>
@@ -165,19 +169,67 @@
     </div>
 </div>
 
-<div id="notifModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h3 style="margin:0">Inbox</h3><button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button></div><div id="notifList"></div></div></div>
-<div id="menuModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0">My Profile</h3><div class="gcash-section"><span class="input-label">My GCash Number (For Rewards)</span><div style="display:flex; gap:8px;"><input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx"><button onclick="saveGcash()" style="background:var(--accent); border:none; color:white; padding:0 15px; border-radius:12px; font-weight:800;">SAVE</button></div></div>
-    
-    <div class="gcash-section" id="referralInputSection" style="border-color: var(--gold);">
-        <span class="input-label" style="color: var(--gold);">Have a Referral Code?</span>
-        <div style="display:flex; gap:8px;">
-            <input type="text" id="referralInput" class="styled-input" placeholder="ENTER CODE">
-            <button onclick="claimReferral()" style="background:var(--gold); border:none; color:black; padding:0 15px; border-radius:12px; font-weight:800;">CLAIM</button>
+<div id="notifModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0">Inbox</h3>
+            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+        </div>
+        <div id="notifList"></div>
+    </div>
+</div>
+
+<div id="menuModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0">My Profile</h3>
+        <div class="gcash-section">
+            <span class="input-label">My GCash Number (For Rewards)</span>
+            <div style="display:flex; gap:8px;">
+                <input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx">
+                <button onclick="saveGcash()" style="background:var(--accent); border:none; color:white; padding:0 15px; border-radius:12px; font-weight:800;">SAVE</button>
+            </div>
+        </div>
+        <div class="gcash-section" id="referralInputSection" style="border-color: var(--gold);">
+            <span class="input-label" style="color: var(--gold);">Have a Referral Code?</span>
+            <div style="display:flex; gap:8px;">
+                <input type="text" id="referralInput" class="styled-input" placeholder="ENTER CODE">
+                <button onclick="claimReferral()" style="background:var(--gold); border:none; color:black; padding:0 15px; border-radius:12px; font-weight:800;">CLAIM</button>
+            </div>
+        </div>
+        <div class="ref-container">
+            <div style="font-size:12px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:8px;">Referral Link</div>
+            <input type="text" id="refLink" readonly class="styled-input" style="text-align:center; cursor:pointer;" onclick="this.select(); document.execCommand('copy'); alert('Copied!');">
+        </div>
+        <div class="history-box">
+            <span style="font-size:11px; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:8px; display:block;">Recent Transactions</span>
+            <div id="historyList"></div>
+        </div>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid var(--danger); border-radius:16px; font-weight:800; margin-top:10px;">Sign Out</button>
+    </div>
+</div>
+
+<div id="storeModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0">Rewards Shop</h3>
+            <div class="points-badge" style="height:32px"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
+        </div>
+        <div class="reward-grid">
+            <div class="reward-item">
+                <div class="reward-info"><b>₱20 GCash</b><small>2,500 Pts</small></div>
+                <button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">Redeem</button>
+            </div>
+            <div class="reward-item">
+                <div class="reward-info"><b>₱50 GCash</b><small>6,000 Pts</small></div>
+                <button class="btn-redeem" onclick="redeemItem('₱50 GCash', 6000)">Redeem</button>
+            </div>
+            <div class="reward-item">
+                <div class="reward-info"><b>₱100 GCash</b><small>11,500 Pts</small></div>
+                <button class="btn-redeem" onclick="redeemItem('₱100 GCash', 11500)">Redeem</button>
+            </div>
         </div>
     </div>
-
-    <div class="ref-container"><div style="font-size:12px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:8px;">Referral Link</div><input type="text" id="refLink" readonly class="styled-input" style="text-align:center; cursor:pointer;" onclick="this.select(); document.execCommand('copy'); alert('Copied!');"></div><div class="history-box"><span style="font-size:11px; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:8px; display:block;">Recent Transactions</span><div id="historyList"></div></div><button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid var(--danger); border-radius:16px; font-weight:800; margin-top:10px;">Sign Out</button></div></div>
-<div id="storeModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 style="margin:0">Rewards Shop</h3><div class="points-badge" style="height:32px"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div></div><div class="reward-grid"><div class="reward-item"><div class="reward-info"><b>₱20 GCash</b><small>2,500 Pts</small></div><button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">Redeem</button></div><div class="reward-item"><div class="reward-info"><b>₱50 GCash</b><small>6,000 Pts</small></div><button class="btn-redeem" onclick="redeemItem('₱50 GCash', 6000)">Redeem</button></div><div class="reward-item"><div class="reward-info"><b>₱100 GCash</b><small>11,500 Pts</small></div><button class="btn-redeem" onclick="redeemItem('₱100 GCash', 11500)">Redeem</button></div></div></div></div>
+</div>
 
 <script>
     lucide.createIcons();
@@ -197,7 +249,7 @@
             const userRef = db.ref('users/'+u.uid);
             userRef.once('value', snapshot => {
                 if (!snapshot.exists()) {
-                    // Generate code for NEW players
+                    // New user initialization
                     const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                     const urlParams = new URLSearchParams(window.location.search);
                     const referredBy = urlParams.get('ref');
@@ -216,14 +268,10 @@
                         });
                     }
                 } else {
-                    // Update existing players logic
+                    // Update existing user but ensure they have a refCode
                     const data = snapshot.val();
                     const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL };
-                    
-                    // FIX: If existing player has no refCode, add it now
-                    if (!data.refCode) {
-                        updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    }
+                    if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                     userRef.update(updates);
                 }
             });
@@ -233,15 +281,11 @@
                     userData = s.val(); userData.uid = u.uid; 
                     document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
                     document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString();
+                    document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || "");
                     
-                    const cleanUrl = window.location.origin + window.location.pathname;
-                    document.getElementById('refLink').value = cleanUrl + "?ref=" + (userData.refCode || "");
-
-                    if(userData.referredBy) {
-                        document.getElementById('referralInputSection').style.display = 'none';
-                    }
-
+                    if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none';
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
+                    
                     if (userData.currentCard) { 
                         cardNumbers = userData.currentCard; 
                         renderCard(); 
@@ -264,20 +308,15 @@
         const code = document.getElementById('referralInput').value.trim().toUpperCase();
         if(!code) return alert("Enter a code!");
         if(code === userData.refCode) return alert("You cannot use your own code!");
-        if(userData.referredBy) return alert("You have already used a referral code!");
+        if(userData.referredBy) return alert("You already used a code!");
 
         db.ref('users').orderByChild('refCode').equalTo(code).once('value', snapshot => {
             if(snapshot.exists()) {
                 const referrerUid = Object.keys(snapshot.val())[0];
-                db.ref('users/'+userData.uid).update({ 
-                    referredBy: code,
-                    points: (userData.points || 0) + 100 
-                });
+                db.ref('users/'+userData.uid).update({ referredBy: code, points: (userData.points || 0) + 100 });
                 db.ref('users/'+referrerUid+'/points').transaction(p => (p || 0) + 500);
-                alert("Referral successful! You received 100 points.");
-            } else {
-                alert("Invalid Referral Code!");
-            }
+                alert("Success! You got 100 points.");
+            } else { alert("Invalid Code!"); }
         });
     }
 
@@ -318,7 +357,6 @@
                 btn.innerHTML = `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`;
             }
             lucide.createIcons();
-
             checkLateJoiner();
             updateGridHits(); 
             renderPrevBalls(); 
@@ -356,7 +394,7 @@
     function checkWin() {
         if(userData.hasWonCurrent || gameDrawn.length === 0) return;
         if(document.getElementById('lateOverlay').style.display === 'flex') return;
-
+        
         let winningWays = [];
         if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; }
         else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; }
@@ -433,6 +471,27 @@
             row.innerHTML = `<img src="${c.pfp}" class="chat-pfp"><div class="bubble"><span class="chat-name">${c.name}</span><span class="chat-text">${c.msg}</span></div>`;
             list.appendChild(row); list.scrollTop = list.scrollHeight;
         });
+    }
+
+    function sendChat() {
+        const inp = document.getElementById('chatIn'); if(!inp.value.trim()) return;
+        db.ref('chats').push({ name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: inp.value });
+        inp.value = "";
+    }
+
+    function openNotifs() { document.getElementById('notifModal').style.display='flex'; document.getElementById('notifDot').style.display='none'; }
+    function openMenuModal() { document.getElementById('menuModal').style.display='flex'; }
+    function saveGcash() {
+        const num = document.getElementById('gcashInput').value;
+        if(num.length < 10) return alert("Invalid GCash!");
+        db.ref('users/'+userData.uid).update({ gcash: num }).then(() => alert("GCash Saved!"));
+    }
+    function redeemItem(item, cost) {
+        if((userData.points||0) < cost) return alert("Insufficient Points!");
+        if(!userData.gcash) return alert("Please set GCash number first!");
+        db.ref('redemptions').push({ uid: userData.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item, cost, status: 'pending', time: Date.now() });
+        db.ref('users/'+userData.uid+'/points').transaction(p => p - cost);
+        alert("Redemption Request Sent!");
     }
 </script>
 </body>
