@@ -221,6 +221,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = [];
+    let currentPattern = "Normal Bingo"; // Default pattern
 
     const presenceRef = db.ref('presence');
     db.ref('.info/connected').on('value', snap => {
@@ -246,13 +247,10 @@
             });
             initBingo(); setupChat();
             
-            // FIXED REAL-TIME NOTIF LISTENER
             db.ref('notifications').limitToLast(1).on('child_added', (snap) => { 
                 const n = snap.val();
                 const key = snap.key;
                 const deletedIds = JSON.parse(localStorage.getItem('deletedNotifs') || "[]");
-                
-                // Dapat private (uid match) o global (no uid), at HINDI pa na-delete
                 if ((!n.uid || n.uid === u.uid) && !deletedIds.includes(key)) {
                     document.getElementById('notifDot').style.display='block'; 
                 }
@@ -289,9 +287,11 @@
             updateGridHits(); renderPrevBalls(); checkWin();
         });
 
+        // DITO TAYO MAIKIKINIG SA PATTERN MULA SA DASHBOARD
         db.ref('gameState/currentPattern').on('value', s => {
-            const pName = s.val() || "Normal Bingo";
-            document.getElementById('patternName').innerText = pName;
+            currentPattern = s.val() || "Normal Bingo";
+            document.getElementById('patternName').innerText = currentPattern;
+            checkWin(); // Re-check win pag nagbago ang pattern habang naglalaro
         });
     }
 
@@ -305,6 +305,7 @@
             else { if(el) el.classList.remove('hit'); }
         });
         
+        // Visual Glow Logic (Hayaan nating naka-glow lahat ng hit patterns para maganda tignan)
         const ways = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
         ways.forEach(w => {
             if(w.every(idx => marks.includes(idx))) {
@@ -313,10 +314,31 @@
         });
     }
 
+    // DINAMIKONG CHECK WIN DEPENDE SA DASHBOARD SELECTION
     function checkWin() {
-        if(userData.hasWonCurrent) return;
-        const ways = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
-        for(let w of ways) { 
+        if(userData.hasWonCurrent || gameDrawn.length === 0) return;
+
+        let winningWays = [];
+
+        if (currentPattern === "Normal Bingo") {
+            // Horizontal, Vertical, at Diagonals
+            winningWays = [
+                [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], // Rows
+                [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], // Cols
+                [0,6,12,18,24],[4,8,12,16,20] // Diagonals
+            ];
+        } else if (currentPattern === "Blackout") {
+            // Lahat ng squares dapat hit
+            winningWays = [Array.from({length: 25}, (_, i) => i)];
+        } else if (currentPattern === "Letter X") {
+            // Dalawang diagonal lang
+            winningWays = [[0,6,12,18,24,4,8,16,20]];
+        } else if (currentPattern === "Four Corners") {
+            // Apat na kanto lang
+            winningWays = [[0,4,20,24]];
+        }
+
+        for(let w of winningWays) { 
             if(w.every(i => marks.includes(i))) { 
                 triggerWin(w); 
                 break; 
@@ -361,7 +383,6 @@
         renderCard();
     }
 
-    // FIXED PRIVATE NOTIF & DELETE PERMANENTLY LOGIC
     function openNotifs() {
         document.getElementById('notifModal').style.display='flex';
         document.getElementById('notifDot').style.display='none';
@@ -373,11 +394,7 @@
             s.forEach(child => {
                 const n = child.val();
                 const key = child.key;
-
-                // 1. Check if deleted by player
                 if(deletedIds.includes(key)) return;
-
-                // 2. Filter: UID match o Global (no UID)
                 if (!n.uid || n.uid === u.uid) {
                     const div = document.createElement('div'); div.className = 'notif-item';
                     div.innerHTML = `<div class="notif-title"><span>${n.title}</span><i data-lucide="trash-2" class="btn-del-notif" style="width:16px;" onclick="deleteNotif('${key}', event)"></i></div><div class="notif-body">${n.body}</div>`;
@@ -388,7 +405,6 @@
         });
     }
 
-    // Per player ang deletion sa browser level
     function deleteNotif(key, e) { 
         e.stopPropagation(); 
         const deletedIds = JSON.parse(localStorage.getItem('deletedNotifs') || "[]");
