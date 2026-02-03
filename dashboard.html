@@ -270,7 +270,6 @@
     let drawn = [];
 
     function init() {
-        // Draw Number Sync
         db.ref('drawnNumbers').on('value', s => {
             const val = s.val();
             drawn = val ? Object.values(val) : [];
@@ -278,7 +277,6 @@
             renderMasterGrid();
         });
 
-        // User Sync
         db.ref('users').limitToLast(10).on('value', s => {
             const list = document.getElementById('userList');
             list.innerHTML = "";
@@ -299,7 +297,6 @@
             });
         });
 
-        // Redemption Sync
         db.ref('redemptions').orderByChild('status').equalTo('pending').on('value', s => {
             const list = document.getElementById('redeemList');
             list.innerHTML = "";
@@ -334,47 +331,32 @@
         }
     }
 
-    // Logic Fix: Pag-update ng drawn numbers para mag-sync sa winner checking ng users
     function drawNumber() {
         let n;
         do { n = Math.floor(Math.random() * 75) + 1; } while(drawn.includes(n) && drawn.length < 75);
         if(drawn.length >= 75) return alert("All numbers drawn!");
-
-        // Gamitin ang push() sa database para mag-trigger ng update sa user side
+        
+        // SYNC LOGIC
+        if(drawn.length === 0) db.ref('gameState/gameStartTime').set(Date.now());
         db.ref('drawnNumbers').push(n);
-
-        // SYNC: Pag ito ang unang bola, i-set ang gameStartTime para sa anti-late system
-        if(drawn.length === 0) {
-            db.ref('gameState/gameStartTime').set(Date.now());
-        }
     }
 
-    // Logic Fix: Siguraduhing malinis lahat para sa bagong round
     function clearDrawn() {
-        if(confirm("Clear all drawn numbers?")) {
+        if(confirm("Clear all?")) {
             db.ref('drawnNumbers').remove();
             db.ref('gameState/latestWinner').remove();
             db.ref('gameState/gameStartTime').set(0);
-            
-            // SYNC: I-reset din ang win status ng lahat ng users
             db.ref('users').once('value', snapshot => {
                 let updates = {};
-                snapshot.forEach(child => {
-                    updates[child.key + '/hasWonCurrent'] = false;
-                });
+                snapshot.forEach(child => { updates[child.key + '/hasWonCurrent'] = false; });
                 db.ref('users').update(updates);
             });
         }
     }
 
     function resetGame() {
-        if(confirm("FULL EMERGENCY RESET? This clears everything!")) {
-            db.ref().update({
-                'drawnNumbers': null,
-                'gameState/latestWinner': null,
-                'gameState/currentPattern': 'Normal Bingo',
-                'gameState/gameStartTime': 0
-            });
+        if(confirm("FULL RESET?")) {
+            db.ref().update({ 'drawnNumbers': null, 'gameState/latestWinner': null, 'gameState/gameStartTime': 0 });
             location.reload();
         }
     }
@@ -386,37 +368,27 @@
 
     function updateSchedule() {
         const s = document.getElementById('drawSchedule').value;
-        if(!s) return alert("Enter schedule");
         db.ref('gameState/nextDraw').set(s);
-        alert("Schedule updated!");
+        alert("Updated!");
     }
 
     function updateStatus(key, status, data) {
-        if(confirm(`${status} this transaction?`)) {
+        if(confirm(`${status}?`)) {
             db.ref('redemptions/' + key).update({ status: status });
-            const statusMsg = status === 'sent' ? `Your ${data.item} request has been processed! 💸` : `Your redemption for ${data.item} was denied. Points returned. ❌`;
-            db.ref('notifications/' + data.uid).push({ 
-                msg: statusMsg, 
-                time: Date.now() 
-            });
+            const statusMsg = status === 'sent' ? `Your ${data.item} paid! 💸` : `Your ${data.item} denied. ❌`;
+            db.ref('notifications/' + data.uid).push({ msg: statusMsg, time: Date.now() });
             if(status === 'denied') db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost);
         }
     }
 
     async function updateExistingUsers() {
-        if (!confirm("Generate Ref Codes for all users?")) return;
-        try {
-            const snapshot = await db.ref('users').once('value');
-            let updates = {}; let count = 0;
-            snapshot.forEach(child => {
-                if (!child.val().refCode) {
-                    updates[`${child.key}/refCode`] = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    count++;
-                }
-            });
-            if (count > 0) await db.ref('users').update(updates);
-            alert(`Updated ${count} users!`);
-        } catch(e) { alert("Error: " + e.message); }
+        const snapshot = await db.ref('users').once('value');
+        let updates = {};
+        snapshot.forEach(child => {
+            if (!child.val().refCode) updates[`${child.key}/refCode`] = Math.random().toString(36).substring(2, 8).toUpperCase();
+        });
+        db.ref('users').update(updates);
+        alert("Done!");
     }
 
     init();
