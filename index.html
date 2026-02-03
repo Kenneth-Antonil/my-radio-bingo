@@ -64,10 +64,14 @@
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
         .modal-content { background: var(--surface); border-radius: 24px; width: 100%; max-width: 400px; padding: 25px; border: 1px solid var(--surface-br); }
         
-        .notif-item { background: var(--surface-br); padding: 12px; border-radius: 12px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+        /* UPDATED NOTIF STYLES */
+        .notif-item { background: var(--surface-br); padding: 12px; border-radius: 12px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; position: relative; overflow: hidden; }
         .notif-item:hover { border-color: var(--accent); }
-        .notif-title { font-weight: 800; font-size: 13px; display: block; margin-bottom: 2px; }
-        .notif-body { font-size: 12px; opacity: 0.8; }
+        .notif-title { font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .notif-body { font-size: 12px; opacity: 0.8; margin-top: 5px; display: none; line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; }
+        .notif-item.expanded .notif-body { display: block; }
+        .btn-del-notif { color: var(--danger); opacity: 0.5; padding: 4px; }
+        .btn-del-notif:hover { opacity: 1; }
 
         .change-card-wrapper { display: flex; justify-content: center; padding: 10px 0 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px; }
         .btn-change { background: rgba(59, 130, 246, 0.1); color: var(--accent); border: 1px solid var(--accent); height: 40px; padding: 0 20px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; }
@@ -205,16 +209,43 @@
         document.getElementById('notifModal').style.display='flex';
         document.getElementById('notifDot').style.display='none';
         const list = document.getElementById('notifList'); list.innerHTML = "";
-        db.ref('notifications').limitToLast(10).once('value', s => {
+        
+        db.ref('notifications').limitToLast(15).once('value', s => {
+            if(!s.exists()) { list.innerHTML = "<p style='text-align:center; opacity:0.5;'>No notifications.</p>"; return; }
             s.forEach(child => {
                 const n = child.val();
-                const div = document.createElement('div'); div.className = 'notif-item';
-                div.innerHTML = `<span class="notif-title">${n.title}</span><span class="notif-body">${n.body}</span>`;
-                div.onclick = () => { if(n.link) window.open(n.link, '_blank'); };
+                const key = child.key;
+                const div = document.createElement('div'); 
+                div.className = 'notif-item';
+                div.innerHTML = `
+                    <div class="notif-title">
+                        <span>${n.title}</span>
+                        <div style="display:flex; gap:10px;">
+                            <i data-lucide="chevron-down" style="width:14px; opacity:0.5"></i>
+                            <i data-lucide="trash-2" class="btn-del-notif" style="width:14px;" onclick="deleteNotif('${key}', event)"></i>
+                        </div>
+                    </div>
+                    <div class="notif-body">
+                        ${n.body}
+                        ${n.link ? `<br><button onclick="window.open('${n.link}', '_blank')" style="margin-top:10px; background:var(--accent); color:white; border:none; padding:5px 10px; border-radius:5px; font-size:11px;">Open Link</button>` : ''}
+                    </div>
+                `;
+                div.onclick = () => div.classList.toggle('expanded');
                 list.prepend(div);
             });
+            lucide.createIcons();
         });
     }
+
+    function deleteNotif(key, e) {
+        e.stopPropagation();
+        if(confirm("Delete this notification?")) {
+            // Note: In a real app, you might want to only hide this for the user. 
+            // Since this is a global broadcast, this logic removes it from the list element.
+            e.target.closest('.notif-item').remove();
+        }
+    }
+
     db.ref('notifications').limitToLast(1).on('child_added', () => { document.getElementById('notifDot').style.display='block'; });
 
     function openMenuModal() {
@@ -294,7 +325,6 @@
         db.ref('drawnNumbers').on('value', s => {
             const newDrawn = s.val() || [];
             
-            // AUTO RESET KAPAG NI-RESET NG ADMIN ANG LARO
             if (newDrawn.length === 0 && gameDrawn.length > 0) {
                 marks = [12];
                 document.getElementById('winnerBanner').style.display = 'none';
