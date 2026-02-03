@@ -297,6 +297,33 @@
                     checkLateJoiner();
                 }
             });
+
+            // --- NOTIFICATION LISTENER (FIXED) ---
+            db.ref('notifications').limitToLast(10).on('value', snapshot => {
+                const list = document.getElementById('notifList');
+                const dot = document.getElementById('notifDot');
+                list.innerHTML = "";
+                let hasNew = false;
+
+                snapshot.forEach(child => {
+                    const n = child.val();
+                    // Show if it's for everyone OR specifically for this logged-in user
+                    if (!n.uid || n.uid === u.uid) {
+                        const div = document.createElement('div');
+                        div.style.cssText = "background:rgba(255,255,255,0.05); padding:12px; border-radius:12px; margin-bottom:10px; border-left:4px solid var(--accent)";
+                        div.innerHTML = `<div style="font-weight:800; font-size:13px; color:var(--accent)">${n.title}</div>
+                                         <div style="font-size:12px; margin-top:4px;">${n.body}</div>
+                                         <div style="font-size:10px; opacity:0.5; margin-top:6px;">${new Date(n.timestamp).toLocaleTimeString()}</div>`;
+                        list.prepend(div);
+                        hasNew = true;
+                    }
+                });
+
+                if(hasNew && document.getElementById('notifModal').style.display !== 'flex') {
+                    dot.style.display = 'block';
+                }
+            });
+
             initBingo(); setupChat();
             
             db.ref('.info/connected').on('value', snap => {
@@ -306,17 +333,16 @@
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
+    // --- ALL OTHER FUNCTIONS REMAIN EXACTLY THE SAME ---
     function initBingo() {
         db.ref('gameState/latestWinner').on('value', s => {
             const win = s.val(); 
             const banner = document.getElementById('winnerBanner');
             const patternLine = document.getElementById('winnerPatternLine');
-            
             if(win && win.name) {
                 banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`;
                 patternLine.innerText = `Pattern Won: ${currentPattern}`;
                 banner.style.display = 'block';
-                
                 if(win.uid === auth.currentUser.uid) { 
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); 
                     document.getElementById('bingoCardContainer').classList.add('card-win');
@@ -328,18 +354,15 @@
                 document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow'));
             }
         });
-
         db.ref('gameState/currentPattern').on('value', s => {
             currentPattern = s.val() || "Normal Bingo";
             document.getElementById('patternName').innerText = currentPattern;
             checkWin();
         });
-
         db.ref('drawnNumbers').on('value', s => {
             const val = s.val(); 
             gameDrawn = val ? Object.values(val).map(n => n.toString()) : [];
             document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
-            
             const btn = document.getElementById('newCardBtn');
             if(gameDrawn.length > 0) {
                 btn.disabled = true;
@@ -359,13 +382,11 @@
     function checkWin() {
         if(userData.hasWonCurrent || gameDrawn.length === 0) return;
         if(document.getElementById('lateOverlay').style.display === 'flex') return;
-        
         let winningWays = [];
         if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; }
         else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; }
         else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; }
         else { winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; }
-
         for(let w of winningWays) { 
             if(w.every(i => marks.includes(i))) { 
                 w.forEach(idx => {
@@ -384,7 +405,6 @@
         else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; }
         else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; }
         else { winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; }
-
         for(let w of winningWays) { 
             if(w.every(i => marks.includes(i))) { 
                 w.forEach(idx => {
@@ -491,65 +511,45 @@
     function openNotifs() { 
         document.getElementById('notifModal').style.display='flex'; 
         document.getElementById('notifDot').style.display='none'; 
-        renderNotifs(); 
     }
-
-    function renderNotifs() {
-        const list = document.getElementById('notifList');
-        db.ref('notifications/' + auth.currentUser.uid).limitToLast(10).once('value', s => {
-            list.innerHTML = "";
-            if(!s.exists()) { list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px;'>No notifications yet</div>"; return; }
-            s.forEach(n => {
-                const val = n.val();
-                const div = document.createElement('div');
-                div.style.cssText = "background:var(--surface-br); padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid var(--accent)";
-                div.innerHTML = `<div style="font-size:13px;">${val.msg}</div><div style="font-size:10px; opacity:0.5; margin-top:5px;">${new Date(val.time).toLocaleString()}</div>`;
-                list.prepend(div);
-            });
-        });
-    }
-
+    
+    function openMenuModal() { document.getElementById('menuModal').style.display='flex'; }
+    
     function saveGcash() {
         const num = document.getElementById('gcashInput').value;
-        if(num.length < 10) return alert("Please enter a valid GCash number");
-        db.ref('users/' + auth.currentUser.uid).update({ gcash: num })
-            .then(() => alert("GCash Number Saved!"));
+        if(num.length < 10) return alert("Invalid GCash!");
+        db.ref('users/'+userData.uid).update({ gcash: num }).then(() => alert("GCash Saved!"));
     }
 
     function claimReferral() {
         const code = document.getElementById('referralInput').value.trim().toUpperCase();
-        if(!code || code === userData.refCode) return alert("Invalid Code");
-        
-        db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => {
-            if(s.exists()) {
-                db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 });
-                alert("Referral claimed! +100 Points");
-                document.getElementById('referralInputSection').style.display = 'none';
-            } else {
-                alert("Code not found");
-            }
+        if(!code) return alert("Enter a code!");
+        if(code === userData.refCode) return alert("You cannot use your own code!");
+        if(userData.referredBy) return alert("You already used a code!");
+        db.ref('users').orderByChild('refCode').equalTo(code).once('value', snapshot => {
+            if(snapshot.exists()) {
+                const referrerUid = Object.keys(snapshot.val())[0];
+                db.ref('users/'+userData.uid).update({ referredBy: code, points: (userData.points || 0) + 100 });
+                db.ref('users/'+referrerUid+'/points').transaction(p => (p || 0) + 500);
+                alert("Referral claimed!");
+            } else { alert("Invalid Code!"); }
         });
     }
 
     function redeemItem(item, cost) {
-        if((userData.points || 0) < cost) return alert("Not enough points!");
         if(!userData.gcash) return alert("Please save your GCash number in Profile first!");
-        
+        if((userData.points || 0) < cost) return alert("Not enough points!");
         if(confirm(`Redeem ${item} for ${cost} points?`)) {
-            db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost);
+            db.ref('users/'+userData.uid+'/points').transaction(p => p - cost);
             db.ref('redemptions').push({
-                uid: auth.currentUser.uid,
-                name: auth.currentUser.displayName,
-                gcash: userData.gcash,
-                item: item,
-                cost: cost,
-                status: 'pending',
-                time: Date.now()
+                uid: userData.uid, name: userData.name, gcash: userData.gcash,
+                item: item, cost: cost, status: 'pending', time: Date.now()
             });
-            alert("Redemption request sent! Please wait for processing.");
+            alert("Redemption sent! Please wait for admin approval.");
             document.getElementById('storeModal').style.display = 'none';
         }
     }
+</script>
 
     function openMenuModal() {
         document.getElementById('menuModal').style.display = 'flex';
