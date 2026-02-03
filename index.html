@@ -15,7 +15,6 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 20px; overflow-x: hidden; }
         
-        /* LOGIN OVERLAY STYLES - IBINALIK KO ITO */
         #loginOverlay { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .login-card { background: var(--surface); padding: 40px 30px; border-radius: 30px; width: 100%; max-width: 400px; text-align: center; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         .login-logo { font-size: 32px; font-weight: 900; margin-bottom: 15px; letter-spacing: -1px; }
@@ -23,7 +22,6 @@
         .login-sub { font-size: 14px; opacity: 0.7; margin-bottom: 30px; line-height: 1.6; }
         .btn-google { background: white; color: #000; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-size: 15px; }
 
-        /* NAVIGATION & UI */
         .nav { background: var(--surface); padding: 0 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: 65px; }
         .user-stats { display: flex; align-items: center; gap: 10px; }
         .icon-btn { background: var(--surface-br); color: white; border: 1px solid rgba(255,255,255,0.1); width: 40px; height: 40px; border-radius: 12px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; }
@@ -62,12 +60,6 @@
         .btn-change { background: rgba(59, 130, 246, 0.1); color: var(--accent); border: 1px solid var(--accent); height: 40px; padding: 0 20px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
         .btn-change:active { transform: scale(0.95); }
         .btn-change:disabled { opacity: 0.3; cursor: not-allowed; border-color: gray; color: gray; }
-
-        .status-card { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; margin-top: 15px; border: 1px dashed #334155; }
-        .status-item { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .status-tag { padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase; font-size: 9px; }
-        .pending { background: var(--gold); color: black; }
-        .sent { background: var(--success); color: white; }
 
         .ref-container { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1)); border: 1px solid var(--accent); padding: 15px; border-radius: 16px; margin-bottom: 15px; text-align: center; }
         .ref-header { font-size: 12px; font-weight: 800; color: var(--success); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; }
@@ -129,7 +121,17 @@
 </div>
 
 <div id="notifModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Notifications</h3><div id="notifList"></div></div></div>
-<div id="menuModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Account</h3><div class="ref-container"><div class="ref-header">Invite & Earn</div><input type="text" id="refLink" readonly style="width:100%; padding:10px; background:#000; color:var(--gold); border-radius:8px; font-size:12px; text-align:center;"></div><button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:12px; background:var(--danger); color:white; border:none; border-radius:8px; font-weight:700;">Log Out</button></div></div>
+<div id="menuModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3>Account</h3>
+        <div class="ref-container">
+            <div class="ref-header"><i data-lucide="gift" style="width:14px"></i> Invite & Earn</div>
+            <p style="font-size: 11px; margin: 5px 0 12px; opacity: 0.9;">Share link. Get 500 Pts!</p>
+            <input type="text" id="refLink" readonly style="width:100%; padding:10px; background:#000; color:var(--gold); border-radius:8px; font-size:12px; text-align:center; cursor:pointer;" onclick="this.select(); document.execCommand('copy'); alert('Copied!')">
+        </div>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:12px; background:var(--danger); color:white; border:none; border-radius:8px; font-weight:700;">Log Out</button>
+    </div>
+</div>
 <div id="storeModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3>Rewards</h3><div style="background:var(--surface-br); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;"><div><b>₱50 GCash</b><br><small>5,000 Pts</small></div><button onclick="redeem(5000, '50 GCash')" style="background:var(--success); border:none; color:white; padding:8px 15px; border-radius:8px;">Redeem</button></div></div></div>
 
 <script>
@@ -141,7 +143,23 @@
 
     async function login() {
         const provider = new firebase.auth.GoogleAuthProvider();
-        try { await auth.signInWithPopup(provider); location.reload(); } catch(e) { alert(e.message); }
+        const urlParams = new URLSearchParams(window.location.search);
+        const refBy = urlParams.get('ref');
+        try {
+            const res = await auth.signInWithPopup(provider);
+            const u = res.user;
+            const snap = await db.ref('users/'+u.uid).once('value');
+            if(!snap.exists()){
+                const code = u.uid.substring(0,6).toUpperCase();
+                await db.ref('users/'+u.uid).set({ name: u.displayName, points: 0, refCode: code, photo: u.photoURL });
+                await db.ref('referralCodes/'+code).set(u.uid);
+                if(refBy) {
+                    const ownerSnap = await db.ref('referralCodes/'+refBy).once('value');
+                    if(ownerSnap.exists()) db.ref('users/'+ownerSnap.val()+'/points').transaction(p => (p||0) + 500);
+                }
+            }
+            location.reload();
+        } catch(e) { alert(e.message); }
     }
 
     auth.onAuthStateChanged(u => {
@@ -150,8 +168,12 @@
             document.getElementById('userPanel').style.display = 'flex';
             document.getElementById('userImg').src = u.photoURL;
             db.ref('users/'+u.uid).on('value', s => { 
-                if(s.exists()){ userData = s.val(); userData.uid = u.uid; document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString(); initBingo(); }
-                else { db.ref('users/'+u.uid).set({ name: u.displayName, points: 0, photo: u.photoURL }); }
+                if(s.exists()){ 
+                    userData = s.val(); userData.uid = u.uid; 
+                    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
+                    document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + userData.refCode;
+                    initBingo(); 
+                }
             });
             setupChat();
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
