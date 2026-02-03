@@ -216,7 +216,6 @@
         updateCountdown();
     });
 
-    // UPDATED: Continuous Auto-Draw logic
     function updateCountdown() {
         const display = document.getElementById('countdownDisplay');
         if(!activeSchedule) {
@@ -229,22 +228,18 @@
         const diff = activeSchedule - now;
 
         if(diff <= 0) {
-            // Check if there's a winner card currently in the DOM
             const hasWinner = document.querySelector('.winner-card');
             
             if (hasWinner) {
                 display.innerText = "WINNER FOUND! AUTO-STOPPED.";
                 display.style.color = "var(--gold)";
-                db.ref('gameState/nextDraw').set(null); // Kill the schedule loop
+                db.ref('gameState/nextDraw').set(null);
                 return;
             }
 
             display.innerText = "DRAWING...";
-            
-            // Execute the draw
             drawNumber();
             
-            // Re-schedule the next ball automatically in 5 seconds
             const nextBallTime = Date.now() + 5000; 
             db.ref('gameState/nextDraw').set(nextBallTime);
 
@@ -262,7 +257,6 @@
     }
     setInterval(updateCountdown, 1000);
 
-    // Update searchable list for points tool
     db.ref('users').on('value', snapshot => {
         const dataList = document.getElementById('playerList');
         dataList.innerHTML = "";
@@ -309,7 +303,6 @@
         drawnNumbers.push(n); db.ref('drawnNumbers').set(drawnNumbers);
     }
 
-    // NEW FUNCTION: DRAW MANUAL NUMBER
     function drawManualNumber() {
         const input = document.getElementById('manualBallInput');
         const n = parseInt(input.value).toString();
@@ -402,31 +395,64 @@
         msg.innerHTML = `<b>${d.name}</b> ${d.msg}`; list.appendChild(msg); list.scrollTop = list.scrollHeight;
     });
 
+    // FIXED REDEMPTION LISTENER
     db.ref('redemptions').on('value', snap => {
-        const list = document.getElementById('payoutList'); list.innerHTML = "";
+        const list = document.getElementById('payoutList'); 
+        list.innerHTML = "";
+        if(!snap.exists()) return;
+
         snap.forEach(child => {
-            const r = child.val(); const key = child.key;
+            const r = child.val(); 
+            const key = child.key;
             if(r.status !== 'pending') return;
-            const div = document.createElement('div'); div.className = 'redeem-item';
-            div.innerHTML = `<div style="display:flex; justify-content:space-between;"><b>${r.item}</b> <small>${new Date(r.time).toLocaleTimeString()}</small></div>
-                <div style="margin-top:5px;">${r.name}</div><div style="color:var(--success); font-weight:800;">${r.gcash || 'No GCash'}</div>
+
+            const div = document.createElement('div'); 
+            div.className = 'redeem-item';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between;">
+                    <b style="color:var(--gold)">${r.item || 'Reward'}</b> 
+                    <small>${new Date(r.time).toLocaleTimeString()}</small>
+                </div>
+                <div style="margin-top:5px; font-weight:bold;">${r.name || 'Unknown Player'}</div>
+                <div style="color:var(--success); font-weight:800; font-size:14px;">${r.gcash || 'No GCash'}</div>
                 <div class="redeem-actions">
-                    <button class="btn-status" style="background:var(--success); color:white" onclick="updateStatus('${key}', 'sent', ${JSON.stringify(r).replace(/"/g, '&quot;')})">Paid</button>
-                    <button class="btn-status" style="background:var(--danger); color:white" onclick="updateStatus('${key}', 'denied', ${JSON.stringify(r).replace(/"/g, '&quot;')})">Deny</button>
+                    <button class="btn-status" style="background:var(--success); color:white" id="pay-${key}">Paid</button>
+                    <button class="btn-status" style="background:var(--danger); color:white" id="deny-${key}">Deny</button>
                 </div>`;
             list.prepend(div);
+
+            // Using event listeners to avoid JSON formatting errors in HTML attributes
+            document.getElementById(`pay-${key}`).onclick = () => updateStatus(key, 'sent', r);
+            document.getElementById(`deny-${key}`).onclick = () => updateStatus(key, 'denied', r);
         });
     });
 
+    // FIXED UPDATE STATUS WITH NOTIFICATIONS
     function updateStatus(key, status, data) {
-        if(confirm(`${status} this request?`)) {
+        const actionText = status === 'sent' ? "MARK AS PAID" : "DENY";
+        if(confirm(`${actionText} this request?`)) {
+            // 1. Update Database Status
             db.ref('redemptions/' + key).update({ status: status });
-            if(status === 'denied') db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost);
-            alert("Updated!");
+            
+            // 2. Refund points if denied
+            if(status === 'denied') {
+                db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost);
+            }
+
+            // 3. Send Notification to specific player
+            db.ref('notifications').push({
+                title: status === 'sent' ? "Pera Received! 💸" : "Request Denied ❌",
+                body: status === 'sent' 
+                    ? `Your reward for ${data.item} has been sent to your GCash!` 
+                    : `Your request for ${data.item} was denied. Points have been returned.`,
+                targetUid: data.uid,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            alert("Updated and Player Notified!");
         }
     }
 
-    // --- FIX TOOL FOR MISSING REF CODES ---
     async function updateExistingUsers() {
         if (!confirm("Generate codes for all players who don't have one?")) return;
         try {
