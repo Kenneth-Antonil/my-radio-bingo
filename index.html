@@ -32,7 +32,6 @@
         .marquee-content { display: inline-block; animation: marquee 25s linear infinite; padding-left: 100%; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* Next Draw Banner Style */
         .next-draw-banner { background: linear-gradient(90deg, #1e293b, #334155); margin: 12px; padding: 12px 18px; border-radius: 16px; border: 1px solid var(--gold); display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
         .draw-icon { background: var(--gold); color: #000; padding: 8px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
         .draw-info-text { flex: 1; }
@@ -56,17 +55,11 @@
         .cell.hit { background: var(--accent); color: white; transform: scale(1.02); }
 
         .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
-
         .cell.win-glow { background: var(--success) !important; color: white; z-index: 3; position: relative; border: 2px solid white; box-shadow: 0 0 15px var(--success); }
         .cell.win-glow::after { content: ''; position: absolute; inset: -3px; border: 2px solid white; border-radius: 10px; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        .late-overlay {
-            position: absolute; inset: 0; background: rgba(15, 23, 42, 0.8); 
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            z-index: 100; display: none; flex-direction: column; align-items: center; 
-            justify-content: center; text-align: center; padding: 20px; border-radius: 20px;
-        }
+        .late-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; }
         .late-text { font-weight: 800; font-size: 18px; color: white; margin-bottom: 8px; }
         .late-subtext { font-size: 13px; opacity: 0.8; color: var(--text); }
 
@@ -109,8 +102,6 @@
         .history-box { margin-top: 15px; background: rgba(0,0,0,0.2); border-radius: 15px; padding: 12px; max-height: 200px; overflow-y: auto; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); }
         .pattern-legend { margin-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); }
         .legend-item { font-size: 10px; opacity: 0.6; display: flex; align-items: center; gap: 4px; font-weight: 600; }
-
-        /* Notification Styling */
         .notif-item { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; margin-bottom: 8px; border-left: 4px solid var(--accent); }
         .notif-msg { font-size: 13px; display: block; margin-bottom: 4px; }
         .notif-time { font-size: 10px; opacity: 0.5; }
@@ -318,18 +309,14 @@
                 }
             });
 
-            // --- FIXED TIME AND DATE LOGIC ---
+            // FIXED TIME AND DATE SYNC (The added fix)
             db.ref('gameState/nextDrawTimestamp').on('value', s => {
-                const target = s.val(); 
+                const target = s.val();
                 const textEl = document.getElementById('nextDrawText');
-                if(!target) {
-                    textEl.innerText = "To be announced";
-                    return;
-                }
+                if(!target) { textEl.innerText = "To be announced"; return; }
                 if(window.gameTimer) clearInterval(window.gameTimer);
                 window.gameTimer = setInterval(() => {
-                    const now = Date.now();
-                    const diff = target - now;
+                    const diff = target - Date.now();
                     if(diff <= 0) {
                         textEl.innerText = "LIVE NOW!";
                         textEl.style.color = "var(--success)";
@@ -343,7 +330,6 @@
                 }, 1000);
             });
 
-            // SYNC: Notifications and Transactions
             db.ref('users/'+u.uid+'/notifs').on('value', s => {
                 const list = document.getElementById('notifList'); list.innerHTML = "";
                 const data = s.val();
@@ -371,7 +357,6 @@
             });
 
             initBingo(); setupChat();
-            
             db.ref('.info/connected').on('value', snap => {
                 if (snap.val() === true) { const p = db.ref('presence').push(); p.onDisconnect().remove(); p.set(true); }
             });
@@ -383,13 +368,9 @@
         db.ref('gameState/latestWinner').on('value', s => {
             const win = s.val(); 
             const banner = document.getElementById('winnerBanner');
-            const patternLine = document.getElementById('winnerPatternLine');
-            
             if(win && win.name) {
                 banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`;
-                patternLine.innerText = `Pattern Won: ${currentPattern}`;
                 banner.style.display = 'block';
-                
                 if(win.uid === auth.currentUser.uid) { 
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); 
                     document.getElementById('bingoCardContainer').classList.add('card-win');
@@ -397,13 +378,13 @@
             } else { 
                 banner.style.display = 'none'; 
                 document.getElementById('bingoCardContainer').classList.remove('card-win'); 
-                document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow'));
             }
         });
 
         db.ref('gameState/currentPattern').on('value', s => {
             currentPattern = s.val() || "Normal Bingo";
             document.getElementById('patternName').innerText = currentPattern;
+            checkWin();
         });
 
         db.ref('drawnNumbers').on('value', s => {
@@ -412,13 +393,8 @@
             document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
             
             const btn = document.getElementById('newCardBtn');
-            if(gameDrawn.length > 0) {
-                btn.disabled = true;
-                btn.innerHTML = `<i data-lucide="lock" style="width:14px"></i> IN GAME`;
-            } else {
-                btn.disabled = false;
-                btn.innerHTML = `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`;
-            }
+            btn.disabled = gameDrawn.length > 0;
+            btn.innerHTML = gameDrawn.length > 0 ? `<i data-lucide="lock" style="width:14px"></i> IN GAME` : `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`;
             lucide.createIcons();
             checkLateJoiner();
             renderCard();
@@ -427,10 +403,8 @@
         });
     }
 
-    // Placeholder functions to prevent errors
     function generateNewCard() {
-        let card = [];
-        const ranges = [[1,15],[16,30],[31,45],[46,60],[61,75]];
+        let card = []; const ranges = [[1,15],[16,30],[31,45],[46,60],[61,75]];
         for(let i=0; i<5; i++){
             let col = [];
             while(col.length < 5){
@@ -439,10 +413,11 @@
             }
             card.push(col);
         }
-        let flat = [];
-        for(let r=0; r<5; r++) for(let c=0; c<5; c++) flat.push(card[c][r]);
+        let flat = []; for(let r=0; r<5; r++) for(let c=0; c<5; c++) flat.push(card[c][r]);
         flat[12] = "FREE";
-        db.ref('users/'+auth.currentUser.uid).update({ currentCard: flat, cardTimestamp: Date.now() });
+        cardNumbers = flat;
+        db.ref('users/'+auth.currentUser.uid).update({ currentCard: flat, cardTimestamp: Date.now(), hasWonCurrent: false });
+        renderCard();
     }
 
     function renderCard() {
@@ -453,8 +428,7 @@
             const isHit = n === "FREE" || gameDrawn.includes(n.toString());
             cell.className = 'cell' + (isHit ? ' hit' : '');
             if(isHit) marks.push(i);
-            cell.id = `c-${i}`;
-            cell.innerText = n;
+            cell.id = `c-${i}`; cell.innerText = n;
             grid.appendChild(cell);
         });
     }
@@ -466,11 +440,47 @@
         });
     }
 
-    function checkWin() { /* Standard Win Logic */ }
-    function checkLateJoiner() {
-        if(!userData.cardTimestamp) return;
-        const isLate = gameDrawn.length > 0 && userData.cardTimestamp > Date.now() - 30000;
-        document.getElementById('lateOverlay').style.display = isLate ? 'flex' : 'none';
+    function checkWin() {
+        if(userData.hasWonCurrent || gameDrawn.length === 0) return;
+        let winningWays = [];
+        if (currentPattern === "Blackout") winningWays = [Array.from({length: 25}, (_, i) => i)];
+        else if (currentPattern === "Letter X") winningWays = [[0,4,6,8,12,16,18,20,24]];
+        else if (currentPattern === "Four Corners") winningWays = [[0,4,20,24]];
+        else winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
+
+        for(let w of winningWays) { 
+            if(w.every(i => marks.includes(i))) { 
+                w.forEach(idx => document.getElementById('c-'+idx).classList.add('win-glow'));
+                triggerWin(); break; 
+            } 
+        }
+    }
+
+    function triggerWin() {
+        db.ref('gameState/latestWinner').once('value', s => {
+            if(!s.exists()) {
+                db.ref('gameState/latestWinner').set({ name: auth.currentUser.displayName, uid: auth.currentUser.uid, time: Date.now() });
+                db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
+                db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
+                db.ref('users/'+userData.uid+'/history').push({ msg: "Won Bingo Game", points: 500, time: Date.now() });
+            }
+        });
+    }
+
+    function saveGcash() {
+        const val = document.getElementById('gcashInput').value;
+        if(val.length < 10) return alert("Invalid GCash Number");
+        db.ref('users/'+userData.uid).update({ gcash: val }).then(() => alert("GCash Saved!"));
+    }
+
+    function redeemItem(item, cost) {
+        if(!userData.gcash) return alert("Please save your GCash number first!");
+        if(userData.points < cost) return alert("Insufficient Points!");
+        if(confirm(`Redeem ${item}?`)) {
+            db.ref('users/'+userData.uid+'/points').transaction(p => p - cost);
+            db.ref('redemptions').push({ uid: userData.uid, name: userData.name, item: item, cost: cost, gcash: userData.gcash, status: 'pending', time: Date.now() });
+            alert("Sent!");
+        }
     }
 
     function setupChat() {
@@ -490,6 +500,15 @@
         db.ref('chats').push({ name: auth.currentUser.displayName, msg: msg, time: Date.now() });
         document.getElementById('chatIn').value = "";
     }
+
+    function checkLateJoiner() {
+        if(!userData.cardTimestamp) return;
+        const isLate = gameDrawn.length > 0 && userData.cardTimestamp > Date.now() - 30000;
+        document.getElementById('lateOverlay').style.display = isLate ? 'flex' : 'none';
+    }
+
+    function openMenuModal() { document.getElementById('menuModal').style.display = 'flex'; }
+    function openNotifs() { document.getElementById('notifModal').style.display = 'flex'; }
 </script>
 </body>
 </html>
