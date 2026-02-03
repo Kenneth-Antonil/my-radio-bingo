@@ -576,11 +576,19 @@
         if(userData.hasWonCurrent || gameDrawn.length === 0) return;
         if(document.getElementById('lateOverlay').style.display === 'flex' && !document.getElementById('lateOverlay').innerHTML.includes('May nanalo na!')) return;
         
+        // FIX: Re-verify current marks before checking pattern
+        marks = [12];
+        cardNumbers.forEach((n, i) => {
+            if(i === 12 || gameDrawn.includes(n.toString())) {
+                if(!marks.includes(i)) marks.push(i);
+            }
+        });
+
         let winningWays = getWinningWays();
         for(let w of winningWays) { 
             if(w.every(i => marks.includes(i))) { 
                 triggerWin(); 
-                break; 
+                return; // Stop after first win detection
             } 
         }
     }
@@ -605,9 +613,14 @@
     }
 
     function triggerWin() {
-        db.ref('gameState/latestWinner').once('value', s => {
-            if(!s.exists()) {
-                db.ref('gameState/latestWinner').set({ name: auth.currentUser.displayName, uid: auth.currentUser.uid, time: Date.now() });
+        db.ref('gameState/latestWinner').transaction((currentData) => {
+            if (currentData === null) {
+                return { name: auth.currentUser.displayName, uid: auth.currentUser.uid, time: Date.now() };
+            } else {
+                return; // Abort if someone already won
+            }
+        }, (error, committed, snapshot) => {
+            if (committed) {
                 db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
                 db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
             }
