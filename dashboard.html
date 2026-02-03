@@ -55,7 +55,6 @@
         .btn-status { flex: 1; padding: 10px; border-radius: 10px; border: none; font-size: 11px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
 
         .status-dot { position: absolute; bottom: -2px; right: -2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--surface); }
-
         .ref-link-box { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; margin-top: 10px; display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,0.05); }
         .ref-link-text { font-size: 9px; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
         .copy-btn { background: none; border: none; color: var(--text); opacity: 0.5; cursor: pointer; padding: 2px; }
@@ -117,10 +116,7 @@
 
     <div class="main-layout">
         <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="margin:0;"><i data-lucide="monitor"></i> Registered Players</h2>
-                <input type="text" id="playerSearch" onkeyup="filterPlayers()" placeholder="Search players..." style="width:200px; margin:0; padding:8px 12px; font-size:12px;">
-            </div>
+            <h2><i data-lucide="monitor"></i> Registered Players</h2>
             <div class="players-grid" id="playersGrid"></div>
         </div>
 
@@ -139,63 +135,38 @@
     let currentWinnerUID = "";
     let currentPattern = "Normal Bingo";
 
-    // Update the searchable datalist for the points tool
+    // Update searchable list for points tool
     db.ref('users').on('value', snapshot => {
         const dataList = document.getElementById('playerList');
         dataList.innerHTML = "";
         snapshot.forEach(child => {
             const user = child.val();
             const option = document.createElement('option');
-            // Show RefCode if available, otherwise just Name
-            const identifyingInfo = user.refCode || "No-Ref-Code";
-            option.value = `${user.name || 'Unknown'} - ${identidyingInfo}`;
+            option.value = `${user.name || 'Unknown'} - ${user.refCode || 'NoRef'}`;
             dataList.appendChild(option);
         });
-        refreshPlayers(); // Trigger grid update when data changes
+        refreshPlayers(); 
     });
 
     function adjustPoints(type) {
         let refInput = document.getElementById('targetRefCode').value.trim();
-        let nameToFind = "";
-        
-        if(refInput.includes(" - ")) {
-            const parts = refInput.split(" - ");
-            nameToFind = parts[0];
-            refInput = parts[1];
-        }
-        
+        if(refInput.includes(" - ")) refInput = refInput.split(" - ")[1];
         const amount = parseInt(document.getElementById('pointAmount').value);
-        if(!refInput || isNaN(amount)) return alert("Pakilagay ang details!");
+        if(!refInput || isNaN(amount)) return alert("Check inputs!");
 
-        // Search by refCode first, if not found or "No-Ref-Code", search by Name
-        let query = db.ref('users').orderByChild('refCode').equalTo(refInput);
-        
-        query.once('value', snapshot => {
+        db.ref('users').orderByChild('refCode').equalTo(refInput).once('value', snapshot => {
             if(snapshot.exists()) {
                 const uid = Object.keys(snapshot.val())[0];
-                applyPointTransaction(uid, amount, type);
-            } else {
-                // Try fallback search by name if refCode search fails
-                db.ref('users').orderByChild('name').equalTo(nameToFind || refInput).once('value', snap2 => {
-                    if(snap2.exists()) {
-                        const uid = Object.keys(snap2.val())[0];
-                        applyPointTransaction(uid, amount, type);
-                    } else { alert("Hindi mahanap ang Player!"); }
+                const change = type === 'add' ? amount : -amount;
+                db.ref('users/' + uid + '/points').transaction(c => (c || 0) + change).then(() => {
+                    alert("Success!");
+                    document.getElementById('pointAmount').value = "";
+                    document.getElementById('targetRefCode').value = "";
                 });
-            }
+            } else { alert("Player not found!"); }
         });
     }
 
-    function applyPointTransaction(uid, amount, type) {
-        const change = type === 'add' ? amount : -amount;
-        db.ref('users/' + uid + '/points').transaction(current => (current || 0) + change).then(() => {
-            alert("Success!");
-            document.getElementById('pointAmount').value = "";
-            document.getElementById('targetRefCode').value = "";
-        });
-    }
-
-    // Pattern & Drawing logic (Unchanged)
     db.ref('gameState/currentPattern').on('value', s => { if(s.exists()) { currentPattern = s.val(); document.getElementById('gamePattern').value = currentPattern; refreshPlayers(); } });
     db.ref('gameState/latestWinner').on('value', s => { currentWinnerUID = s.exists() ? s.val().uid : ""; refreshPlayers(); });
     db.ref('drawnNumbers').on('value', s => {
@@ -223,34 +194,18 @@
         alert("Sent!");
     }
 
-    function copyRef(text) {
-        navigator.clipboard.writeText(text).then(() => alert("Link Copied!"));
-    }
-
-    function filterPlayers() {
-        const val = document.getElementById('playerSearch').value.toLowerCase();
-        const cards = document.querySelectorAll('.player-mini-card');
-        cards.forEach(c => {
-            const name = c.getAttribute('data-name').toLowerCase();
-            const ref = c.getAttribute('data-ref').toLowerCase();
-            c.style.display = (name.includes(val) || ref.includes(val)) ? "block" : "none";
-        });
-    }
+    function copyRef(text) { navigator.clipboard.writeText(text).then(() => alert("Copied!")); }
 
     function refreshPlayers() {
         const threshold = Date.now() - (5 * 60 * 1000); 
-        const siteUrl = window.location.origin + window.location.pathname.replace('dashboard.html', 'index.html');
-
         db.ref('users').once('value', snapshot => {
             const container = document.getElementById('playersGrid');
             container.innerHTML = "";
-            
             snapshot.forEach(child => {
                 const user = child.val();
                 const uid = child.key;
                 const isOnline = user.last_seen && user.last_seen > threshold;
-                const refCodeStr = user.refCode || "";
-                const fullRefLink = siteUrl + "?ref=" + refCodeStr;
+                const fullRefLink = window.location.origin + "/index.html?ref=" + (user.refCode || "");
 
                 const marks = [12];
                 let isBingo = false;
@@ -262,7 +217,6 @@
                         if(isHit) marks.push(idx);
                         gridHtml += `<div id="m-${uid}-${idx}" class="mini-cell ${isHit ? 'hit' : ''} ${idx === 12 ? 'free' : ''}">${idx === 12 ? '★' : num}</div>`;
                     });
-                    // Pattern Logic
                     let patterns = [];
                     if (currentPattern === "Blackout") patterns = [Array.from({length: 25}, (_, i) => i)];
                     else if (currentPattern === "Letter X") patterns = [[0,4,6,8,12,16,18,20,24]];
@@ -274,10 +228,6 @@
 
                 const cardDiv = document.createElement('div');
                 cardDiv.className = `player-mini-card ${isBingo ? 'winner-card' : ''}`;
-                cardDiv.style.opacity = isOnline ? "1" : "0.5";
-                cardDiv.setAttribute('data-name', user.name || '');
-                cardDiv.setAttribute('data-ref', refCodeStr);
-
                 cardDiv.innerHTML = `
                     <div class="player-info">
                         <div style="position:relative">
@@ -293,7 +243,7 @@
                     ${gridHtml}
                     <div class="ref-link-box">
                         <span class="ref-link-text">${fullRefLink}</span>
-                        <button class="copy-btn" onclick="copyRef('${fullRefLink}')" title="Copy Link"><i data-lucide="copy" style="width:12px"></i></button>
+                        <button class="copy-btn" onclick="copyRef('${fullRefLink}')"><i data-lucide="copy" style="width:12px"></i></button>
                     </div>
                     <div style="font-size:9px; margin-top:8px; opacity:0.6; display:flex; justify-content:space-between;">
                         <span>GCash: ${user.gcash || 'N/A'}</span>
@@ -306,7 +256,6 @@
         });
     }
 
-    // Chat and Redemption logic (Unchanged)
     db.ref('chats').limitToLast(20).on('child_added', s => {
         const d = s.val(); const list = document.getElementById('chatList');
         const msg = document.createElement('div'); msg.className = 'chat-msg';
@@ -336,8 +285,7 @@
             alert("Updated!");
         }
     }
-    
-    setInterval(refreshPlayers, 15000); 
+    setInterval(refreshPlayers, 10000); 
     refreshPlayers();
 </script>
 </body>
