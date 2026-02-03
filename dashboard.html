@@ -132,6 +132,21 @@
     let currentWinnerUID = "";
     let currentPattern = "Normal Bingo";
 
+    // --- NEW FIX: Dedicated Player Search List Listener ---
+    // Hinila ko ito palabas para laging updated ang listahan kahit sino pa ang mag-register.
+    db.ref('users').on('value', snapshot => {
+        const dataList = document.getElementById('playerList');
+        dataList.innerHTML = "";
+        snapshot.forEach(child => {
+            const user = child.val();
+            if(user.refCode) {
+                const option = document.createElement('option');
+                option.value = `${user.name || 'Unknown'} - ${user.refCode}`;
+                dataList.appendChild(option);
+            }
+        });
+    });
+
     function adjustPoints(type) {
         let refInput = document.getElementById('targetRefCode').value.trim();
         if(refInput.includes(" - ")) refInput = refInput.split(" - ")[1];
@@ -185,24 +200,13 @@
         const threshold = Date.now() - (5 * 60 * 1000); 
         db.ref('users').once('value', snapshot => {
             const container = document.getElementById('playersGrid');
-            const dataList = document.getElementById('playerList');
             container.innerHTML = "";
-            dataList.innerHTML = ""; 
             
             snapshot.forEach(child => {
                 const user = child.val();
                 const uid = child.key;
 
-                // --- SEARCH LIST LOGIC ---
-                if(user.refCode) {
-                    const option = document.createElement('option');
-                    option.value = `${user.name || 'Unknown'} - ${user.refCode}`;
-                    dataList.appendChild(option);
-                }
-
-                // --- STATUS CHECK ---
                 const isOnline = user.last_seen && user.last_seen > threshold;
-
                 const marks = [12];
                 let isBingo = false;
                 let winningCells = [];
@@ -224,8 +228,6 @@
 
                 const cardDiv = document.createElement('div');
                 cardDiv.className = `player-mini-card ${isBingo ? 'winner-card' : ''}`;
-                
-                // Dim effect for offline players
                 cardDiv.style.opacity = isOnline ? "1" : "0.5";
 
                 cardDiv.innerHTML = `
