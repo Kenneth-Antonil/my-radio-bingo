@@ -92,8 +92,8 @@
         <div class="card">
             <h2><i data-lucide="coins"></i> Give/Take Points</h2>
             <label style="font-size:11px; font-weight:800; opacity:0.6;">PLAYER REF CODE</label>
-            <input type="text" id="targetRefCode" placeholder="Enter Ref Code (e.g. AB12CD)">
-            <label style="font-size:11px; font-weight:800; opacity:0.6;">AMOUNT</label>
+            <input type="text" id="targetRefCode" list="playerList" placeholder="Search Name or Ref Code...">
+            <datalist id="playerList"></datalist> <label style="font-size:11px; font-weight:800; opacity:0.6;">AMOUNT</label>
             <input type="number" id="pointAmount" placeholder="Amount (e.g. 500)">
             <div style="display:flex; gap:10px;">
                 <button onclick="adjustPoints('add')" style="flex:1; background:var(--success); color:white; border:none; padding:12px; border-radius:12px; font-weight:800; cursor:pointer;">ADD</button>
@@ -130,12 +130,15 @@
 
     // --- NEW: ADJUST POINTS FUNCTION ---
     function adjustPoints(type) {
-        const refCode = document.getElementById('targetRefCode').value.toUpperCase().trim();
+        let refInput = document.getElementById('targetRefCode').value.trim();
+        // Extract Ref Code if selected from datalist (Format: "Name - REFCODE")
+        if(refInput.includes(" - ")) refInput = refInput.split(" - ")[1];
+        
+        const refCode = refInput.toUpperCase();
         const amount = parseInt(document.getElementById('pointAmount').value);
         
         if(!refCode || isNaN(amount)) return alert("Pakilagay ang Ref Code at Amount!");
 
-        // Find user by Ref Code
         db.ref('users').orderByChild('refCode').equalTo(refCode).once('value', snapshot => {
             if(snapshot.exists()) {
                 const uid = Object.keys(snapshot.val())[0];
@@ -146,6 +149,7 @@
                 }).then(() => {
                     alert(`Tagumpay! ${type === 'add' ? 'Nagdagdag' : 'Nagbawas'} ng ${amount} pts.`);
                     document.getElementById('pointAmount').value = "";
+                    document.getElementById('targetRefCode').value = "";
                 });
             } else {
                 alert("Hindi mahanap ang Ref Code na yan!");
@@ -194,21 +198,30 @@
     }
 
     function refreshPlayers() {
-        const threshold = Date.now() - (5 * 60 * 1000); // Online within 5 mins
+        const threshold = Date.now() - (5 * 60 * 1000); 
         db.ref('users').once('value', snapshot => {
             const container = document.getElementById('playersGrid');
+            const dataList = document.getElementById('playerList');
             container.innerHTML = "";
+            dataList.innerHTML = ""; // Update the auto-complete list
             
             snapshot.forEach(child => {
                 const user = child.val();
                 const uid = child.key;
+
+                // Add to Auto-complete list (kahit offline para mahanap pa rin)
+                if(user.refCode) {
+                    const option = document.createElement('option');
+                    option.value = `${user.name || 'User'} - ${user.refCode}`;
+                    dataList.appendChild(option);
+                }
+
                 if (!user.last_seen || user.last_seen < threshold) return;
 
                 const marks = [12];
                 let isBingo = false;
                 let winningCells = [];
 
-                // Render Card Logic
                 let gridHtml = '<div class="mini-grid">';
                 if(user.currentCard) {
                     user.currentCard.forEach((num, idx) => {
@@ -217,7 +230,6 @@
                         gridHtml += `<div id="m-${uid}-${idx}" class="mini-cell ${isHit ? 'hit' : ''} ${idx === 12 ? 'free' : ''}">${idx === 12 ? '★' : num}</div>`;
                     });
 
-                    // Pattern Check Logic
                     let patterns = [];
                     if (currentPattern === "Blackout") patterns = [Array.from({length: 25}, (_, i) => i)];
                     else if (currentPattern === "Letter X") patterns = [[0,4,6,8,12,16,18,20,24]];
@@ -254,7 +266,6 @@
                 `;
                 container.appendChild(cardDiv);
                 
-                // Highlight winning cells
                 if(isBingo) {
                     winningCells.forEach(idx => {
                         const cell = document.getElementById(`m-${uid}-${idx}`);
@@ -266,7 +277,6 @@
         });
     }
 
-    // Monitoring
     db.ref('chats').limitToLast(20).on('child_added', s => {
         const d = s.val(); const list = document.getElementById('chatList');
         const msg = document.createElement('div'); msg.className = 'chat-msg';
@@ -300,7 +310,7 @@
         }
     }
 
-    setInterval(refreshPlayers, 5000); // Auto-refresh every 5 secs
+    setInterval(refreshPlayers, 5000); 
     refreshPlayers();
 </script>
 </body>
