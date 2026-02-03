@@ -91,9 +91,10 @@
 
         <div class="card">
             <h2><i data-lucide="coins"></i> Give/Take Points</h2>
-            <label style="font-size:11px; font-weight:800; opacity:0.6;">PLAYER REF CODE</label>
-            <input type="text" id="targetRefCode" list="playerList" placeholder="Search Name or Ref Code...">
-            <datalist id="playerList"></datalist> <label style="font-size:11px; font-weight:800; opacity:0.6;">AMOUNT</label>
+            <label style="font-size:11px; font-weight:800; opacity:0.6;">PLAYER (SEARCH NAME OR REF)</label>
+            <input type="text" id="targetRefCode" list="playerList" placeholder="Start typing name...">
+            <datalist id="playerList"></datalist>
+            <label style="font-size:11px; font-weight:800; opacity:0.6;">AMOUNT</label>
             <input type="number" id="pointAmount" placeholder="Amount (e.g. 500)">
             <div style="display:flex; gap:10px;">
                 <button onclick="adjustPoints('add')" style="flex:1; background:var(--success); color:white; border:none; padding:12px; border-radius:12px; font-weight:800; cursor:pointer;">ADD</button>
@@ -128,10 +129,8 @@
     let currentWinnerUID = "";
     let currentPattern = "Normal Bingo";
 
-    // --- NEW: ADJUST POINTS FUNCTION ---
     function adjustPoints(type) {
         let refInput = document.getElementById('targetRefCode').value.trim();
-        // Extract Ref Code if selected from datalist (Format: "Name - REFCODE")
         if(refInput.includes(" - ")) refInput = refInput.split(" - ")[1];
         
         const refCode = refInput.toUpperCase();
@@ -143,34 +142,17 @@
             if(snapshot.exists()) {
                 const uid = Object.keys(snapshot.val())[0];
                 const change = type === 'add' ? amount : -amount;
-                
-                db.ref('users/' + uid + '/points').transaction(current => {
-                    return (current || 0) + change;
-                }).then(() => {
+                db.ref('users/' + uid + '/points').transaction(current => (current || 0) + change).then(() => {
                     alert(`Tagumpay! ${type === 'add' ? 'Nagdagdag' : 'Nagbawas'} ng ${amount} pts.`);
                     document.getElementById('pointAmount').value = "";
                     document.getElementById('targetRefCode').value = "";
                 });
-            } else {
-                alert("Hindi mahanap ang Ref Code na yan!");
-            }
+            } else { alert("Hindi mahanap ang Ref Code!"); }
         });
     }
 
-    // Listen to Game Pattern
-    db.ref('gameState/currentPattern').on('value', s => { 
-        if(s.exists()) {
-            currentPattern = s.val();
-            document.getElementById('gamePattern').value = currentPattern; 
-            refreshPlayers();
-        }
-    });
-
-    db.ref('gameState/latestWinner').on('value', s => {
-        currentWinnerUID = s.exists() ? s.val().uid : "";
-        refreshPlayers();
-    });
-
+    db.ref('gameState/currentPattern').on('value', s => { if(s.exists()) { currentPattern = s.val(); document.getElementById('gamePattern').value = currentPattern; refreshPlayers(); } });
+    db.ref('gameState/latestWinner').on('value', s => { currentWinnerUID = s.exists() ? s.val().uid : ""; refreshPlayers(); });
     db.ref('drawnNumbers').on('value', s => {
         drawnNumbers = s.val() ? Object.values(s.val()).map(n => n.toString()) : [];
         document.getElementById('currentBallDisplay').innerText = drawnNumbers.length > 0 ? drawnNumbers[drawnNumbers.length-1] : "--";
@@ -183,7 +165,6 @@
         let n; do { n = (Math.floor(Math.random() * 75) + 1).toString(); } while (drawnNumbers.includes(n));
         drawnNumbers.push(n); db.ref('drawnNumbers').set(drawnNumbers);
     }
-
     function resetGame() { if(confirm("Reset Lahat?")) { db.ref('drawnNumbers').set([]); db.ref('gameState/latestWinner').set(null); } }
     function clearWinner() { if(confirm("Alisin ang winner banner?")) { db.ref('gameState/latestWinner').set(null); } }
     function updatePattern(val) { db.ref('gameState/currentPattern').set(val); }
@@ -203,25 +184,26 @@
             const container = document.getElementById('playersGrid');
             const dataList = document.getElementById('playerList');
             container.innerHTML = "";
-            dataList.innerHTML = ""; // Update the auto-complete list
+            dataList.innerHTML = ""; 
             
             snapshot.forEach(child => {
                 const user = child.val();
                 const uid = child.key;
 
-                // Add to Auto-complete list (kahit offline para mahanap pa rin)
+                // --- SEARCH LIST LOGIC (Kahit offline kasama dito) ---
                 if(user.refCode) {
                     const option = document.createElement('option');
-                    option.value = `${user.name || 'User'} - ${user.refCode}`;
+                    // Format: Pangalan - REFCODE
+                    option.value = `${user.name || 'Unknown'} - ${user.refCode}`;
                     dataList.appendChild(option);
                 }
 
+                // --- VISUAL GRID LOGIC (Online only) ---
                 if (!user.last_seen || user.last_seen < threshold) return;
 
                 const marks = [12];
                 let isBingo = false;
                 let winningCells = [];
-
                 let gridHtml = '<div class="mini-grid">';
                 if(user.currentCard) {
                     user.currentCard.forEach((num, idx) => {
@@ -229,22 +211,13 @@
                         if(isHit) marks.push(idx);
                         gridHtml += `<div id="m-${uid}-${idx}" class="mini-cell ${isHit ? 'hit' : ''} ${idx === 12 ? 'free' : ''}">${idx === 12 ? '★' : num}</div>`;
                     });
-
                     let patterns = [];
                     if (currentPattern === "Blackout") patterns = [Array.from({length: 25}, (_, i) => i)];
                     else if (currentPattern === "Letter X") patterns = [[0,4,6,8,12,16,18,20,24]];
                     else if (currentPattern === "Four Corners") patterns = [[0,4,20,24]];
                     else patterns = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
-
-                    for(let p of patterns) {
-                        if(p.every(i => marks.includes(i))) {
-                            isBingo = true;
-                            winningCells = [...new Set([...winningCells, ...p])];
-                        }
-                    }
-                } else {
-                    for(let i=0; i<25; i++) gridHtml += `<div class="mini-cell">--</div>`;
-                }
+                    for(let p of patterns) { if(p.every(i => marks.includes(i))) { isBingo = true; winningCells = [...new Set([...winningCells, ...p])]; } }
+                } else { for(let i=0; i<25; i++) gridHtml += `<div class="mini-cell">--</div>`; }
                 gridHtml += '</div>';
 
                 const cardDiv = document.createElement('div');
@@ -262,16 +235,9 @@
                     <div style="font-size:9px; margin-top:8px; opacity:0.6; display:flex; justify-content:space-between;">
                         <span>GCash: ${user.gcash || 'N/A'}</span>
                         <span style="color:var(--success)">${isBingo ? 'BINGO!' : ''}</span>
-                    </div>
-                `;
+                    </div>`;
                 container.appendChild(cardDiv);
-                
-                if(isBingo) {
-                    winningCells.forEach(idx => {
-                        const cell = document.getElementById(`m-${uid}-${idx}`);
-                        if(cell) cell.classList.add('win-glow');
-                    });
-                }
+                if(isBingo) { winningCells.forEach(idx => { const cell = document.getElementById(`m-${uid}-${idx}`); if(cell) cell.classList.add('win-glow'); }); }
             });
             lucide.createIcons();
         });
@@ -280,8 +246,7 @@
     db.ref('chats').limitToLast(20).on('child_added', s => {
         const d = s.val(); const list = document.getElementById('chatList');
         const msg = document.createElement('div'); msg.className = 'chat-msg';
-        msg.innerHTML = `<b>${d.name}</b> ${d.msg}`;
-        list.appendChild(msg); list.scrollTop = list.scrollHeight;
+        msg.innerHTML = `<b>${d.name}</b> ${d.msg}`; list.appendChild(msg); list.scrollTop = list.scrollHeight;
     });
 
     db.ref('redemptions').on('value', snap => {
@@ -290,10 +255,8 @@
             const r = child.val(); const key = child.key;
             if(r.status !== 'pending') return;
             const div = document.createElement('div'); div.className = 'redeem-item';
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between;"><b>${r.item}</b> <small>${new Date(r.time).toLocaleTimeString()}</small></div>
-                <div style="margin-top:5px;">${r.name}</div>
-                <div style="color:var(--success); font-weight:800;">${r.gcash || 'No GCash'}</div>
+            div.innerHTML = `<div style="display:flex; justify-content:space-between;"><b>${r.item}</b> <small>${new Date(r.time).toLocaleTimeString()}</small></div>
+                <div style="margin-top:5px;">${r.name}</div><div style="color:var(--success); font-weight:800;">${r.gcash || 'No GCash'}</div>
                 <div class="redeem-actions">
                     <button class="btn-status" style="background:var(--success); color:white" onclick="updateStatus('${key}', 'sent', ${JSON.stringify(r).replace(/"/g, '&quot;')})">Paid</button>
                     <button class="btn-status" style="background:var(--danger); color:white" onclick="updateStatus('${key}', 'denied', ${JSON.stringify(r).replace(/"/g, '&quot;')})">Deny</button>
@@ -309,7 +272,6 @@
             alert("Updated!");
         }
     }
-
     setInterval(refreshPlayers, 5000); 
     refreshPlayers();
 </script>
