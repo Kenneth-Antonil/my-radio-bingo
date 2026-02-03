@@ -223,14 +223,50 @@
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('userPanel').style.display = 'flex';
             document.getElementById('userImg').src = u.photoURL;
-            db.ref('users/'+u.uid).update({ last_seen: Date.now(), name: u.displayName, photo: u.photoURL });
+
+            // HANDLE INITIAL USER DATA & REFERRALS
+            const userRef = db.ref('users/'+u.uid);
+            userRef.once('value', snapshot => {
+                if (!snapshot.exists()) {
+                    // Create New User Profile
+                    const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const referredBy = urlParams.get('ref');
+
+                    userRef.set({
+                        name: u.displayName,
+                        photo: u.photoURL,
+                        points: 100, // Welcome gift
+                        refCode: newRefCode,
+                        referredBy: referredBy || null,
+                        last_seen: Date.now()
+                    });
+
+                    // If they came from a referral link, reward the referrer
+                    if (referredBy) {
+                        db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => {
+                            if (refSnap.exists()) {
+                                const referrerUid = Object.keys(refSnap.val())[0];
+                                // Give referrer 500 bonus points
+                                db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 500);
+                            }
+                        });
+                    }
+                } else {
+                    userRef.update({ last_seen: Date.now(), name: u.displayName, photo: u.photoURL });
+                }
+            });
             
-            db.ref('users/'+u.uid).on('value', s => { 
+            userRef.on('value', s => { 
                 if(s.exists()){ 
                     userData = s.val(); userData.uid = u.uid; 
                     document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
                     document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString();
-                    document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + userData.refCode;
+                    
+                    // Display Current Referral Link
+                    const cleanUrl = window.location.origin + window.location.pathname;
+                    document.getElementById('refLink').value = cleanUrl + "?ref=" + (userData.refCode || "");
+
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
                     if (userData.currentCard) { 
                         cardNumbers = userData.currentCard; 
@@ -262,7 +298,6 @@
             } else { 
                 banner.style.display = 'none'; 
                 document.getElementById('bingoCardContainer').classList.remove('card-win'); 
-                // Clear win-glow classes if no winner
                 document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow'));
             }
         });
@@ -278,7 +313,6 @@
             gameDrawn = val ? Object.values(val).map(n => n.toString()) : [];
             document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
             
-            // PREVENT CHANGE CARD: Disable button if game has started
             const btn = document.getElementById('newCardBtn');
             if(gameDrawn.length > 0) {
                 btn.disabled = true;
@@ -319,7 +353,6 @@
 
         for(let w of winningWays) { 
             if(w.every(i => marks.includes(i))) { 
-                // Force UI update for winning line
                 w.forEach(idx => {
                     const el = document.getElementById('c-'+idx);
                     if(el) el.classList.add('win-glow');
@@ -332,7 +365,7 @@
 
     function triggerWin() {
         db.ref('gameState/latestWinner').once('value', s => {
-            if(!s.exists()) { // Only trigger if no winner yet
+            if(!s.exists()) {
                 db.ref('gameState/latestWinner').set({ 
                     name: auth.currentUser.displayName, 
                     uid: auth.currentUser.uid, 
