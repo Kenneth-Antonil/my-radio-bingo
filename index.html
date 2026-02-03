@@ -49,17 +49,11 @@
         .cell.hit { background: var(--accent); color: white; transform: scale(1.02); }
 
         .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
-
         .cell.win-glow { background: var(--success) !important; color: white; z-index: 3; position: relative; border: 2px solid white; box-shadow: 0 0 15px var(--success); }
         .cell.win-glow::after { content: ''; position: absolute; inset: -3px; border: 2px solid white; border-radius: 10px; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        .late-overlay {
-            position: absolute; inset: 0; background: rgba(15, 23, 42, 0.8); 
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            z-index: 100; display: none; flex-direction: column; align-items: center; 
-            justify-content: center; text-align: center; padding: 20px; border-radius: 20px;
-        }
+        .late-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; }
         .late-text { font-weight: 800; font-size: 18px; color: white; margin-bottom: 8px; }
         .late-subtext { font-size: 13px; opacity: 0.8; color: var(--text); }
 
@@ -131,6 +125,12 @@
 <div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang.</div></div>
 
 <div class="container">
+    <div id="nextDrawBanner" class="ref-container" style="display: none; background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid var(--gold); margin-bottom: 15px;">
+        <div style="font-size: 10px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px;">Next Game Schedule</div>
+        <div id="nextDrawTime" style="font-size: 24px; font-weight: 900; color: #fff; margin: 5px 0;">--:-- --</div>
+        <div style="font-size: 11px; opacity: 0.7;">Abangan ang susunod na bola!</div>
+    </div>
+
     <div id="winnerBanner">
         <span>🎉 BINGO WINNER! 🎉</span>
         <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
@@ -297,7 +297,10 @@
                     checkLateJoiner();
                 }
             });
-            initBingo(); setupChat();
+            initBingo(); 
+            setupChat();
+            setupNotifBadge(); // NEW FIX: Real-time badge listener
+            listenForNextDraw(); // NEW: Next Draw Banner listener
             
             db.ref('.info/connected').on('value', snap => {
                 if (snap.val() === true) { const p = db.ref('presence').push(); p.onDisconnect().remove(); p.set(true); }
@@ -305,6 +308,24 @@
             db.ref('presence').on('value', s => { document.getElementById('onlineCount').innerText = s.numChildren() || 0; });
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
+
+    // NEW: Function to listen for next draw schedule
+    function listenForNextDraw() {
+        db.ref('gameState/nextDraw').on('value', s => {
+            const time = s.val();
+            const banner = document.getElementById('nextDrawBanner');
+            const timeDisplay = document.getElementById('nextDrawTime');
+            if(time && time !== "") { banner.style.display = 'block'; timeDisplay.innerText = time; } else { banner.style.display = 'none'; }
+        });
+    }
+
+    // NEW FIX: Real-time Notification Badge
+    function setupNotifBadge() {
+        db.ref('notifications/' + auth.currentUser.uid).on('value', s => {
+            const dot = document.getElementById('notifDot');
+            if(s.exists()) { dot.style.display = 'block'; } else { dot.style.display = 'none'; }
+        });
+    }
 
     function initBingo() {
         db.ref('gameState/latestWinner').on('value', s => {
@@ -488,23 +509,21 @@
         inp.value = "";
     }
 
-    function openNotifs() { 
-        document.getElementById('notifModal').style.display='flex'; 
-        document.getElementById('notifDot').style.display='none'; 
-        renderNotifs(); 
-    }
+    function openNotifs() { document.getElementById('notifModal').style.display='flex'; document.getElementById('notifDot').style.display='none'; renderNotifs(); }
 
+    // UPDATED FIX: Render notifications in real-time and sorted by newest
     function renderNotifs() {
         const list = document.getElementById('notifList');
-        db.ref('notifications/' + auth.currentUser.uid).limitToLast(10).once('value', s => {
+        db.ref('notifications/' + auth.currentUser.uid).limitToLast(10).on('value', s => {
             list.innerHTML = "";
             if(!s.exists()) { list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px;'>No notifications yet</div>"; return; }
-            s.forEach(n => {
-                const val = n.val();
+            let notifs = [];
+            s.forEach(child => { notifs.push(child.val()); });
+            notifs.reverse().forEach(val => {
                 const div = document.createElement('div');
                 div.style.cssText = "background:var(--surface-br); padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid var(--accent)";
-                div.innerHTML = `<div style="font-size:13px;">${val.msg}</div><div style="font-size:10px; opacity:0.5; margin-top:5px;">${new Date(val.time).toLocaleString()}</div>`;
-                list.prepend(div);
+                div.innerHTML = `<div style="font-weight:700; color:var(--accent); font-size:12px; margin-bottom:4px;">RADIO BINGO UPDATE</div><div style="font-size:13px;">${val.msg}</div><div style="font-size:10px; opacity:0.5; margin-top:5px;">${new Date(val.time).toLocaleString()}</div>`;
+                list.appendChild(div);
             });
         });
     }
@@ -512,40 +531,27 @@
     function saveGcash() {
         const num = document.getElementById('gcashInput').value;
         if(num.length < 10) return alert("Please enter a valid GCash number");
-        db.ref('users/' + auth.currentUser.uid).update({ gcash: num })
-            .then(() => alert("GCash Number Saved!"));
+        db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => alert("GCash Number Saved!"));
     }
 
     function claimReferral() {
         const code = document.getElementById('referralInput').value.trim().toUpperCase();
         if(!code || code === userData.refCode) return alert("Invalid Code");
-        
         db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => {
             if(s.exists()) {
                 db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 });
                 alert("Referral claimed! +100 Points");
                 document.getElementById('referralInputSection').style.display = 'none';
-            } else {
-                alert("Code not found");
-            }
+            } else { alert("Code not found"); }
         });
     }
 
     function redeemItem(item, cost) {
         if((userData.points || 0) < cost) return alert("Not enough points!");
         if(!userData.gcash) return alert("Please save your GCash number in Profile first!");
-        
         if(confirm(`Redeem ${item} for ${cost} points?`)) {
             db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost);
-            db.ref('redemptions').push({
-                uid: auth.currentUser.uid,
-                name: auth.currentUser.displayName,
-                gcash: userData.gcash,
-                item: item,
-                cost: cost,
-                status: 'pending',
-                time: Date.now()
-            });
+            db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() });
             alert("Redemption request sent! Please wait for processing.");
             document.getElementById('storeModal').style.display = 'none';
         }
@@ -555,7 +561,6 @@
         document.getElementById('menuModal').style.display = 'flex';
         const hist = document.getElementById('historyList');
         hist.innerHTML = "<div style='font-size:12px; opacity:0.5;'>Loading transactions...</div>";
-        
         db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).limitToLast(5).once('value', s => {
             hist.innerHTML = "";
             if(!s.exists()) hist.innerHTML = "<div style='font-size:11px; opacity:0.5;'>No history yet</div>";
