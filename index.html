@@ -86,7 +86,14 @@
         .styled-input { width: 100%; background: var(--bg); border: 1px solid var(--surface-br); padding: 12px; border-radius: 12px; color: white; font-weight: 700; outline: none; }
         .styled-input:focus { border-color: var(--accent); }
 
-        .btn-change { background: rgba(59, 130, 246, 0.1); color: var(--accent); border: 1px solid var(--accent); height: 40px; padding: 0 20px; border-radius: 12px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .btn-change { background: rgba(59, 130, 246, 0.1); color: var(--accent); border: 1px solid var(--accent); height: 40px; padding: 0 15px; border-radius: 12px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .pattern-box { background: var(--surface-br); height: 40px; padding: 0 15px; border-radius: 12px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.1); }
+        .pattern-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+        .pattern-text { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .pattern-legend { margin-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); }
+        .legend-item { font-size: 10px; opacity: 0.6; display: flex; align-items: center; gap: 4px; font-weight: 600; }
+
         .ref-container { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1)); border: 1px solid var(--accent); padding: 15px; border-radius: 16px; margin-bottom: 15px; text-align: center; }
         .history-box { margin-top: 15px; background: rgba(0,0,0,0.2); border-radius: 15px; padding: 12px; max-height: 200px; overflow-y: auto; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); }
         .history-item { display: flex; justify-content: space-between; font-size: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
@@ -131,9 +138,20 @@
         </div>
     </div>
     <div class="card" id="bingoCardContainer">
-        <div class="change-card-wrapper" style="display:flex; justify-content:center; padding-bottom:15px;"><button class="btn-change" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:16px"></i> GET NEW BINGO CARD</button></div>
+        <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px; gap:8px;">
+            <div class="pattern-box">
+                <div class="pattern-dot"></div>
+                <span class="pattern-text" id="patternName">Any Row/Col</span>
+            </div>
+            <button class="btn-change" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
+        </div>
         <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
         <div class="grid" id="bingoGrid"></div>
+        <div class="pattern-legend">
+            <div class="legend-item"><i data-lucide="minus" style="width:10px"></i> Horizontal</div>
+            <div class="legend-item"><i data-lucide="separator-vertical" style="width:10px"></i> Vertical</div>
+            <div class="legend-item"><i data-lucide="x" style="width:10px"></i> Diagonal</div>
+        </div>
     </div>
     <div class="chat-box card">
         <div id="chatList"></div>
@@ -238,7 +256,6 @@
     }
 
     function initBingo() {
-        // GLOBAL WINNER LISTENER
         db.ref('gameState/latestWinner').on('value', s => {
             const win = s.val();
             const banner = document.getElementById('winnerBanner');
@@ -260,6 +277,12 @@
             document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
             updateGridHits(); renderPrevBalls(); checkWin();
         });
+
+        // Listen for global pattern change
+        db.ref('gameState/currentPattern').on('value', s => {
+            const pName = s.val() || "Normal Bingo";
+            document.getElementById('patternName').innerText = pName;
+        });
     }
 
     function updateGridHits() {
@@ -279,9 +302,7 @@
     }
 
     function triggerWin(pattern) {
-        // Save to Global Game State para makita ng lahat
         db.ref('gameState/latestWinner').set({ name: userData.name, uid: userData.uid, time: Date.now() });
-        
         pattern.forEach(idx => { document.getElementById('c-'+idx)?.classList.add('win-glow'); });
         db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
         db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
@@ -289,7 +310,7 @@
     }
 
     function resetWinState() {
-        db.ref('gameState/latestWinner').set(null); // Clear global winner kapag nag-reset ang bola
+        db.ref('gameState/latestWinner').set(null); 
         document.querySelectorAll('.cell').forEach(el => { el.classList.remove('win-glow', 'hit'); if(el.id === 'c-12') el.classList.add('hit'); });
         db.ref('users/'+userData.uid).update({ hasWonCurrent: false });
     }
