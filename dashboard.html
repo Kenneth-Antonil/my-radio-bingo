@@ -89,6 +89,18 @@
             <button onclick="sendGlobalNotif()" style="background:var(--success); color:white; border:none; padding:12px; border-radius:12px; width:100%; font-weight:800; cursor:pointer;">Send to All Players</button>
         </div>
 
+        <div class="card">
+            <h2><i data-lucide="coins"></i> Give/Take Points</h2>
+            <label style="font-size:11px; font-weight:800; opacity:0.6;">PLAYER REF CODE</label>
+            <input type="text" id="targetRefCode" placeholder="Enter Ref Code (e.g. AB12CD)">
+            <label style="font-size:11px; font-weight:800; opacity:0.6;">AMOUNT</label>
+            <input type="number" id="pointAmount" placeholder="Amount (e.g. 500)">
+            <div style="display:flex; gap:10px;">
+                <button onclick="adjustPoints('add')" style="flex:1; background:var(--success); color:white; border:none; padding:12px; border-radius:12px; font-weight:800; cursor:pointer;">ADD</button>
+                <button onclick="adjustPoints('sub')" style="flex:1; background:var(--danger); color:white; border:none; padding:12px; border-radius:12px; font-weight:800; cursor:pointer;">SUBTRACT</button>
+            </div>
+        </div>
+
         <div class="card payout-card">
             <h2><i data-lucide="banknote"></i> Payout Queue</h2>
             <div id="payoutList"></div>
@@ -115,6 +127,31 @@
     let drawnNumbers = [];
     let currentWinnerUID = "";
     let currentPattern = "Normal Bingo";
+
+    // --- NEW: ADJUST POINTS FUNCTION ---
+    function adjustPoints(type) {
+        const refCode = document.getElementById('targetRefCode').value.toUpperCase().trim();
+        const amount = parseInt(document.getElementById('pointAmount').value);
+        
+        if(!refCode || isNaN(amount)) return alert("Pakilagay ang Ref Code at Amount!");
+
+        // Find user by Ref Code
+        db.ref('users').orderByChild('refCode').equalTo(refCode).once('value', snapshot => {
+            if(snapshot.exists()) {
+                const uid = Object.keys(snapshot.val())[0];
+                const change = type === 'add' ? amount : -amount;
+                
+                db.ref('users/' + uid + '/points').transaction(current => {
+                    return (current || 0) + change;
+                }).then(() => {
+                    alert(`Tagumpay! ${type === 'add' ? 'Nagdagdag' : 'Nagbawas'} ng ${amount} pts.`);
+                    document.getElementById('pointAmount').value = "";
+                });
+            } else {
+                alert("Hindi mahanap ang Ref Code na yan!");
+            }
+        });
+    }
 
     // Listen to Game Pattern
     db.ref('gameState/currentPattern').on('value', s => { 
