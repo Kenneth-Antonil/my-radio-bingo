@@ -171,7 +171,17 @@
 </div>
 
 <div id="notifModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h3 style="margin:0">Inbox</h3><button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button></div><div id="notifList"></div></div></div>
-<div id="menuModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0">My Profile</h3><div class="gcash-section"><span class="input-label">My GCash Number (For Rewards)</span><div style="display:flex; gap:8px;"><input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx"><button onclick="saveGcash()" style="background:var(--accent); border:none; color:white; padding:0 15px; border-radius:12px; font-weight:800;">SAVE</button></div></div><div class="ref-container"><div style="font-size:12px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:8px;">Referral Link</div><input type="text" id="refLink" readonly class="styled-input" style="text-align:center; cursor:pointer;" onclick="this.select(); document.execCommand('copy'); alert('Copied!');"></div><div class="history-box"><span style="font-size:11px; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:8px; display:block;">Recent Transactions</span><div id="historyList"></div></div><button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid var(--danger); border-radius:16px; font-weight:800; margin-top:10px;">Sign Out</button></div></div>
+<div id="menuModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0">My Profile</h3><div class="gcash-section"><span class="input-label">My GCash Number (For Rewards)</span><div style="display:flex; gap:8px;"><input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx"><button onclick="saveGcash()" style="background:var(--accent); border:none; color:white; padding:0 15px; border-radius:12px; font-weight:800;">SAVE</button></div></div>
+    
+    <div class="gcash-section" id="referralInputSection" style="border-color: var(--gold);">
+        <span class="input-label" style="color: var(--gold);">Have a Referral Code?</span>
+        <div style="display:flex; gap:8px;">
+            <input type="text" id="referralInput" class="styled-input" placeholder="ENTER CODE">
+            <button onclick="claimReferral()" style="background:var(--gold); border:none; color:black; padding:0 15px; border-radius:12px; font-weight:800;">CLAIM</button>
+        </div>
+    </div>
+
+    <div class="ref-container"><div style="font-size:12px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:8px;">Referral Link</div><input type="text" id="refLink" readonly class="styled-input" style="text-align:center; cursor:pointer;" onclick="this.select(); document.execCommand('copy'); alert('Copied!');"></div><div class="history-box"><span style="font-size:11px; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:8px; display:block;">Recent Transactions</span><div id="historyList"></div></div><button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid var(--danger); border-radius:16px; font-weight:800; margin-top:10px;">Sign Out</button></div></div>
 <div id="storeModal" class="modal" onclick="this.style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3 style="margin:0">Rewards Shop</h3><div class="points-badge" style="height:32px"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div></div><div class="reward-grid"><div class="reward-item"><div class="reward-info"><b>₱20 GCash</b><small>2,500 Pts</small></div><button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">Redeem</button></div><div class="reward-item"><div class="reward-info"><b>₱50 GCash</b><small>6,000 Pts</small></div><button class="btn-redeem" onclick="redeemItem('₱50 GCash', 6000)">Redeem</button></div><div class="reward-item"><div class="reward-info"><b>₱100 GCash</b><small>11,500 Pts</small></div><button class="btn-redeem" onclick="redeemItem('₱100 GCash', 11500)">Redeem</button></div></div></div></div>
 
 <script>
@@ -223,6 +233,11 @@
                     const cleanUrl = window.location.origin + window.location.pathname;
                     document.getElementById('refLink').value = cleanUrl + "?ref=" + (userData.refCode || "");
 
+                    // Hide referral input if already used
+                    if(userData.referredBy) {
+                        document.getElementById('referralInputSection').style.display = 'none';
+                    }
+
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
                     if (userData.currentCard) { 
                         cardNumbers = userData.currentCard; 
@@ -241,6 +256,30 @@
             db.ref('presence').on('value', s => { document.getElementById('onlineCount').innerText = s.numChildren() || 0; });
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
+
+    // ADDED: Logic to claim referral manually via code
+    function claimReferral() {
+        const code = document.getElementById('referralInput').value.trim().toUpperCase();
+        if(!code) return alert("Enter a code!");
+        if(code === userData.refCode) return alert("You cannot use your own code!");
+        if(userData.referredBy) return alert("You have already used a referral code!");
+
+        db.ref('users').orderByChild('refCode').equalTo(code).once('value', snapshot => {
+            if(snapshot.exists()) {
+                const referrerUid = Object.keys(snapshot.val())[0];
+                // Update current user
+                db.ref('users/'+userData.uid).update({ 
+                    referredBy: code,
+                    points: (userData.points || 0) + 100 // Bonus for the new user
+                });
+                // Reward the referrer
+                db.ref('users/'+referrerUid+'/points').transaction(p => (p || 0) + 500);
+                alert("Referral successful! You received 100 points.");
+            } else {
+                alert("Invalid Referral Code!");
+            }
+        });
+    }
 
     function initBingo() {
         db.ref('gameState/latestWinner').on('value', s => {
@@ -287,14 +326,9 @@
         });
     }
 
-    // NEW LOGIC: DETECT LATE JOINERS
     function checkLateJoiner() {
         const overlay = document.getElementById('lateOverlay');
-        // If there are balls drawn AND user hasn't won AND user doesn't have a valid card for this round
-        // We check if gameDrawn exists. If user enters and game is already at ball 5, they are late.
         if(gameDrawn.length > 0) {
-            // A player is "Late" if they don't have a current card OR if their card was created 
-            // after the first ball was drawn (this prevents jumping in mid-game)
             overlay.style.display = 'flex';
         } else {
             overlay.style.display = 'none';
@@ -317,7 +351,6 @@
 
     function checkWin() {
         if(userData.hasWonCurrent || gameDrawn.length === 0) return;
-        // If late overlay is active, user cannot win
         if(document.getElementById('lateOverlay').style.display === 'flex') return;
 
         let winningWays = [];
