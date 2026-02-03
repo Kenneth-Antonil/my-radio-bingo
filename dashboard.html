@@ -216,10 +216,12 @@
         updateCountdown();
     });
 
+    // UPDATED: Continuous Auto-Draw logic
     function updateCountdown() {
         const display = document.getElementById('countdownDisplay');
         if(!activeSchedule) {
             display.innerText = "No active schedule.";
+            display.style.color = "var(--success)";
             return;
         }
 
@@ -227,19 +229,35 @@
         const diff = activeSchedule - now;
 
         if(diff <= 0) {
-            display.innerText = "DRAWING NOW...";
-            // Auto trigger draw and clear schedule
+            // Check if there's a winner card currently in the DOM
+            const hasWinner = document.querySelector('.winner-card');
+            
+            if (hasWinner) {
+                display.innerText = "WINNER FOUND! AUTO-STOPPED.";
+                display.style.color = "var(--gold)";
+                db.ref('gameState/nextDraw').set(null); // Kill the schedule loop
+                return;
+            }
+
+            display.innerText = "DRAWING...";
+            
+            // Execute the draw
             drawNumber();
+            
+            // Re-schedule the next ball automatically in 5 seconds
+            const nextBallTime = Date.now() + 5000; 
+            db.ref('gameState/nextDraw').set(nextBallTime);
+
             db.ref('notifications').push({ 
-                title: "Game Started!", 
-                body: "A new ball has been drawn. Check your cards!", 
+                title: "Live Draw!", 
+                body: "A new ball has been drawn automatically.", 
                 timestamp: firebase.database.ServerValue.TIMESTAMP 
             });
-            db.ref('gameState/nextDraw').set(null);
         } else {
             const mins = Math.floor(diff / 60000);
             const secs = Math.floor((diff % 60000) / 1000);
-            display.innerText = `Starts in: ${mins}m ${secs}s`;
+            display.innerText = `Auto-Draw in: ${mins}m ${secs}s`;
+            display.style.color = "var(--success)";
         }
     }
     setInterval(updateCountdown, 1000);
