@@ -53,6 +53,9 @@
         .redeem-item { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); font-size: 13px; margin-bottom: 10px; }
         .redeem-actions { display: flex; gap: 8px; margin-top: 12px; }
         .btn-status { flex: 1; padding: 10px; border-radius: 10px; border: none; font-size: 11px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
+
+        /* Status Dot */
+        .status-dot { position: absolute; bottom: -2px; right: -2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--surface); }
     </style>
 </head>
 <body>
@@ -110,7 +113,7 @@
 
     <div class="main-layout">
         <div class="card">
-            <h2><i data-lucide="monitor"></i> Active Players Mirror</h2>
+            <h2><i data-lucide="monitor"></i> Registered Players List</h2>
             <div class="players-grid" id="playersGrid"></div>
         </div>
 
@@ -190,16 +193,15 @@
                 const user = child.val();
                 const uid = child.key;
 
-                // --- SEARCH LIST LOGIC (Kahit offline kasama dito) ---
+                // --- SEARCH LIST LOGIC ---
                 if(user.refCode) {
                     const option = document.createElement('option');
-                    // Format: Pangalan - REFCODE
                     option.value = `${user.name || 'Unknown'} - ${user.refCode}`;
                     dataList.appendChild(option);
                 }
 
-                // --- VISUAL GRID LOGIC (Online only) ---
-                if (!user.last_seen || user.last_seen < threshold) return;
+                // --- STATUS CHECK ---
+                const isOnline = user.last_seen && user.last_seen > threshold;
 
                 const marks = [12];
                 let isBingo = false;
@@ -222,9 +224,16 @@
 
                 const cardDiv = document.createElement('div');
                 cardDiv.className = `player-mini-card ${isBingo ? 'winner-card' : ''}`;
+                
+                // Dim effect for offline players
+                cardDiv.style.opacity = isOnline ? "1" : "0.5";
+
                 cardDiv.innerHTML = `
                     <div class="player-info">
-                        <img src="${user.photoURL || 'https://via.placeholder.com/40'}" class="player-pfp">
+                        <div style="position:relative">
+                            <img src="${user.photoURL || 'https://via.placeholder.com/40'}" class="player-pfp">
+                            <div class="status-dot" style="background:${isOnline ? 'var(--success)' : '#64748b'}"></div>
+                        </div>
                         <div style="flex:1">
                             <div style="font-size:11px; font-weight:800; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${user.name || 'User'}</div>
                             <div style="font-size:10px; color:var(--gold); font-weight:700;">${(user.points||0).toLocaleString()} PTS</div>
@@ -234,7 +243,7 @@
                     ${gridHtml}
                     <div style="font-size:9px; margin-top:8px; opacity:0.6; display:flex; justify-content:space-between;">
                         <span>GCash: ${user.gcash || 'N/A'}</span>
-                        <span style="color:var(--success)">${isBingo ? 'BINGO!' : ''}</span>
+                        <span style="font-weight:bold; color:${isOnline ? 'var(--success)' : 'inherit'}">${isOnline ? 'ONLINE' : 'OFFLINE'}</span>
                     </div>`;
                 container.appendChild(cardDiv);
                 if(isBingo) { winningCells.forEach(idx => { const cell = document.getElementById(`m-${uid}-${idx}`); if(cell) cell.classList.add('win-glow'); }); }
@@ -272,7 +281,7 @@
             alert("Updated!");
         }
     }
-    setInterval(refreshPlayers, 5000); 
+    setInterval(refreshPlayers, 10000); 
     refreshPlayers();
 </script>
 </body>
