@@ -89,6 +89,10 @@
                 <option value="Four Corners">Four Corners</option>
             </select>
 
+            <button onclick="updateExistingUsers()" style="background:var(--gold); color:black; border:none; padding:12px; border-radius:12px; width:100%; font-weight:800; cursor:pointer; margin-bottom: 20px;">
+                FIX MISSING REF CODES
+            </button>
+
             <h2 style="margin-top:20px; margin-bottom:10px;"><i data-lucide="megaphone"></i> Broadcast</h2>
             <input type="text" id="notifTitle" placeholder="Notification Title">
             <textarea id="notifMsg" rows="2" placeholder="Write announcement..."></textarea>
@@ -285,6 +289,31 @@
             alert("Updated!");
         }
     }
+
+    // --- FIX TOOL FOR MISSING REF CODES ---
+    async function updateExistingUsers() {
+        if (!confirm("Generate codes for all players who don't have one?")) return;
+        try {
+            const snapshot = await db.ref('users').once('value');
+            if (!snapshot.exists()) return alert("No users found.");
+            let updates = {};
+            let count = 0;
+            snapshot.forEach(child => {
+                const userId = child.key;
+                const userData = child.val();
+                if (!userData.refCode) {
+                    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+                    updates[`${userId}/refCode`] = newCode;
+                    count++;
+                }
+            });
+            if (count > 0) {
+                await db.ref('users').update(updates);
+                alert(`Done! Updated ${count} players.`);
+            } else { alert("All players already have codes."); }
+        } catch (e) { alert("Error: " + e.message); }
+    }
+
     setInterval(refreshPlayers, 10000); 
     refreshPlayers();
 </script>
