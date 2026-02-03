@@ -26,37 +26,12 @@
             overflow: hidden;
         }
 
-        /* WINNING STYLES - DINAGDAG PARA SA VISUALS */
-        .cell.win-pattern {
-            background: var(--gold) !important;
-            color: #000 !important;
-            box-shadow: 0 0 15px var(--gold);
-            z-index: 2;
-            transform: scale(1.1);
-        }
+        /* --- ADDED FEATURES ONLY --- */
+        .cell.win-pattern { background: var(--gold) !important; color: #000 !important; transform: scale(1.1); z-index: 5; box-shadow: 0 0 15px var(--gold); }
+        .card-container.game-over { filter: grayscale(1) opacity(0.4); pointer-events: none; }
+        #loserOverlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); padding: 20px; border-radius: 20px; text-align: center; z-index: 100; width: 85%; border: 2px solid var(--gold); display: none; }
+        /* --------------------------- */
 
-        .card-container.game-over {
-            filter: grayscale(1) opacity(0.5);
-            pointer-events: none;
-            position: relative;
-        }
-
-        #loserOverlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8);
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            z-index: 10;
-            width: 80%;
-            border: 2px solid var(--surface-br);
-            display: none;
-        }
-
-        /* --- ORIGINAL STYLES MO (WALANG GALAW) --- */
         .top-nav { background: var(--surface); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--surface-br); }
         .logo { font-weight: 900; font-size: 20px; letter-spacing: -1px; display: flex; align-items: center; gap: 8px; }
         .logo span { color: var(--accent); }
@@ -72,7 +47,7 @@
         .ball-display { background: var(--bg); border-radius: 20px; padding: 20px; text-align: center; margin-bottom: 20px; border: 1px solid var(--surface-br); }
         #currentBall { font-size: 48px; font-weight: 900; color: var(--accent); display: block; }
         
-        .bingo-card { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 15px; position: relative; }
+        .bingo-card { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 15px; }
         .cell { aspect-ratio: 1; background: var(--bg); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; border: 1px solid var(--surface-br); transition: all 0.3s; }
         .cell.marked { background: var(--accent); border-color: var(--accent); color: white; }
         .cell.free { background: var(--gold); color: #000; font-size: 10px; font-weight: 900; }
@@ -85,9 +60,13 @@
         .modal-content { background: var(--surface); width: 100%; max-width: 400px; border-radius: 30px; padding: 30px; border: 1px solid var(--surface-br); }
         
         .shop-item { background: var(--bg); padding: 15px; border-radius: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .history-item { padding: 15px; border-bottom: 1px solid var(--surface-br); display: flex; justify-content: space-between; }
-        .status-pending { color: var(--gold); }
-        .status-completed { color: var(--success); }
+        .history-item { padding: 15px; border-bottom: 1px solid var(--surface-br); display: flex; justify-content: space-between; align-items: center; }
+        .hist-main { display: flex; flex-direction: column; }
+        .hist-title { font-weight: 800; font-size: 14px; }
+        .hist-date { font-size: 10px; opacity: 0.5; }
+        .hist-status { font-size: 10px; font-weight: 900; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; }
+        .status-pending { background: rgba(251, 191, 36, 0.1); color: var(--gold); }
+        .status-completed { background: rgba(16, 185, 129, 0.1); color: var(--success); }
     </style>
 </head>
 <body>
@@ -115,11 +94,11 @@
                 <span id="currentBall">--</span>
             </div>
             
-            <div id="cardContainer" style="position: relative;">
+            <div id="gameWrapper" style="position: relative;">
                 <div id="loserOverlay">
-                    <h2 style="color: var(--danger); margin: 0;">GAME OVER</h2>
-                    <p id="winnerName" style="font-size: 14px; margin: 10px 0;"></p>
-                    <p style="font-size: 12px; opacity: 0.7;">Bawi nalang next draw!</p>
+                    <h2 style="color: var(--danger); margin: 0; font-weight: 900;">GAME OVER</h2>
+                    <p id="winnerInfo" style="margin: 10px 0; font-weight: 700;"></p>
+                    <p style="font-size: 12px; opacity: 0.8;">Bawi nalang next draw!</p>
                 </div>
                 <div class="bingo-card" id="bingoCard"></div>
             </div>
@@ -130,17 +109,21 @@
 
     <div id="shopModal" class="modal">
         <div class="modal-content">
-            <h2 style="margin-top: 0;">Rewards Shop</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 style="margin:0;">Rewards Shop</h2>
+                <button onclick="closeModals()" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+            </div>
             <div id="shopList"></div>
-            <button onclick="closeModals()" style="width:100%; margin-top:20px; padding:15px; border-radius:15px; border:none; background:var(--surface-br); color:white;">Close</button>
         </div>
     </div>
 
     <div id="menuModal" class="modal">
         <div class="modal-content">
-            <h2>Transaction History</h2>
-            <div id="historyList" style="max-height: 300px; overflow-y: auto;"></div>
-            <button onclick="closeModals()" style="width:100%; margin-top:20px; padding:15px; border-radius:15px; border:none; background:var(--surface-br); color:white;">Close</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 style="margin:0;">History</h2>
+                <button onclick="closeModals()" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+            </div>
+            <div id="historyList" style="max-height: 400px; overflow-y: auto;"></div>
         </div>
     </div>
 
@@ -162,14 +145,9 @@
     let currentPattern = "Normal Bingo";
     let hasWon = false;
 
-    // LOGIN & INITIALIZATION
     auth.onAuthStateChanged(user => {
-        if(user) {
-            setupUser(user);
-            initGameSync();
-        } else {
-            login();
-        }
+        if(user) { setupUser(user); initGameSync(); }
+        else { login(); }
     });
 
     async function login() {
@@ -188,14 +166,13 @@
                     joined: Date.now()
                 });
             } else {
-                document.getElementById('userPoints').innerText = '₱' + s.val().points.toFixed(2);
-                if(s.val().hasWonCurrent) hasWon = true;
+                document.getElementById('userPoints').innerText = '₱' + (s.val().points || 0).toFixed(2);
+                hasWon = s.val().hasWonCurrent || false;
             }
         });
     }
 
     function initGameSync() {
-        // Pattern & Schedule Sync
         db.ref('gameState').on('value', s => {
             const data = s.val();
             if(data) {
@@ -203,16 +180,19 @@
                 document.getElementById('gamePattern').innerText = currentPattern;
                 document.getElementById('nextDrawTime').innerText = data.nextDraw || "--:--";
                 
-                // --- UPDATE: Winner Overlay Check ---
+                // FEATURE: Winner Check
                 if(data.latestWinner && data.latestWinner.uid !== auth.currentUser.uid) {
-                    showLoserState(data.latestWinner.name);
+                    document.getElementById('gameWrapper').classList.add('game-over');
+                    document.getElementById('loserOverlay').style.display = 'block';
+                    document.getElementById('winnerInfo').innerText = "Winner: " + data.latestWinner.name;
+                    document.getElementById('bingoBtn').style.display = 'none';
                 } else if(!data.latestWinner) {
-                    hideOverlays();
+                    document.getElementById('gameWrapper').classList.remove('game-over');
+                    document.getElementById('loserOverlay').style.display = 'none';
                 }
             }
         });
 
-        // Balls Sync
         db.ref('drawnNumbers').on('value', s => {
             drawnNumbers = s.val() ? Object.values(s.val()) : [];
             const lastBall = drawnNumbers[drawnNumbers.length-1];
@@ -246,21 +226,18 @@
 
         container.innerHTML = "";
         let markedCount = 0;
-        
-        // Winning Indices para sa line display
-        const winResult = checkWinningPattern();
+        const win = checkWinningPattern();
 
         for(let r=0; r<5; r++) {
             for(let c=0; c<5; c++) {
                 const val = myCard[c][r];
                 const isFree = r === 2 && c === 2;
                 const isMarked = isFree || drawnNumbers.includes(val);
-                
                 const div = document.createElement('div');
                 div.className = `cell ${isFree ? 'free' : ''} ${isMarked ? 'marked' : ''}`;
                 
-                // --- UPDATE: Ipakita ang Winning Line ---
-                if(hasWon && winResult && winResult.indices.some(idx => idx.r === r && idx.c === c)) {
+                // FEATURE: Pattern Line Highlight
+                if(hasWon && win && win.indices.some(idx => idx.r === r && idx.c === c)) {
                     div.classList.add('win-pattern');
                 }
 
@@ -269,170 +246,93 @@
                 if(isMarked) markedCount++;
             }
         }
-        
         document.getElementById('bingoBtn').style.display = (markedCount >= 4 && !hasWon) ? 'block' : 'none';
     }
 
-    // UPDATE: Sinama ang Indices sa checkWinningPattern para malaman kung anong cells ang kukulayan
     function checkWinningPattern() {
         const board = [];
         for(let r=0; r<5; r++) {
             board[r] = [];
-            for(let c=0; c<5; c++) {
-                board[r][c] = (r === 2 && c === 2) || drawnNumbers.includes(myCard[c][r]);
-            }
+            for(let c=0; c<5; c++) { board[r][c] = (r === 2 && c === 2) || drawnNumbers.includes(myCard[c][r]); }
         }
-
-        let winIndices = [];
-
-        // Rows
+        // Check Rows
         for(let r=0; r<5; r++) {
-            if(board[r].every(v => v)) {
-                for(let c=0; c<5; c++) winIndices.push({r,c});
-                return { win: true, indices: winIndices };
-            }
+            if(board[r].every(v => v)) return { indices: [0,1,2,3,4].map(c => ({r,c})) };
         }
-        // Cols
+        // Check Cols
         for(let c=0; c<5; c++) {
-            let win = true;
-            let temp = [];
-            for(let r=0; r<5; r++) { if(!board[r][c]) win = false; temp.push({r,c}); }
-            if(win) return { win: true, indices: temp };
+            let win = true; let idxs = [];
+            for(let r=0; r<5; r++) { if(!board[r][c]) win = false; idxs.push({r,c}); }
+            if(win) return { indices: idxs };
         }
         // Diagonals
-        let d1 = true, d2 = true, t1 = [], t2 = [];
+        let d1 = true, d2 = true, i1 = [], i2 = [];
         for(let i=0; i<5; i++) {
-            if(!board[i][i]) d1 = false; t1.push({r:i, c:i});
-            if(!board[i][4-i]) d2 = false; t2.push({r:i, c:4-i});
+            if(!board[i][i]) d1 = false; i1.push({r:i, c:i});
+            if(!board[i][4-i]) d2 = false; i2.push({r:i, c:4-i});
         }
-        if(d1) return { win: true, indices: t1 };
-        if(d2) return { win: true, indices: t2 };
-
+        if(d1) return { indices: i1 };
+        if(d2) return { indices: i2 };
         return null;
     }
 
     async function checkBingo() {
-        const winResult = checkWinningPattern();
-        if(winResult && !hasWon) {
+        const win = checkWinningPattern();
+        if(win && !hasWon) {
             hasWon = true;
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-            
-            await db.ref('gameState/latestWinner').set({
-                uid: auth.currentUser.uid,
-                name: auth.currentUser.displayName,
-                time: Date.now()
-            });
-            
-            db.ref('users/' + auth.currentUser.uid).update({
-                points: firebase.database.ServerValue.increment(50),
-                hasWonCurrent: true
-            });
-            
-            alert("BINGO! Nanalo ka ng ₱50!");
-            renderCard(); // I-refresh para lumabas ang gold line
-        } else {
-            alert("Hindi pa Bingo! Check mo mabuti.");
-        }
-    }
-
-    // --- NEW UI LOGIC FUNCTIONS ---
-    function showLoserState(winnerName) {
-        document.getElementById('cardContainer').classList.add('game-over');
-        const overlay = document.getElementById('loserOverlay');
-        overlay.style.display = 'block';
-        document.getElementById('winnerName').innerText = "Winner: " + winnerName;
-        document.getElementById('bingoBtn').style.display = 'none';
-    }
-
-    function hideOverlays() {
-        document.getElementById('cardContainer').classList.remove('game-over');
-        document.getElementById('loserOverlay').style.display = 'none';
+            await db.ref('gameState/latestWinner').set({ uid: auth.currentUser.uid, name: auth.currentUser.displayName });
+            db.ref('users/' + auth.currentUser.uid).update({ points: firebase.database.ServerValue.increment(50), hasWonCurrent: true });
+            alert("BINGO!");
+            renderCard();
+        } else { alert("Hindi pa Bingo!"); }
     }
 
     function resetForNewGame() {
         hasWon = false;
         myCard = generateCard();
         localStorage.setItem('myBingoCard', JSON.stringify(myCard));
-        hideOverlays();
         db.ref('users/' + auth.currentUser.uid + '/hasWonCurrent').set(false);
     }
 
-    // ORIGINAL SHOP & MODAL LOGIC (WALANG GALAW)
     function openShop() {
         document.getElementById('shopModal').style.display = 'flex';
-        const items = [
-            { name: "₱50 GCash", cost: 50 },
-            { name: "₱100 GCash", cost: 100 },
-            { name: "₱500 GCash", cost: 500 }
-        ];
+        const items = [{ name: "₱50 GCash", cost: 50 }, { name: "₱100 GCash", cost: 100 }];
         const list = document.getElementById('shopList');
         list.innerHTML = "";
         items.forEach(item => {
             const div = document.createElement('div');
             div.className = 'shop-item';
-            div.innerHTML = `
-                <div>
-                    <div style="font-weight:800;">${item.name}</div>
-                    <div style="font-size:12px; color:var(--gold);">₱${item.cost} Points</div>
-                </div>
-                <button onclick="redeem('${item.name}', ${item.cost})" style="padding:10px 20px; border-radius:10px; border:none; background:var(--accent); color:white; font-weight:800;">REDEEM</button>
-            `;
+            div.innerHTML = `<div><b>${item.name}</b><br><small>${item.cost} Pts</small></div><button onclick="redeem('${item.name}', ${item.cost})" style="padding:8px 15px; border-radius:8px; border:none; background:var(--accent); color:white; font-weight:800;">REDEEM</button>`;
             list.appendChild(div);
         });
     }
 
     async function redeem(item, cost) {
         const s = await db.ref('users/' + auth.currentUser.uid).once('value');
-        const points = s.val().points || 0;
-        if(points < cost) return alert("Kulang ang iyong points!");
-        
-        const gcash = prompt("Ilagay ang iyong GCash Number:");
+        if((s.val().points || 0) < cost) return alert("Kulang points!");
+        const gcash = prompt("GCash Number:");
         if(!gcash) return;
-
-        await db.ref('redemptions').push({
-            uid: auth.currentUser.uid,
-            name: auth.currentUser.displayName,
-            item: item,
-            cost: cost,
-            gcash: gcash,
-            status: 'pending',
-            time: Date.now()
-        });
-
+        db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, item: item, cost: cost, gcash: gcash, status: 'pending', time: Date.now() });
         db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => p - cost);
-        alert("Redemption Request Sent!");
-        closeModals();
+        alert("Sent!"); closeModals();
     }
-
-    function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
 
     function openMenuModal() {
         document.getElementById('menuModal').style.display = 'flex';
-        const hist = document.getElementById('historyList');
-        hist.innerHTML = "<div style='font-size:12px; opacity:0.5; padding:10px;'>Loading transactions...</div>";
-        
+        const hist = document.getElementById('historyList'); hist.innerHTML = "Loading...";
         db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => {
             hist.innerHTML = "";
-            if(!s.exists()) { hist.innerHTML = "<div style='font-size:11px; opacity:0.5; text-align:center; padding:20px;'>No history yet</div>"; return; }
-            
-            let redemptions = [];
-            s.forEach(child => { redemptions.push(child.val()); });
-            redemptions.sort((a,b) => b.time - a.time);
-
-            redemptions.forEach(v => {
-                const item = document.createElement('div');
-                item.className = 'history-item';
-                item.innerHTML = `
-                    <div>
-                        <div style="font-weight:700; font-size:13px;">${v.item}</div>
-                        <div style="font-size:10px; opacity:0.5;">${new Date(v.time).toLocaleDateString()}</div>
-                    </div>
-                    <span style="font-size:11px; font-weight:800;" class="${v.status === 'pending' ? 'status-pending' : 'status-completed'}">${v.status.toUpperCase()}</span>
-                `;
-                hist.appendChild(item);
+            s.forEach(child => {
+                const v = child.val();
+                const div = document.createElement('div'); div.className = 'history-item';
+                div.innerHTML = `<div class="hist-main"><span class="hist-title">${v.item}</span><span class="hist-date">${new Date(v.time).toLocaleDateString()}</span></div><span class="hist-status ${v.status === 'pending' ? 'status-pending' : 'status-completed'}">${v.status}</span>`;
+                hist.prepend(div);
             });
         });
     }
+
+    function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
 </script>
 </body>
 </html>
