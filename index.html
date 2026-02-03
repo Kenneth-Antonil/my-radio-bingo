@@ -54,7 +54,6 @@
         .cell.win-glow::after { content: ''; position: absolute; inset: -3px; border: 2px solid white; border-radius: 10px; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        /* NEW LATE JOINER OVERLAY STYLES */
         .late-overlay {
             position: absolute; inset: 0; background: rgba(15, 23, 42, 0.8); 
             backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -233,7 +232,6 @@
                     const cleanUrl = window.location.origin + window.location.pathname;
                     document.getElementById('refLink').value = cleanUrl + "?ref=" + (userData.refCode || "");
 
-                    // Hide referral input if already used
                     if(userData.referredBy) {
                         document.getElementById('referralInputSection').style.display = 'none';
                     }
@@ -245,7 +243,7 @@
                     } else { 
                         generateNewCard(); 
                     }
-                    checkLateJoiner(); // Check when user data updates
+                    checkLateJoiner();
                 }
             });
             initBingo(); setupChat();
@@ -257,7 +255,6 @@
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
-    // ADDED: Logic to claim referral manually via code
     function claimReferral() {
         const code = document.getElementById('referralInput').value.trim().toUpperCase();
         if(!code) return alert("Enter a code!");
@@ -267,12 +264,10 @@
         db.ref('users').orderByChild('refCode').equalTo(code).once('value', snapshot => {
             if(snapshot.exists()) {
                 const referrerUid = Object.keys(snapshot.val())[0];
-                // Update current user
                 db.ref('users/'+userData.uid).update({ 
                     referredBy: code,
-                    points: (userData.points || 0) + 100 // Bonus for the new user
+                    points: (userData.points || 0) + 100 
                 });
-                // Reward the referrer
                 db.ref('users/'+referrerUid+'/points').transaction(p => (p || 0) + 500);
                 alert("Referral successful! You received 100 points.");
             } else {
@@ -328,11 +323,16 @@
 
     function checkLateJoiner() {
         const overlay = document.getElementById('lateOverlay');
-        if(gameDrawn.length > 0) {
-            overlay.style.display = 'flex';
-        } else {
-            overlay.style.display = 'none';
-        }
+        db.ref('gameState/gameStartTime').once('value', s => {
+            const startTime = s.val() || 0;
+            const cardTime = userData.cardTimestamp || 0;
+            // Overlay only shows if game is active AND your card was made AFTER the balls started
+            if(gameDrawn.length > 0 && cardTime > startTime) {
+                overlay.style.display = 'flex';
+            } else {
+                overlay.style.display = 'none';
+            }
+        });
     }
 
     function updateGridHits() {
