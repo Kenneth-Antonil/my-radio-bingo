@@ -13,32 +13,19 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
         .card { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
         h2 { margin-top: 0; display: flex; align-items: center; gap: 10px; font-size: 1.2rem; color: var(--accent); }
-        
-        /* Control Panel Styles */
         .control-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-size: 0.9rem; opacity: 0.8; }
         select, input { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: white; margin-bottom: 10px; }
         button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .btn-primary { background: var(--accent); color: white; }
         .btn-danger { background: var(--danger); color: white; margin-top: 10px; }
-        
-        /* Online Users List */
-        .user-list { max-height: 400px; overflow-y: auto; }
-        .user-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .user-info { display: flex; align-items: center; gap: 10px; }
-        .user-pfp { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--accent); }
-        .status-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 8px var(--success); }
-        .user-name { font-size: 0.9rem; font-weight: 600; }
-
-        /* Notification Section */
+        .user-list { max-height: 200px; overflow-y: auto; }
+        .user-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; }
+        .status-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; }
         .notif-form { display: flex; flex-direction: column; gap: 10px; }
-
-        /* Request Table */
         table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
         th { text-align: left; opacity: 0.6; padding: 10px; }
         td { padding: 10px; border-top: 1px solid rgba(255,255,255,0.05); }
-        .status-pending { color: #fbbf24; }
-
         .balls-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 5px; margin-top: 15px; }
         .ball { background: #334155; padding: 5px; text-align: center; border-radius: 5px; font-size: 0.8rem; }
     </style>
@@ -51,15 +38,15 @@
         <div class="control-group">
             <label>Current Bingo Pattern</label>
             <select id="patternSelect" onchange="updatePattern(this.value)">
-                <option value="Normal Bingo">Normal Bingo (Row/Col/Diag)</option>
-                <option value="Blackout">Blackout (Full Card)</option>
+                <option value="Normal Bingo">Normal Bingo</option>
+                <option value="Blackout">Blackout</option>
                 <option value="Letter X">Letter X</option>
                 <option value="Four Corners">Four Corners</option>
             </select>
         </div>
         <div class="control-group">
-            <label>Draw Number (1-75)</label>
-            <input type="number" id="ballInput" placeholder="Enter number...">
+            <label>Draw Number</label>
+            <input type="number" id="ballInput" placeholder="1-75">
             <button class="btn-primary" onclick="drawNumber()">DRAW BALL</button>
             <button class="btn-danger" onclick="resetGame()">RESET GAME</button>
         </div>
@@ -67,37 +54,25 @@
     </div>
 
     <div class="card">
-        <h2><i data-lucide="users"></i> Live Online Players (<span id="onlineCount">0</span>)</h2>
-        <p style="font-size: 0.7rem; opacity: 0.5; margin-bottom: 15px;">Showing users active in the last 2 minutes.</p>
-        <div class="user-list" id="activeUserList">
-            </div>
+        <h2><i data-lucide="users"></i> Online Players (<span id="onlineCount">0</span>)</h2>
+        <div class="user-list" id="activeUserList"></div>
     </div>
 
     <div class="card">
-        <h2><i data-lucide="bell"></i> Send Notification</h2>
+        <h2><i data-lucide="bell"></i> Send Notif</h2>
         <div class="notif-form">
-            <input type="text" id="notifTitle" placeholder="Title (e.g. Winner!)">
-            <input type="text" id="notifBody" placeholder="Message content...">
-            <input type="text" id="notifUid" placeholder="Recipient UID (Leave blank for ALL)">
-            <button class="btn-primary" onclick="sendNotif()">SEND NOTIFICATION</button>
+            <input type="text" id="notifTitle" placeholder="Title">
+            <input type="text" id="notifBody" placeholder="Message">
+            <input type="text" id="notifUid" placeholder="UID (Optional)">
+            <button class="btn-primary" onclick="sendNotif()">SEND</button>
         </div>
     </div>
 
     <div class="card" style="grid-column: span 1;">
-        <h2><i data-lucide="wallet"></i> Redemption Requests</h2>
-        <div style="overflow-x: auto;">
-            <table id="reqTable">
-                <thead>
-                    <tr>
-                        <th>Player</th>
-                        <th>GCash</th>
-                        <th>Item</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="requestList"></tbody>
-            </table>
-        </div>
+        <h2><i data-lucide="wallet"></i> Requests</h2>
+        <table id="reqTable">
+            <tbody id="requestList"></tbody>
+        </table>
     </div>
 </div>
 
@@ -107,120 +82,76 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // GAME LOGIC
     function drawNumber() {
         const val = document.getElementById('ballInput').value;
-        if(!val || val < 1 || val > 75) return alert("Invalid number!");
+        if(!val) return;
         db.ref('drawnNumbers').push(val);
         document.getElementById('ballInput').value = "";
     }
 
     function resetGame() {
-        if(confirm("Reset all drawn numbers and winners?")) {
+        if(confirm("Reset?")) {
             db.ref('drawnNumbers').remove();
             db.ref('gameState/latestWinner').remove();
-            db.ref('users').once('value', s => {
-                s.forEach(u => u.ref.update({ hasWonCurrent: false }));
-            });
+            db.ref('users').once('value', s => s.forEach(u => u.ref.update({hasWonCurrent:false})));
         }
     }
 
-    function updatePattern(val) {
-        db.ref('gameState/currentPattern').set(val);
-    }
+    function updatePattern(val) { db.ref('gameState/currentPattern').set(val); }
 
-    // LISTENER PARA SA DRAWN BALLS
     db.ref('drawnNumbers').on('value', s => {
         const list = document.getElementById('drawnList'); list.innerHTML = "";
-        s.forEach(c => {
-            const b = document.createElement('div'); b.className = 'ball';
-            b.innerText = c.val(); list.appendChild(b);
-        });
+        s.forEach(c => { const b = document.createElement('div'); b.className='ball'; b.innerText=c.val(); list.appendChild(b); });
     });
 
-    // DINAMIKONG PAG-FILTER NG ONLINE USERS
+    // DINAMIKONG ONLINE LIST (ACTIVE ONLY)
     function updateOnlineList() {
         const list = document.getElementById('activeUserList');
         const countSpan = document.getElementById('onlineCount');
-        const now = Date.now();
-        const twoMinutes = 2 * 60 * 1000; // Threshold para masabing active
+        const threshold = Date.now() - (2 * 60 * 1000); // 2 minutes ago
 
         db.ref('users').on('value', s => {
             list.innerHTML = "";
-            let activeCount = 0;
-
+            let count = 0;
             s.forEach(child => {
                 const user = child.val();
-                // I-check kung may last_seen at kung hindi lumampas ng 2 minutes
-                if (user.last_seen && (now - user.last_seen < twoMinutes)) {
-                    activeCount++;
+                if (user.last_seen && user.last_seen > threshold) {
+                    count++;
                     const div = document.createElement('div');
                     div.className = 'user-item';
-                    div.innerHTML = `
-                        <div class="user-info">
-                            <img src="${user.photo || 'https://via.placeholder.com/30'}" class="user-pfp">
-                            <div>
-                                <div class="user-name">${user.name}</div>
-                                <div style="font-size:10px; opacity:0.5;">UID: ${child.key}</div>
-                            </div>
-                        </div>
-                        <div class="status-dot"></div>
-                    `;
+                    div.innerHTML = `<span>${user.name}</span><div class="status-dot"></div>`;
                     list.appendChild(div);
                 }
             });
-            countSpan.innerText = activeCount;
+            countSpan.innerText = count;
         });
     }
-    // Patakbuhin ang filter kada 30 seconds para laging fresh ang listahan
-    setInterval(updateOnlineList, 30000);
+    setInterval(updateOnlineList, 10000);
     updateOnlineList();
 
-    // NOTIFICATION LOGIC
     function sendNotif() {
-        const title = document.getElementById('notifTitle').value;
-        const body = document.getElementById('notifBody').value;
-        const uid = document.getElementById('notifUid').value;
-
-        if(!title || !body) return alert("Fill title and body!");
-
-        const newNotif = {
-            title: title,
-            body: body,
-            time: Date.now()
-        };
-
-        if(uid) newNotif.uid = uid; // Kung may UID, para sa specific user lang
-
-        db.ref('notifications').push(newNotif).then(() => {
-            alert("Sent!");
-            document.getElementById('notifTitle').value = "";
-            document.getElementById('notifBody').value = "";
-        });
+        const t = document.getElementById('notifTitle').value;
+        const b = document.getElementById('notifBody').value;
+        const u = document.getElementById('notifUid').value;
+        if(!t || !b) return;
+        const data = { title:t, body:b, time:Date.now() };
+        if(u) data.uid = u;
+        db.ref('notifications').push(data).then(() => alert("Sent"));
     }
 
-    // REDEEM REQUESTS
     db.ref('redeemRequests').on('value', s => {
         const list = document.getElementById('requestList'); list.innerHTML = "";
         s.forEach(c => {
             const r = c.val();
             if(r.status === 'pending') {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${r.name}</td>
-                    <td>${r.gcash}</td>
-                    <td>${r.item}</td>
-                    <td><button onclick="approveRequest('${c.key}')" style="background:var(--success); font-size:10px; padding:5px;">DONE</button></td>
-                `;
+                tr.innerHTML = `<td>${r.name}</td><td>${r.item}</td><td><button onclick="approve('${c.key}')">OK</button></td>`;
                 list.appendChild(tr);
             }
         });
     });
 
-    function approveRequest(key) {
-        db.ref('redeemRequests/'+key).update({ status: 'approved' });
-    }
+    function approve(key) { db.ref('redeemRequests/'+key).update({status:'approved'}); }
 </script>
-
 </body>
 </html>
