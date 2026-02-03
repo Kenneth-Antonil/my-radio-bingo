@@ -60,26 +60,9 @@
         .copy-btn { background: none; border: none; color: var(--text); opacity: 0.5; cursor: pointer; padding: 2px; }
         .copy-btn:hover { opacity: 1; color: var(--accent); }
 
-        /* New Feature Styling */
-        .manual-draw-input {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px dashed rgba(255,255,255,0.1);
-        }
-        .manual-draw-input input {
-            margin-bottom: 0;
-            text-align: center;
-            font-size: 18px;
-        }
-
-        /* Scheduler Styling */
-        .scheduler-box {
-            background: rgba(59, 130, 246, 0.05);
-            border: 1px solid var(--accent);
-            margin-top: 15px;
-        }
+        .manual-draw-input { display: flex; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); }
+        .manual-draw-input input { margin-bottom: 0; text-align: center; font-size: 18px; }
+        .scheduler-box { background: rgba(59, 130, 246, 0.05); border: 1px solid var(--accent); margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -183,7 +166,6 @@
     let currentPattern = "Normal Bingo";
     let activeSchedule = null;
 
-    // --- SCHEDULER LOGIC ---
     function setSchedule() {
         const timeVal = document.getElementById('scheduleTime').value;
         if(!timeVal) return alert("Select a time first");
@@ -202,7 +184,6 @@
         const timeVal = document.getElementById('scheduleTime').value;
         if(!timeVal) return alert("No schedule set.");
         const formattedTime = new Date(timeVal).toLocaleTimeString();
-        
         db.ref('notifications').push({ 
             title: "Upcoming Draw! 🎰", 
             body: `The next Bingo draw starts at ${formattedTime}. Be ready!`, 
@@ -222,13 +203,10 @@
             display.innerText = "No active schedule.";
             return;
         }
-
         const now = Date.now();
         const diff = activeSchedule - now;
-
         if(diff <= 0) {
             display.innerText = "DRAWING NOW...";
-            // Auto trigger draw and clear schedule
             drawNumber();
             db.ref('notifications').push({ 
                 title: "Game Started!", 
@@ -244,7 +222,6 @@
     }
     setInterval(updateCountdown, 1000);
 
-    // Update searchable list for points tool
     db.ref('users').on('value', snapshot => {
         const dataList = document.getElementById('playerList');
         dataList.innerHTML = "";
@@ -262,7 +239,6 @@
         if(refInput.includes(" - ")) refInput = refInput.split(" - ")[1];
         const amount = parseInt(document.getElementById('pointAmount').value);
         if(!refInput || isNaN(amount)) return alert("Check inputs!");
-
         db.ref('users').orderByChild('refCode').equalTo(refInput).once('value', snapshot => {
             if(snapshot.exists()) {
                 const uid = Object.keys(snapshot.val())[0];
@@ -291,13 +267,11 @@
         drawnNumbers.push(n); db.ref('drawnNumbers').set(drawnNumbers);
     }
 
-    // NEW FUNCTION: DRAW MANUAL NUMBER
     function drawManualNumber() {
         const input = document.getElementById('manualBallInput');
         const n = parseInt(input.value).toString();
         if (!n || n < 1 || n > 75) return alert("Enter a valid ball number (1-75)");
         if (drawnNumbers.includes(n)) return alert("Ball " + n + " is already drawn!");
-        
         drawnNumbers.push(n); 
         db.ref('drawnNumbers').set(drawnNumbers);
         input.value = "";
@@ -307,13 +281,20 @@
     function clearWinner() { if(confirm("Alisin ang winner banner?")) { db.ref('gameState/latestWinner').set(null); } }
     function updatePattern(val) { db.ref('gameState/currentPattern').set(val); }
 
+    // FIXED: Global Announcement logic
     function sendGlobalNotif() {
         const title = document.getElementById('notifTitle').value;
         const message = document.getElementById('notifMsg').value;
         if(!title || !message) return alert("Fill fields");
-        db.ref('notifications').push({ title: title, body: message, timestamp: firebase.database.ServerValue.TIMESTAMP });
-        document.getElementById('notifTitle').value = ""; document.getElementById('notifMsg').value = "";
-        alert("Sent!");
+        db.ref('notifications').push({ 
+            title: title, 
+            body: message, 
+            timestamp: firebase.database.ServerValue.TIMESTAMP 
+        }).then(() => {
+            document.getElementById('notifTitle').value = ""; 
+            document.getElementById('notifMsg').value = "";
+            alert("Announcement Sent!");
+        });
     }
 
     function copyRef(text) { navigator.clipboard.writeText(text).then(() => alert("Copied!")); }
@@ -328,7 +309,6 @@
                 const uid = child.key;
                 const isOnline = user.last_seen && user.last_seen > threshold;
                 const fullRefLink = window.location.origin + "/index.html?ref=" + (user.refCode || "");
-
                 const marks = [12];
                 let isBingo = false;
                 let winningCells = [];
@@ -400,15 +380,27 @@
         });
     });
 
+    // FIXED: Redemption Status Notification
     function updateStatus(key, status, data) {
         if(confirm(`${status} this request?`)) {
             db.ref('redemptions/' + key).update({ status: status });
+            
+            const statusMsg = status === 'sent' ? 
+                `Your redeem for ${data.item} has been paid! 💸` : 
+                `Your redeem for ${data.item} was denied. Points returned. ❌`;
+            
+            db.ref('notifications').push({
+                title: "Redeem Update",
+                body: statusMsg,
+                uid: data.uid, // Targeted UID for index.html to show dot
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+
             if(status === 'denied') db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost);
-            alert("Updated!");
+            alert("Updated & Notified!");
         }
     }
 
-    // --- FIX TOOL FOR MISSING REF CODES ---
     async function updateExistingUsers() {
         if (!confirm("Generate codes for all players who don't have one?")) return;
         try {
