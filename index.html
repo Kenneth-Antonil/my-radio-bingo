@@ -65,7 +65,6 @@
         .chat-input input { flex: 1; background: var(--bg); border: none; border-radius: 12px; padding: 12px; color: white; outline: none; }
         .send-btn { background: var(--accent); color: white; border: none; padding: 0 15px; border-radius: 12px; cursor: pointer; }
 
-        /* UPGRADED MODALS */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(10px); }
         .modal-content { background: var(--surface); border-radius: 28px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.1); max-height: 90vh; overflow-y: auto; }
         
@@ -120,7 +119,7 @@
 <div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang.</div></div>
 
 <div class="container">
-    <div id="winnerBanner">🎉 BINGO! YOU WON! 🎉</div>
+    <div id="winnerBanner">🎉 BINGO! 🎉</div>
     <div class="draw-panel">
         <div class="prev-balls" id="ballRow"></div>
         <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8;">NOW DRAWN</span><span id="currentBall" style="font-size:32px; font-weight:900;">--</span></div>
@@ -155,7 +154,6 @@
 <div id="menuModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 style="margin-top:0">My Profile</h3>
-        
         <div class="gcash-section">
             <span class="input-label">My GCash Number (For Rewards)</span>
             <div style="display:flex; gap:8px;">
@@ -163,12 +161,10 @@
                 <button onclick="saveGcash()" style="background:var(--accent); border:none; color:white; padding:0 15px; border-radius:12px; font-weight:800;">SAVE</button>
             </div>
         </div>
-
         <div class="ref-container">
             <div style="font-size:12px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:8px;">Referral Link</div>
             <input type="text" id="refLink" readonly class="styled-input" style="text-align:center; cursor:pointer;" onclick="this.select(); document.execCommand('copy'); alert('Copied!');">
         </div>
-
         <div class="history-box">
             <span style="font-size:11px; font-weight:800; color:var(--accent); text-transform:uppercase; margin-bottom:8px; display:block;">Recent Transactions</span>
             <div id="historyList"></div>
@@ -184,7 +180,6 @@
             <div class="points-badge" style="height:32px"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
         </div>
         <p style="font-size:12px; opacity:0.6; margin-bottom:20px;">Make sure your GCash number is correct in your profile before redeeming.</p>
-        
         <div class="reward-grid">
             <div class="reward-item">
                 <div class="reward-info"><b>₱20 GCash</b><small>2,500 Pts</small></div>
@@ -243,6 +238,20 @@
     }
 
     function initBingo() {
+        // GLOBAL WINNER LISTENER
+        db.ref('gameState/latestWinner').on('value', s => {
+            const win = s.val();
+            const banner = document.getElementById('winnerBanner');
+            if(win && win.name) {
+                banner.innerText = `🎉 BINGO! WINNER: ${win.name.toUpperCase()} 🎉`;
+                banner.style.display = 'block';
+                if(win.uid === auth.currentUser.uid) { confetti(); document.getElementById('bingoCardContainer').classList.add('card-win'); }
+            } else {
+                banner.style.display = 'none';
+                document.getElementById('bingoCardContainer').classList.remove('card-win');
+            }
+        });
+
         db.ref('drawnNumbers').on('value', s => {
             const val = s.val();
             const newDrawn = val ? (Array.isArray(val) ? val : Object.values(val)).map(n => n.toString()) : [];
@@ -270,9 +279,9 @@
     }
 
     function triggerWin(pattern) {
-        confetti();
-        document.getElementById('winnerBanner').style.display = 'block';
-        document.getElementById('bingoCardContainer').classList.add('card-win');
+        // Save to Global Game State para makita ng lahat
+        db.ref('gameState/latestWinner').set({ name: userData.name, uid: userData.uid, time: Date.now() });
+        
         pattern.forEach(idx => { document.getElementById('c-'+idx)?.classList.add('win-glow'); });
         db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
         db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
@@ -280,8 +289,7 @@
     }
 
     function resetWinState() {
-        document.getElementById('winnerBanner').style.display = 'none';
-        document.getElementById('bingoCardContainer').classList.remove('card-win');
+        db.ref('gameState/latestWinner').set(null); // Clear global winner kapag nag-reset ang bola
         document.querySelectorAll('.cell').forEach(el => { el.classList.remove('win-glow', 'hit'); if(el.id === 'c-12') el.classList.add('hit'); });
         db.ref('users/'+userData.uid).update({ hasWonCurrent: false });
     }
@@ -383,7 +391,6 @@
         if(confirm(`Redeem ${name} to ${userData.gcash}?`)) {
             db.ref('users/'+userData.uid+'/points').transaction(p => (p || 0) - cost);
             db.ref('users/'+userData.uid+'/history').push({ type: 'Redeem: '+name, amount: -cost });
-            // Automatic record for admin
             db.ref('redeemRequests').push({ uid: userData.uid, name: userData.name, gcash: userData.gcash, item: name, cost: cost, status: 'pending', time: Date.now() });
             alert("Redeem request sent!");
         }
