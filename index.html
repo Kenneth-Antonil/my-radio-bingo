@@ -60,7 +60,6 @@
         .marquee-content { display: inline-block; animation: marquee 25s linear infinite; padding-left: 100%; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* BRING ME ADVANCED UI STYLES */
         .tab-system { display: flex; background: var(--surface); margin: 15px 0; border-radius: 15px; padding: 5px; gap: 5px; }
         .tab-btn { flex: 1; padding: 12px; border: none; background: none; color: #94a3b8; font-weight: 800; font-size: 12px; cursor: pointer; border-radius: 10px; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .tab-btn.active { background: var(--surface-br); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
@@ -99,9 +98,8 @@
         .next-draw-time { font-size: 16px; font-weight: 900; color: white; }
 
         .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 12px; }
-        .card { background: var(--surface); border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative; }
+        .card { background: var(--surface); border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative; transition: 0.3s; }
         
-        /* VIDEO FEED PINNED AT TOP */
         .video-feed-wrapper { margin-bottom: 15px; border-radius: 20px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); }
         .video-container { position: relative; height: 210px; width: 100%; }
         .video-overlay-bl { position: absolute; bottom: 12px; left: 12px; z-index: 10; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--success); display: flex; align-items: center; gap: 5px; color: var(--success); font-size: 11px; font-weight: 800; }
@@ -118,14 +116,15 @@
         .cell.hit { background: var(--accent); color: white; transform: scale(1.02); }
 
         .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
-        .card.card-lost { opacity: 0.4; filter: grayscale(0.8); pointer-events: none; }
+        .card.card-lost { opacity: 0.3; filter: grayscale(1); pointer-events: none; transform: scale(0.98); }
         .cell.win-glow { background: var(--success) !important; color: white; z-index: 3; position: relative; border: 2px solid white; box-shadow: 0 0 15px var(--success); }
         .cell.win-glow::after { content: ''; position: absolute; inset: -3px; border: 2px solid white; border-radius: 10px; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        .late-overlay, .game-over-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; }
-        .late-text { font-weight: 800; font-size: 18px; color: white; margin-bottom: 8px; }
-        .late-subtext { font-size: 13px; opacity: 0.8; color: var(--text); }
+        .late-overlay, .game-over-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; }
+        .late-text { font-weight: 800; font-size: 20px; color: white; margin-bottom: 8px; }
+        .late-subtext { font-size: 13px; opacity: 0.9; color: #cbd5e1; font-weight: 600; line-height: 1.4; }
+        .winner-avatar-big { width: 80px; height: 80px; border-radius: 20px; border: 3px solid var(--success); margin-bottom: 15px; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); object-fit: cover; }
 
         #winnerBanner { display: none; background: var(--success); color: white; padding: 12px; border-radius: 12px; text-align: center; font-weight: 900; margin-bottom: 12px; animation: slideDown 0.5s ease; border: 2px solid white; }
         .winner-line { font-size: 12px; opacity: 0.9; margin-top: 4px; display: block; font-weight: 600; }
@@ -298,12 +297,12 @@
             <div id="lateOverlay" class="late-overlay">
                 <i data-lucide="clock" style="color:var(--gold); width:40px; height:40px; margin-bottom:10px;"></i>
                 <div class="late-text">Game is Ongoing</div>
-                <div class="late-subtext">Humingi ng paumanhin, nagsimula na ang bola. Join in the next round!</div>
+                <div class="late-subtext">Humingi ng paumanhin, nagsimula na ang bola bago ka makakuha ng card. Join in the next round!</div>
             </div>
             <div id="gameOverOverlay" class="game-over-overlay">
-                <i data-lucide="frown" style="color:var(--danger); width:40px; height:40px; margin-bottom:10px;"></i>
-                <div class="late-text">May nanalo na!</div>
-                <div class="late-subtext" id="gameOverMsg">Bawi na lang next draw.</div>
+                <img id="winnerAvatarDisplay" class="winner-avatar-big" src="">
+                <div class="late-text" id="winnerNameMsg">May nanalo na!</div>
+                <div class="late-subtext" style="color:var(--danger); font-weight: 800;">Bawi na lang next draw.</div>
             </div>
             <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
                 <div class="pattern-box">
@@ -517,7 +516,7 @@
         });
     }
 
-    // --- RE-ENGINEERED ADVANCED AI HANDLER (STRICT VERSION) ---
+    // --- RE-ENGINEERED ADVANCED AI HANDLER ---
     async function handleBringMeUploadAdvanced(input) {
         if(!input.files || !input.files[0]) return;
         if(userData.hasWonBringMeThisRound) { alert("Nakuha mo na ang points! Hintayin ang susunod."); return; }
@@ -530,7 +529,6 @@
         const scanLine = document.getElementById('aiScanLine');
         const statusText = document.getElementById('aiStatusText');
 
-        // Show UI feedback
         preview.src = URL.createObjectURL(file);
         preview.style.display = 'block';
         placeholder.style.display = 'none';
@@ -538,25 +536,16 @@
         scanLine.style.display = 'block';
         statusText.innerText = "AI IDENTIFYING OBJECT...";
 
-        // Process with TensorFlow coco-ssd
         const img = new Image();
         img.src = preview.src;
         img.onload = async () => {
             const predictions = await cocoModel.detect(img);
             const targetItem = document.getElementById('bringmeItem').innerText.toLowerCase();
             
-            // Log for debugging
-            console.log("AI Predictions:", predictions);
-
-            // MAHIGPIT NA VALIDATION LOGIC
             const successfulMatch = predictions.find(p => {
                 const label = p.class.toLowerCase();
-                const score = p.score; // Confidence score (0.0 to 1.0)
-
-                // Minimum 65% confidence para hindi "hula-hula"
+                const score = p.score;
                 if (score < 0.65) return false;
-
-                // Specific Mapping para iwas mali
                 if (targetItem.includes("mouse") && label === "mouse") return true;
                 if (targetItem.includes("keyboard") && label === "keyboard") return true;
                 if (targetItem.includes("cellphone") && (label === "cell phone" || label === "mobile phone")) return true;
@@ -567,10 +556,7 @@
                 if (targetItem.includes("remote") && label === "remote") return true;
                 if (targetItem.includes("laptop") && label === "laptop") return true;
                 if (targetItem.includes("libro") && label === "book") return true;
-
-                // Generic fallback kung eksaktong english term ang target
                 if (targetItem === label) return true;
-
                 return false;
             });
 
@@ -583,7 +569,6 @@
                             alert(`✅ AI SUCCESS: Sigurado ako (${confidencePercent}%) na ${successfulMatch.class} iyan!`);
                             triggerBringMeWin();
                         } else {
-                            // Kung may nakita pero hindi match
                             if (predictions.length > 0) {
                                 const detected = predictions.map(p => p.class).join(", ");
                                 alert(`❌ AI REJECTED: Ang nakita ko ay (${detected}), pero ang hanap ay ${targetItem.toUpperCase()}.`);
@@ -594,7 +579,6 @@
                     } else if (game.winner) {
                         alert("May nanalo na!");
                     }
-                    
                     loader.style.display = 'none';
                     scanLine.style.display = 'none';
                 });
@@ -614,7 +598,6 @@
         });
     }
 
-    // --- REMAINING ORIGINAL FUNCTIONS (AS PER INSTRUCTIONS: NO DELETION) ---
     function fixDate(timestamp) {
         if(!timestamp) return "No Date";
         const d = new Date(parseInt(timestamp));
@@ -699,14 +682,38 @@
 
     function initBingo() {
         db.ref('gameState/latestWinner').on('value', s => {
-            const win = s.val(); const banner = document.getElementById('winnerBanner'); const patternLine = document.getElementById('winnerPatternLine'); const cardCont = document.getElementById('bingoCardContainer'); const gameOverlay = document.getElementById('gameOverOverlay');
+            const win = s.val(); 
+            const banner = document.getElementById('winnerBanner'); 
+            const patternLine = document.getElementById('winnerPatternLine'); 
+            const cardCont = document.getElementById('bingoCardContainer'); 
+            const gameOverlay = document.getElementById('gameOverOverlay');
+            const winnerAvatar = document.getElementById('winnerAvatarDisplay');
+            const winnerNameText = document.getElementById('winnerNameMsg');
+
             if(win && win.name) {
                 banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`;
                 patternLine.innerText = `Pattern Won: ${currentPattern}`;
                 banner.style.display = 'block';
-                if(win.uid === auth.currentUser.uid) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; applyWinGlowToCurrentCard(); } 
-                else { cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; document.getElementById('gameOverMsg').innerText = `${win.name.toUpperCase()} wins!`; }
-            } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); gameOverlay.style.display = 'none'; document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow')); }
+                
+                if(win.uid === auth.currentUser.uid) { 
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); 
+                    cardCont.classList.add('card-win'); 
+                    cardCont.classList.remove('card-lost'); 
+                    gameOverlay.style.display = 'none'; 
+                    applyWinGlowToCurrentCard(); 
+                } else { 
+                    cardCont.classList.add('card-lost'); 
+                    cardCont.classList.remove('card-win'); 
+                    gameOverlay.style.display = 'flex'; 
+                    winnerAvatar.src = win.photo || 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg';
+                    winnerNameText.innerText = `${win.name.toUpperCase()} ang nanalo!`; 
+                }
+            } else { 
+                banner.style.display = 'none'; 
+                cardCont.classList.remove('card-win', 'card-lost'); 
+                gameOverlay.style.display = 'none'; 
+                document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow')); 
+            }
         });
         db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternName').innerText = currentPattern; checkWin(); });
         db.ref('drawnNumbers').on('value', s => {
@@ -733,7 +740,12 @@
     }
 
     function triggerWin() {
-        db.ref('gameState/latestWinner').set({ name: auth.currentUser.displayName, uid: auth.currentUser.uid, time: Date.now() });
+        db.ref('gameState/latestWinner').set({ 
+            name: auth.currentUser.displayName, 
+            uid: auth.currentUser.uid, 
+            photo: auth.currentUser.photoURL,
+            time: Date.now() 
+        });
         db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
         db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
     }
@@ -741,9 +753,31 @@
     function checkLateJoiner() {
         const overlay = document.getElementById('lateOverlay');
         if (!gameDrawn || gameDrawn.length === 0) { overlay.style.display = 'none'; return; }
+        
         db.ref('gameState/gameStartTime').once('value', s => {
-            const startTime = s.val() || 0; const cardTime = (userData && userData.cardTimestamp) ? userData.cardTimestamp : 0;
-            if(gameDrawn.length > 0 && cardTime > startTime) { overlay.style.display = 'flex'; } else { overlay.style.display = 'none'; }
+            const startTime = s.val() || 0; 
+            const cardTime = (userData && userData.cardTimestamp) ? userData.cardTimestamp : 0;
+            // FIX: Ang cardTime ay dapat palaging mas maaga kaysa sa startTime para makalaro.
+            // Kung mas bago ang card (cardTime > startTime), ibig sabihin kumuha siya habang may bola na.
+            if(gameDrawn.length > 0 && cardTime > startTime) { overlay.style.display = 'flex'; } 
+            else { overlay.style.display = 'none'; }
+        });
+    }
+
+    function applyWinGlowToCurrentCard() {
+        let winningWays = [];
+        if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; }
+        else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; }
+        else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; }
+        else { winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; }
+        
+        winningWays.forEach(w => {
+            if(w.every(i => marks.includes(i))) {
+                w.forEach(index => {
+                    const cell = document.getElementById('c-' + index);
+                    if(cell) cell.classList.add('win-glow');
+                });
+            }
         });
     }
 
