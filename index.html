@@ -15,12 +15,36 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 20px; overflow-x: hidden; }
 
-        #loginOverlay { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .login-card { background: var(--surface); padding: 40px 30px; border-radius: 30px; width: 100%; max-width: 400px; text-align: center; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        .login-logo { font-size: 32px; font-weight: 900; margin-bottom: 15px; letter-spacing: -1px; }
+        /* PINAGANDANG LOGIN SECTION */
+        #loginOverlay { 
+            position: fixed; 
+            inset: 0; 
+            background: linear-gradient(rgba(11, 17, 32, 0.8), rgba(11, 17, 32, 0.8)), url('https://images.unsplash.com/photo-1596715094285-1d4b83d9539d?q=80&w=2072&auto=format&fit=crop'); 
+            background-size: cover;
+            background-position: center;
+            z-index: 9999; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px; 
+        }
+        .login-card { 
+            background: rgba(30, 41, 59, 0.7); 
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 50px 30px; 
+            border-radius: 40px; 
+            width: 100%; 
+            max-width: 400px; 
+            text-align: center; 
+            border: 1px solid rgba(255,255,255,0.15); 
+            box-shadow: 0 25px 50px rgba(0,0,0,0.6); 
+        }
+        .login-logo { font-size: 42px; font-weight: 900; margin-bottom: 10px; letter-spacing: -2px; }
         .login-logo span { color: var(--accent); }
-        .login-sub { font-size: 14px; opacity: 0.7; margin-bottom: 30px; line-height: 1.6; }
-        .btn-google { background: white; color: #000; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-size: 15px; }
+        .login-sub { font-size: 15px; opacity: 0.9; margin-bottom: 35px; line-height: 1.6; font-weight: 500; }
+        .btn-google { background: white; color: #000; border: none; width: 100%; padding: 16px; border-radius: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; font-size: 16px; transition: 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .btn-google:hover { transform: translateY(-2px); box-shadow: 0 15px 25px rgba(0,0,0,0.3); }
 
         .nav { background: var(--surface); padding: 0 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: 65px; }
         .user-stats { display: flex; align-items: center; gap: 10px; }
@@ -431,7 +455,8 @@
 
                     userRef.set({
                         name: u.displayName, photo: u.photoURL, points: 100, refCode: newRefCode,
-                        referredBy: referredBy || null, last_seen: Date.now(), cardTimestamp: Date.now()
+                        referredBy: referredBy || null, last_seen: Date.now(), cardTimestamp: Date.now(),
+                        lastLoginDate: new Date().toDateString() // Bonus tracker
                     });
 
                     if (referredBy) {
@@ -445,6 +470,15 @@
                 } else {
                     const data = snapshot.val();
                     const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL };
+                    
+                    // EVERYDAY BONUS LOGIC
+                    const today = new Date().toDateString();
+                    if (data.lastLoginDate !== today) {
+                        updates.points = (data.points || 0) + 50;
+                        updates.lastLoginDate = today;
+                        alert("🎁 Daily Bonus! Nakatanggap ka ng 50 points sa pag-login ngayong araw.");
+                    }
+
                     if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                     if (!data.cardTimestamp) updates.cardTimestamp = Date.now(); // Safety fix
                     userRef.update(updates);
