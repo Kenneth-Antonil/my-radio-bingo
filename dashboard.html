@@ -44,10 +44,13 @@
 
         input, textarea, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--surface-br); background: var(--bg); color: white; font-size: 13px; }
 
-        /* COMPACT GRID FOR MORE VISIBILITY */
         .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; }
         .player-mini-card { background: var(--surface); border-radius: 12px; padding: 10px; border: 1px solid var(--surface-br); position: relative; }
+        
+        /* GLOWS */
         .player-mini-card.winner-card { border: 2px solid var(--success) !important; background: rgba(16, 185, 129, 0.05); animation: pulse 2s infinite; }
+        .player-mini-card.puro-card { border: 2px solid var(--gold) !important; background: rgba(251, 191, 36, 0.05); box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); }
+
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
 
         .player-info { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -71,6 +74,7 @@
         
         .scheduler-box { border: 1px solid rgba(59, 130, 246, 0.3); }
         .auto-status { font-size: 11px; font-weight: bold; color: var(--gold); margin-top: 5px; text-align: center; }
+        .online-badge { background: var(--success); color: white; padding: 2px 8px; border-radius: 20px; font-size: 10px; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -140,7 +144,10 @@
 
     <div class="main-layout">
         <div class="card">
-            <h2><i data-lucide="monitor"></i> Live Player Boards</h2>
+            <h2 style="display: flex; align-items: center;">
+                <i data-lucide="monitor"></i> Live Player Boards 
+                <span id="onlineCounter" class="online-badge">0 Online</span>
+            </h2>
             <div class="players-grid" id="playersGrid"></div>
         </div>
 
@@ -198,7 +205,6 @@
         updateCountdown();
     });
 
-    // AUTO DRAW LOGIC: TULOY-TULOY HANGGANG MAY BINGO
     function updateCountdown() {
         const display = document.getElementById('countdownDisplay');
         if(!activeSchedule) {
@@ -211,10 +217,9 @@
         if(diff <= 0) {
             display.innerText = "AUTO-DRAWING ACTIVE...";
             if(!autoDrawInterval) {
-                // Magsisimula ang loop bawat 5 segundo
                 autoDrawInterval = setInterval(() => {
                     if (anyBingoDetected) {
-                        display.innerText = "BINGO DETECTED! Loop stopped.";
+                        display.innerText = "ONLINE BINGO DETECTED! Loop stopped.";
                         clearInterval(autoDrawInterval);
                         autoDrawInterval = null;
                         db.ref('gameState/nextDraw').set(null);
@@ -317,17 +322,31 @@
     function refreshPlayers() {
         const threshold = Date.now() - (5 * 60 * 1000); 
         let bingoFoundThisTick = false;
+        let onlineCount = 0;
 
         db.ref('users').once('value', snapshot => {
             const container = document.getElementById('playersGrid');
             container.innerHTML = "";
+            
+            let usersArray = [];
             snapshot.forEach(child => {
                 const user = child.val();
-                const uid = child.key;
-                const isOnline = user.last_seen && user.last_seen > threshold;
+                user.uid = child.key;
+                user.isOnline = user.last_seen && user.last_seen > threshold;
+                if(user.isOnline) onlineCount++;
+                usersArray.push(user);
+            });
+
+            document.getElementById('onlineCounter').innerText = onlineCount + " Online";
+            usersArray.sort((a, b) => b.isOnline - a.isOnline);
+
+            usersArray.forEach(user => {
+                const uid = user.uid;
+                const isOnline = user.isOnline;
                 const fullRefLink = window.location.origin + "/index.html?ref=" + (user.refCode || "");
                 const marks = [12];
                 let isBingo = false;
+                let isPuro = false;
                 let winningCells = [];
                 let gridHtml = '<div class="mini-grid">';
                 
@@ -337,6 +356,7 @@
                         if(isHit) marks.push(idx);
                         gridHtml += `<div id="m-${uid}-${idx}" class="mini-cell ${isHit ? 'hit' : ''} ${idx === 12 ? 'free' : ''}">${idx === 12 ? '★' : num}</div>`;
                     });
+
                     let patterns = [];
                     if (currentPattern === "Blackout") patterns = [Array.from({length: 25}, (_, i) => i)];
                     else if (currentPattern === "Letter X") patterns = [[0,4,6,8,12,16,18,20,24]];
@@ -344,17 +364,21 @@
                     else patterns = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
                     
                     for(let p of patterns) { 
-                        if(p.every(i => marks.includes(i))) { 
+                        let hits = p.filter(i => marks.includes(i)).length;
+                        // RESTRICTION: Check only if player is online
+                        if(hits === p.length && isOnline) { 
                             isBingo = true; 
                             bingoFoundThisTick = true;
                             winningCells = [...new Set([...winningCells, ...p])]; 
-                        } 
+                        } else if (hits === p.length - 1 && isOnline) {
+                            isPuro = true;
+                        }
                     }
                 } else { for(let i=0; i<25; i++) gridHtml += `<div class="mini-cell">--</div>`; }
                 gridHtml += '</div>';
 
                 const cardDiv = document.createElement('div');
-                cardDiv.className = `player-mini-card ${isBingo ? 'winner-card' : ''}`;
+                cardDiv.className = `player-mini-card ${isBingo ? 'winner-card' : (isPuro ? 'puro-card' : '')}`;
                 cardDiv.innerHTML = `
                     <div class="player-info">
                         <div style="position:relative">
