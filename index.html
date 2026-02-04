@@ -446,6 +446,7 @@
                     const data = snapshot.val();
                     const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL };
                     if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    if (!data.cardTimestamp) updates.cardTimestamp = Date.now(); // Safety fix
                     userRef.update(updates);
                 }
             });
@@ -615,10 +616,22 @@
 
     function checkLateJoiner() {
         const overlay = document.getElementById('lateOverlay');
+        // KUNG WALA PANG BOLA, SIGURADONG HINDI LATE.
+        if (!gameDrawn || gameDrawn.length === 0) {
+            overlay.style.display = 'none';
+            return;
+        }
+
         db.ref('gameState/gameStartTime').once('value', s => {
-            const startTime = s.val() || 0; const cardTime = userData.cardTimestamp || 0;
-            if(gameDrawn.length > 0 && cardTime > startTime) { overlay.style.display = 'flex'; } 
-            else { overlay.style.display = 'none'; }
+            const startTime = s.val() || 0;
+            // Fallback sa Date.now() kung wala pang cardTimestamp para hindi naba-block ang login
+            const cardTime = (userData && userData.cardTimestamp) ? userData.cardTimestamp : Date.now();
+
+            if(gameDrawn.length > 0 && cardTime > startTime) { 
+                overlay.style.display = 'flex'; 
+            } else { 
+                overlay.style.display = 'none'; 
+            }
         });
     }
 
@@ -640,7 +653,15 @@
         const b = getCol(1, 15), i = getCol(16, 30), n = getCol(31, 45), g = getCol(46, 60), o = getCol(61, 75);
         n[2] = "FREE"; cardNumbers = [];
         for(let row=0; row<5; row++) cardNumbers.push(b[row], i[row], n[row], g[row], o[row]);
-        db.ref('users/'+auth.currentUser.uid).update({ currentCard: cardNumbers, hasWonCurrent: false, cardTimestamp: Date.now() });
+        
+        const now = Date.now();
+        if(userData) userData.cardTimestamp = now;
+
+        db.ref('users/'+auth.currentUser.uid).update({ 
+            currentCard: cardNumbers, 
+            hasWonCurrent: false, 
+            cardTimestamp: now 
+        });
         renderCard();
     }
 
