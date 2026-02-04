@@ -86,7 +86,8 @@
         .item-name { font-size: 24px; font-weight: 900; color: white; display: block; margin-top: 5px; }
         
         .camera-box { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 16px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.1); }
-        #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        /* BINAGO: Inalis ang transform: scaleX(-1) para hindi naka-mirror */
+        #webcam { width: 100%; height: 100%; object-fit: cover; }
         .scan-overlay { position: absolute; inset: 0; border: 2px solid var(--accent); opacity: 0.3; pointer-events: none; border-radius: 16px; box-shadow: inset 0 0 50px var(--accent); display: none; }
         .ai-status { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 5px; }
 
@@ -428,14 +429,14 @@
         }
     }
 
-    // FIXED AI SCAN LOGIC WITH AUTO-REFRESH
+    // PINALAKAS NA DETECTION LOGIC (FIXED MIRROR SYNC)
     async function startAIScan() {
         if (!detector || !isCameraActive) return;
         const scanBtn = document.getElementById('scanBtn');
         const overlay = document.getElementById('scanOverlay');
         const video = document.getElementById('webcam');
         const status = document.getElementById('aiStatus');
-        const target = currentTargetItem.toLowerCase().trim();
+        const target = (currentTargetItem || "").toLowerCase().trim();
 
         if (target === "waiting for host..." || target === "") {
             alert("Hintayin muna ang item mula sa host!");
@@ -447,31 +448,34 @@
         overlay.style.display = 'block';
         lucide.createIcons();
 
-        // Perform multiple detections in a short burst for higher accuracy
         let found = false;
         let scanAttempts = 0;
-        const maxAttempts = 5; // Scan 5 frames rapidly
+        const maxAttempts = 10; // Mas maraming frames para mas accurate
 
         const checkFrame = async () => {
-            const predictions = await detector.detect(video);
-            // Higher sensitivity: Check if target exists in detected labels
-            const match = predictions.find(p => 
-                (p.class.toLowerCase().includes(target) || target.includes(p.class.toLowerCase())) 
-                && p.score > 0.45 // Balanced threshold
-            );
+            // BINAGO: Idinagdag ang flipHorizontal: false para magtugma sa normal camera view
+            const predictions = await detector.detect(video, { flipHorizontal: false });
+            
+            // PINALAKAS: Mas matalinong pag-match ng item name
+            const match = predictions.find(p => {
+                const label = p.class.toLowerCase();
+                return (label.includes(target) || target.includes(label)) && p.score > 0.40;
+            });
 
             if (match) {
                 found = true;
                 return true;
             }
             scanAttempts++;
-            if (scanAttempts < maxAttempts) return await checkFrame();
+            if (scanAttempts < maxAttempts) {
+                await new Promise(r => setTimeout(r, 100)); // Maikling delay bago ang susunod na frame
+                return await checkFrame();
+            }
             return false;
         };
 
         await checkFrame();
 
-        // AUTO-REFRESH LOGIC: Mabilis na feedback para makapag-scan ulit agad
         setTimeout(() => {
             overlay.style.display = 'none';
             scanBtn.disabled = false;
@@ -483,13 +487,11 @@
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                 status.innerHTML = `<i data-lucide="check-circle" style="color:var(--success)"></i> ITEM FOUND!`;
             } else {
-                // Auto-refresh feedback
                 status.innerHTML = `<i data-lucide="alert-circle" style="color:var(--danger)"></i> Not found. Try again!`;
-                // Reset status after 1.5s so they can see they can scan again
                 setTimeout(() => {
                     status.innerHTML = `<i data-lucide="cpu" style="width:12px"></i> AI Ready`;
                     lucide.createIcons();
-                }, 1500);
+                }, 2000);
             }
         }, 800);
     }
