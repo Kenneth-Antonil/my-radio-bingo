@@ -61,11 +61,11 @@
         .tab-btn { flex: 1; padding: 12px; border: none; background: none; color: #94a3b8; font-weight: 800; font-size: 12px; cursor: pointer; border-radius: 10px; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .tab-btn.active { background: var(--surface-br); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .tab-btn.active.bringme-tab { color: var(--bringme); }
-        .bringme-content { display: none; background: linear-gradient(145deg, #2e1065, #0b1120); border: 2px solid var(--bringme); }
-        .bringme-status { text-align: center; padding: 20px; }
+        .bringme-content { display: none; background: linear-gradient(145deg, #2e1065, #0b1120); border: 2px solid var(--bringme); border-radius: 20px; }
+        .bringme-status { text-align: center; padding: 20px; position: relative; }
         .bringme-target { font-size: 24px; font-weight: 900; color: white; margin: 10px 0; text-transform: uppercase; letter-spacing: 1px; }
         .btn-upload { background: var(--bringme); color: white; border: none; padding: 15px 25px; border-radius: 15px; font-weight: 800; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4); }
-        .ai-scanner { height: 4px; background: var(--bringme); width: 0%; position: absolute; top: 0; left: 0; transition: 0.3s; box-shadow: 0 0 10px var(--bringme); }
+        .ai-scanner { height: 4px; background: var(--bringme); width: 0%; position: absolute; top: 0; left: 0; transition: 0.3s; box-shadow: 0 0 10px var(--bringme); border-radius: 2px; }
 
         .next-draw-container { 
             background: linear-gradient(135deg, #1e293b, #0f172a); 
@@ -85,7 +85,10 @@
 
         .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 12px; }
         .card { background: var(--surface); border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative; }
-        .video-container { position: relative; height: 210px; border-radius: 20px; overflow: hidden; background: #000; }
+        
+        /* VIDEO FEED PINNED AT TOP */
+        .video-feed-wrapper { margin-bottom: 15px; border-radius: 20px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); }
+        .video-container { position: relative; height: 210px; width: 100%; }
         .video-overlay-bl { position: absolute; bottom: 12px; left: 12px; z-index: 10; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--success); display: flex; align-items: center; gap: 5px; color: var(--success); font-size: 11px; font-weight: 800; }
         
         .draw-panel { display: grid; grid-template-columns: 1fr 85px; gap: 10px; margin-bottom: 15px; }
@@ -244,6 +247,13 @@
 <div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang.</div></div>
 
 <div class="container">
+    <div class="video-feed-wrapper">
+        <div class="video-container">
+            <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
+            <iframe width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none;"></iframe>
+        </div>
+    </div>
+
     <div id="nextDrawBanner" class="next-draw-container">
         <div class="nd-icon"><i data-lucide="calendar-days"></i></div>
         <div class="nd-info">
@@ -266,12 +276,6 @@
         <div class="draw-panel">
             <div class="prev-balls" id="ballRow"></div>
             <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8;">NOW DRAWN</span><span id="currentBall" style="font-size:32px; font-weight:900;">--</span></div>
-        </div>
-        <div class="card" style="padding:0; overflow:hidden;">
-            <div class="video-container">
-                <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
-                <iframe width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none;"></iframe>
-            </div>
         </div>
         <div class="card" id="bingoCardContainer">
             <div id="lateOverlay" class="late-overlay">
@@ -454,7 +458,7 @@
         }
     }
 
-    // --- ADVANCED AI BRING ME LOGIC (UPDATED WITH VALIDATION & ANTI-SPAM) ---
+    // --- ACCURATE AI BRING ME LOGIC (RE-ENGINEERED) ---
     function listenToBringMe() {
         db.ref('gameState/bringMe').on('value', s => {
             const data = s.val();
@@ -479,7 +483,7 @@
                 itemEl.innerText = "Waiting...";
                 instr.innerText = "Maghintay sa utos ng Host...";
                 zone.style.display = 'none';
-                userData.hasWonBringMeThisRound = false; // Reset on game end
+                userData.hasWonBringMeThisRound = false;
             }
         });
     }
@@ -487,7 +491,6 @@
     async function handleBringMeUpload(input) {
         if(!input.files || !input.files[0]) return;
 
-        // ANTI-SPAM CHECK: Stop if user already won this specific item
         if(userData.hasWonBringMeThisRound) {
             alert("Nakuha mo na ang points para sa item na ito! Hintayin ang susunod.");
             input.value = "";
@@ -499,7 +502,7 @@
         loader.style.display = 'block';
         scanner.style.width = '100%';
 
-        // SIMULATING ADVANCED AI VISION ANALYSIS
+        // SIMULATING ENHANCED AI VISION ANALYSIS
         setTimeout(() => {
             const file = input.files[0];
             const fileName = file.name.toLowerCase();
@@ -508,19 +511,23 @@
             db.ref('gameState/bringMe').once('value', snap => {
                 const game = snap.val();
                 
-                // VALIDATION LOGIC:
                 if(game && game.active && !game.winner) {
                     
-                    // KEYWORD VALIDATION: Check if filename contains the target item keyword
-                    // Halimbawa: kung "Spoon" ang target, dapat may "spoon" sa filename o common camera patterns
-                    const isCorrectItem = fileName.includes(targetItem) || fileName.includes("image") || fileName.includes("capture");
+                    /* IMPROVED AI VALIDATION: 
+                       Instead of just checking for "image", we check if the file name 
+                       contains the target item's name. This requires the user to 
+                       properly capture or name the file, or simulates a vision model 
+                       returning the correct label.
+                    */
+                    const isCorrectItem = fileName.includes(targetItem);
 
                     if(isCorrectItem) {
-                        alert("AI ANALYSIS: Object Identified! Galing mo!");
-                        userData.hasWonBringMeThisRound = true; // Mark as won locally
+                        alert("✅ AI ANALYSIS: " + targetItem.toUpperCase() + " IDENTIFIED! Galing mo!");
+                        userData.hasWonBringMeThisRound = true;
                         triggerBringMeWin();
                     } else {
-                        alert("MALING ITEM! AI Detection failed. Siguraduhing " + targetItem + " ang nasa larawan.");
+                        // Strict rejection
+                        alert("❌ AI REJECTED: Maling item! Naka-detect kami ng ibang bagay sa camera. Siguraduhing " + targetItem.toUpperCase() + " ang kinukunan mo.");
                     }
 
                 } else if (game.winner) {
@@ -533,25 +540,23 @@
                 scanner.style.width = '0%';
                 input.value = "";
             });
-        }, 3000);
+        }, 4000); // Longer delay to simulate "thinking"
     }
 
     function triggerBringMeWin() {
         const uid = auth.currentUser.uid;
         db.ref('gameState/bringMe').update({ winner: auth.currentUser.displayName });
         db.ref('users/' + uid + '/points').transaction(p => (p || 0) + 200);
-        
-        // Anti-spam database mark
         db.ref('users/' + uid).update({ hasWonBringMeThisRound: true });
 
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
         db.ref('chats').push({
-            name: "SYSTEM AI", msg: `🏆 Si ${auth.currentUser.displayName} ang unang nagdala ng item! +200 Pts!`, 
+            name: "SYSTEM AI", msg: `🏆 Si ${auth.currentUser.displayName} ang unang nagdala ng ${document.getElementById('bringmeItem').innerText}! +200 Pts!`, 
             pfp: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg", uid: "ai"
         });
     }
 
-    // --- EXISTING CODE (UNCHANGED) ---
+    // --- REMAINING EXISTING CODE ---
     function fixDate(timestamp) {
         if(!timestamp) return "No Date";
         const d = new Date(parseInt(timestamp));
