@@ -455,8 +455,8 @@
 
                     userRef.set({
                         name: u.displayName, photo: u.photoURL, points: 100, refCode: newRefCode,
-                        referredBy: referredBy || null, last_seen: Date.now(), cardTimestamp: Date.now(),
-                        lastLoginDate: new Date().toDateString() // Bonus tracker
+                        referredBy: referredBy || null, last_seen: Date.now(), cardTimestamp: 0,
+                        lastLoginDate: new Date().toDateString()
                     });
 
                     if (referredBy) {
@@ -470,20 +470,13 @@
                 } else {
                     const data = snapshot.val();
                     const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL };
-                    
-                    // EVERYDAY BONUS LOGIC
                     const today = new Date().toDateString();
                     if (data.lastLoginDate !== today) {
                         updates.points = (data.points || 0) + 50;
                         updates.lastLoginDate = today;
                         alert("🎁 Daily Bonus! Nakatanggap ka ng 50 points sa pag-login ngayong araw.");
                     }
-
                     if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    
-                    // FIXED: Only set timestamp if it doesn't exist yet to avoid blocking existing players
-                    if (!data.cardTimestamp) updates.cardTimestamp = Date.now(); 
-                    
                     userRef.update(updates);
                 }
             });
@@ -494,10 +487,8 @@
                     document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
                     document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString();
                     document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || "");
-                    
                     if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none';
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
-                    
                     if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
                     checkLateJoiner();
                 }
@@ -509,14 +500,12 @@
     function setupPresence(uid) {
         const onlineRef = db.ref('.info/connected');
         const userStatusRef = db.ref('status/' + uid);
-
         onlineRef.on('value', (snapshot) => {
             if (snapshot.val() === false) return;
             userStatusRef.onDisconnect().remove().then(() => {
                 userStatusRef.set({ state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP });
             });
         });
-
         db.ref('status').on('value', (s) => {
             document.getElementById('onlineCount').innerText = s.numChildren() || 0;
         });
@@ -527,14 +516,11 @@
             const nextDrawVal = s.val();
             const banner = document.getElementById('nextDrawBanner');
             const timeEl = document.getElementById('nextDrawTime');
-
             if(nextDrawVal) {
                 banner.style.display = 'flex';
                 timeEl.innerText = isNaN(nextDrawVal) ? nextDrawVal : fixDate(nextDrawVal);
                 checkNotificationTime(nextDrawVal);
-            } else {
-                banner.style.display = 'none';
-            }
+            } else { banner.style.display = 'none'; }
         });
     }
 
@@ -568,23 +554,20 @@
             const patternLine = document.getElementById('winnerPatternLine');
             const cardCont = document.getElementById('bingoCardContainer');
             const gameOverlay = document.getElementById('gameOverOverlay');
-
             if(win && win.name) {
                 banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`;
                 patternLine.innerText = `Pattern Won: ${currentPattern}`;
                 banner.style.display = 'block';
-
                 if(win.uid === auth.currentUser.uid) { 
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); 
                     cardCont.classList.add('card-win');
                     cardCont.classList.remove('card-lost');
-                    gameOverlay.style.display = 'none'; // Wag i-overlay kung sya nanalo
+                    gameOverlay.style.display = 'none';
                     applyWinGlowToCurrentCard();
                 } else {
-                    // KUNG IBA ANG NANALO
                     cardCont.classList.add('card-lost');
                     cardCont.classList.remove('card-win');
-                    gameOverlay.style.display = 'flex'; // Ipakita ang "Bawi next draw"
+                    gameOverlay.style.display = 'flex';
                     document.getElementById('gameOverMsg').innerText = `${win.name.toUpperCase()} wins! Bawi next draw.`;
                 }
             } else { 
@@ -608,17 +591,13 @@
     function checkWin() {
         if(userData.hasWonCurrent || gameDrawn.length === 0) return;
         if(document.getElementById('lateOverlay').style.display === 'flex') return;
-        
-        // Dagdag check: kung may nanalo na sa system, wag na mag check
         db.ref('gameState/latestWinner').once('value', snap => {
             if(snap.exists()) return;
-
             let winningWays = [];
             if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; }
             else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; }
             else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; }
             else { winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; }
-            
             for(let w of winningWays) { 
                 if(w.every(i => marks.includes(i))) { 
                     w.forEach(idx => { const el = document.getElementById('c-'+idx); if(el) el.classList.add('win-glow'); });
@@ -644,8 +623,6 @@
                 db.ref('gameState/latestWinner').set({ name: auth.currentUser.displayName, uid: auth.currentUser.uid, time: Date.now() });
                 db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
                 db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
-                
-                // Audio or Vibration placeholder if needed
                 if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
             }
         });
@@ -653,20 +630,17 @@
 
     function checkLateJoiner() {
         const overlay = document.getElementById('lateOverlay');
-        
-        // FIXED: Hindi lalabas ang overlay kung walang bola sa board.
+        // KUNG WALANG BOLA, HINDI LATE.
         if (!gameDrawn || gameDrawn.length === 0) {
             overlay.style.display = 'none';
             return;
         }
-
         db.ref('gameState/gameStartTime').once('value', s => {
             const startTime = s.val() || 0;
-            // FIXED: Gamitin ang current card timestamp ng user.
             const cardTime = (userData && userData.cardTimestamp) ? userData.cardTimestamp : 0;
-
-            // Kung nagsimula na ang draw at ang card ay ginawa/ni-refresh PAGKATAPOS ng start time, LATE sila.
-            if(gameDrawn.length > 0 && cardTime > startTime) { 
+            // FIXED LOGIC: Kung ang card ay nilikha PAGKATAPOS lumabas ang unang bola (gameStartTime), saka lang mag-overlay.
+            // Kung ang cardTime ay 0 (old user), papayagan muna.
+            if(gameDrawn.length > 0 && cardTime > startTime && startTime !== 0 && cardTime !== 0) { 
                 overlay.style.display = 'flex'; 
             } else { 
                 overlay.style.display = 'none'; 
@@ -693,13 +667,12 @@
         n[2] = "FREE"; cardNumbers = [];
         for(let row=0; row<5; row++) cardNumbers.push(b[row], i[row], n[row], g[row], o[row]);
         
+        // Kapag nag generate ng card habang wala pang bola, ang cardTimestamp ay itatakda sa 1 para hindi mag-trigger ang late joiner logic.
         const now = Date.now();
-        if(userData) userData.cardTimestamp = now;
-
         db.ref('users/'+auth.currentUser.uid).update({ 
             currentCard: cardNumbers, 
             hasWonCurrent: false, 
-            cardTimestamp: now 
+            cardTimestamp: now
         });
         renderCard();
     }
@@ -717,31 +690,16 @@
         [...gameDrawn].reverse().slice(1,10).forEach(n => { const b = document.createElement('div'); b.className = 'ball-small'; b.innerText = n; row.appendChild(b); });
     }
 
-    // UPDATED PROFESSIONAL CHAT FUNCTIONS
     function setupChat() {
-        db.ref('chats').limitToLast(25).on('child_added', s => {
-            renderChatMessage(s.key, s.val());
-        });
-
-        // Listen for like updates
+        db.ref('chats').limitToLast(25).on('child_added', s => { renderChatMessage(s.key, s.val()); });
         db.ref('chats').on('child_changed', s => {
             const likeCountEl = document.getElementById(`likes-${s.key}`);
             if(likeCountEl) likeCountEl.innerText = Object.keys(s.val().likes || {}).length;
-            
-            // Re-render replies if any
             if(s.val().replies) {
                 const replyBox = document.getElementById(`replies-${s.key}`);
                 replyBox.innerHTML = "";
                 Object.values(s.val().replies).forEach(r => {
-                    replyBox.innerHTML += `
-                        <div class="reply-item">
-                            <img src="${r.pfp}" class="reply-pfp">
-                            <div class="reply-bubble">
-                                <b style="font-size:10px; color:var(--accent); display:block;">${r.name}</b>
-                                <span style="font-size:12px;">${r.msg}</span>
-                            </div>
-                        </div>
-                    `;
+                    replyBox.innerHTML += `<div class="reply-item"><img src="${r.pfp}" class="reply-pfp"><div class="reply-bubble"><b style="font-size:10px; color:var(--accent); display:block;">${r.name}</b><span style="font-size:12px;">${r.msg}</span></div></div>`;
                 });
             }
         });
@@ -751,47 +709,17 @@
         const list = document.getElementById('chatList');
         const likes = c.likes ? Object.keys(c.likes).length : 0;
         const isLiked = c.likes && c.likes[auth.currentUser.uid] ? 'liked' : '';
-        
         const row = document.createElement('div');
         row.className = 'chat-row';
         row.id = `msg-${id}`;
-        
-        row.innerHTML = `
-            <img src="${c.pfp}" class="chat-pfp">
-            <div class="chat-content">
-                <div class="bubble">
-                    <span class="chat-name">${c.name} ${c.uid === auth.currentUser.uid ? '<small style="opacity:0.5">(You)</small>' : ''}</span>
-                    <span class="chat-text">${c.msg}</span>
-                </div>
-                <div class="chat-actions">
-                    <button class="action-btn ${isLiked}" onclick="likeChat('${id}')">
-                        <i data-lucide="heart" style="width:12px"></i> <span id="likes-${id}">${likes}</span>
-                    </button>
-                    <button class="action-btn" onclick="setReply('${id}', '${c.name}')">
-                        <i data-lucide="message-circle" style="width:12px"></i> Reply
-                    </button>
-                </div>
-                <div class="reply-box" id="replies-${id}"></div>
-            </div>
-        `;
-        
+        row.innerHTML = `<img src="${c.pfp}" class="chat-pfp"><div class="chat-content"><div class="bubble"><span class="chat-name">${c.name} ${c.uid === auth.currentUser.uid ? '<small style="opacity:0.5">(You)</small>' : ''}</span><span class="chat-text">${c.msg}</span></div><div class="chat-actions"><button class="action-btn ${isLiked}" onclick="likeChat('${id}')"><i data-lucide="heart" style="width:12px"></i> <span id="likes-${id}">${likes}</span></button><button class="action-btn" onclick="setReply('${id}', '${c.name}')"><i data-lucide="message-circle" style="width:12px"></i> Reply</button></div><div class="reply-box" id="replies-${id}"></div></div>`;
         list.appendChild(row);
         lucide.createIcons();
         list.scrollTop = list.scrollHeight;
-
-        // Render existing replies
         if(c.replies) {
             const replyBox = document.getElementById(`replies-${id}`);
             Object.values(c.replies).forEach(r => {
-                replyBox.innerHTML += `
-                    <div class="reply-item">
-                        <img src="${r.pfp}" class="reply-pfp">
-                        <div class="reply-bubble">
-                            <b style="font-size:10px; color:var(--accent); display:block;">${r.name}</b>
-                            <span style="font-size:12px;">${r.msg}</span>
-                        </div>
-                    </div>
-                `;
+                replyBox.innerHTML += `<div class="reply-item"><img src="${r.pfp}" class="reply-pfp"><div class="reply-bubble"><b style="font-size:10px; color:var(--accent); display:block;">${r.name}</b><span style="font-size:12px;">${r.msg}</span></div></div>`;
             });
         }
     }
@@ -799,10 +727,7 @@
     function likeChat(id) {
         const uid = auth.currentUser.uid;
         const likeRef = db.ref(`chats/${id}/likes/${uid}`);
-        likeRef.once('value', s => {
-            if(s.exists()) likeRef.remove();
-            else likeRef.set(true);
-        });
+        likeRef.once('value', s => { if(s.exists()) likeRef.remove(); else likeRef.set(true); });
     }
 
     function setReply(id, name) {
@@ -821,24 +746,11 @@
         const inp = document.getElementById('chatIn');
         const msg = inp.value.trim();
         if(!msg) return;
-
         if(selectedReplyId) {
-            db.ref(`chats/${selectedReplyId}/replies`).push({
-                uid: auth.currentUser.uid,
-                name: auth.currentUser.displayName,
-                pfp: auth.currentUser.photoURL,
-                msg: msg,
-                time: Date.now()
-            });
+            db.ref(`chats/${selectedReplyId}/replies`).push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() });
             cancelReply();
         } else {
-            db.ref('chats').push({
-                uid: auth.currentUser.uid,
-                name: auth.currentUser.displayName,
-                pfp: auth.currentUser.photoURL,
-                msg: msg,
-                time: Date.now()
-            });
+            db.ref('chats').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() });
         }
         inp.value = "";
     }
@@ -890,26 +802,17 @@
         document.getElementById('menuModal').style.display = 'flex';
         const hist = document.getElementById('historyList');
         hist.innerHTML = "<div style='font-size:12px; opacity:0.5; padding:10px;'>Loading transactions...</div>";
-        
         db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => {
             hist.innerHTML = "";
             if(!s.exists()) { hist.innerHTML = "<div style='font-size:11px; opacity:0.5; text-align:center; padding:20px;'>No history yet</div>"; return; }
-            
             let redemptions = [];
             s.forEach(child => { redemptions.push(child.val()); });
             redemptions.sort((a,b) => (b.time || b.timestamp) - (a.time || a.timestamp));
-
             redemptions.forEach(v => {
                 const item = document.createElement('div');
                 item.className = 'history-item';
                 const statusClass = v.status === 'pending' ? 'status-pending' : 'status-completed';
-                item.innerHTML = `
-                    <div class="hist-main">
-                        <span class="hist-title">${v.item}</span>
-                        <span class="hist-date">${fixDate(v.time || v.timestamp)}</span>
-                    </div>
-                    <span class="hist-status ${statusClass}">${v.status}</span>
-                `;
+                item.innerHTML = `<div class="hist-main"><span class="hist-title">${v.item}</span><span class="hist-date">${fixDate(v.time || v.timestamp)}</span></div><span class="hist-status ${statusClass}">${v.status}</span>`;
                 hist.appendChild(item);
             });
             lucide.createIcons();
