@@ -120,178 +120,185 @@
         <div class="card">
             <h2 style="display: flex; align-items: center;">
                 <i data-lucide="users"></i> Online Players 
-                <span id="onlineCounter" class="online-badge">0 Online</span>
+                <span id="onlineCounter" class="online-badge">0</span>
             </h2>
-            <div class="players-grid" id="playersGrid"></div>
+            <div id="playersGrid" class="players-grid"></div>
         </div>
 
-        <div class="card chat-monitor">
-            <h2><i data-lucide="message-circle"></i> Live Chat</h2>
-            <div id="chatList"></div>
-            <h2 style="margin-top:20px;"><i data-lucide="banknote"></i> Payout Queue</h2>
-            <div id="payoutList" class="payout-card"></div>
+        <div style="display:flex; flex-direction:column; gap:15px;">
+            <div class="card payout-card">
+                <h2><i data-lucide="wallet"></i> Payout Requests</h2>
+                <div id="payoutList"></div>
+            </div>
+
+            <div class="card chat-monitor">
+                <h2><i data-lucide="message-square"></i> Live Chat</h2>
+                <div id="chatList"></div>
+            </div>
         </div>
     </div>
 
-<script>
-    lucide.createIcons();
-    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app" };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    
-    let currentWinnerUID = "";
+    <script>
+        // PAALALA: Ilagay ang iyong Firebase Config dito
+        const firebaseConfig = {
+            apiKey: "AIzaSy...",
+            authDomain: "your-app.firebaseapp.com",
+            databaseURL: "https://your-app-default-rtdb.firebaseio.com",
+            projectId: "your-app",
+            storageBucket: "your-app.appspot.com",
+            messagingSenderId: "...",
+            appId: "..."
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-    function setTargetItem() {
-        // BINASA ANG INPUT IMBES NA SELECT
-        const item = document.getElementById('itemInput').value.trim().toLowerCase();
-        if(!item) return alert("Maglagay ng item name!");
-        
-        db.ref('gameState').update({
-            targetItem: item,
-            latestWinner: null
-        }).then(() => {
-            alert("New Item Set: " + item.toUpperCase());
-            db.ref('notifications').push({ 
-                title: "BRING ME! 📢", 
-                body: `Hanapin at i-scan ang: ${item.toUpperCase()}!`, 
-                timestamp: firebase.database.ServerValue.TIMESTAMP 
+        // 1. GAME CONTROL UPDATES
+        function setTargetItem() {
+            const item = document.getElementById('itemInput').value.toLowerCase().trim();
+            if(!item) return alert("Enter item name!");
+            db.ref('gameState').set({
+                targetItem: item,
+                winner: null,
+                status: 'active',
+                startTime: Date.now()
             });
-            document.getElementById('itemInput').value = ""; // Clear input
-        });
-    }
-
-    function resetGame() {
-        if(confirm("Reset current round?")) {
-            db.ref('gameState/targetItem').set("Waiting for Host...");
-            db.ref('gameState/latestWinner').set(null);
+            document.getElementById('itemInput').value = "";
         }
-    }
 
-    function clearWinner() {
-        db.ref('gameState/latestWinner').set(null);
-    }
-
-    db.ref('gameState/targetItem').on('value', s => {
-        document.getElementById('currentItemDisplay').innerText = s.val() || "WAITING...";
-    });
-
-    db.ref('gameState/latestWinner').on('value', s => {
-        const winBox = document.getElementById('adminWinnerNotif');
-        if(s.exists()) {
-            currentWinnerUID = s.val().uid;
-            winBox.innerText = `WINNER DETECTED: ${s.val().name.toUpperCase()}`;
-            winBox.style.display = 'block';
-        } else {
-            currentWinnerUID = "";
-            winBox.style.display = 'none';
-        }
-        refreshPlayers();
-    });
-
-    function setSchedule() {
-        const timeVal = document.getElementById('scheduleTime').value;
-        if(!timeVal) return alert("Select a time first");
-        db.ref('gameState/nextDraw').set(new Date(timeVal).getTime());
-        alert("Schedule Saved!");
-    }
-
-    function notifyUpcoming() {
-        const timeVal = document.getElementById('scheduleTime').value;
-        if(!timeVal) return alert("No schedule set.");
-        db.ref('notifications').push({ 
-            title: "Next Round Starting! 🚀", 
-            body: `Magsisimula ang Bring Me Live sa ganitong oras: ${new Date(timeVal).toLocaleTimeString()}. Ready niyo na ang camera!`, 
-            timestamp: firebase.database.ServerValue.TIMESTAMP 
-        });
-    }
-
-    function sendGlobalNotif() {
-        const title = document.getElementById('notifTitle').value;
-        const message = document.getElementById('notifMsg').value;
-        if(!title || !message) return alert("Fill fields");
-        db.ref('notifications').push({ title, body: message, timestamp: firebase.database.ServerValue.TIMESTAMP });
-        document.getElementById('notifTitle').value = ""; 
-        document.getElementById('notifMsg').value = "";
-    }
-
-    function adjustPoints(type) {
-        let refInput = document.getElementById('targetRefCode').value.trim();
-        if(refInput.includes(" - ")) refInput = refInput.split(" - ")[1];
-        const amount = parseInt(document.getElementById('pointAmount').value);
-        if(!refInput || isNaN(amount)) return alert("Check inputs!");
-        db.ref('users').orderByChild('refCode').equalTo(refInput).once('value', snapshot => {
-            if(snapshot.exists()) {
-                const uid = Object.keys(snapshot.val())[0];
-                const change = type === 'add' ? amount : -amount;
-                db.ref('users/' + uid + '/points').transaction(c => (c || 0) + change);
-                alert("Updated points!");
+        function resetGame() {
+            if(confirm("Reset the round?")) {
+                db.ref('gameState').update({ targetItem: "WAITING...", winner: null, status: 'waiting' });
             }
+        }
+
+        function clearWinner() {
+            db.ref('gameState/winner').set(null);
+        }
+
+        db.ref('gameState').on('value', s => {
+            const data = s.val();
+            if(!data) return;
+            document.getElementById('currentItemDisplay').innerText = data.targetItem || "WAITING...";
+            document.getElementById('adminWinnerNotif').style.display = data.winner ? 'block' : 'none';
         });
-    }
 
-    function refreshPlayers() {
-        const threshold = Date.now() - (5 * 60 * 1000); 
-        db.ref('users').once('value', snapshot => {
-            const container = document.getElementById('playersGrid');
-            container.innerHTML = "";
-            let onlineCount = 0;
+        // 2. SCHEDULER & BROADCAST
+        function setSchedule() {
+            const time = document.getElementById('scheduleTime').value;
+            if(!time) return;
+            const ts = new Date(time).getTime();
+            db.ref('nextDraw').set(ts);
+            alert("Schedule saved!");
+        }
 
-            snapshot.forEach(child => {
-                const user = child.val();
-                const uid = child.key;
-                const isOnline = user.last_seen && user.last_seen > threshold;
-                if(isOnline) onlineCount++;
+        function notifyUpcoming() {
+            const title = "Incoming Round! 🎮";
+            const body = "Prepare your items, a new round is starting soon!";
+            db.ref('notifications').push({ title, body, uid: 'all', timestamp: Date.now() });
+        }
 
-                const card = document.createElement('div');
-                card.className = `player-mini-card ${uid === currentWinnerUID ? 'winner-glow' : ''}`;
-                card.innerHTML = `
-                    <div class="status-dot" style="background:${isOnline ? 'var(--success)' : '#4b5563'}"></div>
-                    <img src="${user.photo || user.photoURL || 'https://via.placeholder.com/50'}" class="player-pfp">
-                    <div style="font-size:11px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${user.name}</div>
-                    <div style="font-size:10px; color:var(--gold); font-weight:800; margin-top:4px;">${(user.points||0).toLocaleString()} Pts</div>
-                    <div style="font-size:9px; opacity:0.5; margin-top:4px;">ID: ${user.refCode || '---'}</div>
+        function sendGlobalNotif() {
+            const title = document.getElementById('notifTitle').value;
+            const body = document.getElementById('notifMsg').value;
+            if(!title || !body) return;
+            db.ref('notifications').push({ title, body, uid: 'all', timestamp: Date.now() });
+            alert("Broadcast sent!");
+            document.getElementById('notifTitle').value = "";
+            document.getElementById('notifMsg').value = "";
+        }
+
+        // 3. PLAYER MANAGEMENT (SYNCED)
+        db.ref('presence').on('value', s => {
+            const players = s.val() || {};
+            const grid = document.getElementById('playersGrid');
+            const list = document.getElementById('playerList');
+            grid.innerHTML = "";
+            list.innerHTML = "";
+            
+            let online = 0;
+            Object.keys(players).forEach(uid => {
+                const p = players[uid];
+                if(!p.online) return;
+                online++;
+
+                const div = document.createElement('div');
+                div.className = 'player-mini-card';
+                div.innerHTML = `
+                    <img src="${p.photo}" class="player-pfp">
+                    <div style="font-size:11px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name}</div>
+                    <div style="font-size:10px; color:var(--gold); font-weight:900;">${p.points || 0} PTS</div>
                 `;
-                container.appendChild(card);
+                grid.appendChild(div);
+
+                const opt = document.createElement('option');
+                opt.value = uid;
+                opt.innerText = p.name;
+                list.appendChild(opt);
             });
-            document.getElementById('onlineCounter').innerText = onlineCount + " Online";
+            document.getElementById('onlineCounter').innerText = online;
         });
-    }
 
-    db.ref('chats').limitToLast(15).on('child_added', s => {
-        const d = s.val();
-        const msg = document.createElement('div');
-        msg.className = 'chat-msg';
-        msg.innerHTML = `<b>${d.name}:</b> ${d.msg}`;
-        const list = document.getElementById('chatList');
-        list.appendChild(msg);
-        list.scrollTop = list.scrollHeight;
-    });
+        function adjustPoints(type) {
+            const uid = document.getElementById('targetRefCode').value;
+            const amt = parseInt(document.getElementById('pointAmount').value);
+            if(!uid || !amt) return;
+            
+            db.ref('users/' + uid + '/points').transaction(curr => {
+                return type === 'add' ? (curr || 0) + amt : (curr || 0) - amt;
+            });
+            alert("Points updated!");
+        }
 
-    db.ref('redemptions').on('value', snap => {
-        const list = document.getElementById('payoutList'); list.innerHTML = "";
-        snap.forEach(child => {
-            const r = child.val(); if(r.status !== 'pending') return;
-            const div = document.createElement('div'); div.className = 'chat-msg';
-            div.style.borderLeftColor = "var(--success)";
-            div.innerHTML = `<b>${r.item}</b> - ${r.name}<br><small>GCash: ${r.gcash}</small>
-                <div style="display:flex; gap:5px; margin-top:5px;">
-                    <button onclick="updateStatus('${child.key}', 'sent', ${JSON.stringify(r).replace(/"/g, '&quot;')})" style="background:var(--success); color:white; border:none; border-radius:4px; font-size:10px; padding:5px 10px; cursor:pointer;">PAID</button>
-                    <button onclick="updateStatus('${child.key}', 'denied', ${JSON.stringify(r).replace(/"/g, '&quot;')})" style="background:var(--danger); color:white; border:none; border-radius:4px; font-size:10px; padding:5px 10px; cursor:pointer;">X</button>
-                </div>`;
-            list.prepend(div);
+        // 4. REDEMPTION/PAYOUT SYNC
+        db.ref('redemptions').on('value', s => {
+            const list = document.getElementById('payoutList');
+            list.innerHTML = "";
+            s.forEach(child => {
+                const r = child.val();
+                if(r.status !== 'pending') return;
+
+                const div = document.createElement('div');
+                div.className = 'chat-msg';
+                div.style.borderLeftColor = "var(--success)";
+                div.innerHTML = `
+                    <b>${r.item}</b> - ${r.name}<br>
+                    <small>GCash: ${r.gcash}</small>
+                    <div style="display:flex; gap:5px; margin-top:5px;">
+                        <button onclick="updateStatus('${child.key}', 'completed', ${JSON.stringify(r).replace(/"/g, '&quot;')})" style="background:var(--success); color:white; border:none; border-radius:4px; font-size:10px; padding:5px 10px; cursor:pointer;">PAID</button>
+                        <button onclick="updateStatus('${child.key}', 'denied', ${JSON.stringify(r).replace(/"/g, '&quot;')})" style="background:var(--danger); color:white; border:none; border-radius:4px; font-size:10px; padding:5px 10px; cursor:pointer;">X</button>
+                    </div>
+                `;
+                list.prepend(div);
+            });
         });
-    });
 
-    function updateStatus(key, status, data) {
-        if(!confirm(`Mark as ${status}?`)) return;
-        db.ref('redemptions/' + key).update({ status });
-        const body = status === 'sent' ? `Your ${data.item} request is PAID! 💸` : `Your ${data.item} request was denied.`;
-        db.ref('notifications').push({ title: "Payout Update", body, uid: data.uid, timestamp: firebase.database.ServerValue.TIMESTAMP });
-        if(status === 'denied') db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost);
-    }
+        function updateStatus(key, status, data) {
+            if(!confirm(`Mark as ${status}?`)) return;
+            // Sync status sa user history
+            db.ref('redemptions/' + key).update({ status });
+            
+            const body = status === 'completed' ? `Your ${data.item} request is PAID! 💸` : `Your ${data.item} request was denied.`;
+            // Push sa new notifications system
+            db.ref('notifications').push({ 
+                title: "Payout Update", 
+                body, 
+                uid: data.uid, 
+                timestamp: Date.now() 
+            });
+        }
 
-    setInterval(refreshPlayers, 10000);
-    refreshPlayers();
-</script>
+        // 5. CHAT MONITOR
+        db.ref('chats').limitToLast(20).on('child_added', s => {
+            const m = s.val();
+            const list = document.getElementById('chatList');
+            const div = document.createElement('div');
+            div.className = 'chat-msg';
+            div.innerHTML = `<strong>${m.name}:</strong> ${m.text}`;
+            list.appendChild(div);
+            list.scrollTop = list.scrollHeight;
+        });
+
+        lucide.createIcons();
+    </script>
 </body>
 </html>
