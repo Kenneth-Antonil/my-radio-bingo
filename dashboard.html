@@ -53,10 +53,7 @@
 
         .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 20px; }
         .player-mini-card { background: var(--surface); border-radius: 12px; padding: 15px; border: 1px solid var(--surface-br); position: relative; text-align: center; }
-        .player-mini-card.winner-glow { border: 2px solid var(--success); box-shadow: 0 0 15px var(--success); }
         .player-pfp { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent); margin-bottom: 8px; }
-        
-        .status-dot { position: absolute; top: 10px; right: 10px; width: 10px; height: 10px; border-radius: 50%; }
         
         .payout-card { max-height: 400px; overflow-y: auto; }
         .online-badge { background: var(--success); color: white; padding: 2px 8px; border-radius: 20px; font-size: 10px; margin-left: 10px; }
@@ -74,8 +71,8 @@
             <div id="adminWinnerNotif">WINNER DETECTED!</div>
             <div class="current-item-display" id="currentItemDisplay">WAITING...</div>
             
-            <label style="font-size: 10px; font-weight: 800; display: block; margin-bottom: 5px; opacity: 0.7;">TYPE TARGET ITEM:</label>
-            <input type="text" id="itemInput" placeholder="Ex: cell phone, cup, bottle..." style="margin-bottom: 12px; font-weight: 700; text-align: center; text-transform: lowercase;">
+            <label style="font-size: 10px; font-weight: 800; display: block; margin-bottom: 5px; opacity: 0.7;">TYPE TARGET ITEM (Any Object):</label>
+            <input type="text" id="itemInput" placeholder="Ex: mobile phone, bottle, remote..." style="margin-bottom: 12px; font-weight: 700; text-align: center;">
 
             <button class="btn-set" onclick="setTargetItem()">START NEW ROUND</button>
             
@@ -85,16 +82,13 @@
             </div>
         </div>
 
-        <div class="card scheduler-box">
+        <div class="card">
             <h2><i data-lucide="calendar-clock"></i> Round Scheduler</h2>
             <input type="datetime-local" id="scheduleTime">
-            
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
                 <button onclick="setSchedule()" style="background:var(--accent); color:white; border:none; padding:10px; border-radius:10px; font-weight:800; cursor:pointer; font-size:11px;">SAVE TIME</button>
                 <button onclick="notifyUpcoming()" style="background:var(--gold); color:black; border:none; padding:10px; border-radius:10px; font-weight:800; cursor:pointer; font-size:11px;">NOTIFY ALL</button>
             </div>
-            
-            <div id="countdownDisplay" style="font-size:11px; font-weight:bold; color:var(--gold); margin-top:5px; text-align:center;">No schedule set.</div>
         </div>
 
         <div class="card">
@@ -106,8 +100,7 @@
 
         <div class="card">
             <h2><i data-lucide="coins"></i> Point Manager</h2>
-            <input type="text" id="targetRefCode" list="playerList" placeholder="Search Player">
-            <datalist id="playerList"></datalist>
+            <input type="text" id="targetUid" placeholder="Player UID">
             <input type="number" id="pointAmount" placeholder="Amount">
             <div style="display:flex; gap:8px;">
                 <button onclick="adjustPoints('add')" style="flex:1; background:var(--success); color:white; border:none; padding:10px; border-radius:10px; font-weight:800; cursor:pointer;">ADD</button>
@@ -119,7 +112,7 @@
     <div class="main-layout">
         <div class="card">
             <h2 style="display: flex; align-items: center;">
-                <i data-lucide="users"></i> Online Players 
+                <i data-lucide="users"></i> Players
                 <span id="onlineCounter" class="online-badge">0</span>
             </h2>
             <div id="playersGrid" class="players-grid"></div>
@@ -130,7 +123,6 @@
                 <h2><i data-lucide="wallet"></i> Payout Requests</h2>
                 <div id="payoutList"></div>
             </div>
-
             <div class="card chat-monitor">
                 <h2><i data-lucide="message-square"></i> Live Chat</h2>
                 <div id="chatList"></div>
@@ -139,64 +131,48 @@
     </div>
 
     <script>
-        // PAALALA: Ilagay ang iyong Firebase Config dito
+        // Pakisiguro na ang Firebase Config dito ay tugma sa iyong index.html
         const firebaseConfig = {
-            apiKey: "AIzaSy...",
-            authDomain: "your-app.firebaseapp.com",
-            databaseURL: "https://your-app-default-rtdb.firebaseio.com",
-            projectId: "your-app",
-            storageBucket: "your-app.appspot.com",
-            messagingSenderId: "...",
-            appId: "..."
+            apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
+            authDomain: "radiobingo-9ac29.firebaseapp.com",
+            databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "radiobingo-9ac29",
+            storageBucket: "radiobingo-9ac29.firebasestorage.app",
+            messagingSenderId: "965903993397",
+            appId: "1:965903993397:web:f6646fa05225f147eebf7c"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // 1. GAME CONTROL UPDATES
+        // UPDATE: Sync target item sa MobileNet capability
         function setTargetItem() {
             const item = document.getElementById('itemInput').value.toLowerCase().trim();
             if(!item) return alert("Enter item name!");
-            db.ref('gameState').set({
-                targetItem: item,
-                winner: null,
-                status: 'active',
-                startTime: Date.now()
-            });
+            db.ref('gameState/targetItem').set(item);
+            db.ref('gameState/latestWinner').remove(); // Clear previous winner
             document.getElementById('itemInput').value = "";
         }
 
         function resetGame() {
-            if(confirm("Reset the round?")) {
-                db.ref('gameState').update({ targetItem: "WAITING...", winner: null, status: 'waiting' });
+            if(confirm("Reset current round?")) {
+                db.ref('gameState/targetItem').set("Waiting for Host...");
+                db.ref('gameState/latestWinner').remove();
             }
         }
 
         function clearWinner() {
-            db.ref('gameState/winner').set(null);
+            db.ref('gameState/latestWinner').remove();
         }
 
-        db.ref('gameState').on('value', s => {
-            const data = s.val();
-            if(!data) return;
-            document.getElementById('currentItemDisplay').innerText = data.targetItem || "WAITING...";
-            document.getElementById('adminWinnerNotif').style.display = data.winner ? 'block' : 'none';
+        db.ref('gameState/targetItem').on('value', s => {
+            document.getElementById('currentItemDisplay').innerText = s.val() || "WAITING...";
         });
 
-        // 2. SCHEDULER & BROADCAST
-        function setSchedule() {
-            const time = document.getElementById('scheduleTime').value;
-            if(!time) return;
-            const ts = new Date(time).getTime();
-            db.ref('nextDraw').set(ts);
-            alert("Schedule saved!");
-        }
+        db.ref('gameState/latestWinner').on('value', s => {
+            document.getElementById('adminWinnerNotif').style.display = s.exists() ? 'block' : 'none';
+        });
 
-        function notifyUpcoming() {
-            const title = "Incoming Round! 🎮";
-            const body = "Prepare your items, a new round is starting soon!";
-            db.ref('notifications').push({ title, body, uid: 'all', timestamp: Date.now() });
-        }
-
+        // NOTIFICATIONS SYNC
         function sendGlobalNotif() {
             const title = document.getElementById('notifTitle').value;
             const body = document.getElementById('notifMsg').value;
@@ -207,49 +183,24 @@
             document.getElementById('notifMsg').value = "";
         }
 
-        // 3. PLAYER MANAGEMENT (SYNCED)
-        db.ref('presence').on('value', s => {
-            const players = s.val() || {};
-            const grid = document.getElementById('playersGrid');
-            const list = document.getElementById('playerList');
-            grid.innerHTML = "";
-            list.innerHTML = "";
-            
-            let online = 0;
-            Object.keys(players).forEach(uid => {
-                const p = players[uid];
-                if(!p.online) return;
-                online++;
-
-                const div = document.createElement('div');
-                div.className = 'player-mini-card';
-                div.innerHTML = `
-                    <img src="${p.photo}" class="player-pfp">
-                    <div style="font-size:11px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name}</div>
-                    <div style="font-size:10px; color:var(--gold); font-weight:900;">${p.points || 0} PTS</div>
-                `;
-                grid.appendChild(div);
-
-                const opt = document.createElement('option');
-                opt.value = uid;
-                opt.innerText = p.name;
-                list.appendChild(opt);
+        function notifyUpcoming() {
+            db.ref('notifications').push({ 
+                title: "Incoming Round!", 
+                body: "Handa na ba ang inyong mga gamit? Magsisimula na ang susunod na round!", 
+                uid: 'all', 
+                timestamp: Date.now() 
             });
-            document.getElementById('onlineCounter').innerText = online;
-        });
-
-        function adjustPoints(type) {
-            const uid = document.getElementById('targetRefCode').value;
-            const amt = parseInt(document.getElementById('pointAmount').value);
-            if(!uid || !amt) return;
-            
-            db.ref('users/' + uid + '/points').transaction(curr => {
-                return type === 'add' ? (curr || 0) + amt : (curr || 0) - amt;
-            });
-            alert("Points updated!");
         }
 
-        // 4. REDEMPTION/PAYOUT SYNC
+        function setSchedule() {
+            const time = document.getElementById('scheduleTime').value;
+            if(!time) return;
+            const formattedTime = new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            db.ref('gameState/nextDraw').set(formattedTime);
+            alert("Time set to: " + formattedTime);
+        }
+
+        // REDEMPTION SYNC
         db.ref('redemptions').on('value', s => {
             const list = document.getElementById('payoutList');
             list.innerHTML = "";
@@ -265,7 +216,7 @@
                     <small>GCash: ${r.gcash}</small>
                     <div style="display:flex; gap:5px; margin-top:5px;">
                         <button onclick="updateStatus('${child.key}', 'completed', ${JSON.stringify(r).replace(/"/g, '&quot;')})" style="background:var(--success); color:white; border:none; border-radius:4px; font-size:10px; padding:5px 10px; cursor:pointer;">PAID</button>
-                        <button onclick="updateStatus('${child.key}', 'denied', ${JSON.stringify(r).replace(/"/g, '&quot;')})" style="background:var(--danger); color:white; border:none; border-radius:4px; font-size:10px; padding:5px 10px; cursor:pointer;">X</button>
+                        <button onclick="updateStatus('${child.key}', 'denied', ${JSON.stringify(r).replace(/"/g, '&quot;')})" style="background:var(--danger); color:white; border:none; border-radius:4px; font-size:10px; padding:5px 10px; cursor:pointer;">DENY</button>
                     </div>
                 `;
                 list.prepend(div);
@@ -274,26 +225,54 @@
 
         function updateStatus(key, status, data) {
             if(!confirm(`Mark as ${status}?`)) return;
-            // Sync status sa user history
-            db.ref('redemptions/' + key).update({ status });
+            db.ref('redemptions/' + key).update({ status: status });
             
-            const body = status === 'completed' ? `Your ${data.item} request is PAID! 💸` : `Your ${data.item} request was denied.`;
-            // Push sa new notifications system
+            const msg = status === 'completed' ? `Your ${data.item} request is PAID! 💸` : `Your ${data.item} request was denied.`;
             db.ref('notifications').push({ 
                 title: "Payout Update", 
-                body, 
+                body: msg, 
                 uid: data.uid, 
                 timestamp: Date.now() 
             });
         }
 
-        // 5. CHAT MONITOR
-        db.ref('chats').limitToLast(20).on('child_added', s => {
+        // PLAYER MONITOR
+        db.ref('users').on('value', s => {
+            const grid = document.getElementById('playersGrid');
+            grid.innerHTML = "";
+            let count = 0;
+            s.forEach(child => {
+                const p = child.val();
+                count++;
+                const div = document.createElement('div');
+                div.className = 'player-mini-card';
+                div.innerHTML = `
+                    <img src="${p.photo || ''}" class="player-pfp">
+                    <div style="font-size:10px; font-weight:800;">${p.name || 'User'}</div>
+                    <div style="font-size:10px; color:var(--gold); font-weight:900;">${(p.points || 0).toLocaleString()} PTS</div>
+                `;
+                grid.appendChild(div);
+            });
+            document.getElementById('onlineCounter').innerText = count;
+        });
+
+        function adjustPoints(type) {
+            const uid = document.getElementById('targetUid').value;
+            const amt = parseInt(document.getElementById('pointAmount').value);
+            if(!uid || !amt) return alert("Fill all fields");
+            db.ref('users/' + uid + '/points').transaction(p => {
+                return type === 'add' ? (p || 0) + amt : (p || 0) - amt;
+            });
+            alert("Points Updated");
+        }
+
+        // CHAT MONITOR
+        db.ref('chats').limitToLast(15).on('child_added', s => {
             const m = s.val();
             const list = document.getElementById('chatList');
             const div = document.createElement('div');
             div.className = 'chat-msg';
-            div.innerHTML = `<strong>${m.name}:</strong> ${m.text}`;
+            div.innerHTML = `<strong>${m.name}:</strong> ${m.msg}`;
             list.appendChild(div);
             list.scrollTop = list.scrollHeight;
         });
