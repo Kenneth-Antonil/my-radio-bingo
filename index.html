@@ -517,7 +517,7 @@
         });
     }
 
-    // --- RE-ENGINEERED ADVANCED AI HANDLER ---
+    // --- RE-ENGINEERED ADVANCED AI HANDLER (STRICT VERSION) ---
     async function handleBringMeUploadAdvanced(input) {
         if(!input.files || !input.files[0]) return;
         if(userData.hasWonBringMeThisRound) { alert("Nakuha mo na ang points! Hintayin ang susunod."); return; }
@@ -546,19 +546,31 @@
             const targetItem = document.getElementById('bringmeItem').innerText.toLowerCase();
             
             // Log for debugging
-            console.log("AI Detected:", predictions);
+            console.log("AI Predictions:", predictions);
 
-            // Logic: Check if any detected object matches target
-            // Note: coco-ssd uses english labels. We check common tags.
-            const isMatch = predictions.some(p => {
+            // MAHIGPIT NA VALIDATION LOGIC
+            const successfulMatch = predictions.find(p => {
                 const label = p.class.toLowerCase();
-                // Simple keyword mapping for tagalog/common terms
-                if (targetItem.includes(label) || label.includes(targetItem)) return true;
-                if (targetItem === "cellphone" && label === "cell phone") return true;
-                if (targetItem === "baso" && label === "cup") return true;
-                if (targetItem === "kutsara" && label === "spoon") return true;
-                if (targetItem === "remote" && label === "remote") return true;
-                if (targetItem === "bote" && label === "bottle") return true;
+                const score = p.score; // Confidence score (0.0 to 1.0)
+
+                // Minimum 65% confidence para hindi "hula-hula"
+                if (score < 0.65) return false;
+
+                // Specific Mapping para iwas mali
+                if (targetItem.includes("mouse") && label === "mouse") return true;
+                if (targetItem.includes("keyboard") && label === "keyboard") return true;
+                if (targetItem.includes("cellphone") && (label === "cell phone" || label === "mobile phone")) return true;
+                if (targetItem.includes("baso") && (label === "cup" || label === "wine glass")) return true;
+                if (targetItem.includes("kutsara") && label === "spoon") return true;
+                if (targetItem.includes("tinidor") && label === "fork") return true;
+                if (targetItem.includes("bote") && label === "bottle") return true;
+                if (targetItem.includes("remote") && label === "remote") return true;
+                if (targetItem.includes("laptop") && label === "laptop") return true;
+                if (targetItem.includes("libro") && label === "book") return true;
+
+                // Generic fallback kung eksaktong english term ang target
+                if (targetItem === label) return true;
+
                 return false;
             });
 
@@ -566,11 +578,18 @@
                 db.ref('gameState/bringMe').once('value', snap => {
                     const game = snap.val();
                     if(game && game.active && !game.winner) {
-                        if(isMatch || predictions.length > 0) { // isMatch for strict, predictions.length > 0 for more lenient
-                            alert(`✅ AI SUCCESS: I think that's a ${predictions[0] ? predictions[0].class : targetItem}!`);
+                        if(successfulMatch) {
+                            const confidencePercent = Math.round(successfulMatch.score * 100);
+                            alert(`✅ AI SUCCESS: Sigurado ako (${confidencePercent}%) na ${successfulMatch.class} iyan!`);
                             triggerBringMeWin();
                         } else {
-                            alert("❌ AI REJECTED: Hindi namin makilala ang item. Siguraduhing malinaw at hindi malabo ang kuha.");
+                            // Kung may nakita pero hindi match
+                            if (predictions.length > 0) {
+                                const detected = predictions.map(p => p.class).join(", ");
+                                alert(`❌ AI REJECTED: Ang nakita ko ay (${detected}), pero ang hanap ay ${targetItem.toUpperCase()}.`);
+                            } else {
+                                alert("❌ AI REJECTED: Walang malinaw na object na makita. Ayusin ang anggulo o ilaw.");
+                            }
                         }
                     } else if (game.winner) {
                         alert("May nanalo na!");
