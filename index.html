@@ -480,7 +480,10 @@
                     }
 
                     if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    if (!data.cardTimestamp) updates.cardTimestamp = Date.now(); // Safety fix
+                    
+                    // FIXED: Only set timestamp if it doesn't exist yet to avoid blocking existing players
+                    if (!data.cardTimestamp) updates.cardTimestamp = Date.now(); 
+                    
                     userRef.update(updates);
                 }
             });
@@ -650,7 +653,8 @@
 
     function checkLateJoiner() {
         const overlay = document.getElementById('lateOverlay');
-        // KUNG WALA PANG BOLA, SIGURADONG HINDI LATE.
+        
+        // FIXED: Hindi lalabas ang overlay kung walang bola sa board.
         if (!gameDrawn || gameDrawn.length === 0) {
             overlay.style.display = 'none';
             return;
@@ -658,9 +662,10 @@
 
         db.ref('gameState/gameStartTime').once('value', s => {
             const startTime = s.val() || 0;
-            // Fallback sa Date.now() kung wala pang cardTimestamp para hindi naba-block ang login
-            const cardTime = (userData && userData.cardTimestamp) ? userData.cardTimestamp : Date.now();
+            // FIXED: Gamitin ang current card timestamp ng user.
+            const cardTime = (userData && userData.cardTimestamp) ? userData.cardTimestamp : 0;
 
+            // Kung nagsimula na ang draw at ang card ay ginawa/ni-refresh PAGKATAPOS ng start time, LATE sila.
             if(gameDrawn.length > 0 && cardTime > startTime) { 
                 overlay.style.display = 'flex'; 
             } else { 
