@@ -69,7 +69,7 @@
         /* BRING ME GALLERY */
         .bringme-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
         .photo-card { background: var(--surface-br); border-radius: 16px; overflow: hidden; border: 1px solid var(--glass); }
-        .photo-card img { width: 100%; height: 150px; object-fit: cover; }
+        .photo-card img { width: 100%; height: 150px; object-fit: cover; cursor: pointer; }
         .photo-info { padding: 10px; font-size: 11px; }
 
         /* COMMON COMPONENTS */
@@ -230,47 +230,47 @@
     db.ref('drawnNumbers').on('value', s => {
         drawnNumbers = s.val() ? Object.values(s.val()) : [];
         document.querySelectorAll('.ball').forEach(b => b.classList.remove('drawn'));
-        drawnNumbers.forEach(n => document.getElementById('ball-'+n).classList.add('drawn'));
+        drawnNumbers.forEach(n => {
+            const el = document.getElementById('ball-'+n);
+            if(el) el.classList.add('drawn');
+        });
         document.getElementById('lastBall').innerText = drawnNumbers.length ? drawnNumbers[drawnNumbers.length-1] : "--";
-        updateMonitorCards();
     });
 
-    // RENDER LIVE CARDS
-    function updateMonitorCards() {
-        db.ref('users').once('value', s => {
-            const container = document.getElementById('liveCardsContainer');
-            container.innerHTML = "";
-            s.forEach(child => {
-                const user = child.val();
-                if(!user.card) return;
-                
-                let matches = 0;
-                user.card.forEach(n => { if(drawnNumbers.includes(n) || n === "FREE") matches++; });
-                
-                const isBingo = user.hasWonCurrent;
-                const isPuro = matches >= 23 && !isBingo; // 25 cells - 1 free = 24. 23 matches is "Puro"
+    // RENDER LIVE CARDS - FIXED FOR REALTIME
+    db.ref('users').on('value', s => {
+        const container = document.getElementById('liveCardsContainer');
+        container.innerHTML = "";
+        s.forEach(child => {
+            const user = child.val();
+            if(!user.card) return;
+            
+            let matches = 0;
+            user.card.forEach(n => { if(drawnNumbers.includes(n) || n === "FREE") matches++; });
+            
+            const isBingo = user.hasWonCurrent;
+            const isPuro = matches >= 23 && !isBingo; 
 
-                const cardDiv = document.createElement('div');
-                cardDiv.className = `user-card-monitor ${isBingo ? 'bingo' : ''} ${isPuro ? 'puro' : ''}`;
-                
-                let gridHtml = '<div class="mini-bingo-grid">';
-                user.card.forEach(n => {
-                    const marked = drawnNumbers.includes(n) || n === "FREE";
-                    gridHtml += `<div class="mini-cell ${marked ? 'marked' : ''}">${n === "FREE" ? '★' : n}</div>`;
-                });
-                gridHtml += '</div>';
-
-                cardDiv.innerHTML = `
-                    <div style="font-size:10px; font-weight:800; display:flex; justify-content:space-between;">
-                        <span>${user.name.split(' ')[0]}</span>
-                        <span>${matches}/24</span>
-                    </div>
-                    ${gridHtml}
-                `;
-                container.appendChild(cardDiv);
+            const cardDiv = document.createElement('div');
+            cardDiv.className = `user-card-monitor ${isBingo ? 'bingo' : ''} ${isPuro ? 'puro' : ''}`;
+            
+            let gridHtml = '<div class="mini-bingo-grid">';
+            user.card.forEach(n => {
+                const marked = drawnNumbers.includes(n) || n === "FREE";
+                gridHtml += `<div class="mini-cell ${marked ? 'marked' : ''}">${n === "FREE" ? '⭐' : n}</div>`;
             });
+            gridHtml += '</div>';
+
+            cardDiv.innerHTML = `
+                <div style="font-size:10px; font-weight:800; display:flex; justify-content:space-between;">
+                    <span>${(user.name || 'Anonymous').split(' ')[0]}</span>
+                    <span>${matches}/24</span>
+                </div>
+                ${gridHtml}
+            `;
+            container.appendChild(cardDiv);
         });
-    }
+    });
 
     // WINNER ANNOUNCEMENT
     db.ref('gameState/latestWinner').on('value', s => {
@@ -283,18 +283,19 @@
         }
     });
 
-    // BRING ME GALLERY & LOGIC
+    // BRING ME GALLERY & LOGIC - FIXED PHOTO DISPLAY
     db.ref('gameState/bringMeSubmissions').on('value', s => {
         const gallery = document.getElementById('bringmeGallery');
         gallery.innerHTML = "";
+        if(!s.exists()) return;
         s.forEach(child => {
             const data = child.val();
             gallery.innerHTML += `
                 <div class="photo-card">
-                    <img src="${data.photoUrl}" onclick="window.open(this.src)">
+                    <img src="${data.photoUrl}" onclick="window.open(this.src)" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
                     <div class="photo-info">
-                        <b>${data.userName}</b><br>
-                        <span style="color:var(--gold)">Score: ${data.aiScore}%</span>
+                        <b>${data.userName || 'User'}</b><br>
+                        <span style="color:var(--gold)">Score: ${data.aiScore || 0}%</span>
                     </div>
                 </div>
             `;
@@ -322,13 +323,20 @@
         }
     });
 
-    // ONLINE STATUS
+    // ONLINE STATUS - FIXED NAME DISPLAY
     db.ref('status').on('value', s => {
         document.getElementById('countOnline').innerText = s.numChildren();
         const list = document.getElementById('activeUsersList');
         list.innerHTML = "";
         s.forEach(u => {
-            list.innerHTML += `<div style="padding:4px 0; border-bottom:1px solid var(--glass)">🟢 ${u.val().name || 'User'}</div>`;
+            const uid = u.key;
+            db.ref('users/' + uid + '/name').once('value', nameSnap => {
+                const name = nameSnap.val() || 'User';
+                const userEl = document.createElement('div');
+                userEl.style.cssText = "padding:4px 0; border-bottom:1px solid var(--glass)";
+                userEl.innerText = `🟢 ${name}`;
+                list.appendChild(userEl);
+            });
         });
     });
     db.ref('users').on('value', s => { document.getElementById('countUsers').innerText = s.numChildren(); });
@@ -379,7 +387,7 @@
     function updateStatus(key, status, data) {
         if(confirm(`${status} this?`)) {
             db.ref('redemptions/' + key).update({ status: status });
-            const statusMsg = status === 'sent' ? `Ang iyong ${data.item} ay na-ipadala na! 💸` : `Ang iyong ${data.item} ay na-deny. ❌`;
+            const statusMsg = status === 'sent' ? `Ang iyong ${data.item} ay na-ipadala na! 🚀` : `Ang iyong ${data.item} ay na-deny. ❌`;
             db.ref('notifications/' + data.uid).push({ msg: statusMsg, time: Date.now() });
             if(status === 'denied') db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost);
         }
