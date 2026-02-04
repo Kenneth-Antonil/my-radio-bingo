@@ -428,12 +428,14 @@
         }
     }
 
+    // FIXED AI SCAN LOGIC WITH AUTO-REFRESH
     async function startAIScan() {
         if (!detector || !isCameraActive) return;
         const scanBtn = document.getElementById('scanBtn');
         const overlay = document.getElementById('scanOverlay');
         const video = document.getElementById('webcam');
-        const target = currentTargetItem.toLowerCase();
+        const status = document.getElementById('aiStatus');
+        const target = currentTargetItem.toLowerCase().trim();
 
         if (target === "waiting for host..." || target === "") {
             alert("Hintayin muna ang item mula sa host!");
@@ -441,16 +443,35 @@
         }
 
         scanBtn.disabled = true;
-        scanBtn.innerHTML = `<i data-lucide="refresh-cw" class="spin"></i> SCANNING...`;
+        scanBtn.innerHTML = `<i data-lucide="refresh-cw" class="spin"></i> ANALYZING...`;
         overlay.style.display = 'block';
         lucide.createIcons();
 
-        // Perform detection
-        const predictions = await detector.detect(video);
-        
-        // Logic check: Search if target is in predictions
-        let found = predictions.find(p => p.class.toLowerCase() === target && p.score > 0.6);
+        // Perform multiple detections in a short burst for higher accuracy
+        let found = false;
+        let scanAttempts = 0;
+        const maxAttempts = 5; // Scan 5 frames rapidly
 
+        const checkFrame = async () => {
+            const predictions = await detector.detect(video);
+            // Higher sensitivity: Check if target exists in detected labels
+            const match = predictions.find(p => 
+                (p.class.toLowerCase().includes(target) || target.includes(p.class.toLowerCase())) 
+                && p.score > 0.45 // Balanced threshold
+            );
+
+            if (match) {
+                found = true;
+                return true;
+            }
+            scanAttempts++;
+            if (scanAttempts < maxAttempts) return await checkFrame();
+            return false;
+        };
+
+        await checkFrame();
+
+        // AUTO-REFRESH LOGIC: Mabilis na feedback para makapag-scan ulit agad
         setTimeout(() => {
             overlay.style.display = 'none';
             scanBtn.disabled = false;
@@ -460,10 +481,17 @@
             if (found) {
                 triggerWin();
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                status.innerHTML = `<i data-lucide="check-circle" style="color:var(--success)"></i> ITEM FOUND!`;
             } else {
-                alert("Hindi nahanap ang " + target + ". Siguraduhing malinaw at nakatapat sa camera!");
+                // Auto-refresh feedback
+                status.innerHTML = `<i data-lucide="alert-circle" style="color:var(--danger)"></i> Not found. Try again!`;
+                // Reset status after 1.5s so they can see they can scan again
+                setTimeout(() => {
+                    status.innerHTML = `<i data-lucide="cpu" style="width:12px"></i> AI Ready`;
+                    lucide.createIcons();
+                }, 1500);
             }
-        }, 2000);
+        }, 800);
     }
 
     function fixDate(timestamp) {
@@ -549,7 +577,6 @@
     }
 
     function initBringMe() {
-        // Listen for item from host (Using existing drawnNumbers ref to keep DB same)
         db.ref('gameState/targetItem').on('value', s => {
             currentTargetItem = s.val() || "Waiting for Host...";
             document.getElementById('targetItem').innerText = currentTargetItem;
