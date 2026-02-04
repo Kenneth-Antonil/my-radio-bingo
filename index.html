@@ -429,16 +429,31 @@
         }
     }
 
-    // PINALAKAS NA DETECTION LOGIC (FIXED MIRROR SYNC)
+    // FIXED AI DETECTION LOGIC (OPTIMIZED FOR SMALL OBJECTS)
     async function startAIScan() {
         if (!detector || !isCameraActive) return;
         const scanBtn = document.getElementById('scanBtn');
         const overlay = document.getElementById('scanOverlay');
         const video = document.getElementById('webcam');
         const status = document.getElementById('aiStatus');
-        const target = (currentTargetItem || "").toLowerCase().trim();
+        
+        // Kinukuha ang target at ginagawang malinis na string
+        const targetRaw = (currentTargetItem || "").toLowerCase().trim();
 
-        if (target === "waiting for host..." || target === "") {
+        // Dictionary Mapping para sa mga gamit na wala sa default 80 COCO labels
+        // Ginagamit natin ang 'Visual Synonyms' para mabasa ng AI ang toothpick, etc.
+        const aiMapping = {
+            "toothpick": ["toothbrush", "fork", "knife", "scissors"], // Manipis at maliit
+            "salamin sa mata": ["eye glasses", "person", "cell phone"], // Eye glasses ay default COCO, person para sa suot
+            "salamin": ["eye glasses", "cup", "bottle"],
+            "door knob": ["cup", "remote", "cell phone", "bottle", "bowl"], // Karaniwang metal reflection
+            "susi": ["scissors", "knife", "fork", "spoon"],
+            "cellphone": ["cell phone"],
+            "pera": ["book", "paper", "card"],
+            "wallet": ["handbag", "book"]
+        };
+
+        if (targetRaw === "waiting for host..." || targetRaw === "") {
             alert("Hintayin muna ang item mula sa host!");
             return;
         }
@@ -450,25 +465,34 @@
 
         let found = false;
         let scanAttempts = 0;
-        const maxAttempts = 10; // Mas maraming frames para mas accurate
+        const maxAttempts = 15; // Tinaasan ang attempts para mas masusi
 
         const checkFrame = async () => {
-            // BINAGO: Idinagdag ang flipHorizontal: false para magtugma sa normal camera view
-            const predictions = await detector.detect(video, { flipHorizontal: false });
+            // flipHorizontal: false para tugma sa mirror-less view ng video feed
+            const predictions = await detector.detect(video);
             
-            // PINALAKAS: Mas matalinong pag-match ng item name
             const match = predictions.find(p => {
-                const label = p.class.toLowerCase();
-                return (label.includes(target) || target.includes(label)) && p.score > 0.40;
+                const aiLabel = p.class.toLowerCase();
+                
+                // 1. Direct Match Check
+                if (aiLabel.includes(targetRaw) || targetRaw.includes(aiLabel)) return p.score > 0.35;
+                
+                // 2. Mapping/Synonym Check para sa mga mahihirap na items
+                if (aiMapping[targetRaw]) {
+                    return aiMapping[targetRaw].some(synonym => aiLabel.includes(synonym)) && p.score > 0.30;
+                }
+                
+                return false;
             });
 
             if (match) {
                 found = true;
                 return true;
             }
+            
             scanAttempts++;
             if (scanAttempts < maxAttempts) {
-                await new Promise(r => setTimeout(r, 100)); // Maikling delay bago ang susunod na frame
+                await new Promise(r => setTimeout(r, 60)); // Mas mabilis na interval
                 return await checkFrame();
             }
             return false;
@@ -493,7 +517,7 @@
                     lucide.createIcons();
                 }, 2000);
             }
-        }, 800);
+        }, 500);
     }
 
     function fixDate(timestamp) {
