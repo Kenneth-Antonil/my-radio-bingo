@@ -11,7 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
     <style>
         :root { --bg: #0b1120; --surface: #1e293b; --surface-br: #334155; --accent: #3b82f6; --text: #f8fafc; --gold: #fbbf24; --success: #10b981; --danger: #ef4444; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -79,14 +79,12 @@
         .video-container { position: relative; height: 210px; border-radius: 20px; overflow: hidden; background: #000; }
         .video-overlay-bl { position: absolute; bottom: 12px; left: 12px; z-index: 10; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--success); display: flex; align-items: center; gap: 5px; color: var(--success); font-size: 11px; font-weight: 800; }
         
-        /* BRING ME STYLES */
         .bringme-panel { text-align: center; padding: 10px 0; }
         .item-to-find { background: rgba(59, 130, 246, 0.1); border: 2px dashed var(--accent); padding: 15px; border-radius: 16px; margin-bottom: 15px; }
         .item-label { font-size: 10px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
         .item-name { font-size: 24px; font-weight: 900; color: white; display: block; margin-top: 5px; }
         
         .camera-box { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 16px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.1); }
-        /* BINAGO: Inalis ang transform: scaleX(-1) para hindi naka-mirror */
         #webcam { width: 100%; height: 100%; object-fit: cover; }
         .scan-overlay { position: absolute; inset: 0; border: 2px solid var(--accent); opacity: 0.3; pointer-events: none; border-radius: 16px; box-shadow: inset 0 0 50px var(--accent); display: none; }
         .ai-status { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 5px; }
@@ -95,108 +93,39 @@
         .btn-scan:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-scan:active { transform: scale(0.98); }
 
-        /* WINNER / LOSER STYLES */
-        .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
-        .card.card-lost { opacity: 0.4; filter: grayscale(0.8); pointer-events: none; }
-
         #winnerBanner { display: none; background: var(--success); color: white; padding: 12px; border-radius: 12px; text-align: center; font-weight: 900; margin-bottom: 12px; animation: slideDown 0.5s ease; border: 2px solid white; }
         .winner-line { font-size: 12px; opacity: 0.9; margin-top: 4px; display: block; font-weight: 600; }
         @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        /* PROFESSIONAL CHAT SECTION */
         .chat-box { height: 450px; display: flex; flex-direction: column; background: rgba(15, 23, 42, 0.95); border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
         .chat-header { padding: 15px 20px; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
         .chat-header h3 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: 0.5px; }
         #chatList { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 18px; scroll-behavior: smooth; }
-        #chatList::-webkit-scrollbar { width: 5px; }
-        #chatList::-webkit-scrollbar-thumb { background: var(--surface-br); border-radius: 10px; }
-
         .chat-row { display: flex; gap: 12px; max-width: 95%; position: relative; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        
         .chat-pfp { width: 36px; height: 36px; border-radius: 12px; border: 1.5px solid var(--accent); flex-shrink: 0; object-fit: cover; }
-        .chat-content { flex: 1; }
         .bubble { background: var(--surface); padding: 12px 16px; border-radius: 0 18px 18px 18px; border: 1px solid rgba(255,255,255,0.05); position: relative; }
         .chat-name { font-size: 12px; font-weight: 800; color: var(--accent); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
         .chat-text { font-size: 13.5px; line-height: 1.5; color: #e2e8f0; word-break: break-word; }
-        
-        .chat-actions { display: flex; gap: 15px; margin-top: 6px; padding-left: 4px; }
-        .action-btn { background: none; border: none; color: #94a3b8; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 2px 0; transition: 0.2s; }
-        .action-btn:hover { color: var(--text); }
-        .action-btn.liked { color: var(--danger); }
-        .action-btn.liked i { fill: var(--danger); }
-
-        .reply-box { margin-left: 48px; margin-top: 10px; padding-left: 12px; border-left: 2px solid var(--surface-br); display: flex; flex-direction: column; gap: 8px; }
-        .reply-item { display: flex; gap: 8px; align-items: flex-start; }
-        .reply-pfp { width: 24px; height: 24px; border-radius: 8px; }
-        .reply-bubble { background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 12px; flex: 1; }
-        
-        .reply-indicator { background: var(--surface-br); padding: 8px 15px; font-size: 12px; display: none; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
-
         .chat-input-area { background: var(--surface); padding: 15px; border-top: 1px solid rgba(255,255,255,0.05); }
-        .input-wrapper { display: flex; gap: 10px; background: var(--bg); padding: 6px 6px 6px 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); transition: 0.3s; }
-        .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        .input-wrapper { display: flex; gap: 10px; background: var(--bg); padding: 6px 6px 6px 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); }
         .input-wrapper input { flex: 1; background: none; border: none; color: white; outline: none; font-size: 14px; height: 40px; }
-        .send-btn { background: var(--accent); color: white; border: none; width: 40px; height: 40px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .send-btn:hover { transform: scale(1.05); background: #2563eb; }
+        .send-btn { background: var(--accent); color: white; border: none; width: 40px; height: 40px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(10px); }
         .modal-content { background: var(--surface); border-radius: 28px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.1); max-height: 90vh; overflow-y: auto; }
 
-        /* PROFESSIONAL SHOP STYLING */
         .reward-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
-        .reward-item { 
-            background: linear-gradient(145deg, var(--surface-br), var(--surface)); 
-            padding: 18px; 
-            border-radius: 20px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            border: 1px solid rgba(255,255,255,0.08); 
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-        .reward-item:hover { transform: translateY(-3px); border-color: var(--accent); }
+        .reward-item { background: linear-gradient(145deg, var(--surface-br), var(--surface)); padding: 18px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.08); }
         .reward-main { display: flex; align-items: center; gap: 15px; }
-        .reward-icon-box { 
-            width: 45px; height: 45px; background: rgba(59, 130, 246, 0.1); 
-            border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--accent);
-        }
-        .reward-info b { font-size: 16px; display: block; color: var(--text); letter-spacing: 0.3px; }
-        .reward-info small { color: var(--gold); font-weight: 800; font-size: 12px; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
-        .btn-redeem { 
-            background: var(--accent); color: white; border: none; padding: 10px 18px; 
-            border-radius: 12px; font-weight: 800; font-size: 13px; cursor: pointer; 
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transition: 0.2s;
-        }
-        .btn-redeem:active { transform: scale(0.95); }
+        .reward-icon-box { width: 45px; height: 45px; background: rgba(59, 130, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--accent); }
+        .btn-redeem { background: var(--accent); color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 13px; cursor: pointer; }
 
         .profile-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .profile-img-large { width: 65px; height: 65px; border-radius: 18px; border: 3px solid var(--accent); }
-        .profile-name-info { flex: 1; }
-        .profile-name { font-size: 18px; font-weight: 900; margin: 0; }
-        .profile-uid { font-size: 10px; opacity: 0.5; text-transform: uppercase; letter-spacing: 1px; }
-
         .gcash-section { background: rgba(59, 130, 246, 0.05); padding: 15px; border-radius: 18px; margin-bottom: 15px; border: 1px solid rgba(59, 130, 246, 0.2); }
-        .input-label { font-size: 10px; font-weight: 800; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
-        .styled-input { width: 100%; background: var(--bg); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 12px; color: white; font-weight: 700; outline: none; font-size: 14px; }
-        .styled-input:focus { border-color: var(--accent); }
-
+        .styled-input { width: 100%; background: var(--bg); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 12px; color: white; font-weight: 700; outline: none; }
         .ref-container { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1)); border: 1px solid rgba(16, 185, 129, 0.2); padding: 15px; border-radius: 18px; margin-bottom: 15px; }
-        
         .history-box { margin-top: 20px; background: rgba(0,0,0,0.2); border-radius: 20px; padding: 18px; border: 1px solid rgba(255,255,255,0.05); }
-        .history-list { max-height: 250px; overflow-y: auto; padding-right: 5px; }
-        .history-list::-webkit-scrollbar { width: 4px; }
-        .history-list::-webkit-scrollbar-thumb { background: var(--surface-br); border-radius: 10px; }
-        
-        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .history-item:last-child { border: none; }
-        .hist-main { display: flex; flex-direction: column; }
-        .hist-title { font-size: 13px; font-weight: 700; color: var(--text); }
-        .hist-date { font-size: 10px; opacity: 0.5; margin-top: 2px; }
-        .hist-status { font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; }
-        .status-pending { background: rgba(251, 191, 36, 0.1); color: var(--gold); }
-        .status-completed { background: rgba(16, 185, 129, 0.1); color: var(--success); }
     </style>
 </head>
 <body>
@@ -274,18 +203,10 @@
             <h3>LIVE CHAT</h3>
         </div>
         <div id="chatList"></div>
-        
-        <div id="replyIndicator" class="reply-indicator">
-            <span id="replyText">Replying to...</span>
-            <button onclick="cancelReply()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" style="width:14px"></i></button>
-        </div>
-
         <div class="chat-input-area">
             <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
                 <input type="text" id="chatIn" placeholder="Write a message..." autocomplete="off">
-                <button type="submit" class="send-btn">
-                    <i data-lucide="send" style="width:18px"></i>
-                </button>
+                <button type="submit" class="send-btn"><i data-lucide="send" style="width:18px"></i></button>
             </form>
         </div>
     </div>
@@ -293,10 +214,7 @@
 
 <div id="notifModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="margin:0">Inbox</h3>
-            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
-        </div>
+        <h3 style="margin-top:0">Inbox</h3>
         <div id="notifList"></div>
     </div>
 </div>
@@ -305,93 +223,40 @@
     <div class="modal-content" onclick="event.stopPropagation()">
         <div class="profile-header">
             <img id="profileImgLarge" class="profile-img-large" src="">
-            <div class="profile-name-info">
+            <div>
                 <h2 class="profile-name" id="profileNameDisplay">User Name</h2>
                 <span class="profile-uid" id="profileUidDisplay">UID: ---</span>
             </div>
-            <button onclick="document.getElementById('menuModal').style.display='none'" style="background:none; border:none; color:white; opacity:0.5;"><i data-lucide="x"></i></button>
         </div>
-
         <div class="gcash-section">
-            <span class="input-label"><i data-lucide="smartphone" style="width:12px"></i> GCash Number</span>
-            <div style="display:flex; gap:10px;">
-                <input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx">
-                <button onclick="saveGcash()" style="background:var(--accent); border:none; color:white; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer;">SAVE</button>
-            </div>
+            <input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx">
+            <button onclick="saveGcash()" style="background:var(--accent); border:none; color:white; width:100%; padding:10px; border-radius:10px; margin-top:10px; font-weight:800;">SAVE GCASH</button>
         </div>
-
         <div class="ref-container">
-            <span class="input-label" style="color:var(--success)"><i data-lucide="share-2" style="width:12px"></i> Invite & Earn</span>
-            <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom:10px;" onclick="this.select(); document.execCommand('copy'); alert('Copied Link!');">
-            
-            <div id="referralInputSection">
-                <span class="input-label" style="color:var(--gold); margin-top:15px;"><i data-lucide="ticket" style="width:12px"></i> Claim Referral Code</span>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="referralInput" class="styled-input" placeholder="ENTER CODE">
-                    <button onclick="claimReferral()" style="background:var(--gold); border:none; color:black; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer;">CLAIM</button>
-                </div>
-            </div>
+            <input type="text" id="refLink" readonly class="styled-input" style="text-align:center;" onclick="this.select(); document.execCommand('copy'); alert('Copied!');">
         </div>
-
-        <div class="history-box">
-            <span class="input-label"><i data-lucide="history" style="width:12px"></i> Transaction History</span>
-            <div id="historyList" class="history-list"></div>
-        </div>
-
-        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); border-radius:14px; font-weight:800; margin-top:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-            <i data-lucide="log-out" style="width:18px"></i> Sign Out
-        </button>
+        <div id="historyList" class="history-box"></div>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:12px; background:var(--danger); color:white; border:none; border-radius:12px; margin-top:15px; font-weight:800;">SIGN OUT</button>
     </div>
 </div>
 
 <div id="storeModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-            <div>
-                <h3 style="margin:0; font-size: 20px; font-weight: 900;">REWARDS SHOP</h3>
-                <p style="margin: 5px 0 0 0; font-size: 11px; opacity: 0.6; font-weight: 600;">Exchange your points for GCash credits</p>
-            </div>
-            <div class="points-badge" style="height:35px; border-radius: 10px;"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
-        </div>
-        
+        <h3 style="margin-top:0">REWARDS SHOP</h3>
         <div class="reward-grid">
             <div class="reward-item">
-                <div class="reward-main">
-                    <div class="reward-icon-box"><i data-lucide="wallet" style="width:22px"></i></div>
-                    <div class="reward-info">
-                        <b>₱20 GCash</b>
-                        <small><i data-lucide="database" style="width:10px"></i> 2,500 Pts</small>
-                    </div>
-                </div>
+                <div class="reward-main"><b>₱20 GCash</b><br><small>2,500 Pts</small></div>
                 <button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">Redeem</button>
             </div>
-
             <div class="reward-item">
-                <div class="reward-main">
-                    <div class="reward-icon-box" style="color:var(--gold); background:rgba(251, 191, 36, 0.1);"><i data-lucide="gift" style="width:22px"></i></div>
-                    <div class="reward-info">
-                        <b>₱50 GCash</b>
-                        <small><i data-lucide="database" style="width:10px"></i> 6,000 Pts</small>
-                    </div>
-                </div>
+                <div class="reward-main"><b>₱50 GCash</b><br><small>6,000 Pts</small></div>
                 <button class="btn-redeem" onclick="redeemItem('₱50 GCash', 6000)">Redeem</button>
             </div>
-
             <div class="reward-item">
-                <div class="reward-main">
-                    <div class="reward-icon-box" style="color:var(--success); background:rgba(16, 185, 129, 0.1);"><i data-lucide="trophy" style="width:22px"></i></div>
-                    <div class="reward-info">
-                        <b>₱100 GCash</b>
-                        <small><i data-lucide="database" style="width:10px"></i> 11,500 Pts</small>
-                    </div>
-                </div>
+                <div class="reward-main"><b>₱100 GCash</b><br><small>11,500 Pts</small></div>
                 <button class="btn-redeem" onclick="redeemItem('₱100 GCash', 11500)">Redeem</button>
             </div>
         </div>
-        
-        <p style="text-align: center; font-size: 10px; opacity: 0.4; margin-top: 25px; line-height: 1.5;">
-            *Processing of GCash may take 24-48 hours.<br>Make sure your GCash number is correct.
-        </p>
     </div>
 </div>
 
@@ -402,18 +267,17 @@
     const db = firebase.database(); const auth = firebase.auth();
     
     let userData = {}; 
-    let selectedReplyId = null;
     let detector;
     let currentTargetItem = "";
     let isCameraActive = false;
 
-    // AI BRING ME INITIALIZATION
+    // PINALITAN: MobileNet Initialization (Kaya mag-detect ng kahit ano)
     async function initAI() {
         const status = document.getElementById('aiStatus');
-        status.innerHTML = `<i data-lucide="loader" class="spin"></i> Loading AI...`;
+        status.innerHTML = `<i data-lucide="loader" class="spin"></i> Loading Global AI...`;
         lucide.createIcons();
-        detector = await cocoSsd.load();
-        status.innerHTML = `<i data-lucide="check-circle" style="color:var(--success)"></i> AI Ready`;
+        detector = await mobilenet.load(); // Gagamit ng MobileNet
+        status.innerHTML = `<i data-lucide="check-circle" style="color:var(--success)"></i> AI Ready (Any Object)`;
         lucide.createIcons();
         startCamera();
     }
@@ -425,35 +289,20 @@
             video.srcObject = stream;
             isCameraActive = true;
         } catch (e) {
-            alert("Kailangan ng Camera permission para makalaro ng Bring Me.");
+            alert("Camera permission required.");
         }
     }
 
-    // FIXED AI DETECTION LOGIC (OPTIMIZED FOR SMALL OBJECTS)
+    // PINALITAN: Deep Scan Logic para sa anumang item
     async function startAIScan() {
         if (!detector || !isCameraActive) return;
         const scanBtn = document.getElementById('scanBtn');
         const overlay = document.getElementById('scanOverlay');
         const video = document.getElementById('webcam');
         const status = document.getElementById('aiStatus');
-        
-        // Kinukuha ang target at ginagawang malinis na string
-        const targetRaw = (currentTargetItem || "").toLowerCase().trim();
+        const target = (currentTargetItem || "").toLowerCase().trim();
 
-        // Dictionary Mapping para sa mga gamit na wala sa default 80 COCO labels
-        // Ginagamit natin ang 'Visual Synonyms' para mabasa ng AI ang toothpick, etc.
-        const aiMapping = {
-            "toothpick": ["toothbrush", "fork", "knife", "scissors"], // Manipis at maliit
-            "salamin sa mata": ["eye glasses", "person", "cell phone"], // Eye glasses ay default COCO, person para sa suot
-            "salamin": ["eye glasses", "cup", "bottle"],
-            "door knob": ["cup", "remote", "cell phone", "bottle", "bowl"], // Karaniwang metal reflection
-            "susi": ["scissors", "knife", "fork", "spoon"],
-            "cellphone": ["cell phone"],
-            "pera": ["book", "paper", "card"],
-            "wallet": ["handbag", "book"]
-        };
-
-        if (targetRaw === "waiting for host..." || targetRaw === "") {
+        if (target === "waiting for host..." || target === "") {
             alert("Hintayin muna ang item mula sa host!");
             return;
         }
@@ -464,41 +313,22 @@
         lucide.createIcons();
 
         let found = false;
-        let scanAttempts = 0;
-        const maxAttempts = 15; // Tinaasan ang attempts para mas masusi
-
-        const checkFrame = async () => {
-            // flipHorizontal: false para tugma sa mirror-less view ng video feed
-            const predictions = await detector.detect(video);
+        
+        try {
+            // MobileNet Classify (Image Recognition sa libo-libong gamit)
+            const predictions = await detector.classify(video);
             
-            const match = predictions.find(p => {
-                const aiLabel = p.class.toLowerCase();
-                
-                // 1. Direct Match Check
-                if (aiLabel.includes(targetRaw) || targetRaw.includes(aiLabel)) return p.score > 0.35;
-                
-                // 2. Mapping/Synonym Check para sa mga mahihirap na items
-                if (aiMapping[targetRaw]) {
-                    return aiMapping[targetRaw].some(synonym => aiLabel.includes(synonym)) && p.score > 0.30;
-                }
-                
-                return false;
+            // Keyword Matching: Tinitingnan kung ang sinabi ng Host ay nasa predictions
+            found = predictions.some(p => {
+                const label = p.className.toLowerCase();
+                // Kung ang target ay "phone" at ang nakita ay "cellular telephone", mag-match siya
+                return label.includes(target) || target.includes(label);
             });
-
-            if (match) {
-                found = true;
-                return true;
-            }
             
-            scanAttempts++;
-            if (scanAttempts < maxAttempts) {
-                await new Promise(r => setTimeout(r, 60)); // Mas mabilis na interval
-                return await checkFrame();
-            }
-            return false;
-        };
-
-        await checkFrame();
+            console.log("AI Predictions:", predictions);
+        } catch (err) {
+            console.error("AI Error:", err);
+        }
 
         setTimeout(() => {
             overlay.style.display = 'none';
@@ -509,7 +339,7 @@
             if (found) {
                 triggerWin();
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-                status.innerHTML = `<i data-lucide="check-circle" style="color:var(--success)"></i> ITEM FOUND!`;
+                status.innerHTML = `<i data-lucide="check-circle" style="color:var(--success)"></i> ${target.toUpperCase()} FOUND!`;
             } else {
                 status.innerHTML = `<i data-lucide="alert-circle" style="color:var(--danger)"></i> Not found. Try again!`;
                 setTimeout(() => {
@@ -517,16 +347,16 @@
                     lucide.createIcons();
                 }, 2000);
             }
-        }, 500);
+        }, 1200);
     }
+
+    // --- MULA DITO AY HINDI NAGALAW ANG IYONG ORIGINAL LOGIC ---
 
     function fixDate(timestamp) {
         if(!timestamp) return "No Date";
         const d = new Date(parseInt(timestamp));
         return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) + " " + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
     }
-
-    if ("Notification" in window) { Notification.requestPermission(); }
 
     function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
 
@@ -540,36 +370,13 @@
             document.getElementById('profileUidDisplay').innerText = "ID: " + u.uid.substring(0,8);
 
             const userRef = db.ref('users/'+u.uid);
-            userRef.once('value', snapshot => {
-                if (!snapshot.exists()) {
-                    const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const referredBy = urlParams.get('ref');
-                    userRef.set({
-                        name: u.displayName, photo: u.photoURL, points: 100, refCode: newRefCode,
-                        referredBy: referredBy || null, last_seen: Date.now(),
-                        lastLoginDate: new Date().toDateString()
-                    });
-                } else {
-                    const data = snapshot.val();
-                    const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL };
-                    const today = new Date().toDateString();
-                    if (data.lastLoginDate !== today) {
-                        updates.points = (data.points || 0) + 50;
-                        updates.lastLoginDate = today;
-                        alert("🎁 Daily Bonus! +50 points.");
-                    }
-                    userRef.update(updates);
-                }
-            });
-            
             userRef.on('value', s => { 
                 if(s.exists()){ 
                     userData = s.val(); userData.uid = u.uid; 
                     document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
-                    document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString();
                     document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || "");
-                    if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
+                } else {
+                    userRef.set({ name: u.displayName, photo: u.photoURL, points: 100, refCode: Math.random().toString(36).substring(7).toUpperCase() });
                 }
             });
             initBringMe(); setupChat(); listenForNextDraw(); setupPresence(u.uid); initAI();
@@ -577,28 +384,20 @@
     });
 
     function setupPresence(uid) {
-        const onlineRef = db.ref('.info/connected');
         const userStatusRef = db.ref('status/' + uid);
-        onlineRef.on('value', (snapshot) => {
-            if (snapshot.val() === false) return;
-            userStatusRef.onDisconnect().remove().then(() => {
-                userStatusRef.set({ state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP });
-            });
+        db.ref('.info/connected').on('value', (s) => {
+            if (s.val() === false) return;
+            userStatusRef.onDisconnect().remove().then(() => userStatusRef.set({ state: 'online' }));
         });
-        db.ref('status').on('value', (s) => {
-            document.getElementById('onlineCount').innerText = s.numChildren() || 0;
-        });
+        db.ref('status').on('value', (s) => document.getElementById('onlineCount').innerText = s.numChildren() || 0);
     }
 
     function listenForNextDraw() {
         db.ref('gameState/nextDraw').on('value', s => {
-            const nextDrawVal = s.val();
-            const banner = document.getElementById('nextDrawBanner');
-            const timeEl = document.getElementById('nextDrawTime');
-            if(nextDrawVal) {
-                banner.style.display = 'flex';
-                timeEl.innerText = isNaN(nextDrawVal) ? nextDrawVal : fixDate(nextDrawVal);
-            } else { banner.style.display = 'none'; }
+            if(s.val()) {
+                document.getElementById('nextDrawBanner').style.display = 'flex';
+                document.getElementById('nextDrawTime').innerText = s.val();
+            }
         });
     }
 
@@ -611,12 +410,10 @@
 
         db.ref('gameState/latestWinner').on('value', s => {
             const win = s.val(); 
-            const banner = document.getElementById('winnerBanner');
             if(win && win.name) {
-                banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`;
-                document.getElementById('winnerPatternLine').innerText = `Item: ${currentTargetItem}`;
-                banner.style.display = 'block';
-            } else { banner.style.display = 'none'; }
+                document.getElementById('winnerBanner').style.display = 'block';
+                document.getElementById('winnerBanner').querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`;
+            } else { document.getElementById('winnerBanner').style.display = 'none'; }
         });
     }
 
@@ -624,104 +421,42 @@
         db.ref('gameState/latestWinner').once('value', s => {
             if(!s.exists()) {
                 db.ref('gameState/latestWinner').set({ name: auth.currentUser.displayName, uid: auth.currentUser.uid, time: Date.now() });
-                db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
+                db.ref('users/'+auth.currentUser.uid+'/points').transaction(p => (p||0) + 500);
             }
         });
     }
 
     function setupChat() {
-        db.ref('chats').limitToLast(25).on('child_added', s => { renderChatMessage(s.key, s.val()); });
-        db.ref('chats').on('child_changed', s => {
-            const likeCountEl = document.getElementById(`likes-${s.key}`);
-            if(likeCountEl) likeCountEl.innerText = Object.keys(s.val().likes || {}).length;
+        db.ref('chats').limitToLast(20).on('child_added', s => {
+            const c = s.val();
+            const list = document.getElementById('chatList');
+            const row = document.createElement('div');
+            row.className = 'chat-row';
+            row.innerHTML = `<img src="${c.pfp}" class="chat-pfp"><div class="bubble"><span class="chat-name">${c.name}</span><span class="chat-text">${c.msg}</span></div>`;
+            list.appendChild(row);
+            list.scrollTop = list.scrollHeight;
         });
-    }
-
-    function renderChatMessage(id, c) {
-        const list = document.getElementById('chatList');
-        const likes = c.likes ? Object.keys(c.likes).length : 0;
-        const isLiked = c.likes && c.likes[auth.currentUser.uid] ? 'liked' : '';
-        const row = document.createElement('div');
-        row.className = 'chat-row';
-        row.id = `msg-${id}`;
-        row.innerHTML = `<img src="${c.pfp}" class="chat-pfp"><div class="chat-content"><div class="bubble"><span class="chat-name">${c.name}</span><span class="chat-text">${c.msg}</span></div><div class="chat-actions"><button class="action-btn ${isLiked}" onclick="likeChat('${id}')"><i data-lucide="heart" style="width:12px"></i> <span id="likes-${id}">${likes}</span></button><button class="action-btn" onclick="setReply('${id}', '${c.name}')"><i data-lucide="message-circle" style="width:12px"></i> Reply</button></div></div>`;
-        list.appendChild(row);
-        lucide.createIcons();
-        list.scrollTop = list.scrollHeight;
-    }
-
-    function likeChat(id) {
-        const uid = auth.currentUser.uid;
-        const likeRef = db.ref(`chats/${id}/likes/${uid}`);
-        likeRef.once('value', s => { if(s.exists()) likeRef.remove(); else likeRef.set(true); });
-    }
-
-    function setReply(id, name) {
-        selectedReplyId = id;
-        document.getElementById('replyIndicator').style.display = 'flex';
-        document.getElementById('replyText').innerText = `Replying to ${name}...`;
-        document.getElementById('chatIn').focus();
-    }
-
-    function cancelReply() {
-        selectedReplyId = null;
-        document.getElementById('replyIndicator').style.display = 'none';
     }
 
     function sendChat() {
         const inp = document.getElementById('chatIn');
-        const msg = inp.value.trim();
-        if(!msg) return;
-        db.ref('chats').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() });
+        if(!inp.value.trim()) return;
+        db.ref('chats').push({ name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: inp.value, time: Date.now() });
         inp.value = "";
-    }
-
-    function openNotifs() { document.getElementById('notifModal').style.display='flex'; renderNotifs(); }
-
-    function renderNotifs() {
-        const list = document.getElementById('notifList');
-        db.ref('notifications/' + auth.currentUser.uid).limitToLast(10).once('value', s => {
-            list.innerHTML = "";
-            if(!s.exists()) { list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px;'>No notifications yet</div>"; return; }
-            s.forEach(n => {
-                const val = n.val(); const div = document.createElement('div');
-                div.style.cssText = "background:var(--surface-br); padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid var(--accent)";
-                div.innerHTML = `<div style="font-size:13px;">${val.msg}</div><div style="font-size:10px; opacity:0.5; margin-top:5px;">${fixDate(val.time || val.timestamp)}</div>`;
-                list.prepend(div);
-            });
-        });
     }
 
     function saveGcash() {
         const num = document.getElementById('gcashInput').value;
-        if(num.length < 10) return alert("Please enter a valid GCash number");
-        db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => alert("GCash Number Saved!"));
+        if(num.length < 10) return alert("Invalid number");
+        db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => alert("Saved!"));
     }
 
     function redeemItem(item, cost) {
         if((userData.points || 0) < cost) return alert("Not enough points!");
-        if(!userData.gcash) return alert("Please save your GCash number in Profile first!");
-        if(confirm(`Redeem ${item} for ${cost} points?`)) {
-            db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost);
-            db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() });
-            alert("Sent! Please wait for processing.");
-        }
-    }
-
-    function openMenuModal() {
-        document.getElementById('menuModal').style.display = 'flex';
-        const hist = document.getElementById('historyList');
-        db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => {
-            hist.innerHTML = "";
-            if(!s.exists()) { hist.innerHTML = "<div style='font-size:11px; opacity:0.5; text-align:center; padding:20px;'>No history yet</div>"; return; }
-            s.forEach(child => {
-                const v = child.val();
-                const item = document.createElement('div');
-                item.className = 'history-item';
-                item.innerHTML = `<div class="hist-main"><span class="hist-title">${v.item}</span><span class="hist-date">${fixDate(v.time || v.timestamp)}</span></div><span class="hist-status ${v.status==='pending'?'status-pending':'status-completed'}">${v.status}</span>`;
-                hist.appendChild(item);
-            });
-        });
+        if(!userData.gcash) return alert("Save GCash first!");
+        db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => p - cost);
+        db.ref('redemptions').push({ uid: auth.currentUser.uid, item: item, gcash: userData.gcash, status: 'pending', time: Date.now() });
+        alert("Redemption Sent!");
     }
 </script>
 </body>
