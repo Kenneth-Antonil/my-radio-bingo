@@ -25,7 +25,9 @@
         .nav { background: var(--surface); padding: 0 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: 65px; }
         .user-stats { display: flex; align-items: center; gap: 10px; }
         .icon-btn { background: var(--surface-br); color: white; border: 1px solid rgba(255,255,255,0.1); width: 40px; height: 40px; border-radius: 12px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; }
-        .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--surface); display: none; }
+        .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--surface); display: none; animation: pulse-notif 1s infinite; }
+        @keyframes pulse-notif { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        
         .points-badge { background: rgba(251, 191, 36, 0.1); color: var(--gold); padding: 0 15px; height: 40px; border-radius: 12px; font-weight: 800; border: 1px solid var(--gold); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
         
         .disclaimer { background: var(--danger); color: white; padding: 6px 0; font-size: 11px; font-weight: 700; overflow: hidden; white-space: nowrap; border-bottom: 1px solid rgba(0,0,0,0.3); }
@@ -183,6 +185,12 @@
         
         .pattern-legend { margin-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); }
         .legend-item { font-size: 10px; opacity: 0.6; display: flex; align-items: center; gap: 4px; font-weight: 600; }
+        
+        /* NOTIFICATION UI FIX */
+        .notif-item { background:var(--surface-br); padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid var(--accent); position: relative; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+        .btn-delete-notif { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--danger); opacity: 0.5; cursor: pointer; transition: 0.2s; }
+        .btn-delete-notif:hover { opacity: 1; }
     </style>
 </head>
 <body>
@@ -465,7 +473,7 @@
                     checkLateJoiner();
                 }
             });
-            initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid);
+            initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); setupRealtimeNotifs(u.uid);
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
@@ -804,21 +812,64 @@
         inp.value = "";
     }
 
-    function openNotifs() { document.getElementById('notifModal').style.display='flex'; document.getElementById('notifDot').style.display='none'; renderNotifs(); }
+    // --- UPDATED NOTIFICATION SYSTEM ---
+    function setupRealtimeNotifs(uid) {
+        // Listen to broadcasts
+        db.ref('notifications/' + uid).on('child_added', (s) => {
+            const badge = document.getElementById('notifDot');
+            if (badge) badge.style.display = 'block';
+            
+            // Web Notification sound or alert can be added here
+            if (Notification.permission === "granted") {
+                const n = s.val();
+                new Notification("Radio Bingo Broadcast", { body: n.msg });
+            }
+        });
+    }
+
+    function openNotifs() { 
+        document.getElementById('notifModal').style.display='flex'; 
+        document.getElementById('notifDot').style.display='none'; 
+        renderNotifs(); 
+    }
 
     function renderNotifs() {
         const list = document.getElementById('notifList');
-        db.ref('notifications/' + auth.currentUser.uid).limitToLast(10).once('value', s => {
+        const uid = auth.currentUser.uid;
+        
+        db.ref('notifications/' + uid).orderByChild('time').once('value', s => {
             list.innerHTML = "";
-            if(!s.exists()) { list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px;'>No notifications yet</div>"; return; }
+            if(!s.exists()) { 
+                list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px;'>No notifications yet</div>"; 
+                return; 
+            }
+            
             s.forEach(n => {
-                const val = n.val(); const div = document.createElement('div');
-                div.style.cssText = "background:var(--surface-br); padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid var(--accent)";
-                div.innerHTML = `<div style="font-size:13px;">${val.msg}</div><div style="font-size:10px; opacity:0.5; margin-top:5px;">${fixDate(val.time || val.timestamp)}</div>`;
+                const val = n.val();
+                const key = n.key;
+                const div = document.createElement('div');
+                div.className = 'notif-item';
+                div.innerHTML = `
+                    <div style="font-size:13px; padding-right:20px; color:var(--text);">${val.msg}</div>
+                    <div style="font-size:10px; opacity:0.5; margin-top:8px;">${fixDate(val.time || val.timestamp)}</div>
+                    <button class="btn-delete-notif" onclick="deleteNotif('${key}')">
+                        <i data-lucide="trash-2" style="width:14px"></i>
+                    </button>
+                `;
                 list.prepend(div);
             });
+            lucide.createIcons();
         });
     }
+
+    function deleteNotif(key) {
+        if(confirm("Burahin ang notification na ito?")) {
+            db.ref('notifications/' + auth.currentUser.uid + '/' + key).remove().then(() => {
+                renderNotifs();
+            });
+        }
+    }
+    // --- END NOTIF UPDATES ---
 
     function saveGcash() {
         const num = document.getElementById('gcashInput').value;
