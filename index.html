@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Online Bring Me | Official</title>
+    <title>Online Bring Me | Official Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -22,326 +22,378 @@
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-active { display: block; }
         
-        .bottom-nav { 
-            position: fixed; bottom: 0; left: 0; right: 0; 
-            background: rgba(30, 41, 59, 0.95); 
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            display: grid; grid-template-columns: repeat(3, 1fr); 
-            height: 70px; border-top: 1px solid rgba(255,255,255,0.1); 
-            z-index: 1000; padding: 5px 10px;
-        }
-        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; border: none; background: none; cursor: pointer; transition: 0.2s; }
-        .nav-item i { width: 22px; margin-bottom: 4px; }
-        .nav-item span { font-size: 10px; font-weight: 700; }
+        /* Layout Improvements */
+        .nav { background: var(--surface); padding: 0 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: 65px; }
+        .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 12px; }
+        
+        /* Stats & Badges */
+        .points-badge { background: rgba(251, 191, 36, 0.1); color: var(--gold); padding: 0 12px; height: 38px; border-radius: 10px; font-weight: 800; border: 1px solid var(--gold); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+        .live-counter { background: var(--danger); color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: 900; position: absolute; top: 10px; left: 10px; z-index: 10; display: flex; align-items: center; gap: 4px; }
+
+        /* AI Camera Section */
+        .ai-card { background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid var(--accent); border-radius: 24px; overflow: hidden; margin-bottom: 15px; }
+        .camera-container { position: relative; width: 100%; height: 300px; background: #000; }
+        #aiVideo { width: 100%; height: 100%; object-fit: cover; }
+        .scan-line { position: absolute; width: 100%; height: 2px; background: var(--accent); top: 0; left: 0; box-shadow: 0 0 15px var(--accent); animation: scan 2s linear infinite; display: none; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+        /* Chat System */
+        .chat-box { height: 400px; display: flex; flex-direction: column; background: var(--surface); border-radius: 20px; overflow: hidden; }
+        #chatList { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .chat-row { display: flex; gap: 10px; position: relative; }
+        .bubble { background: var(--surface-br); padding: 10px; border-radius: 15px; font-size: 13px; position: relative; max-width: 80%; }
+        .chat-actions { display: flex; gap: 10px; margin-top: 5px; font-size: 11px; font-weight: 700; color: #94a3b8; }
+        .heart-btn { cursor: pointer; transition: 0.2s; }
+        .heart-btn.active { color: var(--danger); }
+
+        /* Bottom Nav */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(15px); display: grid; grid-template-columns: repeat(3, 1fr); height: 70px; border-top: 1px solid rgba(255,255,255,0.1); z-index: 1000; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; border: none; background: none; cursor: pointer; }
         .nav-item.active { color: var(--accent); }
 
-        #loginOverlay { position: fixed; inset: 0; background: linear-gradient(rgba(11, 17, 32, 0.8), rgba(11, 17, 32, 0.8)), url('https://images.unsplash.com/photo-1596715094285-1d4b83d9539d?q=80&w=2072&auto=format&fit=crop'); background-size: cover; background-position: center; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .login-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 50px 30px; border-radius: 40px; width: 100%; max-width: 400px; text-align: center; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 25px 50px rgba(0,0,0,0.6); }
-        .login-logo { font-size: 42px; font-weight: 900; margin-bottom: 10px; letter-spacing: -2px; }
-        .login-logo span { color: var(--accent); }
-        .login-sub { font-size: 15px; opacity: 0.9; margin-bottom: 35px; line-height: 1.6; font-weight: 500; }
-        .btn-google { background: white; color: #000; border: none; width: 100%; padding: 16px; border-radius: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; font-size: 16px; transition: 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        /* Redesign Redeem Tiers */
+        .tier-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .reward-card { background: var(--surface-br); padding: 15px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+        .reward-card i { color: var(--gold); margin-bottom: 8px; }
 
-        .nav { background: var(--surface); padding: 0 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: 65px; }
-        .user-stats { display: flex; align-items: center; gap: 10px; }
-        .icon-btn { background: var(--surface-br); color: white; border: 1px solid rgba(255,255,255,0.1); width: 40px; height: 40px; border-radius: 12px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; }
-        .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--surface); display: none; }
-        .points-badge { background: rgba(251, 191, 36, 0.1); color: var(--gold); padding: 0 15px; height: 40px; border-radius: 12px; font-weight: 800; border: 1px solid var(--gold); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-        
-        .disclaimer { background: #000; color: #fff; padding: 10px 0; font-size: 12px; font-weight: 900; overflow: hidden; white-space: nowrap; border-bottom: 3px solid var(--danger); border-top: 3px solid var(--danger); box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
-        .marquee-content { display: inline-block; animation: marquee 20s linear infinite; padding-left: 100%; text-transform: uppercase; letter-spacing: 1px; }
-        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+        /* Modals */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--surface); border-radius: 25px; width: 100%; max-width: 400px; padding: 25px; max-height: 80vh; overflow-y: auto; }
 
-        .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 12px; }
-        .card { background: var(--surface); border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative; }
-
-        /* BRING ME STYLES */
-        .ai-card { background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid var(--accent); padding: 25px 15px; border-radius: 24px; text-align: center; margin-bottom: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .camera-box { width: 100%; height: 320px; background: #000; border-radius: 20px; overflow: hidden; position: relative; margin: 15px 0; border: 2px solid rgba(255,255,255,0.1); box-shadow: inset 0 0 50px rgba(0,0,0,0.9); }
-        #aiVideo { width: 100%; height: 100%; object-fit: cover; }
-        .ai-status-label { font-size: 12px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 2px; }
-        #aiTarget { text-shadow: 0 0 15px rgba(251, 191, 36, 0.5); }
-        #aiMsg { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); color: white; padding: 12px; font-size: 12px; font-weight: 600; }
-
-        /* MAINTAINING OTHER STYLES */
-        .chat-box { height: 450px; display: flex; flex-direction: column; background: rgba(15, 23, 42, 0.95); border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; }
-        .chat-header { padding: 15px 20px; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
-        #chatList { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 18px; }
-        .chat-row { display: flex; gap: 12px; }
-        .chat-pfp { width: 36px; height: 36px; border-radius: 12px; border: 1.5px solid var(--accent); }
-        .bubble { background: var(--surface); padding: 12px 16px; border-radius: 0 18px 18px 18px; }
-        .chat-input-area { background: var(--surface); padding: 15px; }
-        .input-wrapper { display: flex; gap: 10px; background: var(--bg); padding: 6px; border-radius: 16px; }
-        .input-wrapper input { flex: 1; background: none; border: none; color: white; padding-left: 10px; outline: none; }
-        .send-btn { background: var(--accent); color: white; border: none; width: 40px; height: 40px; border-radius: 12px; }
-
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(10px); }
-        .modal-content { background: var(--surface); border-radius: 28px; width: 100%; max-width: 450px; padding: 25px; max-height: 90vh; overflow-y: auto; }
-        
-        .reward-item { background: var(--surface-br); padding: 18px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .btn-redeem { background: var(--accent); color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 800; cursor: pointer; }
-
-        .quiz-card { background: #1e293b; border: 1px solid var(--accent); padding: 20px; border-radius: 20px; margin-bottom: 15px; }
-        .opt-btn { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 14px; border-radius: 12px; margin-bottom: 8px; text-align: left; cursor: pointer; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
 <div id="loginOverlay">
     <div class="login-card">
-        <div class="login-logo">BRING<span>ME</span></div>
-        <p class="login-sub">Welcome to Online Bring Me Live. Show the items to the AI and win Golds!</p>
-        <button class="btn-google" onclick="login()">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:18px">
-            Sign in with Google
-        </button>
+        <div class="login-logo" style="color:white; font-size: 40px; font-weight:900;">BRING<span style="color:var(--accent)">ME</span></div>
+        <p class="login-sub">AI-Powered Scavenger Hunt. Win real rewards!</p>
+        <button class="btn-google" onclick="login()" style="width:100%; padding:15px; border-radius:12px; font-weight:800; cursor:pointer;">Sign in with Google</button>
     </div>
 </div>
 
 <div class="nav">
-    <div style="display:flex; align-items:center;"><span style="font-weight: 900; font-size: 18px;">ONLINE<span style="color:var(--accent)">BRINGME</span></span></div>
-    <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
-        <div class="user-stats">
-            <div class="icon-btn" onclick="openNotifs()"><i data-lucide="bell" style="width:20px"></i><span id="notifDot" class="notif-badge"></span></div>
-            <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'"><i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span></div>
-        </div>
-        <img id="userImg" onclick="openMenuModal()" style="width:40px; height:40px; border-radius:12px; cursor: pointer; border: 2px solid var(--accent); object-fit: cover;">
+    <div style="font-weight: 900; font-size: 18px;">ONLINE<span style="color:var(--accent)">BRINGME</span></div>
+    <div id="userPanel" style="display:none; align-items: center; gap: 8px;">
+        <div class="points-badge" onclick="openStore()"><i data-lucide="coins"></i> <span id="userPoints">0</span></div>
+        <img id="userImg" onclick="openProfile()" style="width:38px; height:38px; border-radius:10px; border: 2px solid var(--accent); cursor:pointer;">
     </div>
 </div>
 
-<div class="disclaimer"><div class="marquee-content">⚠️ MAHIGPIT NA PAALALA: ANG SITE NA ITO AY HINDI PARA SA SUGAL. NO REAL MONEY INVOLVED. ⚠️</div></div>
+<div class="disclaimer"><div class="marquee-content">⚠️ NO REAL MONEY INVOLVED • MAGLARO AT MAG-ENJOY LAMANG • REFER FRIENDS TO EARN MORE ⚠️</div></div>
 
 <div class="container">
     <div id="bringMeTab" class="tab-content tab-active">
         <div class="ai-card">
-            <div class="ai-status-label">AI BRING ME CHALLENGE</div>
-            <div style="font-size: 13px; opacity: 0.8; margin-top: 5px;">Hanapin at ipakita sa camera ang:</div>
-            <div id="aiTarget" style="font-size: 36px; font-weight: 900; color: var(--gold); margin: 10px 0; text-transform: uppercase;">---</div>
+            <div style="padding: 15px; text-align: center;">
+                <span style="font-size: 10px; font-weight: 800; color: var(--accent); letter-spacing: 2px;">CURRENT MISSION</span>
+                <div id="aiTarget" style="font-size: 32px; font-weight: 900; color: var(--gold);">---</div>
+            </div>
             
-            <div class="camera-box">
+            <div class="camera-container">
+                <div class="live-counter"><i data-lucide="eye" style="width:12px"></i> <span id="viewCount">...</span> LIVE</div>
+                <div id="scanLine" class="scan-line"></div>
                 <video id="aiVideo" autoplay muted playsinline></video>
-                <div id="aiMsg">Click Start Camera to Start Winning!</div>
             </div>
 
-            <button id="startAiBtn" onclick="initAI()" style="width:100%; background:var(--accent); color:white; border:none; padding:18px; border-radius:16px; font-weight:900; cursor:pointer; font-size: 16px; box-shadow: 0 4px 15px rgba(59,130,246,0.4);">
-                START AI CAMERA
-            </button>
+            <div style="padding: 15px;">
+                <button id="startAiBtn" onclick="initAI()" style="width:100%; background:var(--accent); color:white; border:none; padding:15px; border-radius:12px; font-weight:900; cursor:pointer;">START SCANNING</button>
+                <div id="aiMsg" style="text-align:center; font-size:12px; margin-top:10px; opacity:0.8;">Click button to activate AI Camera</div>
+            </div>
         </div>
 
-        <div class="card" style="padding:0; overflow:hidden;">
-            <div style="height: 200px; background: #000;">
-                <iframe width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" frameborder="0" allowfullscreen></iframe>
-            </div>
+        <div style="border-radius:20px; overflow:hidden; background:#000; height:180px; margin-bottom:15px; border:1px solid var(--surface-br);">
+            <iframe width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" frameborder="0"></iframe>
         </div>
     </div>
 
     <div id="quizTab" class="tab-content">
-        <div id="quizSection" class="quiz-card" style="display: none;">
-            <div class="quiz-header" style="display:flex; justify-content:space-between; margin-bottom:15px;">
-                <div style="font-weight:900; color:var(--accent)">MINI QUIZ</div>
-                <div id="quizStatus" style="font-size:12px; font-weight:800;">Q 1/5</div>
+        <div class="card" style="background:var(--surface); padding:20px; border-radius:20px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                <h3 style="margin:0; color:var(--accent);">AI QUIZ BOT</h3>
+                <span id="quizTimer" style="color:var(--gold); font-weight:800;">00:00</span>
             </div>
-            <div id="quizContent">
-                <div id="quizQuestion" style="font-weight:700; margin-bottom:20px;">Loading...</div>
-                <div id="quizOptions"></div>
-            </div>
-            <div id="quizCooldown" style="display:none; text-align:center; padding:20px;">
-                <div id="quizCountdown" style="font-size:24px; font-weight:900; color:var(--gold)">00:00:00</div>
-            </div>
+            <div id="quizQuestion" style="font-weight:700; font-size:18px; margin-bottom:20px;">Generating question...</div>
+            <div id="quizOptions" style="display:grid; gap:10px;"></div>
         </div>
     </div>
 
     <div id="chatTab" class="tab-content">
-        <div class="chat-box card" style="padding:0">
-            <div class="chat-header"><h3>LIVE CHAT</h3></div>
+        <div class="chat-box">
             <div id="chatList"></div>
-            <div class="chat-input-area">
-                <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
-                    <input type="text" id="chatIn" placeholder="Write a message...">
-                    <button type="submit" class="send-btn"><i data-lucide="send" style="width:18px"></i></button>
-                </form>
+            <div style="padding:15px; background:rgba(0,0,0,0.2);">
+                <div id="replyPreview" style="display:none; font-size:11px; color:var(--accent); margin-bottom:5px;">Replying to... <span onclick="cancelReply()" style="color:var(--danger); float:right;">Cancel</span></div>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="chatIn" placeholder="Type a message..." style="flex:1; background:var(--bg); border:none; color:white; padding:12px; border-radius:10px; outline:none;">
+                    <button onclick="sendChat()" style="background:var(--accent); border:none; color:white; padding:10px 15px; border-radius:10px;"><i data-lucide="send"></i></button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <div class="bottom-nav">
-    <button class="nav-item active" onclick="switchTab('bringMeTab', this)"><i data-lucide="camera"></i><span>BRING ME</span></button>
-    <button class="nav-item" onclick="switchTab('quizTab', this)"><i data-lucide="help-circle"></i><span>QUIZ</span></button>
-    <button class="nav-item" onclick="switchTab('chatTab', this)"><i data-lucide="message-square"></i><span>CHAT</span></button>
-</div>
-
-<div id="menuModal" class="modal" onclick="this.style.display='none'">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <h2 id="profileNameDisplay">User</h2>
-        <input type="number" id="gcashInput" style="width:100%; padding:10px; margin:10px 0;" placeholder="GCash Number">
-        <button onclick="saveGcash()" style="width:100%; background:var(--accent); color:white; border:none; padding:10px; border-radius:10px;">SAVE GCASH</button>
-        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; margin-top:20px; background:var(--danger); color:white; border:none; padding:10px; border-radius:10px;">SIGN OUT</button>
-    </div>
+    <button class="nav-item active" onclick="switchTab('bringMeTab', this)"><i data-lucide="camera"></i><span>PLAY</span></button>
+    <button class="nav-item" onclick="switchTab('quizTab', this)"><i data-lucide="brain-circuit"></i><span>AI QUIZ</span></button>
+    <button class="nav-item" onclick="switchTab('chatTab', this)"><i data-lucide="message-circle"></i><span>CHAT</span></button>
 </div>
 
 <div id="storeModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3>REWARDS SHOP</h3>
-        <div class="reward-item">
-            <span>Official T-Shirt (11,500 Golds)</span>
-            <button class="btn-redeem" onclick="redeemItem('T-Shirt', 11500)">Redeem</button>
+        <h2 style="margin-top:0;">Redeem Rewards</h2>
+        <div class="tier-grid">
+            <div class="reward-card">
+                <i data-lucide="smartphone"></i>
+                <div style="font-size:12px; font-weight:700;">50 Load</div>
+                <div style="color:var(--gold); font-size:10px;">5,000 Golds</div>
+                <button onclick="redeem('50 Load', 5000)" style="margin-top:10px; width:100%; border:none; background:var(--accent); color:white; border-radius:5px; font-size:10px; padding:5px;">Redeem</button>
+            </div>
+            <div class="reward-card">
+                <i data-lucide="shirt"></i>
+                <div style="font-size:12px; font-weight:700;">Official Tee</div>
+                <div style="color:var(--gold); font-size:10px;">15,000 Golds</div>
+                <button onclick="redeem('Tee', 15000)" style="margin-top:10px; width:100%; border:none; background:var(--accent); color:white; border-radius:5px; font-size:10px; padding:5px;">Redeem</button>
+            </div>
         </div>
+        <hr style="margin:20px 0; opacity:0.1;">
+        <h3>Transaction History</h3>
+        <div id="historyList" style="font-size:12px; opacity:0.7;">No history yet.</div>
+    </div>
+</div>
+
+<div id="profileModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 id="pName">User Name</h3>
+        <p style="font-size:12px; opacity:0.8;">Referral Code: <b id="refCode" style="color:var(--accent)">---</b></p>
+        <input type="text" id="gcashNum" placeholder="GCash Number" style="width:100%; padding:12px; border-radius:10px; background:var(--bg); border:none; color:white; margin-bottom:10px;">
+        <button onclick="saveProfile()" style="width:100%; background:var(--success); color:white; border:none; padding:12px; border-radius:10px; font-weight:800;">SAVE PROFILE</button>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; background:none; color:var(--danger); border:none; margin-top:15px; font-weight:700;">Logout</button>
     </div>
 </div>
 
 <script>
     lucide.createIcons();
 
-    function switchTab(tabId, btn) {
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('tab-active'));
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-        document.getElementById(tabId).classList.add('tab-active');
-        btn.classList.add('active');
-    }
-
-    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
+    const firebaseConfig = { 
+        apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", 
+        authDomain: "radiobingo-9ac29.firebaseapp.com", 
+        databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", 
+        projectId: "radiobingo-9ac29" 
+    };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database(); const auth = firebase.auth();
-    let userData = {};
+    const db = firebase.database();
+    const auth = firebase.auth();
+    
+    let user = null;
+    let replyingTo = null;
 
-    // QUIZ DATA
-    const quizData = [
-        { q: "Sino ang pambansang bayani?", a: ["Jose Rizal", "Bonifacio"], c: 0 },
-        { q: "Ilang kulay ang watawat?", a: ["2", "3", "4"], c: 2 }
-    ];
-
+    // --- AUTH & USER DATA ---
     auth.onAuthStateChanged(u => {
         if(u) {
+            user = u;
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('userPanel').style.display = 'flex';
             document.getElementById('userImg').src = u.photoURL;
-            db.ref('users/'+u.uid).on('value', s => { 
-                userData = s.val() || {}; userData.uid = u.uid;
-                document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
-                if(!s.exists()) db.ref('users/'+u.uid).set({ name: u.displayName, points: 100 });
+            document.getElementById('pName').innerText = u.displayName;
+            document.getElementById('refCode').innerText = u.uid.substring(0,8).toUpperCase();
+            
+            db.ref('users/' + u.uid).on('value', s => {
+                const data = s.val() || {};
+                document.getElementById('userPoints').innerText = (data.points || 0).toLocaleString();
+                if(!s.exists()) {
+                    db.ref('users/' + u.uid).set({ name: u.displayName, points: 100, gcash: "" });
+                }
             });
-            initQuizSystem(); setupChat();
-        } else { document.getElementById('loginOverlay').style.display = 'flex'; }
+            loadHistory();
+            setupChat();
+            setupLiveCounter();
+            initAiQuiz();
+        }
     });
 
-    // --- AI ONLINE BRING ME LOGIC (FIXED) ---
-    let aiModel = null;
-    const aiVideo = document.getElementById('aiVideo');
-    const aiTargetEl = document.getElementById('aiTarget');
-    const aiMsg = document.getElementById('aiMsg');
-    const huntItems = ["cell phone", "bottle", "cup", "remote", "book", "handbag", "mouse", "keyboard", "person"];
-    let currentHuntTarget = "";
-    let isAiCooldown = false;
+    // --- AI LOGIC (FIXED SCANNING) ---
+    let model = null;
+    let isDetecting = false;
+    const targets = ["cell phone", "bottle", "cup", "remote", "book", "handbag", "mouse", "keyboard", "bottle"];
+    let currentTarget = "";
 
     async function initAI() {
-        document.getElementById('startAiBtn').style.display = 'none';
-        aiMsg.innerText = "Loading AI Brain... Please wait.";
-        
+        const btn = document.getElementById('startAiBtn');
+        const msg = document.getElementById('aiMsg');
+        btn.disabled = true;
+        msg.innerText = "Loading AI Brain...";
+
         try {
-            // Correct way to load coco-ssd in browser
-            aiModel = await cocoSsd.load();
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment" } 
-            });
-            aiVideo.srcObject = stream;
-            aiMsg.innerText = "AI is scanning... Show the item!";
-            pickNewTarget();
-            runAiDetection();
-        } catch (err) {
-            aiMsg.innerText = "Error: Camera access denied or AI failed to load.";
-            document.getElementById('startAiBtn').style.display = 'block';
-            console.error(err);
+            model = await cocoSsd.load();
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            document.getElementById('aiVideo').srcObject = stream;
+            document.getElementById('scanLine').style.display = 'block';
+            isDetecting = true;
+            pickTarget();
+            detectFrame();
+            msg.innerText = "AI Active! Find the item.";
+            btn.style.display = 'none';
+        } catch (e) {
+            msg.innerText = "Error: Please allow camera access.";
+            btn.disabled = false;
         }
     }
 
-    function pickNewTarget() {
-        currentHuntTarget = huntItems[Math.floor(Math.random() * huntItems.length)];
-        aiTargetEl.innerText = currentHuntTarget;
-        isAiCooldown = false;
+    function pickTarget() {
+        currentTarget = targets[Math.floor(Math.random() * targets.length)];
+        document.getElementById('aiTarget').innerText = currentTarget.toUpperCase();
     }
 
-    async function runAiDetection() {
-        if (!aiModel || isAiCooldown) {
-            requestAnimationFrame(runAiDetection);
-            return;
-        }
+    async function detectFrame() {
+        if(!isDetecting) return;
+        const video = document.getElementById('aiVideo');
         
-        const predictions = await aiModel.detect(aiVideo);
-        let found = false;
-
-        predictions.forEach(p => {
-            if (p.class === currentHuntTarget && p.score > 0.60) {
-                found = true;
-                aiMsg.innerHTML = `<span style='color:var(--success)'>MAHUSAY! NAKITA KO ANG ${p.class.toUpperCase()}!</span>`;
-            }
-        });
-
-        if (found) {
-            isAiCooldown = true;
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.7 } });
-            // Award Golds
-            db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) + 100);
-            setTimeout(() => {
-                aiMsg.innerText = "Scanning for next item...";
-                pickNewTarget();
-            }, 4000);
+        // Optimize: Skip frame if video not ready
+        if (video.readyState === 4) {
+            const predictions = await model.detect(video);
+            predictions.forEach(p => {
+                // FIXED: Direct matching and score threshold
+                if(p.class.toLowerCase() === currentTarget.toLowerCase() && p.score > 0.6) {
+                    winBringMe();
+                }
+            });
         }
-
-        requestAnimationFrame(runAiDetection);
+        requestAnimationFrame(detectFrame);
     }
 
-    // REMAINING FUNCTIONS (QUIZ, CHAT, REDEEM)
+    function winBringMe() {
+        isDetecting = false;
+        confetti({ particleCount: 150, spread: 70 });
+        document.getElementById('aiMsg').innerHTML = "<b style='color:var(--success)'>ITEM FOUND! +500 Golds</b>";
+        db.ref('users/' + user.uid + '/points').transaction(p => (p || 0) + 500);
+        saveHistory("Bring Me Win", 500);
+        
+        setTimeout(() => {
+            isDetecting = true;
+            pickTarget();
+            document.getElementById('aiMsg').innerText = "Scanning for next item...";
+        }, 5000);
+    }
+
+    // --- CHAT SYSTEM (REPLY & HEART) ---
     function setupChat() {
-        db.ref('chats').limitToLast(20).on('child_added', s => {
-            const c = s.val();
+        db.ref('chats').limitToLast(30).on('child_added', s => {
+            const data = s.val();
+            const id = s.key;
             const div = document.createElement('div');
             div.className = 'chat-row';
-            div.innerHTML = `<img src="${c.pfp}" class="chat-pfp"><div class="bubble"><b style="color:var(--accent); font-size:11px;">${c.name}</b><br><span style="font-size:13px;">${c.msg}</span></div>`;
+            div.innerHTML = `
+                <img src="${data.pfp}" style="width:30px; height:30px; border-radius:8px;">
+                <div class="bubble">
+                    ${data.replyTo ? `<div style="font-size:10px; color:var(--accent)">Replying to: ${data.replyTo}</div>` : ''}
+                    <b style="color:var(--accent)">${data.name}</b><br>${data.msg}
+                    <div class="chat-actions">
+                        <span onclick="setReply('${data.name}')">Reply</span>
+                        <span class="heart-btn" onclick="heartChat(this, '${id}')">❤ ${data.hearts || 0}</span>
+                    </div>
+                </div>
+            `;
             document.getElementById('chatList').appendChild(div);
             document.getElementById('chatList').scrollTop = document.getElementById('chatList').scrollHeight;
         });
     }
 
+    function setReply(name) {
+        replyingTo = name;
+        document.getElementById('replyPreview').style.display = 'block';
+        document.getElementById('replyPreview').innerText = "Replying to " + name;
+    }
+
+    function cancelReply() { replyingTo = null; document.getElementById('replyPreview').style.display = 'none'; }
+
     function sendChat() {
         const msg = document.getElementById('chatIn').value;
         if(!msg) return;
-        db.ref('chats').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg });
+        db.ref('chats').push({
+            uid: user.uid,
+            name: user.displayName,
+            pfp: user.photoURL,
+            msg: msg,
+            replyTo: replyingTo,
+            hearts: 0,
+            time: Date.now()
+        });
         document.getElementById('chatIn').value = "";
+        cancelReply();
     }
 
-    function initQuizSystem() {
-        document.getElementById('quizSection').style.display = 'block';
-        showNextQuestion(0);
+    function heartChat(el, id) {
+        el.classList.toggle('active');
+        db.ref('chats/'+id+'/hearts').transaction(h => (h || 0) + 1);
     }
 
-    function showNextQuestion(count) {
-        if(count >= 5) { /* cooldown logic here as per your original code */ return; }
-        const q = quizData[Math.floor(Math.random()*quizData.length)];
+    // --- AI QUIZ SYSTEM ---
+    const quizPool = [
+        { q: "What is 15 + 25?", a: ["40", "35", "45"], c: 0 },
+        { q: "Capital of Philippines?", a: ["Manila", "Cebu", "Davao"], c: 0 }
+    ];
+
+    function initAiQuiz() {
+        const q = quizPool[Math.floor(Math.random() * quizPool.length)];
         document.getElementById('quizQuestion').innerText = q.q;
-        const opt = document.getElementById('quizOptions');
-        opt.innerHTML = "";
-        q.a.forEach((a, i) => {
-            const b = document.createElement('button');
-            b.className = 'opt-btn';
-            b.innerText = a;
-            b.onclick = () => {
-                if(i === q.c) { alert("+25 Golds!"); db.ref('users/'+auth.currentUser.uid+'/points').transaction(p=>(p||0)+25); }
-                showNextQuestion(count+1);
+        const optCont = document.getElementById('quizOptions');
+        optCont.innerHTML = "";
+        q.a.forEach((ans, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'opt-btn';
+            btn.style = "padding:12px; background:var(--surface-br); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:10px; text-align:left; cursor:pointer;";
+            btn.innerText = ans;
+            btn.onclick = () => {
+                if(i === q.c) {
+                    alert("Correct! +50 Golds");
+                    db.ref('users/'+user.uid+'/points').transaction(p=>(p||0)+50);
+                    initAiQuiz();
+                } else {
+                    alert("Wrong! Try again.");
+                }
             };
-            opt.appendChild(b);
+            optCont.appendChild(btn);
         });
     }
 
-    function saveGcash() {
-        const val = document.getElementById('gcashInput').value;
-        db.ref('users/'+auth.currentUser.uid).update({ gcash: val });
-        alert("Saved!");
+    // --- UTILITIES ---
+    function setupLiveCounter() {
+        const count = Math.floor(Math.random() * 50) + 120;
+        document.getElementById('viewCount').innerText = count;
     }
 
+    function saveHistory(type, amt) {
+        db.ref('users/'+user.uid+'/history').push({ type, amt, date: new Date().toLocaleDateString() });
+    }
+
+    function loadHistory() {
+        db.ref('users/'+user.uid+'/history').limitToLast(5).on('value', s => {
+            const list = document.getElementById('historyList');
+            list.innerHTML = "";
+            s.forEach(child => {
+                const h = child.val();
+                list.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${h.type}</span><span style="color:var(--success)">+${h.amt}</span></div>`;
+            });
+        });
+    }
+
+    function switchTab(id, btn) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('tab-active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id).classList.add('tab-active');
+        btn.classList.add('active');
+    }
+
+    function openStore() { document.getElementById('storeModal').style.display='flex'; }
+    function openProfile() { document.getElementById('profileModal').style.display='flex'; }
     function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-    function openMenuModal() { document.getElementById('menuModal').style.display = 'flex'; document.getElementById('profileNameDisplay').innerText = auth.currentUser.displayName; }
-    function openNotifs() { alert("No new notifications"); }
+    
+    function saveProfile() {
+        const g = document.getElementById('gcashNum').value;
+        db.ref('users/'+user.uid).update({ gcash: g });
+        alert("Profile Updated!");
+    }
 </script>
 </body>
 </html>
