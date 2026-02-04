@@ -3,140 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Bring Me | Admin Master</title>
+    <title>Radio Bring Me | Admin Discord-Style</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         :root { 
-            --bg: #020617; 
-            --surface: #0f172a; 
-            --surface-br: #1e293b; 
-            --accent: #3b82f6; 
-            --text: #f8fafc; 
-            --success: #10b981; 
-            --danger: #ef4444; 
-            --gold: #fbbf24; 
-            --glass: rgba(255, 255, 255, 0.05);
+            --bg: #313338; 
+            --sidebar: #2b2d31; 
+            --surface: #1e1f22; 
+            --accent: #5865f2; 
+            --text: #dbdee1; 
+            --text-muted: #949ba4;
+            --success: #23a559; 
+            --danger: #f23f42; 
+            --gold: #f0b232; 
         }
-        * { box-sizing: border-box; outline: none; }
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); 
-            color: var(--text); 
-            margin: 0; 
-            padding: 20px; 
-            background-image: radial-gradient(circle at top right, #1e1b4b, transparent);
-            min-height: 100vh;
+            background: var(--bg); color: var(--text); 
+            margin: 0; display: flex; height: 100vh; overflow: hidden;
+        }
+        .sidebar { width: 260px; background: var(--sidebar); display: flex; flex-direction: column; border-right: 1px solid rgba(0,0,0,0.2); }
+        .main-content { flex: 1; overflow-y: auto; padding: 25px; }
+        
+        .nav-header { padding: 20px; font-weight: 800; font-size: 18px; border-bottom: 1px solid rgba(255,255,255,0.05); color: white; }
+        
+        .card { background: var(--surface); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.1); }
+        h2 { font-size: 12px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+
+        input, textarea { 
+            width: 100%; background: #1e1f22; border: 1px solid #111; color: white; 
+            padding: 10px; border-radius: 4px; margin-bottom: 10px; font-family: inherit;
         }
 
-        .admin-header { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1600px; margin: 0 auto 25px; }
-        .card { background: var(--surface); padding: 25px; border-radius: 24px; border: 1px solid var(--surface-br); box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .btn-set { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 3px; cursor: pointer; font-weight: 600; width: 100%; }
+        .btn-set:hover { background: #4752c4; }
 
-        h2 { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-top: 0; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: var(--accent); border-bottom: 1px solid var(--glass); padding-bottom: 12px; }
-
-        .draw-box { border: 2px solid var(--accent); background: linear-gradient(145deg, #0f172a, #1e1b4b); }
-        .current-item-display { font-size: 36px; font-weight: 900; color: var(--gold); margin: 20px 0; text-transform: uppercase; text-shadow: 0 0 20px rgba(251, 191, 36, 0.3); text-align: center; }
-
-        .btn-set { background: var(--accent); color: white; font-size: 15px; padding: 16px; border-radius: 16px; border: none; font-weight: 800; cursor: pointer; width: 100%; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4); }
-        .btn-set:hover { transform: translateY(-2px); filter: brightness(1.1); }
-        .btn-reset { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1.5px solid var(--danger); padding: 10px; border-radius: 12px; width: 100%; cursor: pointer; font-weight: 700; font-size: 12px; transition: 0.2s; }
-        .btn-reset:hover { background: var(--danger); color: white; }
-
-        input, textarea { width: 100%; padding: 12px 16px; margin-bottom: 12px; border-radius: 12px; border: 1px solid var(--surface-br); background: #020617; color: white; font-size: 14px; font-weight: 600; }
-        input:focus { border-color: var(--accent); }
-
-        #adminWinnerNotif { background: var(--success); color: white; padding: 15px; border-radius: 16px; margin-bottom: 20px; display: none; font-weight: 800; text-align: center; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        .player-mini-card { 
+            display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 4px; transition: 0.2s; cursor: pointer;
+        }
+        .player-mini-card:hover { background: rgba(255,255,255,0.05); }
+        .player-pfp { width: 32px; height: 32px; border-radius: 50%; }
         
-        .winner-profile { margin-top: 12px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 16px; border: 1px dashed rgba(255,255,255,0.3); }
+        .chat-monitor { height: 400px; display: flex; flex-direction: column; background: var(--sidebar); border-radius: 8px; }
+        #chatList { flex: 1; overflow-y: auto; padding: 15px; font-size: 14px; }
+        .chat-msg { margin-bottom: 8px; }
+        .chat-msg b { color: var(--accent); }
 
-        .main-layout { display: grid; grid-template-columns: 1fr 380px; gap: 20px; max-width: 1600px; margin: 0 auto; }
-        .chat-monitor { height: 600px; display: flex; flex-direction: column; }
-        #chatList { flex: 1; overflow-y: auto; padding-right: 10px; }
-        .chat-msg { margin-bottom: 10px; padding: 12px; background: var(--glass); border-radius: 14px; font-size: 13px; border-left: 4px solid var(--accent); }
-
-        .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; margin-top: 20px; }
-        .player-mini-card { background: #020617; border-radius: 20px; padding: 20px; border: 1px solid var(--surface-br); position: relative; text-align: center; transition: 0.3s; }
-        .player-mini-card:hover { border-color: var(--accent); transform: translateY(-3px); }
-        .player-pfp { width: 55px; height: 55px; border-radius: 18px; border: 2.5px solid var(--accent); margin-bottom: 10px; object-fit: cover; }
-        
-        .status-dot { width: 12px; height: 12px; background: #4b5563; border-radius: 50%; display: inline-block; position: absolute; top: 15px; right: 15px; border: 2.5px solid #020617; }
-        .status-dot.online { background: var(--success); box-shadow: 0 0 12px var(--success); }
-
-        .payout-card { max-height: 400px; overflow-y: auto; }
-        .online-badge { background: var(--success); color: white; padding: 4px 10px; border-radius: 10px; font-size: 11px; margin-left: auto; font-weight: 800; }
-        
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: var(--surface-br); border-radius: 10px; }
+        #adminWinnerNotif { background: var(--success); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none; }
     </style>
 </head>
 <body>
 
-    <h1 style="text-align:center; font-weight:900; letter-spacing:-1.5px; margin-bottom:30px; font-size: 28px;">
-        RADIO BRING ME <span style="color:var(--accent)">MASTER</span>
-    </h1>
-
-    <div class="admin-header">
-        <div class="card draw-box">
-            <h2><i data-lucide="camera"></i> LIVE BRING ME ENGINE</h2>
-            <div id="adminWinnerNotif">
-                🎉 WINNER DETECTED!
-                <div id="winnerInfo" class="winner-profile"></div>
-            </div>
-            <div class="current-item-display" id="currentItemDisplay">WAITING...</div>
-            
-            <input type="text" id="itemInput" placeholder="Enter target item name...">
-            <button class="btn-set" onclick="setTargetItem()">LAUNCH NEW ROUND</button>
-            
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                <button class="btn-reset" onclick="resetGame()">RESET</button>
-                <button class="btn-reset" style="color:var(--gold); border-color:var(--gold);" onclick="clearWinner()">CLEAR WINNER</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2><i data-lucide="megaphone"></i> MARQUEE ANNOUNCEMENT</h2>
-            <textarea id="notifMsg" rows="3" placeholder="I-update ang tumatakbong text sa baba ng app..."></textarea>
-            <button onclick="updateAnnouncement()" style="background:var(--gold); color:black; border:none; padding:15px; border-radius:16px; width:100%; font-weight:800; cursor:pointer; font-size:13px;">UPDATE APP MARQUEE</button>
-            <p style="font-size: 10px; opacity: 0.5; margin-top: 10px; font-weight: 600;">*Ito ang magbabago sa 'Welcome to Radio Bring Me Live!' text.</p>
-        </div>
-
-        <div class="card">
-            <h2><i data-lucide="coins"></i> POINT ADJUSTER</h2>
-            <input type="text" id="targetUid" placeholder="Paste Player UID here...">
-            <input type="number" id="pointAmount" placeholder="Amount (ex: 500)">
-            <div style="display:flex; gap:10px;">
-                <button onclick="adjustPoints('add')" style="flex:1; background:var(--success); color:white; border:none; padding:14px; border-radius:14px; font-weight:800; cursor:pointer;">ADD</button>
-                <button onclick="adjustPoints('sub')" style="flex:1; background:var(--danger); color:white; border:none; padding:14px; border-radius:14px; font-weight:800; cursor:pointer;">SUB</button>
-            </div>
+    <div class="sidebar">
+        <div class="nav-header">ADMIN PANEL</div>
+        <div style="padding: 15px;">
+            <h2><i data-lucide="users"></i> Online Players</h2>
+            <div id="playersGrid"></div>
         </div>
     </div>
 
-    <div class="main-layout">
-        <div class="card">
-            <h2 style="display: flex; align-items: center; width: 100%;">
-                <i data-lucide="users"></i> PLAYER MONITORING
-                <span id="onlineCounter" class="online-badge">0 ONLINE</span>
-            </h2>
-            <div id="playersGrid" class="players-grid"></div>
+    <div class="main-content">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <div class="card">
+                    <h2><i data-lucide="radio"></i> Control Engine</h2>
+                    <div id="adminWinnerNotif">
+                        <div id="winnerInfo"></div>
+                    </div>
+                    <h1 id="currentItemDisplay" style="color:var(--gold); text-align:center;">WAITING...</h1>
+                    <input type="text" id="itemInput" placeholder="Target item...">
+                    <button class="btn-set" onclick="setTargetItem()">LAUNCH ROUND</button>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <button onclick="resetGame()" style="flex:1; background:var(--danger); border:none; color:white; padding:8px; border-radius:3px; cursor:pointer;">RESET</button>
+                        <button onclick="clearWinner()" style="flex:1; background:var(--gold); border:none; color:black; padding:8px; border-radius:3px; cursor:pointer;">CLEAR</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2><i data-lucide="megaphone"></i> Global Marquee</h2>
+                    <textarea id="notifMsg" placeholder="Announcement..."></textarea>
+                    <button onclick="updateAnnouncement()" class="btn-set">UPDATE APP</button>
+                </div>
+            </div>
+
+            <div>
+                <div class="card">
+                    <h2><i data-lucide="coins"></i> Point Adjuster (Secure)</h2>
+                    <input type="text" id="targetUid" placeholder="Player UID">
+                    <input type="number" id="pointAmount" placeholder="Amount">
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="adjustPoints('add')" style="background:var(--success); border:none; color:white; flex:1; padding:10px; border-radius:3px;">ADD</button>
+                        <button onclick="adjustPoints('sub')" style="background:var(--danger); border:none; color:white; flex:1; padding:10px; border-radius:3px;">SUB</button>
+                    </div>
+                </div>
+
+                <div class="card chat-monitor">
+                    <h2><i data-lucide="message-square"></i> Live Chat</h2>
+                    <div id="chatList"></div>
+                </div>
+            </div>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:20px;">
-            <div class="card payout-card">
-                <h2><i data-lucide="wallet"></i> REDEMPTION QUEUE</h2>
-                <div id="payoutList"></div>
-            </div>
-            <div class="card chat-monitor">
-                <h2><i data-lucide="message-square"></i> LIVE MODERATION</h2>
-                <div id="chatList"></div>
-            </div>
+        <div class="card">
+            <h2><i data-lucide="wallet"></i> Pending Payouts</h2>
+            <div id="payoutList"></div>
         </div>
     </div>
 
     <script>
-        // --- LOGIC MAINTAINED FROM ORIGINAL ---
         const firebaseConfig = {
             apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
             authDomain: "radiobingo-9ac29.firebaseapp.com",
@@ -151,29 +128,27 @@
 
         function setTargetItem() {
             const item = document.getElementById('itemInput').value.toLowerCase().trim();
-            if(!item) return alert("Enter item name!");
-            db.ref('gameState/targetItem').set(item);
-            db.ref('gameState/latestWinner').remove(); 
+            if(!item) return;
+            // Siguruhing malinis ang previous winner bago mag-start
+            db.ref('gameState/latestWinner').set(null).then(() => {
+                db.ref('gameState/targetItem').set(item);
+            });
             document.getElementById('itemInput').value = "";
         }
 
-        // BAGONG FUNCTION PARA SA MARQUEE SYNC
         function updateAnnouncement() {
             const msg = document.getElementById('notifMsg').value.trim();
-            if(!msg) return alert("Enter message!");
-            db.ref('gameState/announcement').set(msg);
-            alert("App Marquee Updated!");
-            document.getElementById('notifMsg').value = "";
+            if(msg) db.ref('gameState/announcement').set(msg);
         }
 
         function resetGame() {
-            if(confirm("Reset current round?")) {
+            if(confirm("Reset?")) {
                 db.ref('gameState/targetItem').set("Waiting for Host...");
-                db.ref('gameState/latestWinner').remove();
+                db.ref('gameState/latestWinner').set(null);
             }
         }
 
-        function clearWinner() { db.ref('gameState/latestWinner').remove(); }
+        function clearWinner() { db.ref('gameState/latestWinner').set(null); }
 
         db.ref('gameState/targetItem').on('value', s => {
             document.getElementById('currentItemDisplay').innerText = s.val() || "WAITING...";
@@ -183,21 +158,13 @@
             const notif = document.getElementById('adminWinnerNotif');
             const info = document.getElementById('winnerInfo');
             if(s.exists()) {
-                const winData = s.val();
+                const w = s.val();
                 notif.style.display = 'block';
-                info.innerHTML = `
-                    <img src="${winData.photo || ''}" style="width:50px; height:50px; border-radius:12px; border:2px solid white; margin-bottom:10px;">
-                    <div style="font-size:14px; font-weight:800;">${winData.name}</div>
-                    <div style="font-size:10px; opacity:0.7; margin: 5px 0;">UID: ${winData.uid}</div>
-                    <button onclick="copyUid('${winData.uid}')" style="background:white; color:black; border:none; border-radius:8px; font-size:10px; padding:8px 15px; font-weight:800; cursor:pointer;">USE UID</button>
-                `;
+                info.innerHTML = `Winner: <b>${w.name}</b> <button onclick="copyUid('${w.uid}')">COPY UID</button>`;
             } else { notif.style.display = 'none'; }
         });
 
-        function copyUid(uid) {
-            document.getElementById('targetUid').value = uid;
-            alert("UID Loaded to Point Manager!");
-        }
+        function copyUid(uid) { document.getElementById('targetUid').value = uid; }
 
         db.ref('redemptions').on('value', s => {
             const list = document.getElementById('payoutList');
@@ -206,63 +173,38 @@
                 const r = child.val();
                 if(r.status !== 'pending') return;
                 const div = document.createElement('div');
-                div.className = 'chat-msg';
-                div.style.borderLeftColor = "var(--success)";
-                div.innerHTML = `
-                    <b style="color:var(--gold)">${r.item}</b> - ${r.name}<br>
-                    <small>GCash: ${r.gcash}</small>
-                    <div style="display:flex; gap:5px; margin-top:10px;">
-                        <button onclick="updateStatus('${child.key}', 'completed', ${JSON.stringify(r).replace(/"/g, '&quot;')})" style="background:var(--success); color:white; border:none; border-radius:8px; font-size:10px; padding:8px 12px; cursor:pointer; font-weight:800;">MARK PAID</button>
-                        <button onclick="updateStatus('${child.key}', 'denied', ${JSON.stringify(r).replace(/"/g, '&quot;')})" style="background:var(--danger); color:white; border:none; border-radius:8px; font-size:10px; padding:8px 12px; cursor:pointer; font-weight:800;">DENY</button>
-                    </div>
-                `;
-                list.prepend(div);
+                div.style.padding = "10px"; div.style.borderBottom = "1px solid #444";
+                div.innerHTML = `${r.name} - ${r.item} (${r.gcash}) 
+                    <button onclick="updateStatus('${child.key}', 'completed', ${JSON.stringify(r).replace(/"/g, '&quot;')})">PAID</button>`;
+                list.appendChild(div);
             });
         });
 
         function updateStatus(key, status, data) {
-            if(!confirm(`Mark as ${status}?`)) return;
             db.ref('redemptions/' + key).update({ status: status });
-            db.ref('notifications').push({ 
-                title: "Payout Update", 
-                body: status === 'completed' ? `Your ${data.item} request is PAID! 💸` : `Your ${data.item} request was denied.`, 
-                uid: data.uid, timestamp: Date.now() 
-            });
+            db.ref('notifications').push({ title: "Payout", body: "Updated to " + status, uid: data.uid });
         }
 
         db.ref('users').on('value', s => {
             const grid = document.getElementById('playersGrid');
             grid.innerHTML = "";
-            let count = 0;
-            let players = [];
             s.forEach(child => {
-                const p = child.val(); p.uid = child.key;
-                p.isOnline = (Date.now() - (p.lastActive || 0)) < 300000;
-                if(p.isOnline) count++;
-                players.push(p);
-            });
-            players.sort((a, b) => b.isOnline - a.isOnline);
-            players.forEach(p => {
+                const p = child.val();
                 const div = document.createElement('div');
                 div.className = 'player-mini-card';
-                div.innerHTML = `
-                    <div class="status-dot ${p.isOnline ? 'online' : ''}"></div>
-                    <img src="${p.photo || ''}" class="player-pfp">
-                    <div style="font-size:11px; font-weight:800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name || 'User'}</div>
-                    <div style="font-size:11px; color:var(--gold); font-weight:900;">${(p.points || 0).toLocaleString()}</div>
-                    <button onclick="copyUid('${p.uid}')" style="font-size:9px; background:var(--glass); color:#94a3b8; border:none; margin-top:8px; cursor:pointer; padding:4px 8px; border-radius:6px;">COPY UID</button>
-                `;
+                div.innerHTML = `<img src="${p.photo}" class="player-pfp"> <span>${p.name}</span> <small>${p.points || 0}</small>`;
+                div.onclick = () => copyUid(child.key);
                 grid.appendChild(div);
             });
-            document.getElementById('onlineCounter').innerText = count + " ONLINE";
         });
 
         function adjustPoints(type) {
             const uid = document.getElementById('targetUid').value;
             const amt = parseInt(document.getElementById('pointAmount').value);
-            if(!uid || !amt) return alert("Fill all fields");
+            if(!uid || !amt) return;
+            // Gumamit ng transaction para iwas double points
             db.ref('users/' + uid + '/points').transaction(p => type === 'add' ? (p || 0) + amt : (p || 0) - amt);
-            alert("Points Updated");
+            alert("Points Adjusted!");
         }
 
         db.ref('chats').limitToLast(20).on('child_added', s => {
@@ -270,7 +212,7 @@
             const list = document.getElementById('chatList');
             const div = document.createElement('div');
             div.className = 'chat-msg';
-            div.innerHTML = `<strong style="color:var(--accent)">${m.name}:</strong> ${m.msg}`;
+            div.innerHTML = `<b>${m.name}:</b> ${m.msg}`;
             list.appendChild(div);
             list.scrollTop = list.scrollHeight;
         });
