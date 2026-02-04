@@ -207,17 +207,6 @@
         
         .pattern-legend { margin-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); }
         .legend-item { font-size: 10px; opacity: 0.6; display: flex; align-items: center; gap: 4px; font-weight: 600; }
-
-        /* NEW QUIZ TAB STYLES */
-        .quiz-card { background: linear-gradient(135deg, #1e293b, #111827); border: 1px solid var(--accent); padding: 20px; border-radius: 20px; margin-bottom: 15px; }
-        .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
-        .quiz-title { font-weight: 900; font-size: 16px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
-        .quiz-q-text { font-size: 16px; font-weight: 700; line-height: 1.4; margin-bottom: 20px; }
-        .quiz-options { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        .opt-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 14px; border-radius: 12px; text-align: left; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .opt-btn:hover { background: rgba(59, 130, 246, 0.1); border-color: var(--accent); }
-        .quiz-timer { font-size: 11px; opacity: 0.6; font-weight: 800; }
-        .quiz-locked { text-align: center; padding: 20px; }
     </style>
 </head>
 <body>
@@ -252,23 +241,6 @@
         <div class="nd-info">
             <div class="next-draw-label">Susunod na Bola</div>
             <div id="nextDrawTime" class="next-draw-time">--:-- --</div>
-        </div>
-    </div>
-
-    <div id="quizSection" class="quiz-card" style="display: none;">
-        <div class="quiz-header">
-            <div class="quiz-title"><i data-lucide="help-circle"></i> MINI QUIZ</div>
-            <div class="quiz-timer" id="quizStatus">Q 1/5</div>
-        </div>
-        <div id="quizContent">
-            <div class="quiz-q-text" id="quizQuestion">Loading question...</div>
-            <div class="quiz-options" id="quizOptions"></div>
-        </div>
-        <div id="quizCooldown" class="quiz-locked" style="display:none;">
-            <i data-lucide="lock" style="color:var(--gold); width:30px; margin-bottom:10px;"></i>
-            <div style="font-size:14px; font-weight:800;">Quiz Limit Reached</div>
-            <div style="font-size:11px; opacity:0.6; margin-top:5px;">Balik ka ulit after 3 hours for more points!</div>
-            <div id="quizCountdown" style="color:var(--accent); font-weight:900; font-size:18px; margin-top:10px;">00:00:00</div>
         </div>
     </div>
 
@@ -454,18 +426,6 @@
     // REPLY SYSTEM GLOBAL
     let selectedReplyId = null;
 
-    // QUIZ SYSTEM LOGIC
-    let currentQuizCount = 0;
-    const quizData = [
-        { q: "Sino ang pambansang bayani ng Pilipinas?", a: ["Jose Rizal", "Andres Bonifacio", "Emilio Aguinaldo"], c: 0 },
-        { q: "Ilang kulay ang nasa watawat ng Pilipinas?", a: ["2", "3", "4"], c: 2 },
-        { q: "Ano ang kabisera ng Pilipinas?", a: ["Cebu", "Manila", "Davao"], c: 1 },
-        { q: "Anong prutas ang tinaguriang 'King of Fruits'?", a: ["Mangga", "Durian", "Saging"], c: 1 },
-        { q: "Ilang letra ang nasa alpabetong Filipino?", a: ["26", "28", "30"], c: 1 },
-        { q: "Ano ang pambansang ibon ng Pilipinas?", a: ["Maya", "Philippine Eagle", "Agila"], c: 1 },
-        { q: "Sino ang 'Ama ng Katipunan'?", a: ["Andres Bonifacio", "Juan Luna", "Apolinario Mabini"], c: 0 }
-    ];
-
     function fixDate(timestamp) {
         if(!timestamp) return "No Date";
         const d = new Date(parseInt(timestamp));
@@ -531,90 +491,11 @@
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
                     if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
                     checkLateJoiner();
-                    // Initialize Quiz
-                    initQuizSystem();
                 }
             });
             initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid);
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
-
-    // --- QUIZ LOGIC START ---
-    function initQuizSystem() {
-        document.getElementById('quizSection').style.display = 'block';
-        const now = Date.now();
-        const lastQuizTime = userData.quizLastReset || 0;
-        const quizCount = userData.quizCount || 0;
-
-        if (now - lastQuizTime > 10800000) { // 3 Hours reset
-            db.ref('users/' + userData.uid).update({ quizCount: 0, quizLastReset: now });
-            showNextQuestion(0);
-        } else if (quizCount >= 5) {
-            startQuizCooldown(lastQuizTime + 10800000);
-        } else {
-            showNextQuestion(quizCount);
-        }
-    }
-
-    function showNextQuestion(count) {
-        document.getElementById('quizContent').style.display = 'block';
-        document.getElementById('quizCooldown').style.display = 'none';
-        document.getElementById('quizStatus').innerText = `Q ${count + 1}/5`;
-        
-        // Randomly pick from data
-        const qIndex = Math.floor(Math.random() * quizData.length);
-        const q = quizData[qIndex];
-        
-        document.getElementById('quizQuestion').innerText = q.q;
-        const optCont = document.getElementById('quizOptions');
-        optCont.innerHTML = "";
-        
-        q.a.forEach((opt, idx) => {
-            const btn = document.createElement('button');
-            btn.className = "opt-btn";
-            btn.innerText = opt;
-            btn.onclick = () => checkQuizAnswer(idx, q.c);
-            optCont.appendChild(btn);
-        });
-    }
-
-    function checkQuizAnswer(selected, correct) {
-        if (selected === correct) {
-            alert("✅ Tama! +25 Points");
-            db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) + 25);
-        } else {
-            alert("❌ Mali! Bawi sa susunod.");
-        }
-        
-        const nextCount = (userData.quizCount || 0) + 1;
-        db.ref('users/' + userData.uid + '/quizCount').set(nextCount);
-        
-        if (nextCount >= 5) {
-            initQuizSystem();
-        } else {
-            showNextQuestion(nextCount);
-        }
-    }
-
-    function startQuizCooldown(targetTime) {
-        document.getElementById('quizContent').style.display = 'none';
-        document.getElementById('quizCooldown').style.display = 'block';
-        
-        const timer = setInterval(() => {
-            const now = Date.now();
-            const diff = targetTime - now;
-            if (diff <= 0) {
-                clearInterval(timer);
-                initQuizSystem();
-                return;
-            }
-            const h = Math.floor(diff / 3600000);
-            const m = Math.floor((diff % 3600000) / 60000);
-            const s = Math.floor((diff % 60000) / 1000);
-            document.getElementById('quizCountdown').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-        }, 1000);
-    }
-    // --- QUIZ LOGIC END ---
 
     function setupPresence(uid) {
         const onlineRef = db.ref('.info/connected');
