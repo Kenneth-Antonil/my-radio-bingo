@@ -1,409 +1,499 @@
-<!DOCTYPE html>
-<html lang="tl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Bingo | Admin Master</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-        :root { 
-            --bg: #030712; 
-            --surface: #111827; 
-            --surface-br: #1f2937; 
-            --accent: #3b82f6; 
-            --text: #f8fafc; 
-            --success: #10b981; 
-            --danger: #ef4444; 
-            --gold: #fbbf24; 
-            --puro: #f97316;
-            --bringme: #8b5cf6;
-            --glass: rgba(255, 255, 255, 0.03);
-        }
-        * { box-sizing: border-box; }
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: var(--bg); 
-            color: var(--text); 
-            margin: 0; 
-            padding: 20px; 
-            display: grid; 
-            grid-template-columns: 280px 1fr; 
-            gap: 20px; 
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* TABS SYSTEM */
-        .tabs-nav { display: flex; gap: 10px; margin-bottom: 20px; background: var(--surface); padding: 10px; border-radius: 16px; border: 1px solid var(--glass); }
-        .tab-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; background: transparent; color: #64748b; font-weight: 800; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .tab-btn.active { background: var(--accent); color: white; }
-        .tab-content { display: none; height: calc(100vh - 120px); overflow-y: auto; padding-right: 10px; }
-        .tab-content.active { display: block; }
-
-        /* WINNER MARQUEE */
-        .winner-marquee { background: var(--gold); color: black; padding: 8px; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; position: relative; border-radius: 8px; margin-bottom: 15px; display: none; }
-        .marquee-text { display: inline-block; animation: marquee 15s linear infinite; }
-        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-
-        /* SIDEBAR & STATS */
-        .sidebar { background: var(--surface); border-radius: 24px; padding: 20px; border: 1px solid var(--glass); overflow-y: auto; }
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .stat-card { background: var(--glass); padding: 15px; border-radius: 18px; text-align: center; }
-        .stat-val { font-size: 20px; font-weight: 900; color: var(--gold); }
-        .stat-lbl { font-size: 10px; opacity: 0.5; font-weight: 700; }
-
-        /* BINGO CARDS MONITORING */
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-        .user-card-monitor { background: var(--surface-br); padding: 12px; border-radius: 16px; border: 2px solid transparent; transition: 0.3s; }
-        .user-card-monitor.puro { border-color: var(--puro); box-shadow: 0 0 15px rgba(249, 115, 22, 0.3); animation: pulse-puro 1.5s infinite; }
-        .user-card-monitor.bingo { border-color: var(--success); background: #064e3b; box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
-        @keyframes pulse-puro { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-        
-        .mini-bingo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 8px; }
-        .mini-cell { aspect-ratio: 1; background: rgba(0,0,0,0.3); font-size: 8px; display: flex; align-items: center; justify-content: center; border-radius: 2px; }
-        .mini-cell.marked { background: var(--accent); color: white; }
-
-        /* BRING ME GALLERY */
-        .bringme-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
-        .photo-card { background: var(--surface-br); border-radius: 16px; overflow: hidden; border: 1px solid var(--glass); }
-        .photo-card img { width: 100%; height: 150px; object-fit: cover; cursor: pointer; }
-        .photo-info { padding: 10px; font-size: 11px; }
-
-        /* COMMON COMPONENTS */
-        .card { background: var(--surface); border-radius: 24px; padding: 24px; border: 1px solid var(--glass); margin-bottom: 20px; }
-        .ball-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap: 8px; }
-        .ball { aspect-ratio: 1; background: var(--surface-br); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; font-size: 14px; border: 1px solid var(--glass); }
-        .ball.drawn { background: var(--accent); color: white; box-shadow: 0 0 15px rgba(59,130,246,0.4); }
-        
-        .btn { width: 100%; padding: 12px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
-        .btn-primary { background: var(--accent); color: white; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-bringme { background: var(--bringme); color: white; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
-        input, select { width: 100%; background: var(--surface-br); border: 1px solid var(--glass); padding: 10px; border-radius: 10px; color: white; }
-        
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; }
-        .status-active { background: var(--success); color: white; }
-        .status-off { background: var(--danger); color: white; }
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: var(--surface-br); border-radius: 10px; }
-    </style>
-</head>
-<body>
-
-<div class="sidebar">
-    <div style="font-size: 22px; font-weight: 900; margin-bottom: 25px; letter-spacing: -1px;">ADMIN<span style="color:var(--accent)">PANEL</span></div>
-    
-    <div class="stat-grid">
-        <div class="stat-card"><div class="stat-val" id="countOnline">0</div><div class="stat-lbl">ONLINE</div></div>
-        <div class="stat-card"><div class="stat-val" id="countUsers">0</div><div class="stat-lbl">TOTAL</div></div>
-    </div>
-
-    <div class="input-group">
-        <label>Next Draw Time</label>
-        <input type="text" id="nextDrawIn" placeholder="e.g. 8:00 PM">
-        <button class="btn btn-primary" onclick="setNextDraw()"><i data-lucide="clock"></i> Update</button>
-    </div>
-
-    <div class="card" style="padding: 15px; background: rgba(0,0,0,0.2);">
-        <label>Active Users List</label>
-        <div id="activeUsersList" style="max-height: 200px; overflow-y: auto; font-size: 11px;">
-            </div>
-    </div>
-
-    <button class="btn btn-danger" onclick="resetGame()"><i data-lucide="refresh-ccw"></i> RESET BINGO</button>
-    <button class="btn btn-primary" style="background:#4b5563" onclick="updateExistingUsers()"><i data-lucide="shield-check"></i> Fix Codes</button>
-</div>
-
-<div class="main-section">
-    <div id="winnerAnnounce" class="winner-marquee">
-        <div class="marquee-text" id="winnerMarqueeText">MAY NANALO NA! CONGRATULATIONS SA ATING WINNER! 🏆</div>
-    </div>
-
-    <div class="tabs-nav">
-        <button class="tab-btn active" onclick="openTab('bingo-tab', this)"><i data-lucide="layout-grid"></i> BINGO</button>
-        <button class="tab-btn" onclick="openTab('bringme-tab', this)"><i data-lucide="camera"></i> BRING ME</button>
-        <button class="tab-btn" onclick="openTab('cashout-tab', this)"><i data-lucide="wallet"></i> CASHOUTS</button>
-    </div>
-
-    <div id="bingo-tab" class="tab-content active">
-        <div style="display:grid; grid-template-columns: 1fr 2fr; gap: 20px;">
-            <div class="card">
-                <h2><i data-lucide="settings"></i> Control</h2>
-                <div class="input-group">
-                    <label>Pattern</label>
-                    <select id="patternSelect" onchange="setPattern(this.value)">
-                        <option value="Normal Bingo">Normal Bingo</option>
-                        <option value="Blackout">Blackout</option>
-                        <option value="Letter X">Letter X</option>
-                        <option value="Four Corners">Four Corners</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label>Current Ball</label>
-                    <div id="lastBall" style="font-size: 60px; font-weight: 900; text-align: center; color: var(--accent); background: var(--glass); border-radius: 15px; padding: 10px;">--</div>
-                </div>
-                <div class="ball-grid" id="ballGrid"></div>
-            </div>
-
-            <div class="card">
-                <h2><i data-lucide="users"></i> Live Cards Monitoring</h2>
-                <div class="cards-grid" id="liveCardsContainer">
-                    </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="bringme-tab" class="tab-content">
-        <div class="card" style="background: linear-gradient(145deg, #2e1065, #1e1b4b); border: 2px solid var(--bringme);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="color:white; margin:0;"><i data-lucide="zap"></i> AI BRING ME</h2>
-                <div id="bringmeStatusBadge" class="status-badge status-off">OFFLINE</div>
-            </div>
-            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:15px; align-items:end;">
-                <div class="input-group" style="margin:0;">
-                    <label style="color:rgba(255,255,255,0.6)">Item Target</label>
-                    <input type="text" id="bringmeItemIn" placeholder="e.g. Spoon">
-                </div>
-                <button class="btn btn-bringme" onclick="startBringMe()"><i data-lucide="play"></i> START</button>
-                <button class="btn btn-danger" onclick="stopBringMe()"><i data-lucide="square"></i> STOP</button>
-            </div>
-        </div>
-        
-        <div class="card">
-            <h2><i data-lucide="image"></i> Submissions Gallery</h2>
-            <div class="bringme-gallery" id="bringmeGallery">
-                </div>
-        </div>
-    </div>
-
-    <div id="cashout-tab" class="tab-content">
-        <div class="card">
-            <h2><i data-lucide="wallet"></i> GCash Requests</h2>
-            <div id="cashoutList"></div>
-        </div>
-    </div>
-</div>
-
-<script>
-    lucide.createIcons();
-    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // TABS LOGIC
-    function openTab(tabId, btn) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        btn.classList.add('active');
-    }
-
-    // BINGO BALLS
-    for(let i=1; i<=75; i++) {
-        let b = document.createElement('div');
-        b.className = 'ball'; b.id = 'ball-'+i; b.innerText = i;
-        b.onclick = () => toggleBall(i);
-        document.getElementById('ballGrid').appendChild(b);
-    }
-
-    function toggleBall(num) {
-        const ref = db.ref('drawnNumbers/' + num);
-        ref.once('value', s => {
-            if(s.exists()) ref.remove();
-            else {
-                ref.set(num);
-                db.ref('gameState/gameStartTime').once('value', ss => {
-                    if(!ss.exists()) db.ref('gameState/gameStartTime').set(Date.now());
-                });
-            }
-        });
-    }
-
-    // REAL-TIME MONITORING
-    let drawnNumbers = [];
-    db.ref('drawnNumbers').on('value', s => {
-        drawnNumbers = s.val() ? Object.values(s.val()) : [];
-        document.querySelectorAll('.ball').forEach(b => b.classList.remove('drawn'));
-        drawnNumbers.forEach(n => {
-            const el = document.getElementById('ball-'+n);
-            if(el) el.classList.add('drawn');
-        });
-        document.getElementById('lastBall').innerText = drawnNumbers.length ? drawnNumbers[drawnNumbers.length-1] : "--";
-    });
-
-    // RENDER LIVE CARDS - FIXED FOR REALTIME
-    db.ref('users').on('value', s => {
-        const container = document.getElementById('liveCardsContainer');
-        container.innerHTML = "";
-        s.forEach(child => {
-            const user = child.val();
-            if(!user.card) return;
-            
-            let matches = 0;
-            user.card.forEach(n => { if(drawnNumbers.includes(n) || n === "FREE") matches++; });
-            
-            const isBingo = user.hasWonCurrent;
-            const isPuro = matches >= 23 && !isBingo; 
-
-            const cardDiv = document.createElement('div');
-            cardDiv.className = `user-card-monitor ${isBingo ? 'bingo' : ''} ${isPuro ? 'puro' : ''}`;
-            
-            let gridHtml = '<div class="mini-bingo-grid">';
-            user.card.forEach(n => {
-                const marked = drawnNumbers.includes(n) || n === "FREE";
-                gridHtml += `<div class="mini-cell ${marked ? 'marked' : ''}">${n === "FREE" ? '⭐' : n}</div>`;
-            });
-            gridHtml += '</div>';
-
-            cardDiv.innerHTML = `
-                <div style="font-size:10px; font-weight:800; display:flex; justify-content:space-between;">
-                    <span>${(user.name || 'Anonymous').split(' ')[0]}</span>
-                    <span>${matches}/24</span>
-                </div>
-                ${gridHtml}
-            `;
-            container.appendChild(cardDiv);
-        });
-    });
-
-    // WINNER ANNOUNCEMENT
-    db.ref('gameState/latestWinner').on('value', s => {
-        const marquee = document.getElementById('winnerAnnounce');
-        if(s.exists()) {
-            marquee.style.display = 'block';
-            document.getElementById('winnerMarqueeText').innerText = `🏆 BINGO WINNER: ${s.val().name}! CONGRATULATIONS! 🏆`;
-        } else {
-            marquee.style.display = 'none';
-        }
-    });
-
-    // BRING ME GALLERY & LOGIC - FIXED PHOTO DISPLAY
-    db.ref('gameState/bringMeSubmissions').on('value', s => {
-        const gallery = document.getElementById('bringmeGallery');
-        gallery.innerHTML = "";
-        if(!s.exists()) return;
-        s.forEach(child => {
-            const data = child.val();
-            gallery.innerHTML += `
-                <div class="photo-card">
-                    <img src="${data.photoUrl}" onclick="window.open(this.src)" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
-                    <div class="photo-info">
-                        <b>${data.userName || 'User'}</b><br>
-                        <span style="color:var(--gold)">Score: ${data.aiScore || 0}%</span>
-                    </div>
-                </div>
-            `;
-        });
-    });
-
-    function startBringMe() {
-        const item = document.getElementById('bringmeItemIn').value.trim();
-        if(!item) return alert("Maglagay ng item!");
-        db.ref('gameState/bringMe').set({ active: true, item: item, winner: null, startTime: Date.now() });
-        db.ref('gameState/bringMeSubmissions').remove();
-    }
-
-    function stopBringMe() { db.ref('gameState/bringMe').update({ active: false }); }
-
-    db.ref('gameState/bringMe').on('value', s => {
-        const data = s.val();
-        const badge = document.getElementById('bringmeStatusBadge');
-        if(data && data.active) {
-            badge.innerText = "LIVE NOW";
-            badge.className = "status-badge status-active";
-        } else {
-            badge.innerText = "OFFLINE";
-            badge.className = "status-badge status-off";
-        }
-    });
-
-    // ONLINE STATUS - FIXED NAME DISPLAY
-    db.ref('status').on('value', s => {
-        document.getElementById('countOnline').innerText = s.numChildren();
-        const list = document.getElementById('activeUsersList');
-        list.innerHTML = "";
-        s.forEach(u => {
-            const uid = u.key;
-            db.ref('users/' + uid + '/name').once('value', nameSnap => {
-                const name = nameSnap.val() || 'User';
-                const userEl = document.createElement('div');
-                userEl.style.cssText = "padding:4px 0; border-bottom:1px solid var(--glass)";
-                userEl.innerText = `🟢 ${name}`;
-                list.appendChild(userEl);
-            });
-        });
-    });
-    db.ref('users').on('value', s => { document.getElementById('countUsers').innerText = s.numChildren(); });
-
-    // EXISTING CORE LOGIC
-    function setPattern(p) { db.ref('gameState/currentPattern').set(p); }
-    function setNextDraw() { 
-        const val = document.getElementById('nextDrawIn').value;
-        db.ref('gameState/nextDraw').set(val);
-        alert("Updated!");
-    }
-    function resetGame() {
-        if(confirm("Sigurado ka?")){
-            db.ref('drawnNumbers').remove();
-            db.ref('gameState/latestWinner').remove();
-            db.ref('gameState/gameStartTime').remove();
-            db.ref('users').once('value', s => {
-                s.forEach(u => { db.ref('users/'+u.key).update({ hasWonCurrent: false }); });
-            });
-        }
-    }
-
-    // CASHOUTS
-    db.ref('redemptions').on('value', s => {
-        const list = document.getElementById('cashoutList');
-        list.innerHTML = "";
-        s.forEach(child => {
-            const r = child.val(); const key = child.key;
-            if(r.status !== 'pending') return;
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.style.padding = "15px";
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-weight:800;">${r.name} - <span style="color:var(--gold)">${r.item}</span></div>
-                        <div style="font-size:11px; opacity:0.6;">GCash: ${r.gcash}</div>
-                    </div>
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn btn-primary" style="width:auto; padding:8px 20px" onclick="updateStatus('${key}', 'sent', ${JSON.stringify(r).replace(/"/g, '&quot;')})">PAID</button>
-                        <button class="btn btn-danger" style="width:auto; padding:8px 20px" onclick="updateStatus('${key}', 'denied', ${JSON.stringify(r).replace(/"/g, '&quot;')})">X</button>
-                    </div>
-                </div>`;
-            list.prepend(div);
-        });
-    });
-
-    function updateStatus(key, status, data) {
-        if(confirm(`${status} this?`)) {
-            db.ref('redemptions/' + key).update({ status: status });
-            const statusMsg = status === 'sent' ? `Ang iyong ${data.item} ay na-ipadala na! 🚀` : `Ang iyong ${data.item} ay na-deny. ❌`;
-            db.ref('notifications/' + data.uid).push({ msg: statusMsg, time: Date.now() });
-            if(status === 'denied') db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost);
-        }
-    }
-
-    async function updateExistingUsers() {
-        const snapshot = await db.ref('users').once('value');
-        let updates = {};
-        snapshot.forEach(child => {
-            if (!child.val().refCode) {
-                updates[`${child.key}/refCode`] = Math.random().toString(36).substring(2, 8).toUpperCase();
-            }
-        });
-        if (Object.keys(updates).length > 0) await db.ref('users').update(updates);
-        alert("Codes Generated!");
-    }
-</script>
-</body>
-</html>
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/dashboard.html b/dashboard.html
+index bfa41f06c68350ad160d32a1f56da1e00d3171e3..a058c1f040ef6293886866628f3c493ebb71648b 100644
+--- a/dashboard.html
++++ b/dashboard.html
+@@ -67,110 +67,151 @@
+         .mini-cell.marked { background: var(--accent); color: white; }
+ 
+         /* BRING ME GALLERY */
+         .bringme-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
+         .photo-card { background: var(--surface-br); border-radius: 16px; overflow: hidden; border: 1px solid var(--glass); }
+         .photo-card img { width: 100%; height: 150px; object-fit: cover; cursor: pointer; }
+         .photo-info { padding: 10px; font-size: 11px; }
+ 
+         /* COMMON COMPONENTS */
+         .card { background: var(--surface); border-radius: 24px; padding: 24px; border: 1px solid var(--glass); margin-bottom: 20px; }
+         .ball-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap: 8px; }
+         .ball { aspect-ratio: 1; background: var(--surface-br); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; font-size: 14px; border: 1px solid var(--glass); }
+         .ball.drawn { background: var(--accent); color: white; box-shadow: 0 0 15px rgba(59,130,246,0.4); }
+         
+         .btn { width: 100%; padding: 12px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
+         .btn-primary { background: var(--accent); color: white; }
+         .btn-danger { background: var(--danger); color: white; }
+         .btn-bringme { background: var(--bringme); color: white; }
+         .input-group { margin-bottom: 15px; }
+         label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
+         input, select { width: 100%; background: var(--surface-br); border: 1px solid var(--glass); padding: 10px; border-radius: 10px; color: white; }
+         
+         .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; }
+         .status-active { background: var(--success); color: white; }
+         .status-off { background: var(--danger); color: white; }
++        .status-idle { background: #f59e0b; color: #111827; }
++        .hint { font-size: 11px; opacity: 0.7; margin-top: 8px; }
++        .compact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+ 
+         ::-webkit-scrollbar { width: 6px; }
+         ::-webkit-scrollbar-thumb { background: var(--surface-br); border-radius: 10px; }
+     </style>
+ </head>
+ <body>
+ 
+ <div class="sidebar">
+     <div style="font-size: 22px; font-weight: 900; margin-bottom: 25px; letter-spacing: -1px;">ADMIN<span style="color:var(--accent)">PANEL</span></div>
+     
+     <div class="stat-grid">
+         <div class="stat-card"><div class="stat-val" id="countOnline">0</div><div class="stat-lbl">ONLINE</div></div>
+         <div class="stat-card"><div class="stat-val" id="countUsers">0</div><div class="stat-lbl">TOTAL</div></div>
+     </div>
+ 
+     <div class="input-group">
+         <label>Next Draw Time</label>
+         <input type="text" id="nextDrawIn" placeholder="e.g. 8:00 PM">
+         <button class="btn btn-primary" onclick="setNextDraw()"><i data-lucide="clock"></i> Update</button>
++        <button class="btn btn-primary" style="background:#0ea5e9" onclick="quickSetNextDrawMinutes(10)"><i data-lucide="timer"></i> +10 mins</button>
++    </div>
++
++    <div class="card" style="padding: 15px; background: rgba(0,0,0,0.2); margin-bottom: 15px;">
++        <label style="margin-bottom:10px;">Auto Draw Control</label>
++        <div class="compact-grid">
++            <div class="input-group" style="margin:0;">
++                <label style="font-size:9px;">Interval (seconds)</label>
++                <input type="number" id="autoDrawIntervalIn" min="3" max="180" value="10">
++            </div>
++            <div class="input-group" style="margin:0;">
++                <label style="font-size:9px;">Status</label>
++                <div id="autoDrawStatus" class="status-badge status-off" style="text-align:center; padding:10px;">OFF</div>
++            </div>
++        </div>
++        <button class="btn btn-primary" onclick="startAutoDraw()"><i data-lucide="play"></i> Start Auto Draw</button>
++        <button class="btn btn-danger" onclick="stopAutoDraw()"><i data-lucide="square"></i> Stop Auto Draw</button>
++        <div id="autoDrawHint" class="hint">Auto draw will pull random numbers not yet drawn.</div>
++    </div>
++
++    <div class="card" style="padding: 15px; background: rgba(0,0,0,0.2); margin-bottom: 15px;">
++        <label style="margin-bottom:10px;">Bingo Jackpot Points</label>
++        <div class="compact-grid">
++            <div class="input-group" style="margin:0;">
++                <label style="font-size:9px;">Point Mode</label>
++                <select id="jackpotMode" onchange="setJackpotMode(this.value)">
++                    <option value="regular">Regular Points</option>
++                    <option value="custom">Custom Points</option>
++                </select>
++            </div>
++            <div class="input-group" style="margin:0;">
++                <label style="font-size:9px;">Custom Points</label>
++                <input type="number" id="jackpotCustomPoints" min="1" step="1" value="500">
++            </div>
++        </div>
++        <button class="btn btn-primary" onclick="saveJackpotSettings()"><i data-lucide="save"></i> Save Jackpot</button>
++        <div id="jackpotPreview" class="hint">Current winner reward: 500 points</div>
+     </div>
+ 
+     <div class="card" style="padding: 15px; background: rgba(0,0,0,0.2);">
+         <label>Active Users List</label>
+         <div id="activeUsersList" style="max-height: 200px; overflow-y: auto; font-size: 11px;">
+             </div>
+     </div>
+ 
+     <button class="btn btn-danger" onclick="resetGame()"><i data-lucide="refresh-ccw"></i> RESET BINGO</button>
+     <button class="btn btn-primary" style="background:#4b5563" onclick="updateExistingUsers()"><i data-lucide="shield-check"></i> Fix Codes</button>
+ </div>
+ 
+ <div class="main-section">
+     <div id="winnerAnnounce" class="winner-marquee">
+         <div class="marquee-text" id="winnerMarqueeText">MAY NANALO NA! CONGRATULATIONS SA ATING WINNER! 🏆</div>
+     </div>
+ 
+     <div class="tabs-nav">
+         <button class="tab-btn active" onclick="openTab('bingo-tab', this)"><i data-lucide="layout-grid"></i> BINGO</button>
+         <button class="tab-btn" onclick="openTab('bringme-tab', this)"><i data-lucide="camera"></i> BRING ME</button>
+         <button class="tab-btn" onclick="openTab('cashout-tab', this)"><i data-lucide="wallet"></i> CASHOUTS</button>
+     </div>
+ 
+     <div id="bingo-tab" class="tab-content active">
+         <div style="display:grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+             <div class="card">
+                 <h2><i data-lucide="settings"></i> Control</h2>
+                 <div class="input-group">
+                     <label>Pattern</label>
+                     <select id="patternSelect" onchange="setPattern(this.value)">
+                         <option value="Normal Bingo">Normal Bingo</option>
+                         <option value="Blackout">Blackout</option>
+                         <option value="Letter X">Letter X</option>
+                         <option value="Four Corners">Four Corners</option>
+                     </select>
+                 </div>
+                 <div class="input-group">
+                     <label>Current Ball</label>
+                     <div id="lastBall" style="font-size: 60px; font-weight: 900; text-align: center; color: var(--accent); background: var(--glass); border-radius: 15px; padding: 10px;">--</div>
+                 </div>
+                 <div class="ball-grid" id="ballGrid"></div>
++                <div class="hint">Manual draw disabled. Numbers are now generated via Auto Draw only.</div>
+             </div>
+ 
+             <div class="card">
+                 <h2><i data-lucide="users"></i> Live Cards Monitoring</h2>
+                 <div class="cards-grid" id="liveCardsContainer">
+                     </div>
+             </div>
+         </div>
+     </div>
+ 
+     <div id="bringme-tab" class="tab-content">
+         <div class="card" style="background: linear-gradient(145deg, #2e1065, #1e1b4b); border: 2px solid var(--bringme);">
+             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                 <h2 style="color:white; margin:0;"><i data-lucide="zap"></i> AI BRING ME</h2>
+                 <div id="bringmeStatusBadge" class="status-badge status-off">OFFLINE</div>
+             </div>
+             <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:15px; align-items:end;">
+                 <div class="input-group" style="margin:0;">
+                     <label style="color:rgba(255,255,255,0.6)">Item Target</label>
+                     <input type="text" id="bringmeItemIn" placeholder="e.g. Spoon">
+                 </div>
+                 <button class="btn btn-bringme" onclick="startBringMe()"><i data-lucide="play"></i> START</button>
+                 <button class="btn btn-danger" onclick="stopBringMe()"><i data-lucide="square"></i> STOP</button>
+             </div>
+         </div>
+@@ -186,67 +227,157 @@
+         <div class="card">
+             <h2><i data-lucide="wallet"></i> GCash Requests</h2>
+             <div id="cashoutList"></div>
+         </div>
+     </div>
+ </div>
+ 
+ <script>
+     lucide.createIcons();
+     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
+     firebase.initializeApp(firebaseConfig);
+     const db = firebase.database();
+ 
+     // TABS LOGIC
+     function openTab(tabId, btn) {
+         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+         document.getElementById(tabId).classList.add('active');
+         btn.classList.add('active');
+     }
+ 
+     // BINGO BALLS
+     for(let i=1; i<=75; i++) {
+         let b = document.createElement('div');
+         b.className = 'ball'; b.id = 'ball-'+i; b.innerText = i;
+-        b.onclick = () => toggleBall(i);
++        b.onclick = () => alert('Manual draw is disabled. Use Auto Draw controls in the sidebar.');
+         document.getElementById('ballGrid').appendChild(b);
+     }
+ 
+-    function toggleBall(num) {
++    function drawBall(num) {
+         const ref = db.ref('drawnNumbers/' + num);
+         ref.once('value', s => {
+-            if(s.exists()) ref.remove();
+-            else {
+-                ref.set(num);
+-                db.ref('gameState/gameStartTime').once('value', ss => {
+-                    if(!ss.exists()) db.ref('gameState/gameStartTime').set(Date.now());
+-                });
+-            }
++            if(s.exists()) return;
++            ref.set(num);
++            db.ref('gameState/gameStartTime').once('value', ss => {
++                if(!ss.exists()) db.ref('gameState/gameStartTime').set(Date.now());
++            });
+         });
+     }
+ 
++
++    let autoDrawTimer = null;
++    let autoDrawState = { enabled: false, intervalSec: 10, lastDrawAt: null };
++    const DEFAULT_JACKPOT_POINTS = 500;
++
++    function updateAutoDrawUI() {
++        const badge = document.getElementById('autoDrawStatus');
++        const hint = document.getElementById('autoDrawHint');
++        if (!badge || !hint) return;
++        if (autoDrawState.enabled) {
++            badge.innerText = 'RUNNING';
++            badge.className = 'status-badge status-active';
++            hint.innerText = `Drawing every ${autoDrawState.intervalSec}s. Last draw: ${autoDrawState.lastDrawAt ? new Date(autoDrawState.lastDrawAt).toLocaleTimeString() : 'waiting...'}`;
++        } else {
++            badge.innerText = 'OFF';
++            badge.className = 'status-badge status-off';
++            hint.innerText = 'Auto draw is stopped.';
++        }
++    }
++
++    function getAvailableNumbers() {
++        const used = new Set(drawnNumbers.map(n => Number(n)));
++        const pool = [];
++        for (let i = 1; i <= 75; i++) if (!used.has(i)) pool.push(i);
++        return pool;
++    }
++
++    function runAutoDrawTick() {
++        if (!autoDrawState.enabled) return;
++        const pool = getAvailableNumbers();
++        if (pool.length === 0) {
++            stopAutoDraw();
++            alert('Lahat ng numbers na-draw na. Auto draw stopped.');
++            return;
++        }
++        const picked = pool[Math.floor(Math.random() * pool.length)];
++        drawBall(picked);
++        autoDrawState.lastDrawAt = Date.now();
++        db.ref('gameState/autoDraw').update({ lastDrawAt: autoDrawState.lastDrawAt });
++        updateAutoDrawUI();
++    }
++
++    function clearAutoDrawTimer() {
++        if (autoDrawTimer) {
++            clearInterval(autoDrawTimer);
++            autoDrawTimer = null;
++        }
++    }
++
++    function applyAutoDrawState() {
++        clearAutoDrawTimer();
++        updateAutoDrawUI();
++        if (!autoDrawState.enabled) return;
++        autoDrawTimer = setInterval(runAutoDrawTick, Math.max(3, autoDrawState.intervalSec) * 1000);
++    }
++
++    function startAutoDraw() {
++        const intervalInput = Number(document.getElementById('autoDrawIntervalIn').value) || 10;
++        const intervalSec = Math.min(180, Math.max(3, intervalInput));
++        db.ref('gameState/autoDraw').update({ enabled: true, intervalSec, startedAt: Date.now() });
++    }
++
++    function stopAutoDraw() {
++        db.ref('gameState/autoDraw').update({ enabled: false, stoppedAt: Date.now() });
++    }
++
++    function setJackpotMode(mode) {
++        const customInput = document.getElementById('jackpotCustomPoints');
++        customInput.disabled = mode !== 'custom';
++    }
++
++    function getWinnerPoints(settings) {
++        if (!settings || settings.mode !== 'custom') return DEFAULT_JACKPOT_POINTS;
++        return Number(settings.customPoints) > 0 ? Number(settings.customPoints) : DEFAULT_JACKPOT_POINTS;
++    }
++
++    function updateJackpotPreview(settings) {
++        const preview = document.getElementById('jackpotPreview');
++        if (!preview) return;
++        const pts = getWinnerPoints(settings);
++        const modeLabel = settings && settings.mode === 'custom' ? 'Custom' : 'Regular';
++        preview.innerText = `Current winner reward: ${pts} points (${modeLabel})`;
++    }
++
++    function saveJackpotSettings() {
++        const mode = document.getElementById('jackpotMode').value;
++        const customPoints = Math.max(1, Number(document.getElementById('jackpotCustomPoints').value) || DEFAULT_JACKPOT_POINTS);
++        db.ref('gameState/jackpotSettings').set({ mode, customPoints, updatedAt: Date.now() });
++        alert('Jackpot points updated!');
++    }
++
++
+     // REAL-TIME MONITORING
+     let drawnNumbers = [];
+     db.ref('drawnNumbers').on('value', s => {
+         drawnNumbers = s.val() ? Object.values(s.val()) : [];
+         document.querySelectorAll('.ball').forEach(b => b.classList.remove('drawn'));
+         drawnNumbers.forEach(n => {
+             const el = document.getElementById('ball-'+n);
+             if(el) el.classList.add('drawn');
+         });
+         document.getElementById('lastBall').innerText = drawnNumbers.length ? drawnNumbers[drawnNumbers.length-1] : "--";
+     });
+ 
+     // RENDER LIVE CARDS - FIXED FOR REALTIME
+     db.ref('users').on('value', s => {
+         const container = document.getElementById('liveCardsContainer');
+         container.innerHTML = "";
+         s.forEach(child => {
+             const user = child.val();
+             if(!user.card) return;
+             
+             let matches = 0;
+             user.card.forEach(n => { if(drawnNumbers.includes(n) || n === "FREE") matches++; });
+             
+             const isBingo = user.hasWonCurrent;
+             const isPuro = matches >= 23 && !isBingo; 
+@@ -254,52 +385,54 @@
+             const cardDiv = document.createElement('div');
+             cardDiv.className = `user-card-monitor ${isBingo ? 'bingo' : ''} ${isPuro ? 'puro' : ''}`;
+             
+             let gridHtml = '<div class="mini-bingo-grid">';
+             user.card.forEach(n => {
+                 const marked = drawnNumbers.includes(n) || n === "FREE";
+                 gridHtml += `<div class="mini-cell ${marked ? 'marked' : ''}">${n === "FREE" ? '⭐' : n}</div>`;
+             });
+             gridHtml += '</div>';
+ 
+             cardDiv.innerHTML = `
+                 <div style="font-size:10px; font-weight:800; display:flex; justify-content:space-between;">
+                     <span>${(user.name || 'Anonymous').split(' ')[0]}</span>
+                     <span>${matches}/24</span>
+                 </div>
+                 ${gridHtml}
+             `;
+             container.appendChild(cardDiv);
+         });
+     });
+ 
+     // WINNER ANNOUNCEMENT
+     db.ref('gameState/latestWinner').on('value', s => {
+         const marquee = document.getElementById('winnerAnnounce');
+         if(s.exists()) {
++            const win = s.val();
++            const rewardText = win.pointsAwarded ? ` +${win.pointsAwarded} points` : '';
+             marquee.style.display = 'block';
+-            document.getElementById('winnerMarqueeText').innerText = `🏆 BINGO WINNER: ${s.val().name}! CONGRATULATIONS! 🏆`;
++            document.getElementById('winnerMarqueeText').innerText = `🏆 BINGO WINNER: ${win.name}!${rewardText} CONGRATULATIONS! 🏆`;
+         } else {
+             marquee.style.display = 'none';
+         }
+     });
+ 
+     // BRING ME GALLERY & LOGIC - FIXED PHOTO DISPLAY
+     db.ref('gameState/bringMeSubmissions').on('value', s => {
+         const gallery = document.getElementById('bringmeGallery');
+         gallery.innerHTML = "";
+         if(!s.exists()) return;
+         s.forEach(child => {
+             const data = child.val();
+             gallery.innerHTML += `
+                 <div class="photo-card">
+                     <img src="${data.photoUrl}" onclick="window.open(this.src)" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                     <div class="photo-info">
+                         <b>${data.userName || 'User'}</b><br>
+                         <span style="color:var(--gold)">Score: ${data.aiScore || 0}%</span>
+                     </div>
+                 </div>
+             `;
+         });
+     });
+ 
+     function startBringMe() {
+@@ -319,62 +452,82 @@
+             badge.className = "status-badge status-active";
+         } else {
+             badge.innerText = "OFFLINE";
+             badge.className = "status-badge status-off";
+         }
+     });
+ 
+     // ONLINE STATUS - FIXED NAME DISPLAY
+     db.ref('status').on('value', s => {
+         document.getElementById('countOnline').innerText = s.numChildren();
+         const list = document.getElementById('activeUsersList');
+         list.innerHTML = "";
+         s.forEach(u => {
+             const uid = u.key;
+             db.ref('users/' + uid + '/name').once('value', nameSnap => {
+                 const name = nameSnap.val() || 'User';
+                 const userEl = document.createElement('div');
+                 userEl.style.cssText = "padding:4px 0; border-bottom:1px solid var(--glass)";
+                 userEl.innerText = `🟢 ${name}`;
+                 list.appendChild(userEl);
+             });
+         });
+     });
+     db.ref('users').on('value', s => { document.getElementById('countUsers').innerText = s.numChildren(); });
+ 
++    db.ref('gameState/autoDraw').on('value', s => {
++        const data = s.val() || {};
++        autoDrawState = {
++            enabled: !!data.enabled,
++            intervalSec: Number(data.intervalSec) || 10,
++            lastDrawAt: data.lastDrawAt || null
++        };
++        document.getElementById('autoDrawIntervalIn').value = autoDrawState.intervalSec;
++        applyAutoDrawState();
++    });
++
++    db.ref('gameState/jackpotSettings').on('value', s => {
++        const settings = s.val() || { mode: 'regular', customPoints: DEFAULT_JACKPOT_POINTS };
++        document.getElementById('jackpotMode').value = settings.mode || 'regular';
++        document.getElementById('jackpotCustomPoints').value = Number(settings.customPoints) || DEFAULT_JACKPOT_POINTS;
++        setJackpotMode(settings.mode || 'regular');
++        updateJackpotPreview(settings);
++    });
++
+     // EXISTING CORE LOGIC
+     function setPattern(p) { db.ref('gameState/currentPattern').set(p); }
+     function setNextDraw() { 
+         const val = document.getElementById('nextDrawIn').value;
+         db.ref('gameState/nextDraw').set(val);
+         alert("Updated!");
+     }
+     function resetGame() {
+         if(confirm("Sigurado ka?")){
+             db.ref('drawnNumbers').remove();
+             db.ref('gameState/latestWinner').remove();
+             db.ref('gameState/gameStartTime').remove();
++            db.ref('gameState/autoDraw').update({ enabled: false, stoppedAt: Date.now() });
+             db.ref('users').once('value', s => {
+                 s.forEach(u => { db.ref('users/'+u.key).update({ hasWonCurrent: false }); });
+             });
+         }
+     }
+ 
+     // CASHOUTS
+     db.ref('redemptions').on('value', s => {
+         const list = document.getElementById('cashoutList');
+         list.innerHTML = "";
+         s.forEach(child => {
+             const r = child.val(); const key = child.key;
+             if(r.status !== 'pending') return;
+             const div = document.createElement('div');
+             div.className = 'card';
+             div.style.padding = "15px";
+             div.innerHTML = `
+                 <div style="display:flex; justify-content:space-between; align-items:center;">
+                     <div>
+                         <div style="font-weight:800;">${r.name} - <span style="color:var(--gold)">${r.item}</span></div>
+                         <div style="font-size:11px; opacity:0.6;">GCash: ${r.gcash}</div>
+                     </div>
+                     <div style="display:flex; gap:10px;">
+                         <button class="btn btn-primary" style="width:auto; padding:8px 20px" onclick="updateStatus('${key}', 'sent', ${JSON.stringify(r).replace(/"/g, '&quot;')})">PAID</button>
+                         <button class="btn btn-danger" style="width:auto; padding:8px 20px" onclick="updateStatus('${key}', 'denied', ${JSON.stringify(r).replace(/"/g, '&quot;')})">X</button>
+@@ -382,28 +535,35 @@
+                 </div>`;
+             list.prepend(div);
+         });
+     });
+ 
+     function updateStatus(key, status, data) {
+         if(confirm(`${status} this?`)) {
+             db.ref('redemptions/' + key).update({ status: status });
+             const statusMsg = status === 'sent' ? `Ang iyong ${data.item} ay na-ipadala na! 🚀` : `Ang iyong ${data.item} ay na-deny. ❌`;
+             db.ref('notifications/' + data.uid).push({ msg: statusMsg, time: Date.now() });
+             if(status === 'denied') db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost);
+         }
+     }
+ 
+     async function updateExistingUsers() {
+         const snapshot = await db.ref('users').once('value');
+         let updates = {};
+         snapshot.forEach(child => {
+             if (!child.val().refCode) {
+                 updates[`${child.key}/refCode`] = Math.random().toString(36).substring(2, 8).toUpperCase();
+             }
+         });
+         if (Object.keys(updates).length > 0) await db.ref('users').update(updates);
+         alert("Codes Generated!");
+     }
++
++    // Useful feature: quick set next draw to +10 minutes
++    function quickSetNextDrawMinutes(minutes = 10) {
++        const ts = Date.now() + (minutes * 60 * 1000);
++        document.getElementById('nextDrawIn').value = ts;
++        setNextDraw();
++    }
+ </script>
+ </body>
+ </html>
