@@ -3,41 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Radio Bingo Live | Summer Edition</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <title>Radio Bingo Live | Valentine's Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script> <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
     <style>
-        /* === SUMMER VIBE PALETTE === */
+        /* === VALENTINE'S SHINY 3D PALETTE === */
         :root { 
-            --bg-overlay: rgba(15, 23, 42, 0.6); /* Dark overlay for readability */
-            --glass-surface: rgba(30, 41, 59, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.15);
-            --glass-highlight: rgba(255, 255, 255, 0.1);
+            --bg-overlay: rgba(30, 0, 10, 0.7); 
+            --glass-surface: rgba(80, 10, 30, 0.65);
+            --glass-border: rgba(255, 182, 193, 0.3);
+            --glass-highlight: rgba(255, 255, 255, 0.2);
             
-            --accent: #0ea5e9; /* Ocean Blue */
-            --accent-glow: #38bdf8;
-            --text: #f8fafc; 
+            --accent: #db2777; /* Deep Pink */
+            --accent-glow: #f472b6;
+            --text: #fff1f2; 
             --gold: #fbbf24; 
             --gold-shine: #fcd34d;
+            --love-red: #e11d48;
+            --sweet-pink: #fbcfe8;
             --success: #10b981; 
             --danger: #ef4444; 
             --bringme: #8b5cf6; 
-            --minigame: #f472b6; /* Pink Sunset */
+            --minigame: #db2777;
         }
         
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
-            font-family: 'Inter', sans-serif; 
-            background: url('https://images.unsplash.com/photo-1614094723477-e5ecb7274ae8?q=80&w=2576&auto=format&fit=crop') no-repeat center center fixed;
+            font-family: 'Poppins', sans-serif; 
+            /* Romantic Background */
+            background: url('https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=2670&auto=format&fit=crop') no-repeat center center fixed;
             background-size: cover;
             color: var(--text); 
             margin: 0; 
@@ -46,27 +49,59 @@
             min-height: 100vh;
         }
 
-        /* === SHINY GLASSMORPHISM STYLES === */
+        /* === SHINY 3D GLASS STYLES === */
         .glass-panel {
-            background: var(--glass-surface);
+            background: linear-gradient(145deg, rgba(80, 10, 30, 0.8), rgba(40, 5, 15, 0.8));
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--glass-border);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            border-top: 1px solid rgba(255,255,255,0.4);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(255, 192, 203, 0.1);
+            border-radius: 24px;
         }
 
-        /* REUSED STYLES (UPDATED UI) */
+        /* CUSTOM 3D ALERT POPUP */
+        #customAlertOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000;
+            display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px);
+        }
+        .custom-alert-box {
+            background: linear-gradient(135deg, #be123c, #881337);
+            width: 85%; max-width: 350px; padding: 25px; border-radius: 30px;
+            text-align: center; position: relative;
+            border: 3px solid #f9a8d4;
+            box-shadow: 0 0 0 5px rgba(219, 39, 119, 0.5), 0 20px 50px rgba(0,0,0,0.6);
+            transform: scale(0.8); opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .custom-alert-box.active { transform: scale(1); opacity: 1; }
+        .alert-icon-box {
+            width: 70px; height: 70px; background: linear-gradient(180deg, #fbcfe8, #f472b6);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            margin: -60px auto 15px; border: 4px solid #881337;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            animation: heartBeat 1.5s infinite;
+        }
+        @keyframes heartBeat { 0% {transform: scale(1);} 15% {transform: scale(1.15);} 30% {transform: scale(1);} 45% {transform: scale(1.15);} 60% {transform: scale(1);} }
+        .alert-btn {
+            background: linear-gradient(180deg, #fbbf24, #d97706);
+            color: #451a03; border: none; padding: 12px 30px; border-radius: 25px;
+            font-weight: 900; font-size: 16px; margin-top: 20px; cursor: pointer;
+            box-shadow: 0 5px 0 #92400e, 0 10px 15px rgba(0,0,0,0.3);
+            transition: 0.2s; width: 100%;
+        }
+        .alert-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #92400e; }
+
         #jackpotBanner { 
-            background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b); 
-            color: #78350f; 
+            background: linear-gradient(90deg, #db2777, #f472b6, #db2777); 
+            color: white; 
             padding: 12px; 
             text-align: center; 
             font-weight: 900; 
             font-size: 15px; 
             text-transform: uppercase; 
             letter-spacing: 1px; 
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(251, 191, 36, 0.6); 
+            border-radius: 20px;
+            box-shadow: 0 0 25px rgba(219, 39, 119, 0.6); 
             animation: shimmer 2s infinite linear; 
             background-size: 200% auto; 
             display: none; 
@@ -74,763 +109,322 @@
             border: 2px solid #fff;
         }
         @keyframes shimmer { to { background-position: 200% center; } }
-        .jackpot-amount { font-size: 20px; color: #451a03; display: block; font-weight: 900; }
+        .jackpot-amount { font-size: 24px; color: #fff; display: block; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 
-        #loginOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(8px); }
-        .login-card { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(20px); padding: 50px 30px; border-radius: 40px; width: 100%; max-width: 400px; text-align: center; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 25px 50px rgba(0,0,0,0.6); }
-        .login-logo { font-size: 42px; font-weight: 900; margin-bottom: 10px; letter-spacing: -2px; text-shadow: 0 4px 10px rgba(0,0,0,0.3); background: -webkit-linear-gradient(#fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
-        .login-logo span { background: -webkit-linear-gradient(#38bdf8, #0ea5e9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .login-sub { font-size: 15px; opacity: 0.9; margin-bottom: 35px; line-height: 1.6; font-weight: 500; }
-        .btn-google { background: white; color: #000; border: none; width: 100%; padding: 16px; border-radius: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; font-size: 16px; transition: 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-        .btn-google:hover { transform: translateY(-2px); box-shadow: 0 15px 25px rgba(255,255,255,0.2); }
+        #loginOverlay { position: fixed; inset: 0; background: rgba(20, 0, 5, 0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(10px); }
+        .login-card { 
+            background: rgba(80, 10, 30, 0.8); backdrop-filter: blur(25px); padding: 50px 30px; border-radius: 40px; width: 100%; max-width: 400px; text-align: center; 
+            border: 2px solid rgba(255, 182, 193, 0.3); box-shadow: 0 25px 50px rgba(0,0,0,0.6), inset 0 0 30px rgba(219, 39, 119, 0.2); 
+        }
+        .login-logo { font-size: 38px; font-weight: 900; margin-bottom: 10px; letter-spacing: -1px; color: white; text-shadow: 0 0 20px var(--accent); }
+        .login-logo span { color: var(--accent-glow); font-family: 'cursive'; font-weight: 400; font-size: 42px; }
+        
+        .btn-google { background: white; color: #be123c; border: none; width: 100%; padding: 16px; border-radius: 25px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; font-size: 16px; transition: 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+        .btn-google:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(255,255,255,0.4); }
         
         .nav { 
-            background: rgba(15, 23, 42, 0.7); 
-            backdrop-filter: blur(10px);
+            background: rgba(50, 5, 15, 0.85); 
+            backdrop-filter: blur(12px);
             padding: 0 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: 70px; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
         }
-        .user-stats { display: flex; align-items: center; gap: 10px; }
-        .icon-btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.1); width: 42px; height: 42px; border-radius: 14px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .icon-btn:active { transform: scale(0.95); }
-        .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--surface); display: none; z-index: 10; box-shadow: 0 0 10px var(--danger); }
-        .points-badge { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.4)); color: #fff; padding: 0 15px; height: 42px; border-radius: 14px; font-weight: 800; border: 1px solid rgba(251, 191, 36, 0.6); font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
+        .icon-btn { background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)); color: white; border: 1px solid rgba(255,255,255,0.2); width: 45px; height: 45px; border-radius: 50%; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .notif-badge { position: absolute; top: 0; right: 0; background: var(--gold); width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--love-red); display: none; z-index: 10; animation: bounce 1s infinite; }
+        .points-badge { background: linear-gradient(135deg, #be123c, #881337); color: #fff; padding: 0 18px; height: 42px; border-radius: 25px; font-weight: 800; border: 1px solid #f472b6; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(190, 18, 60, 0.4); }
         
-        .disclaimer { background: rgba(239, 68, 68, 0.9); color: white; padding: 8px 0; font-size: 11px; font-weight: 700; overflow: hidden; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(5px); }
-        .marquee-content { display: inline-block; animation: marquee 25s linear infinite; padding-left: 100%; }
-        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
-        
-        .tab-system { display: flex; background: rgba(0,0,0,0.3); margin: 15px 0; border-radius: 18px; padding: 6px; gap: 6px; border: 1px solid rgba(255,255,255,0.05); }
-        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #94a3b8; font-weight: 800; font-size: 12px; cursor: pointer; border-radius: 12px; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .tab-btn.active { background: rgba(255,255,255,0.1); color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-        .tab-btn.active.bringme-tab { background: rgba(139, 92, 246, 0.2); color: #d8b4fe; border-color: rgba(139, 92, 246, 0.4); }
-        .tab-btn.active.minigame-tab { background: rgba(236, 72, 153, 0.2); color: #f9a8d4; border-color: rgba(236, 72, 153, 0.4); }
+        .disclaimer { background: rgba(220, 38, 38, 0.9); color: white; padding: 8px 0; font-size: 11px; font-weight: 700; overflow: hidden; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,0.2); }
 
-        .bringme-content { display: none; background: linear-gradient(180deg, rgba(46, 16, 101, 0.8) 0%, rgba(11, 17, 32, 0.8) 100%); border: 2px solid var(--bringme); border-radius: 25px; overflow: hidden; position: relative; backdrop-filter: blur(10px); }
-        .bringme-header-ai { background: var(--bringme); color: white; padding: 10px; text-align: center; font-weight: 900; font-size: 12px; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 5px 20px rgba(139, 92, 246, 0.4); }
-        .bringme-status { text-align: center; padding: 30px 20px; position: relative; }
-        .bringme-target { font-size: 32px; font-weight: 900; color: white; margin: 15px 0; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 20px rgba(139, 92, 246, 0.8); }
-        .bringme-desc { font-size: 14px; color: #d8b4fe; margin-bottom: 25px; font-weight: 600; }
-        .ai-camera-container { position: relative; width: 100%; max-width: 320px; aspect-ratio: 1; margin: 0 auto 20px; border-radius: 20px; border: 2px dashed var(--bringme); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); overflow: hidden; box-shadow: inset 0 0 30px rgba(0,0,0,0.5); }
-        .ai-camera-container img { width: 100%; height: 100%; object-fit: cover; display: none; }
-        .ai-placeholder { text-align: center; opacity: 0.6; }
-        .btn-upload-advanced { background: linear-gradient(135deg, var(--bringme), #7c3aed); color: white; border: none; padding: 18px 30px; border-radius: 20px; font-weight: 900; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 16px; transition: 0.3s; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.2); }
-        .btn-upload-advanced:active { transform: scale(0.98); }
-        .ai-scanning-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: #fff; box-shadow: 0 0 15px #fff, 0 0 30px var(--bringme); animation: scanLine 2s linear infinite; display: none; z-index: 10; }
-        @keyframes scanLine { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
+        .tab-system { display: flex; background: rgba(0,0,0,0.4); margin: 15px 0; border-radius: 30px; padding: 6px; gap: 6px; border: 1px solid rgba(255,255,255,0.1); }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #fda4af; font-weight: 800; font-size: 12px; cursor: pointer; border-radius: 25px; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .tab-btn.active { background: linear-gradient(135deg, #db2777, #be123c); color: white; box-shadow: 0 4px 15px rgba(219, 39, 119, 0.4); text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
 
-        .next-draw-container { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(251, 191, 36, 0.3); padding: 15px; border-radius: 20px; margin-bottom: 15px; display: none; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); backdrop-filter: blur(10px); }
-        .nd-icon { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); color: var(--gold); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(251, 191, 36, 0.4); }
-        .nd-info { flex: 1; }
-        .next-draw-label { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
-        .next-draw-time { font-size: 18px; font-weight: 900; color: white; text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        /* BRING ME & AI */
+        .bringme-content { display: none; background: linear-gradient(180deg, #4a044e 0%, #2e1065 100%); border: 2px solid #d8b4fe; border-radius: 30px; overflow: hidden; position: relative; }
+        .ai-camera-container { border: 3px dashed #d8b4fe; border-radius: 25px; }
+
+        /* NEXT DRAW */
+        .next-draw-container { background: linear-gradient(135deg, rgba(20, 0, 5, 0.8), rgba(80, 10, 30, 0.8)); border: 1px solid var(--gold); padding: 15px; border-radius: 25px; margin-bottom: 15px; display: none; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+        .next-draw-time { font-size: 20px; font-weight: 900; color: var(--gold-shine); text-shadow: 0 0 10px rgba(251, 191, 36, 0.5); }
         
         .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 15px; }
-        .card { background: var(--glass-surface); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--glass-border); position: relative; transition: all 0.3s ease; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
+        /* 3D Glass Card */
+        .card { 
+            background: var(--glass-surface); backdrop-filter: blur(20px); border-radius: 30px; padding: 20px; margin-bottom: 20px; 
+            border: 1px solid var(--glass-border); border-bottom: 4px solid rgba(0,0,0,0.3);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3), inset 0 2px 10px rgba(255,255,255,0.05); 
+        }
         
-        .video-feed-wrapper { margin-bottom: 15px; border-radius: 24px; overflow: hidden; background: #000; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-        .video-container { position: relative; height: 220px; width: 100%; }
-        .video-overlay-bl { position: absolute; bottom: 12px; left: 12px; z-index: 10; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--success); display: flex; align-items: center; gap: 5px; color: var(--success); font-size: 11px; font-weight: 800; }
-        
-        .draw-panel { display: grid; grid-template-columns: 1fr 90px; gap: 12px; margin-bottom: 20px; }
-        .prev-balls { background: rgba(0,0,0,0.2); border-radius: 16px; padding: 10px; display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; border: 1px solid rgba(255,255,255,0.05); }
-        .ball-small { min-width: 40px; height: 40px; background: linear-gradient(135deg, #334155, #1e293b); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; border: 1px solid rgba(255,255,255,0.15); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .current-ball-box { background: linear-gradient(135deg, var(--accent), #2563eb); border-radius: 18px; height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5); border: 2px solid rgba(255,255,255,0.2); position: relative; overflow: hidden; }
-        .current-ball-box::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent); animation: shine 3s infinite; }
-        @keyframes shine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        .video-feed-wrapper { margin-bottom: 15px; border-radius: 30px; overflow: hidden; border: 3px solid rgba(255, 182, 193, 0.3); box-shadow: 0 15px 40px rgba(0,0,0,0.6); }
 
+        /* BALLS 3D */
+        .prev-balls { background: rgba(0,0,0,0.3); border-radius: 20px; padding: 10px; display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; border: 1px solid rgba(255,255,255,0.05); }
+        .ball-small { 
+            min-width: 40px; height: 40px; 
+            background: radial-gradient(circle at 30% 30%, #fff, #fb7185, #9f1239); 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            font-size: 14px; font-weight: 900; color: white; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4); 
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .current-ball-box { 
+            background: radial-gradient(circle at 40% 40%, #f472b6, #db2777, #831843);
+            border-radius: 25px; height: 95px; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            box-shadow: 0 10px 30px rgba(219, 39, 119, 0.5), inset 0 5px 15px rgba(255,255,255,0.3); 
+            border: 2px solid rgba(255,255,255,0.2); 
+        }
+
+        /* GRID */
         .bingo-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px; }
-        .letter { text-align: center; font-size: 26px; font-weight: 900; color: var(--gold); text-shadow: 0 2px 10px rgba(251, 191, 36, 0.5); -webkit-text-stroke: 1px rgba(0,0,0,0.2); }
+        .letter { text-align: center; font-size: 26px; font-weight: 900; color: var(--sweet-pink); text-shadow: 0 2px 10px var(--accent); }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; position: relative; }
-        .cell { aspect-ratio: 1; background: rgba(255,255,255,0.05); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s; z-index: 2; position: relative; overflow: hidden; box-shadow: inset 0 2px 5px rgba(255,255,255,0.05); }
-        .cell.hit { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; transform: scale(1.05); border-color: rgba(255,255,255,0.4); box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4); text-shadow: 0 2px 2px rgba(0,0,0,0.3); }
+        .cell { 
+            aspect-ratio: 1; background: rgba(255,255,255,0.08); border-radius: 15px; display: flex; align-items: center; justify-content: center; 
+            font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s; box-shadow: inset 0 2px 5px rgba(255,255,255,0.05);
+        }
+        /* Heart Hit Style */
+        .cell.hit { 
+            background: linear-gradient(135deg, #f43f5e, #e11d48); 
+            color: white; transform: scale(1.05); 
+            border-color: #fca5a5; 
+            box-shadow: 0 5px 15px rgba(225, 29, 72, 0.5); 
+            clip-path: path("M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"); 
+            border-radius: 0; /* Override for heart shape */
+            font-size: 14px;
+        }
+        /* Fallback if clip-path behaves weird on some text */
+        .cell.hit span { z-index: 2; }
         
-        .card.card-win { border: 3px solid var(--success) !important; box-shadow: 0 0 50px rgba(16, 185, 129, 0.5); animation: pulse-win 2s infinite; background: rgba(16, 185, 129, 0.1); }
-        .card.card-lost { opacity: 0.6; filter: grayscale(0.8); pointer-events: none; }
+        .card.card-win { border: 4px solid var(--gold) !important; box-shadow: 0 0 50px rgba(251, 191, 36, 0.5); animation: pulse-win 2s infinite; }
+        .cell.win-glow { background: var(--gold) !important; color: #78350f !important; animation: popWin 0.4s ease forwards; clip-path: none; border-radius: 15px; box-shadow: 0 0 20px var(--gold); }
+
+        .chat-box { height: 450px; background: rgba(30, 0, 10, 0.6); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 30px; }
+        .bubble { background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05)); border-radius: 0 20px 20px 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .send-btn { background: linear-gradient(135deg, var(--accent), #be123c); border-radius: 15px; box-shadow: 0 5px 15px rgba(219, 39, 119, 0.3); }
+
+        /* MINIGAMES RESKIN */
+        .game-poster { border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .game-poster:hover { border-color: var(--accent); }
+        .slot-machine-frame { background: linear-gradient(135deg, #fcd34d, #b45309); border: 3px solid #fff; border-radius: 40px; }
         
-        .card.card-puro { border: 2px solid var(--gold) !important; box-shadow: 0 0 40px rgba(251, 191, 36, 0.4); animation: pulse-gold 1.5s infinite; }
-        .cell.cell-waiting { background: #fffbeb !important; color: #b45309 !important; border: 2px dashed #f59e0b; animation: flash-waiting 1s infinite; z-index: 5; font-weight: 900; transform: scale(1.1); box-shadow: 0 0 20px rgba(251, 191, 36, 0.8); }
+        /* NOTIFICATION PROMPT */
+        #pushPrompt { background: linear-gradient(135deg, #831843, #500724); border-top: 2px solid #f472b6; position: fixed; bottom: 0; left: 0; right: 0; padding: 20px; z-index: 2000; text-align: center; display: none; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); border-radius: 30px 30px 0 0; transform: translateY(100%); transition: 0.3s; }
+        #pushPrompt.show { transform: translateY(0); }
 
-        .cell.win-glow { background: #10b981 !important; color: white; z-index: 3; border: 2px solid #fff; box-shadow: 0 0 25px var(--success), inset 0 0 15px rgba(255,255,255,0.3); animation: popWin 0.4s ease forwards; }
-        .cell.win-glow::after { opacity: 0; animation: fadeInLine 0.5s forwards; }
-
-        @keyframes pulse-gold { 0% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.3); border-color: rgba(251, 191, 36, 0.5); } 50% { box-shadow: 0 0 40px rgba(251, 191, 36, 0.7); border-color: var(--gold); } 100% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.3); border-color: rgba(251, 191, 36, 0.5); } }
-        @keyframes flash-waiting { 0% { opacity: 1; transform: scale(1.1); } 50% { opacity: 0.7; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1.1); } }
-        @keyframes pulse-win { 0% { box-shadow: 0 0 20px var(--success); } 50% { box-shadow: 0 0 50px var(--success); } 100% { box-shadow: 0 0 20px var(--success); } }
-        @keyframes popWin { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1.05); } }
-        @keyframes fadeInLine { from { opacity: 0; } to { opacity: 1; } }
-
-        .cell.win-line-h::after { content:''; position:absolute; top:50%; left:0; right:0; height:6px; background:var(--gold); transform:translateY(-50%); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; border-radius:10px; }
-        .cell.win-line-v::after { content:''; position:absolute; top:0; bottom:0; left:50%; width:6px; background:var(--gold); transform:translateX(-50%); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; border-radius:10px; }
-        .cell.win-line-d1::after { content:''; position:absolute; top:50%; left:-50%; right:-50%; height:6px; background:var(--gold); transform:translateY(-50%) rotate(45deg); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; }
-        .cell.win-line-d2::after { content:''; position:absolute; top:50%; left:-50%; right:-50%; height:6px; background:var(--gold); transform:translateY(-50%) rotate(-45deg); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; }
-
-        .late-overlay, .game-over-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .late-text { font-weight: 800; font-size: 20px; color: white; margin-bottom: 8px; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .late-subtext { font-size: 13px; opacity: 0.9; color: #cbd5e1; }
-        #winnerBanner { display: none; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 15px; border-radius: 16px; text-align: center; font-weight: 900; margin-bottom: 15px; animation: slideDown 0.5s ease; border: 2px solid #a7f3d0; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4); }
-        .winner-line { font-size: 13px; opacity: 0.95; margin-top: 5px; display: block; font-weight: 600; }
-        @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        /* Buttons Update */
+        .btn-change, .btn-redeem, .btn-upload-advanced { background: linear-gradient(135deg, #f472b6, #db2777); color: white; border: none; font-weight: bold; box-shadow: 0 4px 10px rgba(219, 39, 119, 0.4); }
         
-        .chat-box { height: 450px; display: flex; flex-direction: column; background: var(--glass-surface); border-radius: 24px; border: 1px solid var(--glass-border); overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.3); backdrop-filter: blur(20px); }
-        .chat-header { padding: 15px 20px; background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
-        .chat-header h3 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: 0.5px; }
-        #chatList { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 18px; scroll-behavior: smooth; }
-        #chatList::-webkit-scrollbar { width: 5px; }
-        #chatList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-        .chat-row { display: flex; gap: 12px; max-width: 95%; position: relative; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .chat-pfp { width: 38px; height: 38px; border-radius: 14px; border: 2px solid var(--accent); flex-shrink: 0; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .chat-content { flex: 1; }
-        .bubble { background: rgba(255,255,255,0.08); padding: 12px 16px; border-radius: 0 20px 20px 20px; border: 1px solid rgba(255,255,255,0.05); position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.1); backdrop-filter: blur(5px); }
-        .chat-name { font-size: 12px; font-weight: 800; color: var(--accent-glow); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; text-shadow: 0 0 10px rgba(56, 189, 248, 0.4); }
-        .chat-text { font-size: 13.5px; line-height: 1.5; color: #e2e8f0; word-break: break-word; }
-        .chat-actions { display: flex; gap: 15px; margin-top: 6px; padding-left: 4px; }
-        .action-btn { background: none; border: none; color: #94a3b8; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 2px 0; transition: 0.2s; }
-        .action-btn:hover { color: var(--text); }
-        .action-btn.liked { color: var(--minigame); }
-        .action-btn.liked i { fill: var(--minigame); }
-        .reply-box { margin-left: 48px; margin-top: 10px; padding-left: 12px; border-left: 2px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 8px; }
-        .reply-item { display: flex; gap: 8px; align-items: flex-start; }
-        .reply-pfp { width: 24px; height: 24px; border-radius: 8px; }
-        .reply-bubble { background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 12px; flex: 1; }
-        .reply-indicator { background: rgba(255,255,255,0.05); padding: 10px 15px; font-size: 12px; display: none; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .chat-input-area { background: rgba(0,0,0,0.2); padding: 15px; border-top: 1px solid rgba(255,255,255,0.05); }
-        .input-wrapper { display: flex; gap: 10px; background: rgba(15, 23, 42, 0.6); padding: 6px 6px 6px 15px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); transition: 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); }
-        .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
-        .input-wrapper input { flex: 1; background: none; border: none; color: white; outline: none; font-size: 14px; height: 42px; }
-        .send-btn { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; border: none; width: 42px; height: 42px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
-        .send-btn:hover { transform: scale(1.05); }
-        
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(15px); }
-        .modal-content { background: rgba(30, 41, 59, 0.7); border-radius: 30px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.15); max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.5); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
-        
-        .reward-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
-        .reward-item { background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); padding: 18px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .reward-item:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2); }
-        .reward-main { display: flex; align-items: center; gap: 15px; }
-        .reward-icon-box { width: 45px; height: 45px; background: rgba(59, 130, 246, 0.2); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: var(--accent-glow); border: 1px solid rgba(59, 130, 246, 0.3); }
-        .reward-info b { font-size: 16px; display: block; color: white; letter-spacing: 0.3px; }
-        .reward-info small { color: var(--gold); font-weight: 800; font-size: 12px; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
-        .btn-redeem { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transition: 0.2s; }
-        .btn-redeem:active { transform: scale(0.95); }
-        
-        .profile-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .profile-img-large { width: 70px; height: 70px; border-radius: 22px; border: 3px solid var(--accent); box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
-        .profile-name-info { flex: 1; }
-        .profile-name { font-size: 20px; font-weight: 900; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .profile-uid { font-size: 11px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
-        
-        .gcash-section { background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 18px; margin-bottom: 15px; border: 1px solid rgba(59, 130, 246, 0.3); }
-        .styled-input { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 12px; color: white; font-weight: 700; outline: none; font-size: 14px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1); }
-        .styled-input:focus { border-color: var(--accent); background: rgba(0,0,0,0.5); }
-        
-        .ref-container { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1)); border: 1px solid rgba(16, 185, 129, 0.3); padding: 15px; border-radius: 18px; margin-bottom: 15px; }
-        .history-box { margin-top: 20px; background: rgba(0,0,0,0.2); border-radius: 20px; padding: 18px; border: 1px solid rgba(255,255,255,0.05); }
-        .history-list { max-height: 250px; overflow-y: auto; padding-right: 5px; }
-        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        
-        .btn-change { background: rgba(59, 130, 246, 0.1); color: var(--accent-glow); border: 1px solid var(--accent); height: 40px; padding: 0 15px; border-radius: 12px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .btn-change:hover { background: var(--accent); color: white; }
-        .btn-change:disabled { opacity: 0.5; cursor: not-allowed; border-color: #475569; color: #475569; background: none; }
-        
-        .pattern-box { background: rgba(0,0,0,0.2); height: 40px; padding: 0 15px; border-radius: 12px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px); }
-        .pattern-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
-        .pattern-text { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; }
-        
-        /* NEW NOTIFICATION STYLES */
-        .notif-card-new { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); position: relative; transition: 0.2s; backdrop-filter: blur(5px); }
-        .notif-card-new:hover { background: rgba(255,255,255,0.1); border-color: var(--accent); }
-        .notif-header-new { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .notif-title { font-size: 12px; font-weight: 800; color: var(--accent-glow); display: flex; align-items: center; gap: 5px; }
-        .notif-time { font-size: 10px; opacity: 0.5; }
-        .notif-body { font-size: 13px; line-height: 1.5; color: #e2e8f0; }
-        .btn-del-notif { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; transition: 0.2s; }
-        .btn-del-notif:hover { color: var(--danger); }
-
-        /* ========================================= */
-        /* PROFESSIONAL MINI GAMES LOBBY & FULL PAGE */
-        /* ========================================= */
-        
-        .tab-btn.minigame-tab:hover { color: var(--minigame); }
-
-        /* Lobby Grid */
-        .minigame-lobby { display: grid; grid-template-columns: 1fr; gap: 15px; padding: 10px 0; }
-        .game-poster { 
-            position: relative; height: 180px; border-radius: 24px; overflow: hidden; 
-            cursor: pointer; border: 1px solid rgba(255,255,255,0.2); 
-            transition: transform 0.3s, box-shadow 0.3s;
-            background-size: cover; background-position: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        .game-poster:hover { transform: scale(1.03); box-shadow: 0 20px 40px rgba(0,0,0,0.5); border-color: var(--minigame); }
-        .poster-content { 
-            position: absolute; bottom: 0; left: 0; right: 0; padding: 20px;
-            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
-        }
-        .poster-title { font-size: 22px; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 10px black; }
-        .poster-desc { font-size: 12px; color: #cbd5e1; font-weight: 500; opacity: 0.9; }
-        .poster-play { 
-            position: absolute; top: 15px; right: 15px; background: white; color: black; 
-            padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 900; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3); transform: rotate(5deg);
-        }
-
-        /* Full Screen Game Overlay */
-        .game-overlay-fs {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, #1e1b4b, #0f172a); 
-            z-index: 2000; display: none; flex-direction: column;
-            overflow-y: auto; padding: 20px;
-        }
-        .go-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .go-back-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px 20px; border-radius: 12px; font-weight: 800; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px); }
-        .go-back-btn:hover { background: rgba(255,255,255,0.2); }
-        .go-title { font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
-
-        /* === 3D CASINO SLOTS (PROFESSIONAL GOLD) === */
-        .slot-machine-frame {
-            background: linear-gradient(135deg, #fcd34d, #b45309, #fcd34d); /* Gold Metallic */
-            padding: 25px; border-radius: 35px; border: 2px solid #fff;
-            box-shadow: 
-                inset 0 0 30px rgba(0,0,0,0.5), 
-                0 30px 60px rgba(0,0,0,0.6),
-                0 0 0 6px #78350f;
-            position: relative; max-width: 400px; margin: 0 auto;
-        }
-        .slot-lights-top { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 0 10px; }
-        .slot-bulb { width: 16px; height: 16px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 15px #ef4444, inset 0 2px 5px rgba(255,255,255,0.5); animation: blink 0.8s infinite alternate; border: 1px solid rgba(0,0,0,0.2); }
-        .slot-bulb:nth-child(even) { background: #3b82f6; box-shadow: 0 0 15px #3b82f6; animation-delay: 0.4s; }
-        
-        .slot-window {
-            background: #000; padding: 12px; border-radius: 18px;
-            display: flex; gap: 10px; border: 4px solid #451a03;
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.9);
-            margin-bottom: 25px; overflow: hidden; height: 140px; align-items: center; justify-content: center;
-            position: relative;
-        }
-        /* Glass reflection on slots */
-        .slot-window::after {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%;
-            background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
-            pointer-events: none;
-        }
-
-        .reel-col { 
-            flex: 1; height: 110px; background: linear-gradient(to bottom, #f1f5f9, #cbd5e1, #f1f5f9); border-radius: 10px; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 52px; position: relative; overflow: hidden;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.2), 0 0 5px rgba(0,0,0,0.5);
-            border: 1px solid #94a3b8;
-        }
-        .reel-spinning span {
-            animation: slotBlur 0.15s linear infinite;
-            display: block; filter: blur(4px); transform: scaleY(1.2);
-        }
-        @keyframes slotBlur { 
-            0% { transform: translateY(-60px) scaleY(1.2); opacity: 0.6; } 
-            50% { transform: translateY(0px) scaleY(1.2); opacity: 1; } 
-            100% { transform: translateY(60px) scaleY(1.2); opacity: 0.6; } 
-        }
-        .slot-lever-btn {
-            background: linear-gradient(180deg, #ef4444, #b91c1c);
-            width: 100%; padding: 22px; border: none; border-radius: 18px;
-            color: white; font-weight: 900; font-size: 22px; text-transform: uppercase;
-            box-shadow: 0 8px 0 #7f1d1d, 0 15px 30px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.3);
-            cursor: pointer; transition: 0.1s; position: relative; text-shadow: 0 2px 2px rgba(0,0,0,0.3);
-        }
-        .slot-lever-btn:active { transform: translateY(5px); box-shadow: 0 3px 0 #7f1d1d, 0 5px 10px rgba(0,0,0,0.4); }
-        .slot-lever-btn:disabled { filter: grayscale(1); cursor: not-allowed; }
-
-        /* === 3D ROULETTE (PREMIUM STYLE) === */
-        .roulette-table {
-            background: radial-gradient(circle, #065f46, #064e3b);
-            padding: 35px; border-radius: 40px; border: 6px solid #b45309;
-            box-shadow: inset 0 0 80px rgba(0,0,0,0.8), 0 30px 60px rgba(0,0,0,0.6);
-            display: flex; flex-direction: column; align-items: center;
-            position: relative;
-        }
-        /* Felt Texture */
-        .roulette-table::before {
-            content:''; position: absolute; inset: 0; border-radius: 35px;
-            background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
-            pointer-events: none;
-        }
-
-        .wheel-outer {
-            width: 280px; height: 280px; background: linear-gradient(135deg, #451a03, #78350f); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.5); position: relative; border: 5px solid #b45309;
-        }
-        .wheel-inner {
-            width: 250px; height: 250px; border-radius: 50%;
-            background: conic-gradient(
-                #dc2626 0deg 36deg, #171717 36deg 72deg, 
-                #dc2626 72deg 108deg, #171717 108deg 144deg, 
-                #dc2626 144deg 180deg, #171717 180deg 216deg, 
-                #dc2626 216deg 252deg, #171717 252deg 288deg, 
-                #dc2626 288deg 324deg, #171717 324deg 360deg
-            );
-            border: 6px solid #fbbf24;
-            transition: transform 3s cubic-bezier(0.15, 0.85, 0.15, 1);
-            position: relative;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-        .wheel-center {
-            position: absolute; width: 50px; height: 50px; 
-            background: radial-gradient(circle, #fcd34d, #b45309);
-            border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            box-shadow: 0 0 15px rgba(0,0,0,0.7), inset 0 2px 5px rgba(255,255,255,0.6); z-index: 5;
-            display: flex; align-items: center; justify-content: center; border: 2px solid #fff;
-        }
-        .ball-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            border-radius: 50%; pointer-events: none;
-            animation: none;
-        }
-        .roulette-ball {
-            width: 14px; height: 14px; background: radial-gradient(circle at 30% 30%, #fff, #94a3b8); border-radius: 50%;
-            position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-            box-shadow: 0 0 8px white;
-        }
-        @keyframes spinBall { 0% { transform: rotate(0deg); } 100% { transform: rotate(-1080deg); } }
-        
-        .roulette-pointer {
-            position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
-            width: 0; height: 0; border-left: 18px solid transparent; 
-            border-right: 18px solid transparent; border-top: 30px solid #fbbf24; z-index: 10;
-            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
-        }
-
-        /* === 3D CARDS (TROPICAL HIGH LOW) === */
-        .hl-table {
-            background: radial-gradient(circle, #1e3a8a, #0f172a);
-            padding: 40px 20px; border-radius: 35px; text-align: center;
-            border: 4px solid rgba(255,255,255,0.1);
-            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
-            position: relative;
-        }
-        .hl-table::before {
-             content:''; position: absolute; inset: 0; border-radius: 35px;
-            background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
-            pointer-events: none;
-        }
-        .card-scene {
-            width: 150px; height: 220px; margin: 0 auto 35px;
-            perspective: 800px; position: relative;
-        }
-        .playing-card {
-            width: 100%; height: 100%; position: relative;
-            transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border-radius: 18px; box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-        }
-        .playing-card.is-flipped { transform: rotateY(180deg); }
-        .card-face {
-            position: absolute; width: 100%; height: 100%;
-            backface-visibility: hidden; border-radius: 18px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 56px; font-weight: 900; border: 1px solid #e2e8f0;
-        }
-        .card-front { background: #fff; color: #000; flex-direction: column; }
-        .card-back { 
-            background: linear-gradient(135deg, #be123c, #881337);
-            background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 10px, transparent 10px, transparent 20px);
-            transform: rotateY(180deg); border: 4px solid white;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .card-logo-mini { width: 50px; height: 50px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .suit-top { position: absolute; top: 12px; left: 12px; font-size: 24px; }
-        .suit-bottom { position: absolute; bottom: 12px; right: 12px; font-size: 24px; transform: rotate(180deg); }
-
-        .hl-controls-new { display: flex; gap: 15px; justify-content: center; position: relative; z-index: 10; }
-        .btn-guess {
-            flex: 1; padding: 18px; border-radius: 18px; border: none;
-            font-weight: 800; font-size: 14px; text-transform: uppercase;
-            cursor: pointer; transition: 0.2s; color: white;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.3);
-            text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-        }
-        .btn-guess:active { transform: scale(0.95); }
-        .bg-hi { background: linear-gradient(135deg, #10b981, #059669); }
-        .bg-lo { background: linear-gradient(135deg, #ef4444, #b91c1c); }
-
-        /* Unified Win/Loss Modals inside Games */
-        .result-modal {
-            position: absolute; inset: 0; background: rgba(0,0,0,0.85);
-            display: none; align-items: center; justify-content: center;
-            flex-direction: column; z-index: 50; border-radius: 30px;
-            backdrop-filter: blur(8px); animation: fadeIn 0.3s;
-        }
-        .res-title { font-size: 38px; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
-        .res-win { color: #fbbf24; text-shadow: 0 0 30px #fbbf24; }
-        .res-loss { color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
-        .res-pts { font-size: 16px; color: white; opacity: 0.9; margin-bottom: 25px; }
-        .btn-play-again {
-            background: white; color: black; border: none; padding: 12px 25px; 
-            border-radius: 30px; font-weight: 900; font-size: 12px; cursor: pointer;
-            box-shadow: 0 0 20px rgba(255,255,255,0.3); transition: 0.2s;
-        }
-        .btn-play-again:hover { transform: scale(1.1); box-shadow: 0 0 30px rgba(255,255,255,0.5); }
-
-        @keyframes blink { from { opacity: 0.5; } to { opacity: 1; } }
-
     </style>
 </head>
 <body>
 
+<div id="customAlertOverlay">
+    <div class="custom-alert-box" id="alertBox">
+        <div class="alert-icon-box" id="alertIcon">
+            <i data-lucide="heart" style="color:#881337; width:35px; height:35px; fill:#be123c;"></i>
+        </div>
+        <h2 id="alertTitle" style="margin:0 0 10px 0; color:white; text-transform:uppercase; font-size:22px; text-shadow:0 2px 5px rgba(0,0,0,0.3);">Message</h2>
+        <p id="alertMsg" style="margin:0; font-size:14px; opacity:0.9; color:#fce7f3; line-height:1.5;">...</p>
+        <button class="alert-btn" onclick="closeCustomAlert()">OKAY!</button>
+    </div>
+</div>
+
 <div id="loginOverlay">
     <div class="login-card">
-        <div class="login-logo">RADIO<span>BINGO</span></div>
-        <p class="login-sub">Welcome to the official live stream bingo. Sign in to start winning points!</p>
+        <div class="login-logo">LOVE<span>BINGO</span></div>
+        <p class="login-sub" style="color:white; opacity:0.8;">Valentine's Special Edition.<br>Sign in to feel the love & win prizes!</p>
         <button class="btn-google" onclick="login()">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:18px">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:20px">
             Sign in with Google
         </button>
     </div>
 </div>
 
 <div class="nav">
-    <div style="display:flex; align-items:center;"><span style="font-weight: 900; font-size: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.3);">RADIO<span style="color:var(--accent-glow)">BINGO</span></span></div>
+    <div style="display:flex; align-items:center;"><span style="font-weight: 900; font-size: 20px; text-shadow: 0 2px 10px var(--accent); color:white;">LOVE<span style="color:var(--accent-glow)">BINGO</span></span></div>
     <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
         <div class="user-stats">
             <div class="icon-btn" onclick="openNotifs()">
                 <i data-lucide="bell" style="width:20px"></i>
                 <span id="notifDot" class="notif-badge"></span>
             </div>
-            <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'"><i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span></div>
+            <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'">
+                <i data-lucide="heart" style="width:16px; fill:white;"></i> <span id="userPoints">0</span>
+            </div>
         </div>
-        <img id="userImg" onclick="openMenuModal()" style="width:42px; height:42px; border-radius:14px; cursor: pointer; border: 2px solid var(--accent); object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+        <img id="userImg" onclick="openMenuModal()" style="width:45px; height:45px; border-radius:50%; cursor: pointer; border: 2px solid var(--accent-glow); object-fit: cover; box-shadow: 0 0 15px rgba(244, 114, 182, 0.5);">
     </div>
 </div>
 
-<div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang.</div></div>
+<div class="disclaimer"><div class="marquee-content">❤️ VALENTINE'S SPECIAL: Love is in the air! Play responsibly. For Entertainment Purposes Only. ❤️</div></div>
 
 <div class="container">
+    <div id="pushPrompt">
+        <h3 style="margin:0; color:white;">🔔 Enable Love Alerts?</h3>
+        <p style="font-size:12px; opacity:0.8; margin:5px 0 15px;">Get notified when the draw starts even if you close the app!</p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="requestPushPermission()" style="flex:1; padding:12px; background:#10b981; border:none; border-radius:15px; color:white; font-weight:bold;">YES PLEASE</button>
+            <button onclick="document.getElementById('pushPrompt').classList.remove('show')" style="flex:1; padding:12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:15px; color:white;">LATER</button>
+        </div>
+    </div>
+
     <div class="video-feed-wrapper">
-        <div class="video-container">
-            <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
+        <div class="video-container" style="position:relative; height:220px; background:black;">
+            <div style="position:absolute; bottom:12px; left:12px; z-index:10; background:rgba(0,0,0,0.6); padding:5px 12px; border-radius:15px; border:1px solid var(--success); display:flex; align-items:center; gap:5px; color:var(--success); font-size:11px; font-weight:800; backdrop-filter:blur(5px);">
+                <i data-lucide="heart" style="width:12px; fill:var(--success)"></i><span id="onlineCount">0</span> LOVERS ONLINE
+            </div>
             <iframe width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none;"></iframe>
         </div>
     </div>
 
     <div id="jackpotBanner">
-        <span>🎉 JACKPOT ROUND 🎉</span>
+        <span>💘 CUPID'S JACKPOT 💘</span>
         <span class="jackpot-amount" id="jackpotDisplayVal">₱5,000</span>
     </div>
 
     <div id="nextDrawBanner" class="next-draw-container">
-        <div class="nd-icon"><i data-lucide="calendar-days"></i></div>
+        <div style="background:rgba(251, 191, 36, 0.2); padding:10px; border-radius:15px; color:var(--gold); border:1px solid rgba(251, 191, 36, 0.4);"><i data-lucide="clock"></i></div>
         <div class="nd-info">
-            <div class="next-draw-label">Susunod na Bola</div>
+            <div style="font-size:11px; font-weight:800; color:var(--gold); text-transform:uppercase; letter-spacing:1px;">Date Night Draw</div>
             <div id="nextDrawTime" class="next-draw-time">--:-- --</div>
         </div>
     </div>
 
     <div class="tab-system">
-        <button class="tab-btn active" onclick="switchTab('bingo')"><i data-lucide="grid"></i> BINGO CARD</button>
-        <button class="tab-btn bringme-tab" onclick="switchTab('bringme')"><i data-lucide="camera"></i> ONLINE BRING ME</button>
-        <button class="tab-btn minigame-tab" onclick="switchTab('minigames')"><i data-lucide="gamepad-2"></i> MINI GAMES</button>
+        <button class="tab-btn active" onclick="switchTab('bingo')"><i data-lucide="grid"></i> LOVE CARD</button>
+        <button class="tab-btn bringme-tab" onclick="switchTab('bringme')"><i data-lucide="camera"></i> BRING ME</button>
+        <button class="tab-btn minigame-tab" onclick="switchTab('minigames')"><i data-lucide="gamepad-2"></i> CUPID GAMES</button>
     </div>
 
-    <div id="winnerBanner">
-        <span>🎉 BINGO WINNER! 🎉</span>
-        <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
+    <div id="winnerBanner" style="display: none; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 15px; border-radius: 20px; text-align: center; margin-bottom: 15px; border: 2px solid #a7f3d0; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);">
+        <span style="font-weight:900; font-size:18px;">🎉 LOVE WINNER! 🎉</span>
+        <span class="winner-line" id="winnerPatternLine" style="display:block; font-size:13px; margin-top:5px;">Pattern: Normal Bingo</span>
     </div>
 
     <div id="bingoTab">
-        <div class="draw-panel">
+        <div class="draw-panel" style="display: grid; grid-template-columns: 1fr 90px; gap: 12px; margin-bottom: 20px;">
             <div class="prev-balls" id="ballRow"></div>
-            <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">NOW DRAWN</span><span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.3);">--</span></div>
+            <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">DRAWN</span><span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.3);">--</span></div>
         </div>
         <div class="card" id="bingoCardContainer">
-            <div id="lateOverlay" class="late-overlay">
-                <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom:15px; filter: drop-shadow(0 0 10px var(--danger));"></i>
-                <div class="late-text">GAME ONGOING</div>
-                <div class="late-subtext">Sorry, ongoing na ang bola. Bawal na sumali ang late.</div>
-                <div style="margin-top:20px; background:rgba(255,255,255,0.1); padding:10px 20px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
-                    <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
-                    <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
-                </div>
+            <div id="lateOverlay" class="late-overlay" style="position:absolute; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:100; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; border-radius:30px;">
+                <i data-lucide="heart-off" style="color:var(--danger); width:50px; height:50px; margin-bottom:15px;"></i>
+                <div style="font-weight:800; font-size:20px; color:white;">HEART LOCKED</div>
+                <div style="font-size:13px; color:#fda4af; margin-bottom:20px;">Ongoing na ang date. Next round ka na!</div>
+                <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
             </div>
-            <div id="gameOverOverlay" class="game-over-overlay">
-                <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom:15px; filter: drop-shadow(0 0 15px var(--gold));"></i>
-                <div class="late-text">Game Finished</div>
-                <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
+            
+            <div id="gameOverOverlay" style="position:absolute; inset:0; background:rgba(0,0,0,0.9); backdrop-filter:blur(10px); z-index:100; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; border-radius:30px;">
+                <i data-lucide="party-popper" style="color:var(--gold); width:50px; height:50px; margin-bottom:15px;"></i>
+                <div style="font-weight:800; font-size:20px; color:white;">Round Finished</div>
+                <div id="gameOverMsg" style="font-size:13px; color:#fce7f3;">Better luck next time!</div>
             </div>
+
             <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
-                <div class="pattern-box">
-                    <div class="pattern-dot"></div>
-                    <span class="pattern-text" id="patternName">Normal Bingo</span>
+                <div style="background:rgba(255,255,255,0.1); padding:5px 15px; border-radius:15px; display:flex; align-items:center; gap:8px;">
+                    <div style="width:8px; height:8px; background:var(--gold); border-radius:50%; box-shadow:0 0 10px var(--gold);"></div>
+                    <span style="font-size:11px; font-weight:800; color:var(--gold); text-transform:uppercase;" id="patternName">Normal Bingo</span>
                 </div>
-                <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
+                <button class="btn-change" id="newCardBtn" onclick="generateNewCard()" style="border-radius:15px; padding:8px 15px; font-size:11px;"><i data-lucide="refresh-cw" style="width:12px; margin-right:5px;"></i> NEW CARD</button>
             </div>
-            <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
+            <div class="bingo-header"><div class="letter">L</div><div class="letter">O</div><div class="letter">V</div><div class="letter">E</div><div class="letter">S</div></div>
             <div class="grid" id="bingoGrid"></div>
         </div>
     </div>
 
     <div id="bringmeTab" class="bringme-content">
-        <div class="bringme-header-ai">
-            <i data-lucide="cpu" style="width:14px"></i> ADVANCED AI VISION ACTIVE
+        <div style="background:var(--bringme); color:white; padding:10px; text-align:center; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i data-lucide="sparkles" style="width:14px"></i> CUPID'S AI VISION ACTIVE
         </div>
-        <div class="bringme-status">
-            <div id="bringmeInstruction" class="bringme-desc">Maghintay sa utos ng Host...</div>
-            <div id="bringmeItem" class="bringme-target">SYSTEM READY</div>
+        <div class="bringme-status" style="text-align:center; padding:30px 20px;">
+            <div id="bringmeInstruction" style="font-size:14px; color:#d8b4fe; margin-bottom:15px; font-weight:600;">Wait for the Host...</div>
+            <div id="bringmeItem" style="font-size:28px; font-weight:900; color:white; margin:15px 0; text-transform:uppercase; text-shadow:0 0 20px var(--bringme);">SYSTEM READY</div>
             
-            <div class="ai-camera-container">
-                <div id="aiScanLine" class="ai-scanning-overlay"></div>
-                <div id="aiPlaceholder" class="ai-placeholder">
-                    <i data-lucide="aperture" style="width:48px; height:48px; color:var(--bringme); margin-bottom:10px;"></i>
+            <div class="ai-camera-container" style="position:relative; width:100%; max-width:320px; aspect-ratio:1; margin:0 auto 20px; overflow:hidden; background:rgba(0,0,0,0.3);">
+                <div id="aiScanLine" style="position:absolute; top:0; left:0; width:100%; height:4px; background:#fff; box-shadow:0 0 20px #fff; animation:scanLine 2s linear infinite; display:none; z-index:10;"></div>
+                <div id="aiPlaceholder" style="text-align:center; opacity:0.6; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;">
+                    <i data-lucide="heart-handshake" style="width:48px; height:48px; color:var(--bringme); margin-bottom:10px;"></i>
                     <p style="font-size:11px; font-weight:700;">AI READY TO SCAN</p>
                 </div>
-                <img id="aiPreviewImg" src="">
+                <img id="aiPreviewImg" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
             </div>
 
             <div id="uploadZone" style="display:none;">
                 <input type="file" id="bringmeFile" accept="image/*" capture="environment" style="display:none;" onchange="handleBringMeUploadAdvanced(this)">
-                <button class="btn-upload-advanced" onclick="document.getElementById('bringmeFile').click()">
-                    <i data-lucide="camera"></i> CAPTURE & IDENTIFY
+                <button class="btn-upload-advanced" onclick="document.getElementById('bringmeFile').click()" style="width:100%; padding:18px; border-radius:20px; display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <i data-lucide="camera"></i> CAPTURE LOVE ITEM
                 </button>
-                <p style="font-size:10px; opacity:0.5; margin-top:15px; font-weight:600;">AI will automatically identify the object in the photo.</p>
             </div>
-
             <div id="aiLoading" style="display:none; margin-top:15px; text-align:center;">
-                <div class="spinner" style="border:3px solid rgba(255,255,255,0.1); border-top:3px solid var(--bringme); width:24px; height:24px; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto;"></div>
-                <p id="aiStatusText" style="font-size:12px; margin-top:12px; font-weight:800; color:var(--bringme);">ANALYZING PIXELS...</p>
+                <div style="width:20px; height:20px; border:3px solid rgba(255,255,255,0.2); border-top:3px solid var(--bringme); border-radius:50%; animation:spin 1s infinite linear; margin:0 auto;"></div>
+                <p id="aiStatusText" style="font-size:10px; margin-top:10px; color:var(--bringme);">LOVE AI ANALYZING...</p>
             </div>
         </div>
     </div>
 
     <div id="minigamesTab" style="display:none;">
-        <div class="minigame-lobby">
-            <div class="game-poster" onclick="openGame('roulette')" style="background-image: url('https://images.unsplash.com/photo-1606167668584-78701c57f13d?q=80&w=2070&auto=format&fit=crop');">
-                <div class="poster-play">PLAY</div>
-                <div class="poster-content">
-                    <div class="poster-title">Roulette Royale</div>
-                    <div class="poster-desc">Spin the wheel. Win Big.</div>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 15px; padding: 10px 0;">
+            <div class="game-poster" onclick="openGame('roulette')" style="background-image: url('https://images.unsplash.com/photo-1605218427360-36390f855d61?q=80&w=2000&auto=format&fit=crop'); height:180px; border-radius:25px; background-size:cover; position:relative; overflow:hidden;">
+                <div style="position:absolute; bottom:0; width:100%; padding:20px; background:linear-gradient(0deg, rgba(0,0,0,0.9), transparent);">
+                    <div style="font-size:22px; font-weight:900; color:white; text-transform:uppercase;">Love Roulette</div>
+                    <div style="font-size:11px; opacity:0.8;">Spin the wheel of love</div>
                 </div>
             </div>
-            
-             <div class="game-poster" onclick="openGame('highlow')" style="background-image: url('https://images.unsplash.com/photo-1549488497-657754d9297a?q=80&w=2070&auto=format&fit=crop');">
-                <div class="poster-play">PLAY</div>
-                <div class="poster-content">
-                    <div class="poster-title">High Low Pro</div>
-                    <div class="poster-desc">Predict the next card.</div>
-                </div>
-            </div>
-
-             <div class="game-poster" onclick="openGame('slots')" style="background-image: url('https://images.unsplash.com/photo-1596838132731-3301c3fd4317?q=80&w=2070&auto=format&fit=crop');">
-                <div class="poster-play">PLAY</div>
-                <div class="poster-content">
-                    <div class="poster-title">Summer Slots</div>
-                    <div class="poster-desc">Match 3 symbols to jackpot.</div>
+            <div class="game-poster" onclick="openGame('slots')" style="background-image: url('https://images.unsplash.com/photo-1516726817505-f5ed825624d8?q=80&w=2000&auto=format&fit=crop'); height:180px; border-radius:25px; background-size:cover; position:relative; overflow:hidden;">
+                <div style="position:absolute; bottom:0; width:100%; padding:20px; background:linear-gradient(0deg, rgba(0,0,0,0.9), transparent);">
+                    <div style="font-size:22px; font-weight:900; color:white; text-transform:uppercase;">Cupid Slots</div>
+                    <div style="font-size:11px; opacity:0.8;">Match hearts & roses</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="chat-box card" style="padding:0; margin-top:15px;">
-        <div class="chat-header">
-            <i data-lucide="message-square" style="width:18px; color:var(--accent-glow)"></i>
-            <h3>LIVE CHAT</h3>
+    <div class="chat-box" style="margin-top:15px; display:flex; flex-direction:column;">
+        <div class="chat-header" style="padding:15px 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; gap:10px; align-items:center;">
+            <i data-lucide="message-circle-heart" style="color:var(--accent-glow)"></i>
+            <h3 style="margin:0; font-size:15px; font-weight:800;">LOVE CHAT</h3>
         </div>
-        <div id="chatList"></div>
-        <div id="replyIndicator" class="reply-indicator">
-            <span id="replyText">Replying to...</span>
-            <button onclick="cancelReply()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" style="width:14px"></i></button>
+        <div id="chatList" style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:15px;"></div>
+        
+        <div id="replyIndicator" style="display:none; padding:10px 15px; font-size:11px; background:rgba(255,255,255,0.05); justify-content:space-between; align-items:center;">
+            <span id="replyText">Replying...</span>
+            <button onclick="cancelReply()" style="background:none; border:none; color:white;"><i data-lucide="x" style="width:12px"></i></button>
         </div>
-        <div class="chat-input-area">
-            <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
-                <input type="text" id="chatIn" placeholder="Write a message..." autocomplete="off">
-                <button type="submit" class="send-btn">
-                    <i data-lucide="send" style="width:18px"></i>
-                </button>
+
+        <div class="chat-input-area" style="padding:15px; border-top:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2);">
+            <form style="display:flex; gap:10px; background:rgba(0,0,0,0.4); padding:6px 6px 6px 15px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);" onsubmit="event.preventDefault(); sendChat();">
+                <input type="text" id="chatIn" placeholder="Spread love..." autocomplete="off" style="flex:1; background:none; border:none; color:white; outline:none; font-size:14px;">
+                <button type="submit" class="send-btn" style="width:40px; height:40px; border:none; display:flex; align-items:center; justify-content:center; color:white; cursor:pointer;"><i data-lucide="send" style="width:16px"></i></button>
             </form>
         </div>
     </div>
 </div>
 
-<div id="game-roulette" class="game-overlay-fs">
-    <div class="go-header">
-        <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
-        <div class="go-title" style="color:#ef4444; text-shadow:0 0 10px rgba(239, 68, 68, 0.4);">Roulette</div>
+<div id="game-roulette" style="position:fixed; inset:0; background:radial-gradient(circle, #4a044e, #1e1b4b); z-index:2000; display:none; flex-direction:column; padding:20px; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+        <button onclick="closeGame()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; padding:10px 20px; border-radius:15px; font-weight:bold;"><i data-lucide="arrow-left"></i> BACK</button>
+        <div style="font-size:24px; font-weight:900; color:var(--accent-glow); text-shadow:0 0 15px var(--accent);">ROULETTE</div>
     </div>
-    
-    <div style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;">
-        <div class="roulette-table">
-            <div class="wheel-outer">
-                <div class="roulette-pointer"></div>
-                <div class="wheel-inner" id="wheelInner">
-                    <div class="wheel-center"><div style="width:10px; height:10px; background:white; border-radius:50%;"></div></div>
-                </div>
-                <div class="ball-container" id="ballContainer">
-                    <div class="roulette-ball"></div>
-                </div>
-            </div>
-            
-            <div style="margin-top:50px; text-align:center; position:relative; width:100%;">
-                <div id="rouletteResult" class="result-modal">
-                    <div class="res-title res-win" id="rouletteTitle">YOU WON!</div>
-                    <div class="res-pts" id="rouletteSub">+50 Points</div>
-                    <button class="btn-play-again" onclick="resetGameUI('roulette')">PLAY AGAIN</button>
-                </div>
-                <button id="btnSpinWheel" onclick="spinRoulette()" class="slot-lever-btn" style="background: linear-gradient(180deg, #10b981, #047857); box-shadow: 0 8px 0 #064e3b, 0 15px 25px rgba(0,0,0,0.5); border-top: 1px solid rgba(255,255,255,0.3);">SPIN THE WHEEL</button>
-                <p style="font-size:10px; margin-top:20px; opacity:0.6; font-weight:600;">Red/Black 50/50 Chance</p>
-            </div>
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <div style="width:280px; height:280px; border-radius:50%; border:5px solid var(--gold); position:relative; background:conic-gradient(#e11d48 0deg 36deg, #000 36deg 72deg, #e11d48 72deg 108deg, #000 108deg 144deg, #e11d48 144deg 180deg, #000 180deg 216deg, #e11d48 216deg 252deg, #000 252deg 288deg, #e11d48 288deg 324deg, #000 324deg 360deg); box-shadow:0 0 50px rgba(225, 29, 72, 0.4);">
+             <div id="wheelInner" style="width:100%; height:100%; border-radius:50%; transition:transform 3s cubic-bezier(0.2, 0.8, 0.2, 1);"></div>
+             <div style="position:absolute; top:-20px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:15px solid transparent; border-right:15px solid transparent; border-top:30px solid var(--gold); z-index:10;"></div>
         </div>
+        <button id="btnSpinWheel" onclick="spinRoulette()" style="margin-top:50px; background:linear-gradient(135deg, var(--gold), #d97706); border:none; padding:15px 40px; border-radius:30px; font-weight:900; font-size:18px; color:black; box-shadow:0 10px 20px rgba(251, 191, 36, 0.3);">SPIN LOVE WHEEL</button>
     </div>
 </div>
 
-<div id="game-highlow" class="game-overlay-fs">
-    <div class="go-header">
-        <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
-        <div class="go-title" style="color:#3b82f6; text-shadow:0 0 10px rgba(59, 130, 246, 0.4);">High Low</div>
+<div id="game-slots" style="position:fixed; inset:0; background:radial-gradient(circle, #831843, #370617); z-index:2000; display:none; flex-direction:column; padding:20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+        <button onclick="closeGame()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; padding:10px 20px; border-radius:15px; font-weight:bold;"><i data-lucide="arrow-left"></i> BACK</button>
+        <div style="font-size:24px; font-weight:900; color:var(--gold); text-shadow:0 0 15px var(--gold);">CUPID SLOTS</div>
     </div>
-
-    <div style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;">
-        <div class="hl-table" style="width:100%; max-width:380px;">
-            <div class="card-scene">
-                <div class="playing-card" id="mainCard">
-                    <div class="card-face card-front">
-                        <div class="suit-top" style="color:red">♥</div>
-                        <span id="cardValDisplay">7</span>
-                        <div class="suit-bottom" style="color:red">♥</div>
-                    </div>
-                    <div class="card-face card-back">
-                        <div class="card-logo-mini">♠</div>
-                    </div>
-                </div>
-                 <div id="hlResult" class="result-modal" style="border-radius:18px;">
-                    <div class="res-title res-win" id="hlTitle">CORRECT</div>
-                    <div class="res-pts" id="hlSub">+50 Points</div>
-                    <button class="btn-play-again" onclick="resetGameUI('hl')">PLAY AGAIN</button>
-                </div>
-            </div>
-
-            <div class="hl-controls-new">
-                <button class="btn-guess bg-hi" id="btnHi" onclick="guessHighLow('high')">HIGHER ▲</button>
-                <button class="btn-guess bg-lo" id="btnLo" onclick="guessHighLow('low')">LOWER ▼</button>
-            </div>
-            <p style="font-size:10px; margin-top:25px; opacity:0.6; font-weight:600;">Guess the next number (1-100)</p>
+    <div class="slot-machine-frame" style="max-width:400px; margin:0 auto; padding:30px; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+        <div style="background:black; border-radius:20px; display:flex; gap:10px; padding:15px; border:4px solid #451a03; height:130px; margin-bottom:20px; overflow:hidden;">
+            <div id="reel1" style="flex:1; background:white; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:48px;">❤️</div>
+            <div id="reel2" style="flex:1; background:white; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:48px;">🌹</div>
+            <div id="reel3" style="flex:1; background:white; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:48px;">🍫</div>
         </div>
-    </div>
-</div>
-
-<div id="game-slots" class="game-overlay-fs">
-    <div class="go-header">
-        <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
-        <div class="go-title" style="color:#fbbf24; text-shadow:0 0 10px rgba(251, 191, 36, 0.4);">Summer Slots</div>
-    </div>
-
-    <div style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;">
-        <div class="slot-machine-frame">
-            <div class="slot-lights-top">
-                <div class="slot-bulb"></div><div class="slot-bulb"></div><div class="slot-bulb"></div>
-                <div class="slot-bulb"></div><div class="slot-bulb"></div><div class="slot-bulb"></div>
-            </div>
-            
-            <div class="slot-window">
-                <div class="reel-col" id="reel1"><span>🍒</span></div>
-                <div class="reel-col" id="reel2"><span>🍋</span></div>
-                <div class="reel-col" id="reel3"><span>🔔</span></div>
-                
-                 <div id="slotResult" class="result-modal">
-                    <div class="res-title res-win" id="slotTitle">JACKPOT!</div>
-                    <div class="res-pts" id="slotSub">+100 Points</div>
-                    <button class="btn-play-again" onclick="resetGameUI('slot')">PLAY AGAIN</button>
-                </div>
-            </div>
-
-            <button class="slot-lever-btn" id="btnPullLever" onclick="pullSlotLever()">
-                SPIN
-            </button>
-        </div>
-    </div>
-</div>
-
-<div id="notifModal" class="modal" onclick="this.style.display='none'">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <div style="background:rgba(255,255,255,0.1); padding:8px; border-radius:10px;"><i data-lucide="inbox" style="width:20px;"></i></div>
-                <h3 style="margin:0; font-size:18px;">Inbox</h3>
-            </div>
-            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
-        </div>
-        <div id="notifList"></div>
-    </div>
-</div>
-
-<div id="menuModal" class="modal" onclick="this.style.display='none'">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <div class="profile-header">
-            <img id="profileImgLarge" class="profile-img-large" src="">
-            <div class="profile-name-info">
-                <h2 class="profile-name" id="profileNameDisplay">User Name</h2>
-                <span class="profile-uid" id="profileUidDisplay">UID: ---</span>
-            </div>
-            <button onclick="document.getElementById('menuModal').style.display='none'" style="background:none; border:none; color:white; opacity:0.5;"><i data-lucide="x"></i></button>
-        </div>
-        <div class="gcash-section">
-            <span style="font-size:10px; font-weight:800; color:var(--accent-glow); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="smartphone" style="width:12px"></i> GCash Number</span>
-            <div style="display:flex; gap:10px;">
-                <input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx">
-                <button onclick="saveGcash()" style="background:var(--accent); border:none; color:white; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer; box-shadow:0 4px 10px rgba(59, 130, 246, 0.3);">SAVE</button>
-            </div>
-        </div>
-        <div class="ref-container">
-            <span style="font-size:10px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="share-2" style="width:12px"></i> Invite & Earn</span>
-            <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom:10px;" onclick="this.select(); document.execCommand('copy'); alert('Copied Link!');">
-            <div id="referralInputSection">
-                <span style="font-size:10px; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px; margin-top:15px;"><i data-lucide="ticket" style="width:12px"></i> Claim Referral Code</span>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="referralInput" class="styled-input" placeholder="ENTER CODE">
-                    <button onclick="claimReferral()" style="background:var(--gold); border:none; color:black; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer; box-shadow:0 4px 10px rgba(251, 191, 36, 0.3);">CLAIM</button>
-                </div>
-            </div>
-        </div>
-        <div class="history-box">
-            <span style="font-size:10px; font-weight:800; color:white; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="history" style="width:12px"></i> Transaction History</span>
-            <div id="historyList" class="history-list"></div>
-        </div>
-        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); border-radius:14px; font-weight:800; margin-top:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-            <i data-lucide="log-out" style="width:18px"></i> Sign Out
-        </button>
-    </div>
-</div>
-
-<div id="storeModal" class="modal" onclick="this.style.display='none'">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-            <div>
-                <h3 style="margin:0; font-size: 20px; font-weight: 900;">REWARDS SHOP</h3>
-                <p style="margin: 5px 0 0 0; font-size: 11px; opacity: 0.6; font-weight: 600;">Exchange your points for GCash credits</p>
-            </div>
-            <div class="points-badge" style="height:35px; border-radius: 10px;"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
-        </div>
-        <div class="reward-grid">
-            <div class="reward-item">
-                <div class="reward-main">
-                    <div class="reward-icon-box"><i data-lucide="wallet" style="width:22px"></i></div>
-                    <div class="reward-info"><b>₱20 GCash</b><small><i data-lucide="database" style="width:10px"></i> 2,500 Pts</small></div>
-                </div>
-                <button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">Redeem</button>
-            </div>
-            <div class="reward-item">
-                <div class="reward-main">
-                    <div class="reward-icon-box" style="color:var(--gold); background:rgba(251, 191, 36, 0.1); border-color:rgba(251, 191, 36, 0.3);"><i data-lucide="gift" style="width:22px"></i></div>
-                    <div class="reward-info"><b>₱50 GCash</b><small><i data-lucide="database" style="width:10px"></i> 6,000 Pts</small></div>
-                </div>
-                <button class="btn-redeem" onclick="redeemItem('₱50 GCash', 6000)">Redeem</button>
-            </div>
-            <div class="reward-item">
-                <div class="reward-main">
-                    <div class="reward-icon-box" style="color:var(--success); background:rgba(16, 185, 129, 0.1); border-color:rgba(16, 185, 129, 0.3);"><i data-lucide="trophy" style="width:22px"></i></div>
-                    <div class="reward-info"><b>₱100 GCash</b><small><i data-lucide="database" style="width:10px"></i> 11,500 Pts</small></div>
-                </div>
-                <button class="btn-redeem" onclick="redeemItem('₱100 GCash', 11500)">Redeem</button>
-            </div>
-        </div>
-        <p style="text-align: center; font-size: 10px; opacity: 0.4; margin-top: 25px; line-height: 1.5;">*Processing of GCash may take 24-48 hours.<br>Make sure your GCash number is correct.</p>
+        <button id="btnPullLever" onclick="pullSlotLever()" style="width:100%; padding:20px; background:linear-gradient(180deg, #e11d48, #9f1239); color:white; font-weight:900; font-size:22px; border:none; border-radius:20px; box-shadow:0 10px 0 #881337, 0 20px 20px rgba(0,0,0,0.4);">SPIN</button>
     </div>
 </div>
 
@@ -838,591 +432,386 @@
     lucide.createIcons();
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
+    
+    // --- PUSH NOTIFICATION SETUP (FCM) ---
+    // Note: For this to work efficiently when app is closed, you must upload 'firebase-messaging-sw.js' to the root directory.
+    // However, this code will handle permissions and foreground/background token generation.
+    const messaging = firebase.messaging();
+    let currentToken = null;
+
+    function requestPushPermission() {
+        Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') {
+                console.log('Notification permission granted.');
+                // Get Token
+                messaging.getToken({ vapidKey: 'YOUR_PUBLIC_VAPID_KEY_HERE_IF_AVAILABLE' }).then((currentToken) => {
+                    if (currentToken) {
+                        console.log("FCM Token:", currentToken);
+                        // Save token to database
+                        const uid = auth.currentUser.uid;
+                        db.ref('users/' + uid + '/fcmToken').set(currentToken);
+                        showCustomAlert("NOTIFICATIONS ON", "Makakatanggap ka na ng schedule alerts!", "check");
+                        document.getElementById('pushPrompt').classList.remove('show');
+                    } else {
+                        console.log('No registration token available.');
+                    }
+                }).catch((err) => {
+                    console.log('An error occurred while retrieving token. ', err);
+                });
+            } else {
+                showCustomAlert("PERMISSION DENIED", "You need to allow notifications in browser settings.", "lock");
+            }
+        });
+    }
+
+    // Handle incoming messages while web app is open
+    messaging.onMessage((payload) => {
+        console.log('Message received. ', payload);
+        const { title, body } = payload.notification;
+        // Show as Custom Alert
+        showCustomAlert(title, body, "bell");
+        // Also Audio Cue
+        new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(()=>{});
+    });
+    // --- END PUSH NOTIFS ---
+
     const db = firebase.database(); const auth = firebase.auth();
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo";
     let lastNotifiedDraw = ""; let selectedReplyId = null;
-
     let cocoModel = null;
-    cocoSsd.load().then(model => { cocoModel = model; console.log("AI Vision Loaded."); document.getElementById('aiStatusText').innerText = "AI MODEL READY"; });
+    cocoSsd.load().then(model => { cocoModel = model; document.getElementById('aiStatusText').innerText = "CUPID AI READY"; });
+
+    // --- CUSTOM 3D ALERT SYSTEM ---
+    function showCustomAlert(title, msg, iconType = "heart") {
+        const overlay = document.getElementById('customAlertOverlay');
+        const box = document.getElementById('alertBox');
+        const titleEl = document.getElementById('alertTitle');
+        const msgEl = document.getElementById('alertMsg');
+        const iconContainer = document.getElementById('alertIcon');
+
+        titleEl.innerText = title;
+        msgEl.innerText = msg;
+
+        // Reset Icon
+        let iconHtml = '<i data-lucide="heart" style="color:#881337; width:35px; height:35px; fill:#be123c;"></i>';
+        if(iconType === 'check') iconHtml = '<i data-lucide="check-circle" style="color:#10b981; width:35px; height:35px;"></i>';
+        if(iconType === 'trophy') iconHtml = '<i data-lucide="trophy" style="color:#fbbf24; width:35px; height:35px; fill:#d97706;"></i>';
+        if(iconType === 'error' || iconType === 'lock') iconHtml = '<i data-lucide="alert-triangle" style="color:#ef4444; width:35px; height:35px;"></i>';
+        if(iconType === 'bell') iconHtml = '<i data-lucide="bell-ring" style="color:#f472b6; width:35px; height:35px;"></i>';
+
+        iconContainer.innerHTML = iconHtml;
+        lucide.createIcons();
+
+        overlay.style.display = 'flex';
+        // Trigger Animation
+        setTimeout(() => { box.classList.add('active'); }, 10);
+        
+        // Sound Effect for Alert
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'); // Soft pop
+        audio.volume = 0.5;
+        audio.play().catch(()=>{});
+    }
+
+    function closeCustomAlert() {
+        const box = document.getElementById('alertBox');
+        box.classList.remove('active');
+        setTimeout(() => { document.getElementById('customAlertOverlay').style.display = 'none'; }, 300);
+    }
+
+    // OVERRIDE STANDARD ALERT
+    window.alert = function(msg) { showCustomAlert("System Message", msg); }
 
     function switchTab(tab) {
         const btns = document.querySelectorAll('.tab-btn'); btns.forEach(b => b.classList.remove('active'));
         document.getElementById('bingoTab').style.display = 'none'; 
         document.getElementById('bringmeTab').style.display = 'none';
         document.getElementById('minigamesTab').style.display = 'none';
-
-        if(tab === 'bingo') { 
-            document.getElementById('bingoTab').style.display = 'block'; btns[0].classList.add('active'); 
-        } else if(tab === 'bringme') { 
-            document.getElementById('bringmeTab').style.display = 'block'; btns[1].classList.add('active'); 
-        } else if(tab === 'minigames') {
-            document.getElementById('minigamesTab').style.display = 'block'; btns[2].classList.add('active');
-        }
+        if(tab === 'bingo') { document.getElementById('bingoTab').style.display = 'block'; btns[0].classList.add('active'); }
+        else if(tab === 'bringme') { document.getElementById('bringmeTab').style.display = 'block'; btns[1].classList.add('active'); }
+        else if(tab === 'minigames') { document.getElementById('minigamesTab').style.display = 'block'; btns[2].classList.add('active'); }
     }
 
-    function listenToBringMe() {
-        db.ref('gameState/bringMe').on('value', s => {
-            const data = s.val(); const itemEl = document.getElementById('bringmeItem'); const instr = document.getElementById('bringmeInstruction'); const zone = document.getElementById('uploadZone');
-            if(data && data.active) {
-                if(itemEl.innerText !== data.item) userData.hasWonBringMeThisRound = false;
-                itemEl.innerText = data.item; instr.innerText = "DALI! MAGDALANG " + data.item; zone.style.display = 'block';
-                if(data.winner) { itemEl.innerText = "WINNER: " + data.winner; zone.style.display = 'none'; }
-            } else { itemEl.innerText = "WAITING..."; instr.innerText = "Maghintay sa utos ng Host..."; zone.style.display = 'none'; userData.hasWonBringMeThisRound = false; }
-        });
-    }
-
-    async function handleBringMeUploadAdvanced(input) {
-        if(!input.files || !input.files[0]) return;
-        if(userData.hasWonBringMeThisRound) { alert("Nakuha mo na ang points! Hintayin ang susunod."); return; }
-        if(!cocoModel) { alert("AI is still loading, please wait..."); return; }
-        const file = input.files[0]; const preview = document.getElementById('aiPreviewImg'); const placeholder = document.getElementById('aiPlaceholder'); const loader = document.getElementById('aiLoading'); const scanLine = document.getElementById('aiScanLine'); const statusText = document.getElementById('aiStatusText');
-        preview.src = URL.createObjectURL(file); preview.style.display = 'block'; placeholder.style.display = 'none'; loader.style.display = 'block'; scanLine.style.display = 'block'; statusText.innerText = "AI IDENTIFYING OBJECT...";
-        const img = new Image(); img.src = preview.src;
-        img.onload = async () => {
-            const predictions = await cocoModel.detect(img); const targetItem = document.getElementById('bringmeItem').innerText.toLowerCase();
-            const successfulMatch = predictions.find(p => {
-                const label = p.class.toLowerCase(); const score = p.score; if (score < 0.65) return false;
-                if (targetItem.includes("mouse") && label === "mouse") return true;
-                if (targetItem.includes("keyboard") && label === "keyboard") return true;
-                if (targetItem.includes("cellphone") && (label === "cell phone" || label === "mobile phone")) return true;
-                if (targetItem.includes("baso") && (label === "cup" || label === "wine glass")) return true;
-                if (targetItem.includes("kutsara") && label === "spoon") return true;
-                if (targetItem.includes("tinidor") && label === "fork") return true;
-                if (targetItem.includes("bote") && label === "bottle") return true;
-                if (targetItem.includes("remote") && label === "remote") return true;
-                if (targetItem.includes("laptop") && label === "laptop") return true;
-                if (targetItem.includes("libro") && label === "book") return true;
-                if (targetItem === label) return true;
-                return false;
-            });
-            setTimeout(() => {
-                db.ref('gameState/bringMe').once('value', snap => {
-                    const game = snap.val();
-                    if(game && game.active && !game.winner) {
-                        if(successfulMatch) { const confidencePercent = Math.round(successfulMatch.score * 100); alert(`✅ AI SUCCESS: Sigurado ako (${confidencePercent}%) na ${successfulMatch.class} iyan!`); triggerBringMeWin(); } 
-                        else { if (predictions.length > 0) { const detected = predictions.map(p => p.class).join(", "); alert(`❌ AI REJECTED: Ang nakita ko ay (${detected}), pero ang hanap ay ${targetItem.toUpperCase()}.`); } else { alert("❌ AI REJECTED: Walang malinaw na object na makita. Ayusin ang anggulo o ilaw."); } }
-                    } else if (game.winner) { alert("May nanalo na!"); }
-                    loader.style.display = 'none'; scanLine.style.display = 'none';
-                });
-            }, 2000);
-        };
-    }
-
-    function triggerBringMeWin() {
-        const uid = auth.currentUser.uid;
-        db.ref('gameState/bringMe').update({ winner: auth.currentUser.displayName });
-        db.ref('users/' + uid + '/points').transaction(p => (p || 0) + 200);
-        userData.hasWonBringMeThisRound = true;
-        confetti({ particleCount: 150, spread: 80, origin: { y: 0.8 } });
-        db.ref('chats').push({ name: "SYSTEM AI", msg: `🏆 Si ${auth.currentUser.displayName} ang panalo sa Bring Me! +200 Pts!`, pfp: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg", uid: "ai" });
-    }
-
-    function fixDate(timestamp) { if(!timestamp) return "No Date"; const d = new Date(parseInt(timestamp)); return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) + " " + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }); }
-    if ("Notification" in window) { Notification.requestPermission(); }
+    // AUTH & INIT
     function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-
     auth.onAuthStateChanged(u => {
         if(u) {
             document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('userPanel').style.display = 'flex';
-            document.getElementById('userImg').src = u.photoURL; document.getElementById('profileImgLarge').src = u.photoURL;
-            document.getElementById('profileNameDisplay').innerText = u.displayName; document.getElementById('profileUidDisplay').innerText = "ID: " + u.uid.substring(0,8);
+            document.getElementById('userImg').src = u.photoURL;
+            // SHOW PUSH PROMPT ON FIRST LOGIN
+            setTimeout(() => { 
+                if(Notification.permission === 'default') document.getElementById('pushPrompt').classList.add('show');
+            }, 3000);
+
             const userRef = db.ref('users/'+u.uid);
-            userRef.once('value', snapshot => {
-                if (!snapshot.exists()) {
-                    const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    const urlParams = new URLSearchParams(window.location.search); const referredBy = urlParams.get('ref');
-                    userRef.set({ name: u.displayName, photo: u.photoURL, points: 100, refCode: newRefCode, referredBy: referredBy || null, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false });
-                    if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 500); } }); }
-                } else {
-                    const data = snapshot.val(); const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL };
-                    const today = new Date().toDateString(); if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 50; updates.lastLoginDate = today; alert("🎁 Daily Bonus! +50 points."); }
-                    if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase(); userRef.update(updates);
-                }
-            });
             userRef.on('value', s => { 
                 if(s.exists()){ 
                     userData = s.val(); userData.uid = u.uid; 
-                    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString(); document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString();
-                    document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || "");
-                    if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none';
-                    if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
+                    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
                     if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
-                    updatePresenceData(u.uid, userData.name, userData.points);
                     checkLateJoiner();
+                } else {
+                     userRef.set({ name: u.displayName, photo: u.photoURL, points: 100, cardTimestamp: Date.now() });
                 }
             });
-            initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenToBringMe(); listenJackpot(); listenNotifications(u.uid);
+            initBingo(); setupChat(); listenForNextDraw(); listenToBringMe(); listenJackpot();
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
-    function setupPresence(uid) {
-        const onlineRef = db.ref('.info/connected');
-        const userStatusRef = db.ref('status/' + uid);
-        onlineRef.on('value', (snapshot) => {
-            if (snapshot.val() === false) return;
-            userStatusRef.onDisconnect().remove().then(() => { 
-                userStatusRef.set({ state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP }); 
-            });
-        });
-        db.ref('status').on('value', (s) => { document.getElementById('onlineCount').innerText = s.numChildren() || 0; });
-    }
-
-    function updatePresenceData(uid, name, points) {
-        db.ref('status/' + uid).update({ name: name, points: points });
-    }
-
-    function listenNotifications(uid) {
-        db.ref('notifications/' + uid).on('value', s => {
-            const count = s.numChildren();
-            const dot = document.getElementById('notifDot');
-            if(count > 0) {
-                dot.style.display = 'block';
-            } else {
-                dot.style.display = 'none';
-            }
-        });
-    }
-
-    function openNotifs() { 
-        document.getElementById('notifModal').style.display='flex'; 
-        renderNotifs(); 
-    }
-
-    function renderNotifs() { 
-        const list = document.getElementById('notifList'); 
-        db.ref('notifications/' + auth.currentUser.uid).once('value', s => { 
-            list.innerHTML = ""; 
-            if(!s.exists()) { 
-                list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:40px;'>No new messages</div>"; 
-                return; 
-            } 
-            s.forEach(n => { 
-                const val = n.val(); 
-                const key = n.key;
-                const div = document.createElement('div'); 
-                div.className = 'notif-card-new';
-                div.innerHTML = `
-                    <div class="notif-header-new">
-                        <div class="notif-title"><i data-lucide="info" style="width:14px"></i> SYSTEM MSG</div>
-                        <button class="btn-del-notif" onclick="deleteNotif('${key}')"><i data-lucide="trash-2" style="width:14px"></i></button>
-                    </div>
-                    <div class="notif-body">${val.msg}</div>
-                    <div style="font-size:9px; opacity:0.4; margin-top:8px; text-align:right;">${fixDate(val.time)}</div>
-                `; 
-                list.prepend(div); 
-            }); 
-            lucide.createIcons();
-        }); 
-    }
-
-    function deleteNotif(key) {
-        if(confirm("Delete this notification?")) {
-            db.ref('notifications/' + auth.currentUser.uid + '/' + key).remove();
-            renderNotifs(); 
-        }
-    }
-
-    function listenJackpot() {
-        db.ref('gameState/jackpot').on('value', s => {
-            const data = s.val(); const banner = document.getElementById('jackpotBanner');
-            if(data && data.active) { banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = data.amount; } 
-            else { banner.style.display = 'none'; }
-        });
-    }
-
-    function listenForNextDraw() {
-        db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); });
-        db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); });
-    }
-
-    function updateNextDrawDisplay() {
-        db.ref('gameState').once('value', s => {
-            const gameData = s.val() || {}; let displayTime = gameData.nextDraw;
-            if(gameData.schedules) { const now = Date.now(); const sorted = Object.values(gameData.schedules).sort((a,b) => a - b); const next = sorted.find(t => t > now); if(next) displayTime = next; }
-            const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime');
-            if(displayTime) { 
-                banner.style.display = 'flex'; 
-                const formatted = isNaN(displayTime) ? displayTime : fixDate(displayTime);
-                timeEl.innerText = formatted; document.getElementById('lateNextSched').innerText = formatted; checkNotificationTime(displayTime); 
-            } else { banner.style.display = 'none'; }
-        });
-    }
-
-    function checkNotificationTime(timeInput) {
-        if(lastNotifiedDraw == timeInput) return;
-        let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput);
-        if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 10) { if(Notification.permission === "granted") new Notification("Radio Bingo", { body: "10 mins na lang, bola na!" }); lastNotifiedDraw = timeInput; } }
-    }
-
+    // BINGO LOGIC
     function initBingo() {
         db.ref('gameState/latestWinner').on('value', s => {
-            const win = s.val(); const banner = document.getElementById('winnerBanner'); const patternLine = document.getElementById('winnerPatternLine'); const cardCont = document.getElementById('bingoCardContainer'); const gameOverlay = document.getElementById('gameOverOverlay');
-            
-            // REMOVE PURO STYLES IF WINNER IS ANNOUNCED
-            cardCont.classList.remove('card-puro');
-            document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting'));
-
+            const win = s.val(); const banner = document.getElementById('winnerBanner'); 
+            const cardCont = document.getElementById('bingoCardContainer');
             if(win && win.name) {
-                banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`; patternLine.innerText = `Pattern Won: ${currentPattern}`; banner.style.display = 'block';
+                banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`; 
+                banner.style.display = 'block';
                 if(win.uid === auth.currentUser.uid) { 
-                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; 
+                    confetti({ particleCount: 200, spread: 90, colors: ['#e11d48', '#fbbf24'] }); 
+                    cardCont.classList.add('card-win'); 
+                    showCustomAlert("YOU WON!", "Congratulations! You won the Bingo Love Prize!", "trophy");
                 } 
                 else { 
-                    cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; 
-                    // UPDATED GAME OVER MESSAGE
-                    const nextTime = document.getElementById('nextDrawTime').innerText;
-                    document.getElementById('gameOverMsg').innerHTML = `Sayang! Si <b>${win.name.toUpperCase()}</b> ang nanalo.<br><br>Bawi tayo sa next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ${nextTime}</span>`; 
+                    cardCont.style.filter = "grayscale(1)"; 
+                    document.getElementById('gameOverOverlay').style.display='flex';
+                    document.getElementById('gameOverMsg').innerText = `Nanalo na si ${win.name}. Bawi sa next draw!`;
                 }
-            } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); gameOverlay.style.display = 'none'; document.querySelectorAll('.cell').forEach(c => { c.classList.remove('win-glow', 'win-line-h', 'win-line-v', 'win-line-d1', 'win-line-d2'); }); }
+            } else { 
+                banner.style.display = 'none'; cardCont.classList.remove('card-win'); cardCont.style.filter = "none";
+                document.getElementById('gameOverOverlay').style.display='none';
+                document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow', 'hit'));
+            }
         });
-        db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternName').innerText = currentPattern; checkWin(); });
         db.ref('drawnNumbers').on('value', s => {
             const val = s.val(); const newGameDrawn = val ? Object.values(val).map(n => n.toString()) : [];
-            if(newGameDrawn.length > gameDrawn.length) { const newBall = newGameDrawn[newGameDrawn.length - 1]; speakNumber(newBall); }
+            if(newGameDrawn.length > gameDrawn.length) speakNumber(newGameDrawn[newGameDrawn.length - 1]);
             gameDrawn = newGameDrawn; document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
             const btn = document.getElementById('newCardBtn');
-            if(gameDrawn.length > 0) { btn.disabled = true; btn.innerHTML = `<i data-lucide="lock" style="width:14px"></i> IN GAME`; } else { btn.disabled = false; btn.innerHTML = `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`; }
-            lucide.createIcons(); checkLateJoiner(); updateGridHits(); renderPrevBalls(); 
-            
-            // Order is important
-            checkWin(); 
-            checkPuroStatus();
+            if(gameDrawn.length > 0) { btn.disabled = true; btn.innerHTML = `<i data-lucide="lock" style="width:12px"></i> LOCKED`; } else { btn.disabled = false; btn.innerHTML = `<i data-lucide="refresh-cw" style="width:12px"></i> NEW CARD`; }
+            lucide.createIcons(); checkLateJoiner(); updateGridHits(); renderPrevBalls(); checkWin(); 
         });
     }
 
-    function speakNumber(num) { if ('speechSynthesis' in window) { let letter = "B"; if (num > 15) letter = "I"; if (num > 30) letter = "N"; if (num > 45) letter = "G"; if (num > 60) letter = "O"; const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 0.9; window.speechSynthesis.speak(msg); } }
+    function speakNumber(num) { 
+        if ('speechSynthesis' in window) { 
+            let letter = "B"; if(num>15) letter="I"; if(num>30) letter="N"; if(num>45) letter="G"; if(num>60) letter="O";
+            const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 1.1; msg.pitch = 1.2; window.speechSynthesis.speak(msg); 
+        } 
+    }
 
     function checkWin() {
         if(userData.hasWonCurrent || gameDrawn.length === 0) return;
-        db.ref('gameState/latestWinner').once('value', snap => {
-            if(snap.exists()) return;
-            let winningWays = [];
-            if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; }
-            else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; }
-            else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; }
-            else { 
-                winningWays = [
-                    [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], 
-                    [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], 
-                    [0,6,12,18,24], [4,8,12,16,20]
-                ]; 
-            }
-            
-            for(let i = 0; i < winningWays.length; i++) {
-                let w = winningWays[i];
-                if(w.every(idx => marks.includes(idx))) { 
-                    highlightWinningPattern(w, i); 
-                    triggerWin(); 
-                    break; 
-                } 
-            }
-        });
-    }
-
-    function checkPuroStatus() {
-        if(userData.hasWonCurrent || gameDrawn.length === 0) return;
-        document.getElementById('bingoCardContainer').classList.remove('card-puro');
-        document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting'));
-
-        let winningWays = [];
-        if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; }
-        else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; }
-        else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; }
-        else { 
-            winningWays = [
-                [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], 
-                [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], 
-                [0,6,12,18,24], [4,8,12,16,20]
-            ]; 
-        }
-
-        let isPuro = false;
-        winningWays.forEach(indices => {
-            const missing = indices.filter(idx => !marks.includes(idx));
-            if(missing.length === 1) {
-                isPuro = true;
-                const cellId = 'c-' + missing[0];
-                const cell = document.getElementById(cellId);
-                if(cell) cell.classList.add('cell-waiting');
-            }
-        });
-
-        if(isPuro) {
-             document.getElementById('bingoCardContainer').classList.add('card-puro');
-        }
-    }
-
-    function highlightWinningPattern(indices, patternIdx) { 
-        indices.forEach(idx => { 
-            const cell = document.getElementById('c-' + idx); 
-            if(cell) { 
-                cell.classList.add('win-glow'); 
-                if(currentPattern === "Normal Bingo") {
-                    if(patternIdx >= 0 && patternIdx <= 4) cell.classList.add('win-line-h'); 
-                    else if(patternIdx >= 5 && patternIdx <= 9) cell.classList.add('win-line-v'); 
-                    else if(patternIdx === 10) cell.classList.add('win-line-d1'); 
-                    else if(patternIdx === 11) cell.classList.add('win-line-d2'); 
-                }
+        let winningWays = [
+             [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], // Rows
+             [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], // Cols
+             [0,6,12,18,24], [4,8,12,16,20] // Diagonals
+        ];
+        for(let i = 0; i < winningWays.length; i++) {
+            if(winningWays[i].every(idx => marks.includes(idx))) { 
+                winningWays[i].forEach(idx => document.getElementById('c-' + idx).classList.add('win-glow'));
+                triggerWin(); break; 
             } 
-        }); 
+        }
     }
 
     function triggerWin() {
         db.ref('gameState/jackpot').once('value', s => {
             const j = s.val(); let points = 500;
-            if(j && j.active && j.amount) { const val = parseInt(j.amount.toString().replace(/[^0-9]/g, '')); if(!isNaN(val) && val > 0) { points = val; } }
-            db.ref('gameState/latestWinner').set({ name: auth.currentUser.displayName, uid: auth.currentUser.uid, time: Date.now(), prize: points });
+            if(j && j.active && j.amount) { const val = parseInt(j.amount.toString().replace(/[^0-9]/g, '')); if(!isNaN(val) && val > 0) points = val; }
+            db.ref('gameState/latestWinner').set({ name: auth.currentUser.displayName, uid: auth.currentUser.uid, time: Date.now() });
             db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
             db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + points);
         });
     }
+
+    function generateNewCard() {
+        if(gameDrawn.length > 0) return showCustomAlert("Ops!", "Ongoing na ang laro. Bawal magpalit.", "lock");
+        const getCol = (min, max) => { let nums = []; while(nums.length < 5) { let r = Math.floor(Math.random() * (max - min + 1)) + min; if(!nums.includes(r)) nums.push(r); } return nums.sort((a,b) => a-b); };
+        const b=getCol(1,15), i=getCol(16,30), n=getCol(31,45), g=getCol(46,60), o=getCol(61,75); n[2] = "FREE";
+        cardNumbers = [...b.map((x,k)=>b[k]), ...i.map((x,k)=>i[k]), ...n.map((x,k)=>n[k]), ...g.map((x,k)=>g[k]), ...o.map((x,k)=>o[k])];
+        // Reshuffle for grid render format (Col based to Row based logic needs mapping or just simple array save)
+        // Simplified Logic: Save array, render by index.
+        let finalCard = [];
+        for(let r=0; r<5; r++) { finalCard.push(b[r], i[r], n[r], g[r], o[r]); }
+        cardNumbers = finalCard;
+        
+        db.ref('users/'+auth.currentUser.uid).update({ currentCard: cardNumbers, hasWonCurrent: false, cardTimestamp: Date.now() });
+        renderCard();
+    }
+
+    function renderCard() {
+        const grid = document.getElementById('bingoGrid'); grid.innerHTML = "";
+        cardNumbers.forEach((n, i) => { 
+            let d = document.createElement('div'); 
+            d.className = 'cell' + (i===12?' hit':''); d.id = 'c-'+i; 
+            d.innerHTML = n==="FREE"?'<i data-lucide="heart" style="width:20px; fill:white"></i>':n; 
+            grid.appendChild(d); 
+        });
+        lucide.createIcons();
+        updateGridHits();
+    }
+
+    function updateGridHits() {
+        marks = [12];
+        cardNumbers.forEach((n, i) => {
+            const el = document.getElementById('c-'+i);
+            if(i === 12) return;
+            if(gameDrawn.includes(n.toString())) { marks.push(i); if(el) el.classList.add('hit'); } else { if(el) el.classList.remove('hit'); }
+        });
+    }
+
+    function renderPrevBalls() { const row = document.getElementById('ballRow'); row.innerHTML = ""; [...gameDrawn].reverse().slice(1,10).forEach(n => { const b = document.createElement('div'); b.className = 'ball-small'; b.innerText = n; row.appendChild(b); }); }
 
     function checkLateJoiner() {
         const overlay = document.getElementById('lateOverlay');
         if (!gameDrawn || gameDrawn.length === 0) { overlay.style.display = 'none'; return; }
         db.ref('gameState/gameStartTime').once('value', s => {
             const startTime = s.val() || 0; const cardTime = (userData && userData.cardTimestamp) ? userData.cardTimestamp : 0;
-            if(gameDrawn.length > 0 && cardTime > startTime) { overlay.style.display = 'flex'; updateNextDrawDisplay(); } else { overlay.style.display = 'none'; }
+            if(gameDrawn.length > 0 && cardTime > startTime) { overlay.style.display = 'flex'; } else { overlay.style.display = 'none'; }
         });
     }
 
-    function updateGridHits() {
-        marks = [12];
-        cardNumbers.forEach((n, i) => {
-            const el = document.getElementById('c-'+i); if(i === 12) { if(el) el.classList.add('hit'); return; }
-            if(gameDrawn.includes(n.toString())) { marks.push(i); if(el) el.classList.add('hit'); } else { if(el) el.classList.remove('hit'); }
+    // NEXT DRAW LISTEN
+    function listenForNextDraw() {
+        db.ref('gameState/nextDraw').on('value', s => {
+            const time = s.val();
+            const banner = document.getElementById('nextDrawBanner');
+            if(time) { 
+                banner.style.display = 'flex'; 
+                const d = new Date(parseInt(time));
+                const format = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+                document.getElementById('nextDrawTime').innerText = format;
+                document.getElementById('lateNextSched').innerText = format;
+                
+                // SCHEDULE LOCAL PUSH
+                checkNotificationTime(time);
+            } else { banner.style.display = 'none'; }
         });
     }
-
-    function generateNewCard() {
-        if(gameDrawn.length > 0) return alert("Bawal mag palit ng card kapag may bola na!");
-        const getCol = (min, max) => { let nums = []; while(nums.length < 5) { let r = Math.floor(Math.random() * (max - min + 1)) + min; if(!nums.includes(r)) nums.push(r); } return nums.sort((a,b) => a-b); };
-        const b = getCol(1, 15), i = getCol(16, 30), n = getCol(31, 45), g = getCol(46, 60), o = getCol(61, 75);
-        n[2] = "FREE"; cardNumbers = [];
-        for(let row=0; row<5; row++) cardNumbers.push(b[row], i[row], n[row], g[row], o[row]);
-        const now = Date.now();
-        db.ref('users/'+auth.currentUser.uid).update({ currentCard: cardNumbers, hasWonCurrent: false, cardTimestamp: now });
-        renderCard();
-    }
-
-    function renderCard() {
-        const grid = document.getElementById('bingoGrid'); grid.innerHTML = "";
-        cardNumbers.forEach((n, i) => { let d = document.createElement('div'); d.className = 'cell' + (i===12?' hit':''); d.id = 'c-'+i; d.innerText = n==="FREE"?"★":n; grid.appendChild(d); });
-        updateGridHits();
-    }
-
-    function renderPrevBalls() { const row = document.getElementById('ballRow'); row.innerHTML = ""; [...gameDrawn].reverse().slice(1,10).forEach(n => { const b = document.createElement('div'); b.className = 'ball-small'; b.innerText = n; row.appendChild(b); }); }
-
-    function setupChat() {
-        db.ref('chats').limitToLast(25).on('child_added', s => { renderChatMessage(s.key, s.val()); });
-        db.ref('chats').on('child_changed', s => {
-            const likeCountEl = document.getElementById(`likes-${s.key}`); if(likeCountEl) likeCountEl.innerText = Object.keys(s.val().likes || {}).length;
-            if(s.val().replies) { const replyBox = document.getElementById(`replies-${s.key}`); replyBox.innerHTML = ""; Object.values(s.val().replies).forEach(r => { replyBox.innerHTML += `<div class="reply-item"><img src="${r.pfp}" class="reply-pfp"><div class="reply-bubble"><b style="font-size:10px; color:var(--accent); display:block;">${r.name}</b><span style="font-size:12px;">${r.msg}</span></div></div>`; }); }
-        });
-    }
-
-    function renderChatMessage(id, c) {
-        const list = document.getElementById('chatList'); const likes = c.likes ? Object.keys(c.likes).length : 0; const isLiked = c.likes && c.likes[auth.currentUser.uid] ? 'liked' : '';
-        const row = document.createElement('div'); row.className = 'chat-row'; row.id = `msg-${id}`;
-        row.innerHTML = `<img src="${c.pfp}" class="chat-pfp"><div class="chat-content"><div class="bubble"><span class="chat-name">${c.name} ${c.uid === auth.currentUser.uid ? '<small>(You)</small>' : ''}</span><span class="chat-text">${c.msg}</span></div><div class="chat-actions"><button class="action-btn ${isLiked}" onclick="likeChat('${id}')"><i data-lucide="heart" style="width:12px"></i> <span id="likes-${id}">${likes}</span></button><button class="action-btn" onclick="setReply('${id}', '${c.name}')"><i data-lucide="message-circle" style="width:12px"></i> Reply</button></div><div class="reply-box" id="replies-${id}"></div></div>`;
-        list.appendChild(row); lucide.createIcons(); list.scrollTop = list.scrollHeight;
-    }
-
-    function likeChat(id) { const uid = auth.currentUser.uid; const likeRef = db.ref(`chats/${id}/likes/${uid}`); likeRef.once('value', s => { if(s.exists()) likeRef.remove(); else likeRef.set(true); }); }
-    function setReply(id, name) { selectedReplyId = id; document.getElementById('replyIndicator').style.display = 'flex'; document.getElementById('replyText').innerText = `Replying to ${name}...`; document.getElementById('chatIn').focus(); }
-    function cancelReply() { selectedReplyId = null; document.getElementById('replyIndicator').style.display = 'none'; }
-    function sendChat() { const inp = document.getElementById('chatIn'); const msg = inp.value.trim(); if(!msg) return; if(selectedReplyId) { db.ref(`chats/${selectedReplyId}/replies`).push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() }); cancelReply(); } else { db.ref('chats').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() }); } inp.value = ""; }
-    function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length < 10) return alert("Error"); db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => alert("Saved!")); }
-    function claimReferral() { const code = document.getElementById('referralInput').value.trim().toUpperCase(); db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => { if(s.exists()) { db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 }); alert("Claimed!"); } }); }
-    function redeemItem(item, cost) { if((userData.points || 0) < cost) return alert("No points!"); db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost); db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() }); }
-    function openMenuModal() { document.getElementById('menuModal').style.display = 'flex'; const hist = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { hist.innerHTML = ""; s.forEach(child => { const v = child.val(); const item = document.createElement('div'); item.className = 'history-item'; item.innerHTML = `<div class="hist-main"><span class="hist-title" style="color:white; font-size:13px; font-weight:700;">${v.item}</span></div><span class="hist-status" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:6px; background:rgba(251,191,36,0.1); color:#fbbf24;">${v.status.toUpperCase()}</span>`; hist.appendChild(item); }); }); }
-
-    // ============================================
-    // UPDATED MINI GAMES LOGIC (FULL SCREEN)
-    // ============================================
-
-    // Open/Close Handlers
-    function openGame(gameType) {
-        document.querySelector('.nav').style.display = 'none'; // Hide Top Nav
-        document.querySelector('.tab-system').style.display = 'none'; // Hide Tabs
-        document.getElementById('minigamesTab').style.display = 'none'; // Hide Lobby
-        
-        // Open Specific
-        if(gameType === 'roulette') document.getElementById('game-roulette').style.display = 'flex';
-        if(gameType === 'highlow') document.getElementById('game-highlow').style.display = 'flex';
-        if(gameType === 'slots') document.getElementById('game-slots').style.display = 'flex';
-    }
-
-    function closeGame() {
-        // Hide All Overlays
-        document.querySelectorAll('.game-overlay-fs').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('.result-modal').forEach(el => el.style.display = 'none');
-        
-        // Show Main UI
-        document.querySelector('.nav').style.display = 'flex'; 
-        document.querySelector('.tab-system').style.display = 'flex';
-        document.getElementById('minigamesTab').style.display = 'block';
-
-        // Reset buttons if they were disabled
-        document.getElementById('btnSpinWheel').disabled = false;
-        document.getElementById('btnHi').disabled = false;
-        document.getElementById('btnLo').disabled = false;
-        document.getElementById('btnPullLever').disabled = false;
-    }
-
-    function addPoints(pts) { db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) + pts); }
     
-    // STRICT 30% WIN CHANCE LOGIC
-    function isWin() { return Math.random() < 0.30; }
-
-    // PLAY AGAIN RESET
-    function resetGameUI(type) {
-        if(type === 'roulette') {
-            document.getElementById('rouletteResult').style.display = 'none';
-            document.getElementById('btnSpinWheel').disabled = false;
-        }
-        if(type === 'hl') {
-            document.getElementById('hlResult').style.display = 'none';
-            document.getElementById('btnHi').disabled = false;
-            document.getElementById('btnLo').disabled = false;
-        }
-        if(type === 'slot') {
-            document.getElementById('slotResult').style.display = 'none';
-            document.getElementById('btnPullLever').disabled = false;
+    function checkNotificationTime(targetTime) {
+        if(lastNotifiedDraw == targetTime) return;
+        let diff = targetTime - Date.now();
+        if(diff > 0 && diff < 600000) { // 10 mins before
+            if(Notification.permission === "granted") {
+                new Notification("Love Bingo Alert! 💘", { body: "Game starts in 10 minutes! Join na.", icon: "https://cdn-icons-png.flaticon.com/512/2530/2530863.png" });
+            }
+            lastNotifiedDraw = targetTime;
         }
     }
 
-    // --- ROULETTE LOGIC ---
+    // CHAT SYSTEM
+    function setupChat() {
+        db.ref('chats').limitToLast(20).on('child_added', s => {
+            const c = s.val();
+            const list = document.getElementById('chatList');
+            const div = document.createElement('div');
+            div.style.display = 'flex'; div.style.gap = '10px'; div.style.marginBottom = '10px';
+            div.innerHTML = `
+                <img src="${c.pfp}" style="width:35px; height:35px; border-radius:50%; border:2px solid var(--accent);">
+                <div class="bubble" style="padding:10px 15px; flex:1;">
+                    <strong style="color:var(--accent-glow); font-size:12px; display:block;">${c.name}</strong>
+                    <span style="font-size:13px; color:white;">${c.msg}</span>
+                </div>
+            `;
+            list.appendChild(div); list.scrollTop = list.scrollHeight;
+        });
+    }
+    function sendChat() {
+        const inp = document.getElementById('chatIn');
+        if(!inp.value.trim()) return;
+        db.ref('chats').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: inp.value });
+        inp.value = "";
+    }
+
+    // MINI GAMES
+    function openGame(g) {
+        if(g==='roulette') document.getElementById('game-roulette').style.display = 'flex';
+        if(g==='slots') document.getElementById('game-slots').style.display = 'flex';
+    }
+    function closeGame() {
+        document.querySelectorAll('div[id^="game-"]').forEach(d => d.style.display = 'none');
+    }
+    
     function spinRoulette() {
-        const btn = document.getElementById('btnSpinWheel');
+        const btn = document.getElementById('btnSpinWheel'); btn.disabled = true;
         const inner = document.getElementById('wheelInner');
-        const ballCont = document.getElementById('ballContainer');
-        const resultModal = document.getElementById('rouletteResult');
-        
-        btn.disabled = true; resultModal.style.display = 'none';
-
-        const win = isWin();
-        const baseRot = 1080 + Math.floor(Math.random() * 360); // Wheel Spin
-        
-        // Spin Wheel
-        inner.style.transform = `rotate(${baseRot}deg)`;
-        
-        // Spin Ball (Visual)
-        ballCont.style.animation = "spinBall 2s ease-out forwards";
-
+        const rot = 1080 + Math.floor(Math.random() * 360);
+        inner.style.transform = `rotate(${rot}deg)`;
         setTimeout(() => {
-            ballCont.style.animation = "none"; // Reset
-            resultModal.style.display = 'flex';
-            
-            const title = document.getElementById('rouletteTitle');
-            const sub = document.getElementById('rouletteSub');
-            
-            if(win) {
-                title.innerText = "YOU WON!"; title.className = "res-title res-win";
-                sub.innerText = "+50 Points";
-                addPoints(50);
-                confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
-            } else {
-                title.innerText = "TRY AGAIN"; title.className = "res-title res-loss";
-                sub.innerText = "No luck this time";
-            }
+            btn.disabled = false;
+            const win = Math.random() < 0.4;
+            if(win) { showCustomAlert("YOU WON!", "Love is on your side! +50 Pts", "trophy"); addPoints(50); }
+            else { showCustomAlert("TRY AGAIN", "Puso mo'y sawi... try again!", "error"); }
         }, 3000);
     }
-
-    // --- HIGH LOW LOGIC (CARD FLIP) ---
-    function guessHighLow(choice) {
-        const card = document.getElementById('mainCard');
-        const display = document.getElementById('cardValDisplay');
-        const btnHi = document.getElementById('btnHi');
-        const btnLo = document.getElementById('btnLo');
-        const resModal = document.getElementById('hlResult');
-        const title = document.getElementById('hlTitle');
-        const sub = document.getElementById('hlSub');
-
-        // Disable buttons
-        btnHi.disabled = true; btnLo.disabled = true; resModal.style.display = 'none';
-
-        const currentVal = parseInt(display.innerText);
-        const win = isWin();
-        let nextVal = 50;
-
-        if (win) {
-             if(choice === 'high') nextVal = Math.floor(Math.random() * (100 - currentVal)) + currentVal + 1;
-             else nextVal = Math.floor(Math.random() * currentVal); 
-        } else {
-             if(choice === 'high') nextVal = Math.floor(Math.random() * currentVal); 
-             else nextVal = Math.floor(Math.random() * (100 - currentVal)) + currentVal + 1;
-        }
-        if (nextVal < 1 || isNaN(nextVal)) nextVal = 1; if (nextVal > 100) nextVal = 99;
-
-        // FLIP ANIMATION
-        card.classList.add('is-flipped'); // Show Back
-
+    
+    function pullSlotLever() {
+        const btn = document.getElementById('btnPullLever'); btn.disabled = true;
+        const r1 = document.getElementById('reel1'); const r2 = document.getElementById('reel2'); const r3 = document.getElementById('reel3');
+        let interval = setInterval(() => {
+            r1.innerHTML = getRandomIcon(); r2.innerHTML = getRandomIcon(); r3.innerHTML = getRandomIcon();
+        }, 100);
         setTimeout(() => {
-            // While flipped (hidden), change number
-            display.innerText = nextVal;
-            // Flip Back to Front
-            card.classList.remove('is-flipped');
-            
-            setTimeout(() => {
-                resModal.style.display = 'flex';
-                if(win) {
-                    title.innerText = "CORRECT!"; title.className = "res-title res-win";
-                    sub.innerText = "+50 Points";
-                    addPoints(50);
-                } else {
-                    title.innerText = "WRONG"; title.className = "res-title res-loss";
-                    sub.innerText = "Maybe next time";
-                }
-            }, 600);
-        }, 600);
+            clearInterval(interval);
+            const win = Math.random() < 0.3;
+            if(win) {
+                r1.innerHTML = "❤️"; r2.innerHTML = "❤️"; r3.innerHTML = "❤️";
+                showCustomAlert("JACKPOT!", "Triple Hearts! +100 Pts", "trophy"); addPoints(100);
+                confetti();
+            } else {
+                r3.innerHTML = "🥀"; // Lose
+            }
+            btn.disabled = false;
+        }, 2000);
+    }
+    function getRandomIcon() { const i = ["❤️","🌹","💍","🍫","🧸"]; return i[Math.floor(Math.random()*i.length)]; }
+    function addPoints(p) { db.ref('users/'+auth.currentUser.uid+'/points').transaction(v=>(v||0)+p); }
+
+    // BRING ME & AI (Same Logic)
+    function listenToBringMe() {
+        db.ref('gameState/bringMe').on('value', s => {
+            const data = s.val(); 
+            if(data && data.active && !data.winner) {
+                document.getElementById('bringmeItem').innerText = data.item;
+                document.getElementById('uploadZone').style.display = 'block';
+            } else {
+                document.getElementById('bringmeItem').innerText = data.winner ? `WINNER: ${data.winner}` : "WAITING...";
+                document.getElementById('uploadZone').style.display = 'none';
+            }
+        });
     }
 
-    // --- SLOTS LOGIC (REEL BLUR) ---
-    function pullSlotLever() {
-        const btn = document.getElementById('btnPullLever');
-        const reels = [document.getElementById('reel1'), document.getElementById('reel2'), document.getElementById('reel3')];
-        const resModal = document.getElementById('slotResult');
-        const symbols = ["🍒", "🍋", "🔔", "💎", "7️⃣"];
-
-        btn.disabled = true; resModal.style.display = 'none';
+    async function handleBringMeUploadAdvanced(input) {
+        if(!input.files[0]) return;
+        document.getElementById('aiLoading').style.display = 'block';
+        const img = new Image(); img.src = URL.createObjectURL(input.files[0]);
+        document.getElementById('aiPreviewImg').src = img.src; document.getElementById('aiPreviewImg').style.display='block'; document.getElementById('aiPlaceholder').style.display='none';
         
-        // Start Spinning Animation
-        reels.forEach(r => r.classList.add('reel-spinning'));
-
-        const win = isWin();
-
-        setTimeout(() => {
-            // Stop Animation
-            reels.forEach(r => r.classList.remove('reel-spinning'));
+        img.onload = async () => {
+            const preds = await cocoModel.detect(img);
+            const target = document.getElementById('bringmeItem').innerText.toLowerCase();
+            const match = preds.find(p => target.includes(p.class.toLowerCase()) && p.score > 0.6);
             
-            // Set Symbols
-            if(win) {
-                const sym = symbols[Math.floor(Math.random() * symbols.length)];
-                reels.forEach(r => r.querySelector('span').innerText = sym);
-                
-                document.getElementById('slotTitle').innerText = "JACKPOT!";
-                document.getElementById('slotTitle').className = "res-title res-win";
-                document.getElementById('slotSub').innerText = "+100 Points";
-                resModal.style.display = 'flex';
-                addPoints(100);
-                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-            } else {
-                reels[0].querySelector('span').innerText = symbols[Math.floor(Math.random() * symbols.length)];
-                reels[1].querySelector('span').innerText = symbols[Math.floor(Math.random() * symbols.length)];
-                reels[2].querySelector('span').innerText = symbols[Math.floor(Math.random() * symbols.length)];
-                
-                // Prevent accidental win
-                if(reels[0].innerText == reels[1].innerText && reels[1].innerText == reels[2].innerText) {
-                     reels[2].querySelector('span').innerText = "💀";
+            setTimeout(() => {
+                document.getElementById('aiLoading').style.display = 'none';
+                if(match) {
+                    showCustomAlert("AI VERIFIED!", `Yup! That is a ${match.class}. +200 Pts!`, "check");
+                    const uid = auth.currentUser.uid;
+                    db.ref('gameState/bringMe').update({ winner: auth.currentUser.displayName });
+                    db.ref('users/' + uid + '/points').transaction(p => (p || 0) + 200);
+                    confetti();
+                } else {
+                    showCustomAlert("AI REJECTED", `Hmm, I don't see a ${target}. Try again!`, "error");
                 }
-
-                document.getElementById('slotTitle').innerText = "NO LUCK";
-                document.getElementById('slotTitle').className = "res-title res-loss";
-                document.getElementById('slotSub').innerText = "Try again";
-                resModal.style.display = 'flex';
-            }
-        }, 1500);
+            }, 1500);
+        }
+    }
+    
+    function listenJackpot() {
+        db.ref('gameState/jackpot').on('value', s => {
+            const d = s.val(); if(d && d.active) { document.getElementById('jackpotBanner').style.display='block'; document.getElementById('jackpotDisplayVal').innerText=d.amount; }
+            else { document.getElementById('jackpotBanner').style.display='none'; }
+        });
     }
 
 </script>
