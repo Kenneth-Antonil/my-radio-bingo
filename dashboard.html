@@ -3,190 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Bingo | Admin Master</title>
+    <title>Radio Bingo | Admin Command</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root { 
-            --bg: #030712; 
-            --surface: #111827; 
-            --surface-br: #1f2937; 
-            --accent: #3b82f6; 
-            --text: #f8fafc; 
-            --success: #10b981; 
-            --danger: #ef4444; 
-            --gold: #fbbf24; 
-            --puro: #f97316;
-            --bringme: #8b5cf6;
-            --glass: rgba(255, 255, 255, 0.03);
-        }
+        :root { --bg: #0f172a; --panel: #1e293b; --border: #334155; --accent: #3b82f6; --text: #f1f5f9; --green: #10b981; --red: #ef4444; --yellow: #eab308; }
         * { box-sizing: border-box; }
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: var(--bg); 
-            color: var(--text); 
-            margin: 0; 
-            padding: 20px; 
-            display: grid; 
-            grid-template-columns: 280px 1fr; 
-            gap: 20px; 
-            height: 100vh;
-            overflow: hidden;
-        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
 
-        /* TABS SYSTEM */
-        .tabs-nav { display: flex; gap: 10px; margin-bottom: 20px; background: var(--surface); padding: 10px; border-radius: 16px; border: 1px solid var(--glass); }
-        .tab-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; background: transparent; color: #64748b; font-weight: 800; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .tab-btn.active { background: var(--accent); color: white; }
-        .tab-content { display: none; height: calc(100vh - 120px); overflow-y: auto; padding-right: 10px; }
-        .tab-content.active { display: block; }
-
-        /* WINNER MARQUEE */
-        .winner-marquee { background: var(--gold); color: black; padding: 8px; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; position: relative; border-radius: 8px; margin-bottom: 15px; display: none; }
-        .marquee-text { display: inline-block; animation: marquee 15s linear infinite; }
-        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-
-        /* SIDEBAR & STATS */
-        .sidebar { background: var(--surface); border-radius: 24px; padding: 20px; border: 1px solid var(--glass); overflow-y: auto; }
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .stat-card { background: var(--glass); padding: 15px; border-radius: 18px; text-align: center; }
-        .stat-val { font-size: 20px; font-weight: 900; color: var(--gold); }
-        .stat-lbl { font-size: 10px; opacity: 0.5; font-weight: 700; }
-
-        /* BINGO CARDS MONITORING */
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-        .user-card-monitor { background: var(--surface-br); padding: 12px; border-radius: 16px; border: 2px solid transparent; transition: 0.3s; }
-        .user-card-monitor.puro { border-color: var(--puro); box-shadow: 0 0 15px rgba(249, 115, 22, 0.3); animation: pulse-puro 1.5s infinite; }
-        .user-card-monitor.bingo { border-color: var(--success); background: #064e3b; box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
-        @keyframes pulse-puro { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        /* SIDEBAR */
+        .sidebar { width: 300px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
+        .brand { font-size: 24px; font-weight: 900; margin-bottom: 30px; letter-spacing: -1px; }
+        .control-group { margin-bottom: 25px; padding-bottom: 25px; border-bottom: 1px solid var(--border); }
+        .control-group h3 { font-size: 12px; text-transform: uppercase; color: #94a3b8; margin: 0 0 10px 0; font-weight: 800; }
         
-        .mini-bingo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 8px; }
-        .mini-cell { aspect-ratio: 1; background: rgba(0,0,0,0.3); font-size: 8px; display: flex; align-items: center; justify-content: center; border-radius: 2px; }
-        .mini-cell.marked { background: var(--accent); color: white; }
-
-        /* BRING ME GALLERY */
-        .bringme-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
-        .photo-card { background: var(--surface-br); border-radius: 16px; overflow: hidden; border: 1px solid var(--glass); }
-        .photo-card img { width: 100%; height: 150px; object-fit: cover; cursor: pointer; }
-        .photo-info { padding: 10px; font-size: 11px; }
-
-        /* COMMON COMPONENTS */
-        .card { background: var(--surface); border-radius: 24px; padding: 24px; border: 1px solid var(--glass); margin-bottom: 20px; }
-        .ball-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap: 8px; }
-        .ball { aspect-ratio: 1; background: var(--surface-br); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; font-size: 14px; border: 1px solid var(--glass); }
-        .ball.drawn { background: var(--accent); color: white; box-shadow: 0 0 15px rgba(59,130,246,0.4); }
-        
-        .btn { width: 100%; padding: 12px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; transition: 0.2s; font-size: 14px; }
         .btn-primary { background: var(--accent); color: white; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-bringme { background: var(--bringme); color: white; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
-        input, select { width: 100%; background: var(--surface-br); border: 1px solid var(--glass); padding: 10px; border-radius: 10px; color: white; }
-        
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; }
-        .status-active { background: var(--success); color: white; }
-        .status-off { background: var(--danger); color: white; }
+        .btn-green { background: var(--green); color: white; }
+        .btn-red { background: var(--red); color: white; }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: var(--surface-br); border-radius: 10px; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+        .input-dark { width: 100%; background: #020617; border: 1px solid var(--border); color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+
+        /* MAIN AREA */
+        .main { flex: 1; display: flex; flex-direction: column; padding: 20px; overflow: hidden; }
+        
+        /* HEADER STATS */
+        .header-stats { display: flex; gap: 15px; margin-bottom: 20px; }
+        .stat-card { flex: 1; background: var(--panel); padding: 15px; border-radius: 12px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .stat-num { font-size: 24px; font-weight: 900; }
+        .stat-label { font-size: 12px; color: #94a3b8; font-weight: 700; }
+
+        /* GRID MONITOR */
+        .monitor-area { flex: 1; background: #020617; border-radius: 16px; border: 1px solid var(--border); padding: 15px; overflow-y: auto; }
+        .monitor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        
+        .player-card { background: var(--panel); padding: 10px; border-radius: 10px; border: 2px solid transparent; position: relative; }
+        .player-card.is-online { border-color: rgba(59, 130, 246, 0.3); }
+        .player-card.is-puro { border-color: var(--yellow); background: rgba(234, 179, 8, 0.1); animation: pulse 1s infinite; }
+        .player-card.is-winner { border-color: var(--green); background: rgba(16, 185, 129, 0.2); box-shadow: 0 0 20px var(--green); z-index: 10; }
+        
+        .mini-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 8px; }
+        .mini-cell { aspect-ratio: 1; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 8px; border-radius: 2px; }
+        .mini-cell.hit { background: var(--accent); color: white; }
+        .mini-cell.free { background: var(--green); color: white; }
+
+        /* LAST BALL DISPLAY */
+        .big-ball { width: 80px; height: 80px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900; margin: 0 auto 15px; box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3); }
+
+        @keyframes pulse { 50% { opacity: 0.7; transform: scale(0.98); } }
+        
+        /* WINNER MODAL */
+        #winnerAlert { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .winner-box { background: var(--panel); padding: 40px; border-radius: 20px; text-align: center; border: 2px solid var(--green); max-width: 500px; width: 90%; }
+        .winner-box h1 { color: var(--green); font-size: 40px; margin: 0; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <div style="font-size: 22px; font-weight: 900; margin-bottom: 25px; letter-spacing: -1px;">ADMIN<span style="color:var(--accent)">PANEL</span></div>
-    
-    <div class="stat-grid">
-        <div class="stat-card"><div class="stat-val" id="countOnline">0</div><div class="stat-lbl">ONLINE</div></div>
-        <div class="stat-card"><div class="stat-val" id="countUsers">0</div><div class="stat-lbl">TOTAL</div></div>
+    <div class="brand">ADMIN<span style="color:var(--accent)">PANEL</span></div>
+
+    <div class="control-group" style="text-align:center;">
+        <div class="big-ball" id="currentBallDisplay">--</div>
+        <button class="btn btn-green" id="btnAutoDraw" onclick="toggleAutoDraw()">
+            <i data-lucide="play"></i> START AUTO DRAW
+        </button>
+        <button class="btn btn-red" onclick="resetGame()">
+            <i data-lucide="refresh-cw"></i> RESET GAME
+        </button>
     </div>
 
-    <div class="input-group">
-        <label>Next Draw Time</label>
-        <input type="text" id="nextDrawIn" placeholder="e.g. 8:00 PM">
-        <button class="btn btn-primary" onclick="setNextDraw()"><i data-lucide="clock"></i> Update</button>
+    <div class="control-group">
+        <h3>Game Settings</h3>
+        <div style="font-size:11px; margin-bottom:5px;">Jackpot Prize (Text)</div>
+        <div style="display:flex; gap:5px;">
+            <input type="text" id="jackpotIn" class="input-dark" value="₱5,000" style="margin:0;">
+            <button class="btn btn-primary" style="width:auto; margin:0;" onclick="updateJackpot()">SET</button>
+        </div>
+        <div style="font-size:11px; margin-top:15px; margin-bottom:5px;">Pattern</div>
+        <select id="patternSelect" class="input-dark" onchange="setPattern()">
+            <option value="Normal Bingo">Normal Bingo</option>
+            <option value="Blackout">Blackout</option>
+            <option value="Letter X">Letter X</option>
+        </select>
     </div>
 
-    <div class="card" style="padding: 15px; background: rgba(0,0,0,0.2);">
-        <label>Active Users List</label>
-        <div id="activeUsersList" style="max-height: 200px; overflow-y: auto; font-size: 11px;">
-            </div>
+    <div class="control-group">
+        <h3>Bring Me</h3>
+        <input type="text" id="bmItem" class="input-dark" placeholder="Item Name (e.g. Spoon)">
+        <button class="btn btn-primary" onclick="startBM()">START ROUND</button>
+        <button class="btn btn-red" onclick="stopBM()">STOP ROUND</button>
     </div>
 
-    <button class="btn btn-danger" onclick="resetGame()"><i data-lucide="refresh-ccw"></i> RESET BINGO</button>
-    <button class="btn btn-primary" style="background:#4b5563" onclick="updateExistingUsers()"><i data-lucide="shield-check"></i> Fix Codes</button>
+    <div style="font-size:10px; opacity:0.5; margin-top:auto;">
+        RadioBingo Admin v2.0
+    </div>
 </div>
 
-<div class="main-section">
-    <div id="winnerAnnounce" class="winner-marquee">
-        <div class="marquee-text" id="winnerMarqueeText">MAY NANALO NA! CONGRATULATIONS SA ATING WINNER! 🏆</div>
-    </div>
-
-    <div class="tabs-nav">
-        <button class="tab-btn active" onclick="openTab('bingo-tab', this)"><i data-lucide="layout-grid"></i> BINGO</button>
-        <button class="tab-btn" onclick="openTab('bringme-tab', this)"><i data-lucide="camera"></i> BRING ME</button>
-        <button class="tab-btn" onclick="openTab('cashout-tab', this)"><i data-lucide="wallet"></i> CASHOUTS</button>
-    </div>
-
-    <div id="bingo-tab" class="tab-content active">
-        <div style="display:grid; grid-template-columns: 1fr 2fr; gap: 20px;">
-            <div class="card">
-                <h2><i data-lucide="settings"></i> Control</h2>
-                <div class="input-group">
-                    <label>Pattern</label>
-                    <select id="patternSelect" onchange="setPattern(this.value)">
-                        <option value="Normal Bingo">Normal Bingo</option>
-                        <option value="Blackout">Blackout</option>
-                        <option value="Letter X">Letter X</option>
-                        <option value="Four Corners">Four Corners</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label>Current Ball</label>
-                    <div id="lastBall" style="font-size: 60px; font-weight: 900; text-align: center; color: var(--accent); background: var(--glass); border-radius: 15px; padding: 10px;">--</div>
-                </div>
-                <div class="ball-grid" id="ballGrid"></div>
+<div class="main">
+    <div class="header-stats">
+        <div class="stat-card">
+            <div>
+                <div class="stat-num" id="statOnline">0</div>
+                <div class="stat-label">ONLINE USERS</div>
             </div>
-
-            <div class="card">
-                <h2><i data-lucide="users"></i> Live Cards Monitoring</h2>
-                <div class="cards-grid" id="liveCardsContainer">
-                    </div>
+            <i data-lucide="users" style="color:var(--accent)"></i>
+        </div>
+        <div class="stat-card">
+            <div>
+                <div class="stat-num" id="statCards">0</div>
+                <div class="stat-label">ACTIVE CARDS</div>
             </div>
+            <i data-lucide="grid" style="color:var(--green)"></i>
+        </div>
+        <div class="stat-card">
+            <div>
+                <div class="stat-num" id="statDrawn">0</div>
+                <div class="stat-label">BALLS DRAWN</div>
+            </div>
+            <i data-lucide="hash" style="color:var(--yellow)"></i>
         </div>
     </div>
 
-    <div id="bringme-tab" class="tab-content">
-        <div class="card" style="background: linear-gradient(145deg, #2e1065, #1e1b4b); border: 2px solid var(--bringme);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="color:white; margin:0;"><i data-lucide="zap"></i> AI BRING ME</h2>
-                <div id="bringmeStatusBadge" class="status-badge status-off">OFFLINE</div>
+    <div class="monitor-area">
+        <h3 style="margin-top:0; border-bottom:1px solid var(--border); padding-bottom:10px;">
+            <i data-lucide="monitor"></i> REAL-TIME MONITORING
+        </h3>
+        <div id="monitorGrid" class="monitor-grid">
             </div>
-            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:15px; align-items:end;">
-                <div class="input-group" style="margin:0;">
-                    <label style="color:rgba(255,255,255,0.6)">Item Target</label>
-                    <input type="text" id="bringmeItemIn" placeholder="e.g. Spoon">
-                </div>
-                <button class="btn btn-bringme" onclick="startBringMe()"><i data-lucide="play"></i> START</button>
-                <button class="btn btn-danger" onclick="stopBringMe()"><i data-lucide="square"></i> STOP</button>
-            </div>
-        </div>
-        
-        <div class="card">
-            <h2><i data-lucide="image"></i> Submissions Gallery</h2>
-            <div class="bringme-gallery" id="bringmeGallery">
-                </div>
-        </div>
     </div>
+</div>
 
-    <div id="cashout-tab" class="tab-content">
-        <div class="card">
-            <h2><i data-lucide="wallet"></i> GCash Requests</h2>
-            <div id="cashoutList"></div>
-        </div>
+<div id="winnerAlert">
+    <div class="winner-box">
+        <h1>WINNER!</h1>
+        <h2 id="winnerText" style="color:white; font-size:30px;">User Name</h2>
+        <p style="opacity:0.7;">Auto Draw has stopped.</p>
+        <button class="btn btn-primary" onclick="document.getElementById('winnerAlert').style.display='none'">CLOSE</button>
     </div>
 </div>
 
@@ -196,214 +154,193 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // TABS LOGIC
-    function openTab(tabId, btn) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        btn.classList.add('active');
-    }
+    let drawnNumbers = [];
+    let isAutoDrawing = false;
+    let autoDrawInterval;
+    let currentPattern = "Normal Bingo";
+    let activeUsers = [];
 
-    // BINGO BALLS
-    for(let i=1; i<=75; i++) {
-        let b = document.createElement('div');
-        b.className = 'ball'; b.id = 'ball-'+i; b.innerText = i;
-        b.onclick = () => toggleBall(i);
-        document.getElementById('ballGrid').appendChild(b);
-    }
+    // --- INITIALIZATION ---
+    function init() {
+        // Sync Drawn Numbers
+        db.ref('drawnNumbers').on('value', s => {
+            const val = s.val();
+            drawnNumbers = val ? Object.values(val) : [];
+            document.getElementById('statDrawn').innerText = drawnNumbers.length;
+            document.getElementById('currentBallDisplay').innerText = drawnNumbers.length ? drawnNumbers[drawnNumbers.length-1] : "--";
+            renderMonitoring();
+        });
 
-    function toggleBall(num) {
-        const ref = db.ref('drawnNumbers/' + num);
-        ref.once('value', s => {
-            if(s.exists()) ref.remove();
-            else {
-                ref.set(num);
-                db.ref('gameState/gameStartTime').once('value', ss => {
-                    if(!ss.exists()) db.ref('gameState/gameStartTime').set(Date.now());
-                });
+        // Sync Online Count
+        db.ref('status').on('value', s => {
+            const online = s.numChildren();
+            document.getElementById('statOnline').innerText = online;
+            // Update local status for sorting
+            const onlineIds = Object.keys(s.val() || {});
+            activeUsers.forEach(u => u.isOnline = onlineIds.includes(u.uid));
+            renderMonitoring();
+        });
+
+        // Sync Users & Cards
+        db.ref('users').on('value', s => {
+            activeUsers = [];
+            s.forEach(child => {
+                const u = child.val();
+                if(u.currentCard) {
+                    activeUsers.push({
+                        uid: child.key,
+                        name: u.name,
+                        card: u.currentCard,
+                        isOnline: false, // Updated by status listener
+                        hasWon: u.hasWonCurrent
+                    });
+                }
+            });
+            document.getElementById('statCards').innerText = activeUsers.length;
+            renderMonitoring();
+        });
+
+        // Winner Check
+        db.ref('gameState/latestWinner').on('value', s => {
+            if(s.exists()) {
+                stopAutoDraw();
+                const w = s.val();
+                document.getElementById('winnerAlert').style.display = 'flex';
+                document.getElementById('winnerText').innerText = w.name;
             }
         });
     }
 
-    // REAL-TIME MONITORING
-    let drawnNumbers = [];
-    db.ref('drawnNumbers').on('value', s => {
-        drawnNumbers = s.val() ? Object.values(s.val()) : [];
-        document.querySelectorAll('.ball').forEach(b => b.classList.remove('drawn'));
-        drawnNumbers.forEach(n => {
-            const el = document.getElementById('ball-'+n);
-            if(el) el.classList.add('drawn');
-        });
-        document.getElementById('lastBall').innerText = drawnNumbers.length ? drawnNumbers[drawnNumbers.length-1] : "--";
-    });
-
-    // RENDER LIVE CARDS - FIXED FOR REALTIME
-    db.ref('users').on('value', s => {
-        const container = document.getElementById('liveCardsContainer');
-        container.innerHTML = "";
-        s.forEach(child => {
-            const user = child.val();
-            if(!user.card) return;
-            
-            let matches = 0;
-            user.card.forEach(n => { if(drawnNumbers.includes(n) || n === "FREE") matches++; });
-            
-            const isBingo = user.hasWonCurrent;
-            const isPuro = matches >= 23 && !isBingo; 
-
-            const cardDiv = document.createElement('div');
-            cardDiv.className = `user-card-monitor ${isBingo ? 'bingo' : ''} ${isPuro ? 'puro' : ''}`;
-            
-            let gridHtml = '<div class="mini-bingo-grid">';
-            user.card.forEach(n => {
-                const marked = drawnNumbers.includes(n) || n === "FREE";
-                gridHtml += `<div class="mini-cell ${marked ? 'marked' : ''}">${n === "FREE" ? '⭐' : n}</div>`;
-            });
-            gridHtml += '</div>';
-
-            cardDiv.innerHTML = `
-                <div style="font-size:10px; font-weight:800; display:flex; justify-content:space-between;">
-                    <span>${(user.name || 'Anonymous').split(' ')[0]}</span>
-                    <span>${matches}/24</span>
-                </div>
-                ${gridHtml}
-            `;
-            container.appendChild(cardDiv);
-        });
-    });
-
-    // WINNER ANNOUNCEMENT
-    db.ref('gameState/latestWinner').on('value', s => {
-        const marquee = document.getElementById('winnerAnnounce');
-        if(s.exists()) {
-            marquee.style.display = 'block';
-            document.getElementById('winnerMarqueeText').innerText = `🏆 BINGO WINNER: ${s.val().name}! CONGRATULATIONS! 🏆`;
-        } else {
-            marquee.style.display = 'none';
-        }
-    });
-
-    // BRING ME GALLERY & LOGIC - FIXED PHOTO DISPLAY
-    db.ref('gameState/bringMeSubmissions').on('value', s => {
-        const gallery = document.getElementById('bringmeGallery');
-        gallery.innerHTML = "";
-        if(!s.exists()) return;
-        s.forEach(child => {
-            const data = child.val();
-            gallery.innerHTML += `
-                <div class="photo-card">
-                    <img src="${data.photoUrl}" onclick="window.open(this.src)" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
-                    <div class="photo-info">
-                        <b>${data.userName || 'User'}</b><br>
-                        <span style="color:var(--gold)">Score: ${data.aiScore || 0}%</span>
-                    </div>
-                </div>
-            `;
-        });
-    });
-
-    function startBringMe() {
-        const item = document.getElementById('bringmeItemIn').value.trim();
-        if(!item) return alert("Maglagay ng item!");
-        db.ref('gameState/bringMe').set({ active: true, item: item, winner: null, startTime: Date.now() });
-        db.ref('gameState/bringMeSubmissions').remove();
+    // --- AUTO DRAW LOGIC ---
+    function toggleAutoDraw() {
+        if(isAutoDrawing) stopAutoDraw();
+        else startAutoDraw();
     }
 
-    function stopBringMe() { db.ref('gameState/bringMe').update({ active: false }); }
-
-    db.ref('gameState/bringMe').on('value', s => {
-        const data = s.val();
-        const badge = document.getElementById('bringmeStatusBadge');
-        if(data && data.active) {
-            badge.innerText = "LIVE NOW";
-            badge.className = "status-badge status-active";
-        } else {
-            badge.innerText = "OFFLINE";
-            badge.className = "status-badge status-off";
-        }
-    });
-
-    // ONLINE STATUS - FIXED NAME DISPLAY
-    db.ref('status').on('value', s => {
-        document.getElementById('countOnline').innerText = s.numChildren();
-        const list = document.getElementById('activeUsersList');
-        list.innerHTML = "";
-        s.forEach(u => {
-            const uid = u.key;
-            db.ref('users/' + uid + '/name').once('value', nameSnap => {
-                const name = nameSnap.val() || 'User';
-                const userEl = document.createElement('div');
-                userEl.style.cssText = "padding:4px 0; border-bottom:1px solid var(--glass)";
-                userEl.innerText = `🟢 ${name}`;
-                list.appendChild(userEl);
-            });
-        });
-    });
-    db.ref('users').on('value', s => { document.getElementById('countUsers').innerText = s.numChildren(); });
-
-    // EXISTING CORE LOGIC
-    function setPattern(p) { db.ref('gameState/currentPattern').set(p); }
-    function setNextDraw() { 
-        const val = document.getElementById('nextDrawIn').value;
-        db.ref('gameState/nextDraw').set(val);
-        alert("Updated!");
+    function startAutoDraw() {
+        if(drawnNumbers.length >= 75) return alert("Full house na!");
+        isAutoDrawing = true;
+        document.getElementById('btnAutoDraw').innerHTML = `<i data-lucide="pause"></i> STOP AUTO DRAW`;
+        document.getElementById('btnAutoDraw').className = "btn btn-red";
+        
+        autoDrawInterval = setInterval(() => {
+            let num;
+            do {
+                num = Math.floor(Math.random() * 75) + 1;
+            } while (drawnNumbers.includes(num));
+            
+            db.ref('drawnNumbers/' + num).set(num);
+        }, 4000); // 4 seconds per ball
     }
+
+    function stopAutoDraw() {
+        isAutoDrawing = false;
+        clearInterval(autoDrawInterval);
+        document.getElementById('btnAutoDraw').innerHTML = `<i data-lucide="play"></i> START AUTO DRAW`;
+        document.getElementById('btnAutoDraw').className = "btn btn-green";
+        lucide.createIcons();
+    }
+
     function resetGame() {
-        if(confirm("Sigurado ka?")){
+        if(confirm("RESET GAME? This will clear all balls and winners.")) {
+            stopAutoDraw();
             db.ref('drawnNumbers').remove();
             db.ref('gameState/latestWinner').remove();
-            db.ref('gameState/gameStartTime').remove();
+            // Reset winners status in users
             db.ref('users').once('value', s => {
-                s.forEach(u => { db.ref('users/'+u.key).update({ hasWonCurrent: false }); });
+                s.forEach(u => db.ref('users/'+u.key).update({ hasWonCurrent: false }));
             });
         }
     }
 
-    // CASHOUTS
-    db.ref('redemptions').on('value', s => {
-        const list = document.getElementById('cashoutList');
-        list.innerHTML = "";
-        s.forEach(child => {
-            const r = child.val(); const key = child.key;
-            if(r.status !== 'pending') return;
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.style.padding = "15px";
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-weight:800;">${r.name} - <span style="color:var(--gold)">${r.item}</span></div>
-                        <div style="font-size:11px; opacity:0.6;">GCash: ${r.gcash}</div>
-                    </div>
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn btn-primary" style="width:auto; padding:8px 20px" onclick="updateStatus('${key}', 'sent', ${JSON.stringify(r).replace(/"/g, '&quot;')})">PAID</button>
-                        <button class="btn btn-danger" style="width:auto; padding:8px 20px" onclick="updateStatus('${key}', 'denied', ${JSON.stringify(r).replace(/"/g, '&quot;')})">X</button>
-                    </div>
-                </div>`;
-            list.prepend(div);
-        });
-    });
+    // --- MONITORING LOGIC ---
+    function renderMonitoring() {
+        const grid = document.getElementById('monitorGrid');
+        grid.innerHTML = "";
 
-    function updateStatus(key, status, data) {
-        if(confirm(`${status} this?`)) {
-            db.ref('redemptions/' + key).update({ status: status });
-            const statusMsg = status === 'sent' ? `Ang iyong ${data.item} ay na-ipadala na! 🚀` : `Ang iyong ${data.item} ay na-deny. ❌`;
-            db.ref('notifications/' + data.uid).push({ msg: statusMsg, time: Date.now() });
-            if(status === 'denied') db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost);
+        // Sort: Winner > Puro > Online > Offline
+        activeUsers.sort((a,b) => {
+            if(a.hasWon) return -1; if(b.hasWon) return 1;
+            const aNeed = countNeeded(a.card);
+            const bNeed = countNeeded(b.card);
+            if(aNeed === 1 && bNeed !== 1) return -1;
+            if(bNeed === 1 && aNeed !== 1) return 1;
+            if(a.isOnline && !b.isOnline) return -1;
+            if(!a.isOnline && b.isOnline) return 1;
+            return 0;
+        });
+
+        activeUsers.forEach(u => {
+            const needed = countNeeded(u.card);
+            const isPuro = needed === 1;
+            const isOnline = u.isOnline ? 'is-online' : '';
+            const statusClass = u.hasWon ? 'is-winner' : (isPuro ? 'is-puro' : isOnline);
+            
+            let html = `
+                <div class="player-card ${statusClass}">
+                    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; margin-bottom:5px;">
+                        <span>${u.name.split(' ')[0]}</span>
+                        <span style="${isPuro ? 'color:var(--yellow)' : 'color:#64748b'}">${needed} left</span>
+                    </div>
+                    <div class="mini-grid">
+            `;
+            
+            u.card.forEach(n => {
+                const hit = drawnNumbers.includes(n) || n === "FREE";
+                const type = n === "FREE" ? 'free' : (hit ? 'hit' : '');
+                html += `<div class="mini-cell ${type}">${n==="FREE"?"★":n}</div>`;
+            });
+            
+            html += `</div></div>`;
+            grid.innerHTML += html;
+        });
+    }
+
+    function countNeeded(card) {
+        // Basic Normal Bingo Logic (Check lines) - simplified for "Puro" Visual
+        // Note: For perfect accuracy, we need the exact pattern logic here.
+        // Using "Total Hits" for now as approximation for visual speed, 
+        // or re-implement win logic.
+        
+        let marks = [];
+        card.forEach((n,i) => { if(n==="FREE" || drawnNumbers.includes(n)) marks.push(i); });
+        
+        // Define Patterns
+        let wins = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
+        if(currentPattern === "Blackout") wins = [Array.from({length:25},(_,i)=>i)];
+        
+        let minNeeded = 5;
+        for(let w of wins) {
+            const missing = w.filter(idx => !marks.includes(idx)).length;
+            if(missing < minNeeded) minNeeded = missing;
         }
+        return minNeeded;
     }
 
-    async function updateExistingUsers() {
-        const snapshot = await db.ref('users').once('value');
-        let updates = {};
-        snapshot.forEach(child => {
-            if (!child.val().refCode) {
-                updates[`${child.key}/refCode`] = Math.random().toString(36).substring(2, 8).toUpperCase();
-            }
-        });
-        if (Object.keys(updates).length > 0) await db.ref('users').update(updates);
-        alert("Codes Generated!");
+    // --- CONTROLS ---
+    function updateJackpot() {
+        const val = document.getElementById('jackpotIn').value;
+        db.ref('gameState/jackpotPrize').set(val);
+        alert("Jackpot Updated!");
     }
+
+    function setPattern() {
+        const p = document.getElementById('patternSelect').value;
+        currentPattern = p;
+        db.ref('gameState/currentPattern').set(p);
+    }
+
+    function startBM() {
+        const item = document.getElementById('bmItem').value;
+        if(!item) return;
+        db.ref('gameState/bringMe').set({ active: true, item: item });
+    }
+
+    function stopBM() {
+        db.ref('gameState/bringMe').update({ active: false });
+    }
+
+    init();
 </script>
 </body>
 </html>
