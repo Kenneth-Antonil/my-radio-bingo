@@ -691,7 +691,8 @@
             const winnerNameText = document.getElementById('winnerNameMsg');
 
             if(win && win.name) {
-                banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`;
+                const rewardText = win.pointsAwarded ? ` | Reward: +${win.pointsAwarded} points` : '';
+                banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()}${rewardText} 🎉`;
                 patternLine.innerText = `Pattern Won: ${currentPattern}`;
                 banner.style.display = 'block';
                 
@@ -740,14 +741,23 @@
     }
 
     function triggerWin() {
-        db.ref('gameState/latestWinner').set({ 
-            name: auth.currentUser.displayName, 
-            uid: auth.currentUser.uid, 
-            photo: auth.currentUser.photoURL,
-            time: Date.now() 
+        db.ref('gameState/jackpotSettings').once('value', jackpotSnap => {
+            const settings = jackpotSnap.val() || {};
+            const winnerPoints = settings.mode === 'custom'
+                ? Math.max(1, Number(settings.customPoints) || 500)
+                : 500;
+
+            db.ref('gameState/latestWinner').set({ 
+                name: auth.currentUser.displayName, 
+                uid: auth.currentUser.uid, 
+                photo: auth.currentUser.photoURL,
+                time: Date.now(),
+                pointsAwarded: winnerPoints,
+                jackpotMode: settings.mode === 'custom' ? 'custom' : 'regular'
+            });
+            db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
+            db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + winnerPoints);
         });
-        db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
-        db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
     }
 
     function checkLateJoiner() {

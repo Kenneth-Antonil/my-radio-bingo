@@ -89,6 +89,9 @@
         .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; }
         .status-active { background: var(--success); color: white; }
         .status-off { background: var(--danger); color: white; }
+        .status-idle { background: #f59e0b; color: #111827; }
+        .hint { font-size: 11px; opacity: 0.7; margin-top: 8px; }
+        .compact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: var(--surface-br); border-radius: 10px; }
@@ -108,6 +111,43 @@
         <label>Next Draw Time</label>
         <input type="text" id="nextDrawIn" placeholder="e.g. 8:00 PM">
         <button class="btn btn-primary" onclick="setNextDraw()"><i data-lucide="clock"></i> Update</button>
+        <button class="btn btn-primary" style="background:#0ea5e9" onclick="quickSetNextDrawMinutes(10)"><i data-lucide="timer"></i> +10 mins</button>
+    </div>
+
+    <div class="card" style="padding: 15px; background: rgba(0,0,0,0.2); margin-bottom: 15px;">
+        <label style="margin-bottom:10px;">Auto Draw Control</label>
+        <div class="compact-grid">
+            <div class="input-group" style="margin:0;">
+                <label style="font-size:9px;">Interval (seconds)</label>
+                <input type="number" id="autoDrawIntervalIn" min="3" max="180" value="10">
+            </div>
+            <div class="input-group" style="margin:0;">
+                <label style="font-size:9px;">Status</label>
+                <div id="autoDrawStatus" class="status-badge status-off" style="text-align:center; padding:10px;">OFF</div>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="startAutoDraw()"><i data-lucide="play"></i> Start Auto Draw</button>
+        <button class="btn btn-danger" onclick="stopAutoDraw()"><i data-lucide="square"></i> Stop Auto Draw</button>
+        <div id="autoDrawHint" class="hint">Auto draw will pull random numbers not yet drawn.</div>
+    </div>
+
+    <div class="card" style="padding: 15px; background: rgba(0,0,0,0.2); margin-bottom: 15px;">
+        <label style="margin-bottom:10px;">Bingo Jackpot Points</label>
+        <div class="compact-grid">
+            <div class="input-group" style="margin:0;">
+                <label style="font-size:9px;">Point Mode</label>
+                <select id="jackpotMode" onchange="setJackpotMode(this.value)">
+                    <option value="regular">Regular Points</option>
+                    <option value="custom">Custom Points</option>
+                </select>
+            </div>
+            <div class="input-group" style="margin:0;">
+                <label style="font-size:9px;">Custom Points</label>
+                <input type="number" id="jackpotCustomPoints" min="1" step="1" value="500">
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveJackpotSettings()"><i data-lucide="save"></i> Save Jackpot</button>
+        <div id="jackpotPreview" class="hint">Current winner reward: 500 points</div>
     </div>
 
     <div class="card" style="padding: 15px; background: rgba(0,0,0,0.2);">
@@ -149,6 +189,7 @@
                     <div id="lastBall" style="font-size: 60px; font-weight: 900; text-align: center; color: var(--accent); background: var(--glass); border-radius: 15px; padding: 10px;">--</div>
                 </div>
                 <div class="ball-grid" id="ballGrid"></div>
+                <div class="hint">Manual draw disabled. Numbers are now generated via Auto Draw only.</div>
             </div>
 
             <div class="card">
@@ -208,22 +249,112 @@
     for(let i=1; i<=75; i++) {
         let b = document.createElement('div');
         b.className = 'ball'; b.id = 'ball-'+i; b.innerText = i;
-        b.onclick = () => toggleBall(i);
+        b.onclick = () => alert('Manual draw is disabled. Use Auto Draw controls in the sidebar.');
         document.getElementById('ballGrid').appendChild(b);
     }
 
-    function toggleBall(num) {
+    function drawBall(num) {
         const ref = db.ref('drawnNumbers/' + num);
         ref.once('value', s => {
-            if(s.exists()) ref.remove();
-            else {
-                ref.set(num);
-                db.ref('gameState/gameStartTime').once('value', ss => {
-                    if(!ss.exists()) db.ref('gameState/gameStartTime').set(Date.now());
-                });
-            }
+            if(s.exists()) return;
+            ref.set(num);
+            db.ref('gameState/gameStartTime').once('value', ss => {
+                if(!ss.exists()) db.ref('gameState/gameStartTime').set(Date.now());
+            });
         });
     }
+
+
+    let autoDrawTimer = null;
+    let autoDrawState = { enabled: false, intervalSec: 10, lastDrawAt: null };
+    const DEFAULT_JACKPOT_POINTS = 500;
+
+    function updateAutoDrawUI() {
+        const badge = document.getElementById('autoDrawStatus');
+        const hint = document.getElementById('autoDrawHint');
+        if (!badge || !hint) return;
+        if (autoDrawState.enabled) {
+            badge.innerText = 'RUNNING';
+            badge.className = 'status-badge status-active';
+            hint.innerText = `Drawing every ${autoDrawState.intervalSec}s. Last draw: ${autoDrawState.lastDrawAt ? new Date(autoDrawState.lastDrawAt).toLocaleTimeString() : 'waiting...'}`;
+        } else {
+            badge.innerText = 'OFF';
+            badge.className = 'status-badge status-off';
+            hint.innerText = 'Auto draw is stopped.';
+        }
+    }
+
+    function getAvailableNumbers() {
+        const used = new Set(drawnNumbers.map(n => Number(n)));
+        const pool = [];
+        for (let i = 1; i <= 75; i++) if (!used.has(i)) pool.push(i);
+        return pool;
+    }
+
+    function runAutoDrawTick() {
+        if (!autoDrawState.enabled) return;
+        const pool = getAvailableNumbers();
+        if (pool.length === 0) {
+            stopAutoDraw();
+            alert('Lahat ng numbers na-draw na. Auto draw stopped.');
+            return;
+        }
+        const picked = pool[Math.floor(Math.random() * pool.length)];
+        drawBall(picked);
+        autoDrawState.lastDrawAt = Date.now();
+        db.ref('gameState/autoDraw').update({ lastDrawAt: autoDrawState.lastDrawAt });
+        updateAutoDrawUI();
+    }
+
+    function clearAutoDrawTimer() {
+        if (autoDrawTimer) {
+            clearInterval(autoDrawTimer);
+            autoDrawTimer = null;
+        }
+    }
+
+    function applyAutoDrawState() {
+        clearAutoDrawTimer();
+        updateAutoDrawUI();
+        if (!autoDrawState.enabled) return;
+        autoDrawTimer = setInterval(runAutoDrawTick, Math.max(3, autoDrawState.intervalSec) * 1000);
+    }
+
+    function startAutoDraw() {
+        const intervalInput = Number(document.getElementById('autoDrawIntervalIn').value) || 10;
+        const intervalSec = Math.min(180, Math.max(3, intervalInput));
+        db.ref('gameState/autoDraw').update({ enabled: true, intervalSec, startedAt: Date.now() });
+    }
+
+    function stopAutoDraw() {
+        db.ref('gameState/autoDraw').update({ enabled: false, stoppedAt: Date.now() });
+    }
+
+    function setJackpotMode(mode) {
+        const customInput = document.getElementById('jackpotCustomPoints');
+        customInput.disabled = mode !== 'custom';
+    }
+
+    function getWinnerPoints(settings) {
+        if (!settings || settings.mode !== 'custom') return DEFAULT_JACKPOT_POINTS;
+        return Number(settings.customPoints) > 0 ? Number(settings.customPoints) : DEFAULT_JACKPOT_POINTS;
+    }
+
+    function updateJackpotPreview(settings) {
+        const preview = document.getElementById('jackpotPreview');
+        if (!preview) return;
+        const pts = getWinnerPoints(settings);
+        const modeLabel = settings && settings.mode === 'custom' ? 'Custom' : 'Regular';
+        preview.innerText = `Current winner reward: ${pts} points (${modeLabel})`;
+    }
+
+    function saveJackpotSettings() {
+        const mode = document.getElementById('jackpotMode').value;
+        const customPoints = Math.max(1, Number(document.getElementById('jackpotCustomPoints').value) || DEFAULT_JACKPOT_POINTS);
+        db.ref('gameState/jackpotSettings').set({ mode, customPoints, updatedAt: Date.now() });
+        alert('Jackpot points updated!');
+    }
+
 
     // REAL-TIME MONITORING
     let drawnNumbers = [];
@@ -276,8 +407,10 @@
     db.ref('gameState/latestWinner').on('value', s => {
         const marquee = document.getElementById('winnerAnnounce');
         if(s.exists()) {
+            const win = s.val();
+            const rewardText = win.pointsAwarded ? ` +${win.pointsAwarded} points` : '';
             marquee.style.display = 'block';
-            document.getElementById('winnerMarqueeText').innerText = `🏆 BINGO WINNER: ${s.val().name}! CONGRATULATIONS! 🏆`;
+            document.getElementById('winnerMarqueeText').innerText = `🏆 BINGO WINNER: ${win.name}!${rewardText} CONGRATULATIONS! 🏆`;
         } else {
             marquee.style.display = 'none';
         }
@@ -341,6 +474,25 @@
     });
     db.ref('users').on('value', s => { document.getElementById('countUsers').innerText = s.numChildren(); });
 
+    db.ref('gameState/autoDraw').on('value', s => {
+        const data = s.val() || {};
+        autoDrawState = {
+            enabled: !!data.enabled,
+            intervalSec: Number(data.intervalSec) || 10,
+            lastDrawAt: data.lastDrawAt || null
+        };
+        document.getElementById('autoDrawIntervalIn').value = autoDrawState.intervalSec;
+        applyAutoDrawState();
+    });
+
+    db.ref('gameState/jackpotSettings').on('value', s => {
+        const settings = s.val() || { mode: 'regular', customPoints: DEFAULT_JACKPOT_POINTS };
+        document.getElementById('jackpotMode').value = settings.mode || 'regular';
+        document.getElementById('jackpotCustomPoints').value = Number(settings.customPoints) || DEFAULT_JACKPOT_POINTS;
+        setJackpotMode(settings.mode || 'regular');
+        updateJackpotPreview(settings);
+    });
+
     // EXISTING CORE LOGIC
     function setPattern(p) { db.ref('gameState/currentPattern').set(p); }
     function setNextDraw() { 
@@ -353,6 +505,7 @@
             db.ref('drawnNumbers').remove();
             db.ref('gameState/latestWinner').remove();
             db.ref('gameState/gameStartTime').remove();
+            db.ref('gameState/autoDraw').update({ enabled: false, stoppedAt: Date.now() });
             db.ref('users').once('value', s => {
                 s.forEach(u => { db.ref('users/'+u.key).update({ hasWonCurrent: false }); });
             });
@@ -403,6 +556,13 @@
         });
         if (Object.keys(updates).length > 0) await db.ref('users').update(updates);
         alert("Codes Generated!");
+    }
+
+    // Useful feature: quick set next draw to +10 minutes
+    function quickSetNextDrawMinutes(minutes = 10) {
+        const ts = Date.now() + (minutes * 60 * 1000);
+        document.getElementById('nextDrawIn').value = ts;
+        setNextDraw();
     }
 </script>
 </body>
