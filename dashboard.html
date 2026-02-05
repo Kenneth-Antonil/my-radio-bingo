@@ -256,6 +256,57 @@ document.addEventListener('keydown', e => {
     if (e.ctrlKey && e.key === 's') stopAutoDraw();
 });
 </script>
+<!-- ================= DASHBOARD FAILSAFE FIX ================= -->
+<script>
+/* ========= HARD FIREBASE GUARD ========= */
+(function(){
+    if (typeof firebase === 'undefined') {
+        document.body.innerHTML =
+          '<h2 style="color:white;text-align:center;margin-top:40px">Firebase not loaded</h2>';
+        throw new Error("Firebase missing");
+    }
+})();
+
+/* ========= SAFE INIT (NO DOUBLE INIT) ========= */
+if (!firebase.apps.length) {
+    firebase.initializeApp({
+        databaseURL: "https://radiobingo-68749-default-rtdb.firebaseio.com/"
+    });
+}
+
+const db = firebase.database();
+const auth = firebase.auth();
+
+/* ========= AUTH GATE (PREVENT BLANK) ========= */
+document.body.style.display = 'none';
+
+auth.onAuthStateChanged(user => {
+    if (!user) {
+        alert("Admin login required");
+        location.href = "index.html";
+        return;
+    }
+
+    // OPTIONAL: ADMIN UID CHECK
+    const ADMINS = [
+        user.uid // palitan kung gusto mo
+    ];
+
+    if (!ADMINS.includes(user.uid)) {
+        alert("Unauthorized");
+        location.href = "index.html";
+        return;
+    }
+
+    document.body.style.display = 'block';
+});
+
+/* ========= GLOBAL ERROR SHIELD ========= */
+window.addEventListener('error', e => {
+    console.error("Dashboard Error:", e.message);
+});
+</script>
+<!-- ========================================================== -->
 
 </body>
 </html>
