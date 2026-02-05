@@ -138,11 +138,20 @@
 
         .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
         .card.card-lost { opacity: 0.4; filter: grayscale(0.8); pointer-events: none; }
-        .cell.win-glow { background: var(--success) !important; color: white; z-index: 3; position: relative; border: 2px solid white; box-shadow: 0 0 15px var(--success); }
+        
+        /* HIGHLIGHT FOR WINNING PATTERN */
+        .cell.win-glow { 
+            background: var(--success) !important; 
+            color: white; 
+            z-index: 3; 
+            position: relative; 
+            border: 2px solid white; 
+            box-shadow: 0 0 15px var(--success); 
+        }
         .cell.win-glow::after { content: ''; position: absolute; inset: -3px; border: 2px solid white; border-radius: 10px; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        .late-overlay, .game-over-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; }
+        .late-overlay, .game-over-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; }
         .late-text { font-weight: 800; font-size: 18px; color: white; margin-bottom: 8px; }
         .late-subtext { font-size: 13px; opacity: 0.8; color: var(--text); }
 
@@ -320,9 +329,13 @@
         </div>
         <div class="card" id="bingoCardContainer">
             <div id="lateOverlay" class="late-overlay">
-                <i data-lucide="clock" style="color:var(--gold); width:40px; height:40px; margin-bottom:10px;"></i>
-                <div class="late-text">Game is Ongoing</div>
-                <div class="late-subtext">Humingi ng paumanhin, nagsimula na ang bola. Join in the next round!</div>
+                <i data-lucide="lock" style="color:var(--danger); width:40px; height:40px; margin-bottom:10px;"></i>
+                <div class="late-text">GAME ONGOING</div>
+                <div class="late-subtext">Sorry, ongoing na ang bola. Bawal na sumali ang late.</div>
+                <div style="margin-top:15px; background:rgba(255,255,255,0.1); padding:8px 15px; border-radius:10px;">
+                    <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
+                    <strong id="lateNextSched" style="font-size:14px; color:var(--gold);">--:--</strong>
+                </div>
             </div>
             <div id="gameOverOverlay" class="game-over-overlay">
                 <i data-lucide="frown" style="color:var(--danger); width:40px; height:40px; margin-bottom:10px;"></i>
@@ -709,23 +722,63 @@
         });
     }
 
+    // --- MODIFIED NEXT DRAW LISTENER (SUPPORTS SCHEDULER) ---
     function listenForNextDraw() {
+        // Listening for manual next draw (Legacy support)
         db.ref('gameState/nextDraw').on('value', s => {
-            const nextDrawVal = s.val(); const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime');
-            if(nextDrawVal) { banner.style.display = 'flex'; timeEl.innerText = isNaN(nextDrawVal) ? nextDrawVal : fixDate(nextDrawVal); checkNotificationTime(nextDrawVal); } else { banner.style.display = 'none'; }
+            updateNextDrawDisplay();
+        });
+
+        // Listening for scheduled list
+        db.ref('gameState/schedules').on('value', s => {
+            updateNextDrawDisplay();
+        });
+    }
+
+    function updateNextDrawDisplay() {
+        db.ref('gameState').once('value', s => {
+            const gameData = s.val() || {};
+            let displayTime = gameData.nextDraw; // Default manual
+            
+            // Logic to find nearest future schedule
+            if(gameData.schedules) {
+                const now = Date.now();
+                const sorted = Object.values(gameData.schedules).sort((a,b) => a - b);
+                const next = sorted.find(t => t > now);
+                if(next) displayTime = next;
+            }
+
+            const banner = document.getElementById('nextDrawBanner'); 
+            const timeEl = document.getElementById('nextDrawTime');
+            
+            if(displayTime) { 
+                banner.style.display = 'flex'; 
+                // Format if it's a timestamp, else string
+                const formatted = isNaN(displayTime) ? displayTime : fixDate(displayTime);
+                timeEl.innerText = formatted;
+                
+                // Update Overlay Text too
+                document.getElementById('lateNextSched').innerText = formatted;
+                
+                checkNotificationTime(displayTime); 
+            } else { 
+                banner.style.display = 'none'; 
+            }
         });
     }
 
     function checkNotificationTime(timeInput) {
-        setInterval(() => {
-            if(lastNotifiedDraw === timeInput) return;
-            let drawDate;
-            if(!isNaN(timeInput)) { drawDate = new Date(parseInt(timeInput)); } 
-            else { const now = new Date(); const [time, modifier] = timeInput.split(' '); let [hours, minutes] = time.split(':'); if (hours === '12') hours = '00'; if (modifier === 'PM') hours = parseInt(hours, 10) + 12; drawDate = new Date(); drawDate.setHours(hours, minutes, 0); }
-            const now = new Date(); const diff = drawDate.getTime() - now.getTime();
-            const minutesLeft = Math.floor(diff / 60000);
-            if (minutesLeft === 10) { if (Notification.permission === "granted") { new Notification("Radio Bingo Live", { body: "10 minutes na lang!", icon: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" }); lastNotifiedDraw = timeInput; } }
-        }, 30000);
+        // Basic check, simpler than before
+        if(lastNotifiedDraw == timeInput) return;
+        let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput);
+        if(drawTime > 0) {
+           const diff = drawTime - Date.now();
+           const mins = Math.floor(diff / 60000);
+           if(mins === 10) {
+               if(Notification.permission === "granted") new Notification("Radio Bingo", { body: "10 mins na lang, bola na!" });
+               lastNotifiedDraw = timeInput;
+           }
+        }
     }
 
     function initBingo() {
@@ -735,9 +788,24 @@
                 banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`;
                 patternLine.innerText = `Pattern Won: ${currentPattern}`;
                 banner.style.display = 'block';
-                if(win.uid === auth.currentUser.uid) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; applyWinGlowToCurrentCard(); } 
-                else { cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; document.getElementById('gameOverMsg').innerText = `${win.name.toUpperCase()} wins!`; }
-            } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); gameOverlay.style.display = 'none'; document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow')); }
+                if(win.uid === auth.currentUser.uid) { 
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); 
+                    cardCont.classList.add('card-win'); 
+                    cardCont.classList.remove('card-lost'); 
+                    gameOverlay.style.display = 'none'; 
+                    // Highlight logic handles in CheckWin for the winner
+                } else { 
+                    cardCont.classList.add('card-lost'); 
+                    cardCont.classList.remove('card-win'); 
+                    gameOverlay.style.display = 'flex'; 
+                    document.getElementById('gameOverMsg').innerText = `${win.name.toUpperCase()} wins!`; 
+                }
+            } else { 
+                banner.style.display = 'none'; 
+                cardCont.classList.remove('card-win', 'card-lost'); 
+                gameOverlay.style.display = 'none'; 
+                document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow')); 
+            }
         });
         db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternName').innerText = currentPattern; checkWin(); });
         
@@ -774,16 +842,36 @@
         }
     }
 
+    // --- MODIFIED CHECK WIN TO INCLUDE HIGHLIGHTING ---
     function checkWin() {
         if(userData.hasWonCurrent || gameDrawn.length === 0) return;
+        
         db.ref('gameState/latestWinner').once('value', snap => {
-            if(snap.exists()) return;
+            if(snap.exists()) return; // Stop checking if there's already a winner globally
+
             let winningWays = [];
             if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; }
             else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; }
             else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; }
             else { winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; }
-            for(let w of winningWays) { if(w.every(i => marks.includes(i))) { triggerWin(); break; } }
+            
+            for(let w of winningWays) { 
+                if(w.every(i => marks.includes(i))) { 
+                    highlightWinningPattern(w); // Highlight logic
+                    triggerWin(); 
+                    break; 
+                } 
+            }
+        });
+    }
+
+    // NEW FUNCTION: Highlight specific cells
+    function highlightWinningPattern(indices) {
+        indices.forEach(idx => {
+            const cell = document.getElementById('c-' + idx);
+            if(cell) {
+                cell.classList.add('win-glow');
+            }
         });
     }
 
@@ -815,18 +903,31 @@
             
             // Transaction with calculated points (Jackpot or Standard)
             db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + points);
-            
-            // Optional: Local alert for immediate feedback
-            console.log("Won points:", points);
         });
     }
 
+    // --- MODIFIED LATE JOINER LOGIC (STRICTER) ---
     function checkLateJoiner() {
         const overlay = document.getElementById('lateOverlay');
-        if (!gameDrawn || gameDrawn.length === 0) { overlay.style.display = 'none'; return; }
+        
+        // If no balls drawn yet, allow entry
+        if (!gameDrawn || gameDrawn.length === 0) { 
+            overlay.style.display = 'none'; 
+            return; 
+        }
+
         db.ref('gameState/gameStartTime').once('value', s => {
-            const startTime = s.val() || 0; const cardTime = (userData && userData.cardTimestamp) ? userData.cardTimestamp : 0;
-            if(gameDrawn.length > 0 && cardTime > startTime) { overlay.style.display = 'flex'; } else { overlay.style.display = 'none'; }
+            const startTime = s.val() || 0; 
+            const cardTime = (userData && userData.cardTimestamp) ? userData.cardTimestamp : 0;
+            
+            // LOGIC: If balls are drawn AND user got card AFTER game started
+            if(gameDrawn.length > 0 && cardTime > startTime) { 
+                overlay.style.display = 'flex'; 
+                // Ensure Next Schedule is up to date in the overlay
+                updateNextDrawDisplay();
+            } else { 
+                overlay.style.display = 'none'; 
+            }
         });
     }
 
@@ -840,7 +941,7 @@
     }
 
     function generateNewCard() {
-        if(gameDrawn.length > 0) return alert("Bawal mag palit ng card!");
+        if(gameDrawn.length > 0) return alert("Bawal mag palit ng card kapag may bola na!");
         const getCol = (min, max) => { let nums = []; while(nums.length < 5) { let r = Math.floor(Math.random() * (max - min + 1)) + min; if(!nums.includes(r)) nums.push(r); } return nums.sort((a,b) => a-b); };
         const b = getCol(1, 15), i = getCol(16, 30), n = getCol(31, 45), g = getCol(46, 60), o = getCol(61, 75);
         n[2] = "FREE"; cardNumbers = [];
@@ -881,7 +982,7 @@
     function cancelReply() { selectedReplyId = null; document.getElementById('replyIndicator').style.display = 'none'; }
     function sendChat() { const inp = document.getElementById('chatIn'); const msg = inp.value.trim(); if(!msg) return; if(selectedReplyId) { db.ref(`chats/${selectedReplyId}/replies`).push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() }); cancelReply(); } else { db.ref('chats').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() }); } inp.value = ""; }
     function openNotifs() { document.getElementById('notifModal').style.display='flex'; document.getElementById('notifDot').style.display='none'; renderNotifs(); }
-    function renderNotifs() { const list = document.getElementById('notifList'); db.ref('notifications/' + auth.currentUser.uid).limitToLast(10).once('value', s => { list.innerHTML = ""; if(!s.exists()) { list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px;'>No messages</div>"; return; } s.forEach(n => { const val = n.val(); const div = document.createElement('div'); div.style.cssText = "background:var(--surface-br); padding:15px; border-radius:12px; margin-bottom:10px;"; div.innerHTML = `<div style="font-size:13px;">${val.msg}</div>`; list.prepend(div); }); }); }
+    function renderNotifs() { const list = document.getElementById('notifList'); db.ref('notifications/' + auth.currentUser.uid).limitToLast(10).once('value', s => { list.innerHTML = ""; if(!s.exists()) { list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px;'>No messages</div>"; return; } s.forEach(n => { const val = n.val(); const div = document.createElement('div'); style.cssText = "background:var(--surface-br); padding:15px; border-radius:12px; margin-bottom:10px;"; div.innerHTML = `<div style="font-size:13px;">${val.msg}</div>`; list.prepend(div); }); }); }
     function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length < 10) return alert("Error"); db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => alert("Saved!")); }
     function claimReferral() { const code = document.getElementById('referralInput').value.trim().toUpperCase(); db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => { if(s.exists()) { db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 }); alert("Claimed!"); } }); }
     function redeemItem(item, cost) { if((userData.points || 0) < cost) return alert("No points!"); db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost); db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() }); }
