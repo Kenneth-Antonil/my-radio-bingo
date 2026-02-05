@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Bingo | Admin Master</title>
+    <title>Radio Bingo | Admin Master Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -78,7 +78,7 @@
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -172,6 +172,61 @@
             border-radius: 12px;
             margin-bottom: 1rem;
         }
+
+        /* --- BAGONG STYLES PARA SA MONITORING --- */
+        .auto-draw-panel {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            padding: 20px;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid #60a5fa;
+        }
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        .user-monitor-card {
+            background: var(--surface);
+            padding: 15px;
+            border-radius: 16px;
+            border: 1px solid var(--surface-br);
+            position: relative;
+        }
+        .mini-bingo-card {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 3px;
+            margin-top: 10px;
+            background: #000;
+            padding: 5px;
+            border-radius: 8px;
+        }
+        .mini-cell {
+            aspect-ratio: 1;
+            background: #1f2937;
+            font-size: 0.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
+            font-weight: bold;
+        }
+        .mini-cell.marked { background: var(--accent); color: white; }
+        .badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 50px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+        .badge-puro { background: var(--puro); color: white; }
+        .badge-bingo { background: var(--success); color: white; animation: flash 1s infinite; }
+        @keyframes flash { 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
@@ -185,19 +240,37 @@
 </div>
 
 <div class="main">
+    <div class="auto-draw-panel">
+        <div>
+            <h2 style="margin:0">🎰 Automatic Draw Engine</h2>
+            <p id="drawStatus" style="margin:5px 0 0 0; font-size: 0.9rem; opacity: 0.9;">System: Idle</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center">
+            <span style="font-size:0.8rem">Seconds:</span>
+            <input type="number" id="drawInterval" value="5" style="width:70px; margin-top:0">
+            <button class="btn btn-success" id="autoBtn" onclick="toggleAutoDraw()">START AUTO</button>
+        </div>
+    </div>
+
     <div class="stats-grid">
         <div class="stat-card">
             <div style="color:var(--accent)">Total Users</div>
             <div class="stat-val" id="totalUsers">0</div>
         </div>
         <div class="stat-card">
-            <div style="color:var(--puro)">Active Game</div>
-            <div class="stat-val" id="activeGame">Bingo</div>
+            <div style="color:var(--puro)">Active Players</div>
+            <div class="stat-val" id="activeOnline">0</div>
         </div>
         <div class="stat-card">
             <div style="color:var(--success)">Total Points</div>
             <div class="stat-val" id="totalPoints">0</div>
         </div>
+    </div>
+
+    <div class="card">
+        <h3><i data-lucide="eye" style="color:var(--accent)"></i> Real-time Player Monitoring</h3>
+        <div class="monitor-grid" id="monitorGrid">
+            </div>
     </div>
 
     <div class="grid-2">
@@ -274,7 +347,7 @@
         bingoGrid.appendChild(ball);
     }
 
-    // SYNC BINGO BALLS FROM DB
+    // SYNC BINGO BALLS
     db.ref('bingoBalls').on('value', s => {
         const balls = s.val() || {};
         document.querySelectorAll('.ball').forEach(b => b.classList.remove('active'));
@@ -293,7 +366,86 @@
         if(confirm('Reset all balls?')) db.ref('bingoBalls').remove();
     }
 
-    // BRING ME LOGIC
+    // --- AUTOMATIC DRAW ENGINE ---
+    let drawInterval = null;
+    function toggleAutoDraw() {
+        const btn = document.getElementById('autoBtn');
+        if(drawInterval) {
+            clearInterval(drawInterval);
+            drawInterval = null;
+            btn.innerText = "START AUTO";
+            btn.className = "btn btn-success";
+            document.getElementById('drawStatus').innerText = "System: Idle";
+        } else {
+            const sec = document.getElementById('drawInterval').value;
+            drawInterval = setInterval(pickRandomBall, sec * 1000);
+            btn.innerText = "STOP AUTO";
+            btn.className = "btn btn-danger";
+            document.getElementById('drawStatus').innerText = `Drawing every ${sec}s...`;
+        }
+    }
+
+    function pickRandomBall() {
+        db.ref('bingoBalls').once('value', s => {
+            const current = s.val() || {};
+            const available = [];
+            for(let i=1; i<=75; i++) { if(!current[i]) available.push(i); }
+            if(available.length === 0) return toggleAutoDraw();
+            const pick = available[Math.floor(Math.random() * available.length)];
+            db.ref('bingoBalls/' + pick).set(true);
+        });
+    }
+
+    // --- REAL-TIME MONITORING (CARDS, PURO, BINGO) ---
+    db.ref('users').on('value', snapshot => {
+        const container = document.getElementById('monitorGrid');
+        container.innerHTML = "";
+        let onlineCount = 0;
+
+        snapshot.forEach(child => {
+            const u = child.val();
+            if(!u.card) return;
+            onlineCount++;
+
+            const card = u.card; // Array ng numbers
+            const marked = u.markedNumbers || []; // Array ng marked
+            
+            let statusBadge = "";
+            if(u.isBingo) statusBadge = `<span class="badge badge-bingo">BINGO!</span>`;
+            else if(u.isPuro) statusBadge = `<span class="badge badge-puro">PURO</span>`;
+
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'user-monitor-card';
+            cardDiv.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center">
+                    <small><b>${u.name || 'Anonymous'}</b></small>
+                    ${statusBadge}
+                </div>
+                <div class="mini-bingo-card">
+                    ${card.map(n => `<div class="mini-cell ${marked.includes(n) || n === 'FREE' ? 'marked' : ''}">${n === 'FREE' ? '★' : n}</div>`).join('')}
+                </div>
+                <div style="margin-top:10px; display:flex; gap:5px">
+                    <button class="btn btn-primary" style="padding:5px; font-size:10px; flex:1" onclick="requestCam('${child.key}')">
+                        <i data-lucide="video" style="width:12px"></i> LIVE CAM
+                    </button>
+                </div>
+            `;
+            container.appendChild(cardDiv);
+        });
+        document.getElementById('activeOnline').innerText = onlineCount;
+        lucide.createIcons();
+    });
+
+    function requestCam(uid) {
+        db.ref('notifications/' + uid).push({
+            msg: "ADMIN is requesting to access your camera for live verification.",
+            type: "cam_request",
+            time: Date.now()
+        });
+        alert("Camera access request sent to player!");
+    }
+
+    // --- REMAINING EXISTING LOGIC ---
     function setBringMe() {
         const item = document.getElementById('bringMeItem').value;
         if(!item) return;
@@ -329,7 +481,6 @@
         alert("Rewarded!");
     }
 
-    // REDEMPTIONS LOGIC
     db.ref('redemptions').orderByChild('status').equalTo('pending').on('value', s => {
         const list = document.getElementById('redemptionList');
         list.innerHTML = "";
@@ -362,39 +513,26 @@
         }
     }
 
-    // --- NEW SYNC FEATURES ---
-
-    // 1. Sync Next Draw Time to index.html
     function setNextDraw() {
         const time = document.getElementById('nextDrawIn').value;
         if(!time) return alert("Please enter time!");
-        db.ref('settings/nextDraw').set(time)
-        .then(() => alert("Next Draw synced to all users!"))
-        .catch(e => alert("Sync failed: " + e.message));
+        db.ref('settings/nextDraw').set(time).then(() => alert("Next Draw synced!"));
     }
 
-    // 2. Global Notification Broadcast
     function sendGlobalNotif() {
         const msg = document.getElementById('globalMsg').value;
         if(!msg) return alert("Message cannot be empty!");
-        
         db.ref('users').once('value', s => {
             s.forEach(user => {
-                db.ref('notifications/' + user.key).push({
-                    msg: "📢 ADMIN: " + msg,
-                    time: Date.now()
-                });
+                db.ref('notifications/' + user.key).push({ msg: "📢 ADMIN: " + msg, time: Date.now() });
             });
-            alert("Broadcast sent to all players!");
+            alert("Broadcast sent!");
             document.getElementById('globalMsg').value = "";
         });
     }
 
-    // 3. Live Dashboard Stats Sync
     db.ref('users').on('value', s => {
-        const count = s.numChildren();
-        document.getElementById('totalUsers').innerText = count;
-        
+        document.getElementById('totalUsers').innerText = s.numChildren();
         let totalPts = 0;
         s.forEach(u => { totalPts += (u.val().points || 0); });
         document.getElementById('totalPoints').innerText = totalPts.toLocaleString();
@@ -402,6 +540,5 @@
 
     lucide.createIcons();
 </script>
-
 </body>
 </html>
