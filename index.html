@@ -71,13 +71,25 @@
         .bingo-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
         .letter { text-align: center; font-size: 24px; font-weight: 900; color: var(--gold); text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; position: relative; }
-        .cell { aspect-ratio: 1; background: var(--surface-br); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; z-index: 2; }
+        .cell { aspect-ratio: 1; background: var(--surface-br); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; z-index: 2; position: relative; overflow: hidden; }
         .cell.hit { background: var(--accent); color: white; transform: scale(1.02); }
         .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
         .card.card-lost { opacity: 0.4; filter: grayscale(0.8); pointer-events: none; }
-        .cell.win-glow { background: var(--success) !important; color: white; z-index: 3; position: relative; border: 2px solid white; box-shadow: 0 0 15px var(--success); }
-        .cell.win-glow::after { content: ''; position: absolute; inset: -3px; border: 2px solid white; border-radius: 10px; animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        /* UPDATED WIN STYLES FOR LINES */
+        .cell.win-glow { background: #059669 !important; color: white; z-index: 3; border: 2px solid #fbbf24; box-shadow: 0 0 15px var(--success); }
+        .cell.win-glow::after { opacity: 0; animation: fadeInLine 0.5s forwards; }
+        @keyframes fadeInLine { from { opacity: 0; } to { opacity: 1; } }
+
+        /* HORIZONTAL LINE */
+        .cell.win-line-h::after { content:''; position:absolute; top:50%; left:0; right:0; height:6px; background:var(--gold); transform:translateY(-50%); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; border-radius:10px; }
+        /* VERTICAL LINE */
+        .cell.win-line-v::after { content:''; position:absolute; top:0; bottom:0; left:50%; width:6px; background:var(--gold); transform:translateX(-50%); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; border-radius:10px; }
+        /* DIAGONAL LEFT to RIGHT ( \ ) */
+        .cell.win-line-d1::after { content:''; position:absolute; top:50%; left:-50%; right:-50%; height:6px; background:var(--gold); transform:translateY(-50%) rotate(45deg); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; }
+        /* DIAGONAL RIGHT to LEFT ( / ) */
+        .cell.win-line-d2::after { content:''; position:absolute; top:50%; left:-50%; right:-50%; height:6px; background:var(--gold); transform:translateY(-50%) rotate(-45deg); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; }
+
         .late-overlay, .game-over-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; }
         .late-text { font-weight: 800; font-size: 18px; color: white; margin-bottom: 8px; }
         .late-subtext { font-size: 13px; opacity: 0.8; color: var(--text); }
@@ -508,7 +520,6 @@
                     if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none';
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
                     if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
-                    // Update Presence with extra data for Admin Dashboard
                     updatePresenceData(u.uid, userData.name, userData.points);
                     checkLateJoiner();
                 }
@@ -517,15 +528,12 @@
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
-    // --- UPDATED PRESENCE & NOTIFICATIONS ---
-
     function setupPresence(uid) {
         const onlineRef = db.ref('.info/connected');
         const userStatusRef = db.ref('status/' + uid);
         onlineRef.on('value', (snapshot) => {
             if (snapshot.val() === false) return;
             userStatusRef.onDisconnect().remove().then(() => { 
-                // Set basic presence
                 userStatusRef.set({ state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP }); 
             });
         });
@@ -533,7 +541,6 @@
     }
 
     function updatePresenceData(uid, name, points) {
-        // Sync vital stats to status node so Admin can read it easily
         db.ref('status/' + uid).update({ name: name, points: points });
     }
 
@@ -551,7 +558,6 @@
 
     function openNotifs() { 
         document.getElementById('notifModal').style.display='flex'; 
-        // We don't hide the dot immediately here, it hides when list is empty
         renderNotifs(); 
     }
 
@@ -585,11 +591,9 @@
     function deleteNotif(key) {
         if(confirm("Delete this notification?")) {
             db.ref('notifications/' + auth.currentUser.uid + '/' + key).remove();
-            renderNotifs(); // Refresh list
+            renderNotifs(); 
         }
     }
-
-    // --- END UPDATED SECTIONS ---
 
     function listenJackpot() {
         db.ref('gameState/jackpot').on('value', s => {
@@ -630,7 +634,7 @@
                 banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`; patternLine.innerText = `Pattern Won: ${currentPattern}`; banner.style.display = 'block';
                 if(win.uid === auth.currentUser.uid) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; } 
                 else { cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; document.getElementById('gameOverMsg').innerText = `${win.name.toUpperCase()} wins!`; }
-            } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); gameOverlay.style.display = 'none'; document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow')); }
+            } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); gameOverlay.style.display = 'none'; document.querySelectorAll('.cell').forEach(c => { c.classList.remove('win-glow', 'win-line-h', 'win-line-v', 'win-line-d1', 'win-line-d2'); }); }
         });
         db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternName').innerText = currentPattern; checkWin(); });
         db.ref('drawnNumbers').on('value', s => {
@@ -653,12 +657,46 @@
             if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; }
             else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; }
             else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; }
-            else { winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; }
-            for(let w of winningWays) { if(w.every(i => marks.includes(i))) { highlightWinningPattern(w); triggerWin(); break; } }
+            else { 
+                // Normal Bingo Indices:
+                // 0-4: Horizontal Rows
+                // 5-9: Vertical Cols
+                // 10: Diag L-R
+                // 11: Diag R-L
+                winningWays = [
+                    [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], // Rows
+                    [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], // Cols
+                    [0,6,12,18,24], // Diag 1
+                    [4,8,12,16,20]  // Diag 2
+                ]; 
+            }
+            
+            for(let i = 0; i < winningWays.length; i++) {
+                let w = winningWays[i];
+                if(w.every(idx => marks.includes(idx))) { 
+                    highlightWinningPattern(w, i); 
+                    triggerWin(); 
+                    break; 
+                } 
+            }
         });
     }
 
-    function highlightWinningPattern(indices) { indices.forEach(idx => { const cell = document.getElementById('c-' + idx); if(cell) { cell.classList.add('win-glow'); } }); }
+    function highlightWinningPattern(indices, patternIdx) { 
+        indices.forEach(idx => { 
+            const cell = document.getElementById('c-' + idx); 
+            if(cell) { 
+                cell.classList.add('win-glow'); 
+                // Add Line Logic for Normal Bingo
+                if(currentPattern === "Normal Bingo") {
+                    if(patternIdx >= 0 && patternIdx <= 4) cell.classList.add('win-line-h'); // Horizontal
+                    else if(patternIdx >= 5 && patternIdx <= 9) cell.classList.add('win-line-v'); // Vertical
+                    else if(patternIdx === 10) cell.classList.add('win-line-d1'); // Diag Left-Right
+                    else if(patternIdx === 11) cell.classList.add('win-line-d2'); // Diag Right-Left
+                }
+            } 
+        }); 
+    }
 
     function triggerWin() {
         db.ref('gameState/jackpot').once('value', s => {
