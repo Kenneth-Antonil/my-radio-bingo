@@ -15,7 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
     <style>
-        :root { --bg: #0b1120; --surface: #1e293b; --surface-br: #334155; --accent: #3b82f6; --text: #f8fafc; --gold: #fbbf24; --success: #10b981; --danger: #ef4444; --bringme: #8b5cf6; --bringme-dark: #4c1d95; }
+        :root { --bg: #0b1120; --surface: #1e293b; --surface-br: #334155; --accent: #3b82f6; --text: #f8fafc; --gold: #fbbf24; --success: #10b981; --danger: #ef4444; --bringme: #8b5cf6; --bringme-dark: #4c1d95; --minigame: #ec4899; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 20px; overflow-x: hidden; }
 
@@ -42,6 +42,7 @@
         .tab-btn { flex: 1; padding: 12px; border: none; background: none; color: #94a3b8; font-weight: 800; font-size: 12px; cursor: pointer; border-radius: 10px; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .tab-btn.active { background: var(--surface-br); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .tab-btn.active.bringme-tab { color: var(--bringme); }
+        .tab-btn.active.minigame-tab { color: var(--minigame); } /* Added style for new tab active state */
         .bringme-content { display: none; background: linear-gradient(180deg, #2e1065 0%, #0b1120 100%); border: 2px solid var(--bringme); border-radius: 25px; overflow: hidden; position: relative; }
         .bringme-header-ai { background: var(--bringme); color: white; padding: 10px; text-align: center; font-weight: 900; font-size: 12px; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .bringme-status { text-align: center; padding: 30px 20px; position: relative; }
@@ -186,6 +187,38 @@
         .notif-body { font-size: 13px; line-height: 1.5; color: #e2e8f0; }
         .btn-del-notif { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; transition: 0.2s; }
         .btn-del-notif:hover { color: var(--danger); }
+
+        /* MINI GAMES STYLES */
+        .minigame-card { background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid var(--minigame); border-radius: 20px; padding: 20px; text-align: center; margin-bottom: 20px; position: relative; overflow: hidden; }
+        .minigame-header { font-size: 16px; font-weight: 900; color: white; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .minigame-desc { font-size: 11px; opacity: 0.6; margin-bottom: 15px; }
+        .play-btn { background: var(--minigame); color: white; border: none; padding: 12px 25px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.2s; width: 100%; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4); }
+        .play-btn:active { transform: scale(0.95); }
+        .play-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        
+        /* Roulette */
+        .roulette-wheel { width: 100px; height: 100px; border-radius: 50%; border: 4px solid white; margin: 0 auto 15px; background: conic-gradient(red 0deg 90deg, black 90deg 180deg, red 180deg 270deg, black 270deg 360deg); position: relative; transition: transform 2s cubic-bezier(0.25, 0.1, 0.25, 1); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .roulette-arrow { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 15px solid var(--gold); z-index: 5; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+
+        /* High Low */
+        .hl-display { font-size: 42px; font-weight: 900; color: white; margin: 15px 0; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .hl-controls { display: flex; gap: 10px; }
+        .btn-hl { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 800; cursor: pointer; color: white; }
+        .btn-high { background: var(--success); }
+        .btn-low { background: var(--danger); }
+
+        /* Slot */
+        .slot-machine { display: flex; gap: 5px; justify-content: center; margin-bottom: 15px; background: #000; padding: 10px; border-radius: 15px; border: 2px solid var(--gold); }
+        .slot-col { width: 50px; height: 60px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: black; font-weight: bold; overflow: hidden; }
+        .slot-anim { animation: slotScroll 0.2s linear infinite; }
+        @keyframes slotScroll { 0% { opacity: 0.5; transform: translateY(-10px); } 50% { opacity: 1; transform: translateY(0); } 100% { opacity: 0.5; transform: translateY(10px); } }
+
+        .win-overlay { position: absolute; inset: 0; background: rgba(16, 185, 129, 0.9); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 10; border-radius: 20px; animation: fadeIn 0.3s; }
+        .loss-overlay { position: absolute; inset: 0; background: rgba(239, 68, 68, 0.9); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 10; border-radius: 20px; animation: fadeIn 0.3s; }
+        .result-text { font-size: 24px; font-weight: 900; color: white; margin-bottom: 5px; }
+        .result-sub { font-size: 12px; color: white; opacity: 0.9; }
+
+        .tab-btn.minigame-tab:hover { color: var(--minigame); }
     </style>
 </head>
 <body>
@@ -241,6 +274,7 @@
     <div class="tab-system">
         <button class="tab-btn active" onclick="switchTab('bingo')"><i data-lucide="grid"></i> BINGO CARD</button>
         <button class="tab-btn bringme-tab" onclick="switchTab('bringme')"><i data-lucide="camera"></i> ONLINE BRING ME</button>
+        <button class="tab-btn minigame-tab" onclick="switchTab('minigames')"><i data-lucide="gamepad-2"></i> MINI GAMES</button>
     </div>
 
     <div id="winnerBanner">
@@ -264,9 +298,9 @@
                 </div>
             </div>
             <div id="gameOverOverlay" class="game-over-overlay">
-                <i data-lucide="frown" style="color:var(--danger); width:40px; height:40px; margin-bottom:10px;"></i>
-                <div class="late-text">May nanalo na!</div>
-                <div class="late-subtext" id="gameOverMsg">Bawi na lang next draw.</div>
+                <i data-lucide="trophy" style="color:var(--gold); width:40px; height:40px; margin-bottom:10px;"></i>
+                <div class="late-text">Game Finished</div>
+                <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
             </div>
             <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
                 <div class="pattern-box">
@@ -314,6 +348,62 @@
                 <div class="spinner" style="border:3px solid rgba(255,255,255,0.1); border-top:3px solid var(--bringme); width:24px; height:24px; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto;"></div>
                 <p id="aiStatusText" style="font-size:12px; margin-top:12px; font-weight:800; color:var(--bringme);">ANALYZING PIXELS...</p>
             </div>
+        </div>
+    </div>
+
+    <div id="minigamesTab" style="display:none;">
+        <div class="minigame-card">
+            <div class="win-overlay" id="rouletteWin">
+                <div class="result-text">YOU WON!</div>
+                <div class="result-sub">+50 Points Added</div>
+            </div>
+            <div class="loss-overlay" id="rouletteLoss">
+                <div class="result-text">YOU LOST</div>
+                <div class="result-sub">Try again next time</div>
+            </div>
+            <div class="minigame-header"><i data-lucide="disc-3" style="width:16px;"></i> ROULETTE</div>
+            <div class="minigame-desc">Spin the wheel. 30% Chance to Win.</div>
+            <div class="roulette-wheel" id="rouletteWheel">
+                <div class="roulette-arrow"></div>
+            </div>
+            <button class="play-btn" id="btnRoulette" onclick="playRoulette()">SPIN WHEEL</button>
+        </div>
+
+        <div class="minigame-card">
+             <div class="win-overlay" id="hlWin">
+                <div class="result-text">YOU WON!</div>
+                <div class="result-sub">+50 Points Added</div>
+            </div>
+            <div class="loss-overlay" id="hlLoss">
+                <div class="result-text">YOU LOST</div>
+                <div class="result-sub">Wrong guess</div>
+            </div>
+            <div class="minigame-header"><i data-lucide="move-vertical" style="width:16px;"></i> HIGH LOW</div>
+            <div class="minigame-desc">Guess if the next number is higher or lower.</div>
+            <div class="hl-display" id="hlDisplay">50</div>
+            <div class="hl-controls">
+                <button class="btn-hl btn-high" id="btnHigh" onclick="playHighLow('high')">HIGHER</button>
+                <button class="btn-hl btn-low" id="btnLow" onclick="playHighLow('low')">LOWER</button>
+            </div>
+        </div>
+
+        <div class="minigame-card">
+             <div class="win-overlay" id="slotWin">
+                <div class="result-text">JACKPOT!</div>
+                <div class="result-sub">+50 Points Added</div>
+            </div>
+            <div class="loss-overlay" id="slotLoss">
+                <div class="result-text">NO LUCK</div>
+                <div class="result-sub">Try again</div>
+            </div>
+            <div class="minigame-header"><i data-lucide="gem" style="width:16px;"></i> LUCKY SLOTS</div>
+            <div class="minigame-desc">Match 3 symbols to win prizes.</div>
+            <div class="slot-machine">
+                <div class="slot-col" id="slot1">🍒</div>
+                <div class="slot-col" id="slot2">🍋</div>
+                <div class="slot-col" id="slot3">🔔</div>
+            </div>
+            <button class="play-btn" id="btnSlot" onclick="playSlots()">SPIN SLOTS</button>
         </div>
     </div>
 
@@ -438,9 +528,17 @@
 
     function switchTab(tab) {
         const btns = document.querySelectorAll('.tab-btn'); btns.forEach(b => b.classList.remove('active'));
-        document.getElementById('bingoTab').style.display = 'none'; document.getElementById('bringmeTab').style.display = 'none';
-        if(tab === 'bingo') { document.getElementById('bingoTab').style.display = 'block'; btns[0].classList.add('active'); } 
-        else { document.getElementById('bringmeTab').style.display = 'block'; btns[1].classList.add('active'); }
+        document.getElementById('bingoTab').style.display = 'none'; 
+        document.getElementById('bringmeTab').style.display = 'none';
+        document.getElementById('minigamesTab').style.display = 'none';
+
+        if(tab === 'bingo') { 
+            document.getElementById('bingoTab').style.display = 'block'; btns[0].classList.add('active'); 
+        } else if(tab === 'bringme') { 
+            document.getElementById('bringmeTab').style.display = 'block'; btns[1].classList.add('active'); 
+        } else if(tab === 'minigames') {
+            document.getElementById('minigamesTab').style.display = 'block'; btns[2].classList.add('active');
+        }
     }
 
     function listenToBringMe() {
@@ -647,8 +745,15 @@
 
             if(win && win.name) {
                 banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`; patternLine.innerText = `Pattern Won: ${currentPattern}`; banner.style.display = 'block';
-                if(win.uid === auth.currentUser.uid) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; } 
-                else { cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; document.getElementById('gameOverMsg').innerText = `${win.name.toUpperCase()} wins!`; }
+                if(win.uid === auth.currentUser.uid) { 
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; 
+                } 
+                else { 
+                    cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; 
+                    // UPDATED GAME OVER MESSAGE
+                    const nextTime = document.getElementById('nextDrawTime').innerText;
+                    document.getElementById('gameOverMsg').innerHTML = `Sayang! Si <b>${win.name.toUpperCase()}</b> ang nanalo.<br><br>Bawi tayo sa next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ${nextTime}</span>`; 
+                }
             } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); gameOverlay.style.display = 'none'; document.querySelectorAll('.cell').forEach(c => { c.classList.remove('win-glow', 'win-line-h', 'win-line-v', 'win-line-d1', 'win-line-d2'); }); }
         });
         db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternName').innerText = currentPattern; checkWin(); });
@@ -817,6 +922,140 @@
     function claimReferral() { const code = document.getElementById('referralInput').value.trim().toUpperCase(); db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => { if(s.exists()) { db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 }); alert("Claimed!"); } }); }
     function redeemItem(item, cost) { if((userData.points || 0) < cost) return alert("No points!"); db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost); db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() }); }
     function openMenuModal() { document.getElementById('menuModal').style.display = 'flex'; const hist = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { hist.innerHTML = ""; s.forEach(child => { const v = child.val(); const item = document.createElement('div'); item.className = 'history-item'; item.innerHTML = `<div class="hist-main"><span class="hist-title">${v.item}</span></div><span class="hist-status">${v.status}</span>`; hist.appendChild(item); }); }); }
+
+    // ============================================
+    // NEW MINI GAMES LOGIC
+    // ============================================
+
+    // Win Rate Generator: 30% Chance
+    function isWin() { return Math.random() < 0.30; }
+    
+    // Add points helper
+    function addPoints(pts) {
+        db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) + pts);
+    }
+
+    // --- ROULETTE ---
+    function playRoulette() {
+        const wheel = document.getElementById('rouletteWheel');
+        const btn = document.getElementById('btnRoulette');
+        const winOv = document.getElementById('rouletteWin');
+        const lossOv = document.getElementById('rouletteLoss');
+        
+        btn.disabled = true;
+        winOv.style.display = 'none'; lossOv.style.display = 'none';
+
+        // Spin logic
+        const win = isWin();
+        const baseRot = 1440; // 4 spins minimum
+        const randomRot = Math.floor(Math.random() * 360);
+        
+        // Visual trick: If win, land on red/black specific? 
+        // For simplicity: Just spin randomly visually, show overlay result after
+        wheel.style.transform = `rotate(${baseRot + randomRot}deg)`;
+
+        setTimeout(() => {
+            if(win) {
+                winOv.style.display = 'flex';
+                addPoints(50);
+                confetti({ particleCount: 50, spread: 40, origin: { y: 0.6 } });
+            } else {
+                lossOv.style.display = 'flex';
+            }
+            btn.disabled = false;
+        }, 2100);
+    }
+
+    // --- HIGH LOW ---
+    function playHighLow(choice) {
+        const display = document.getElementById('hlDisplay');
+        const currentVal = parseInt(display.innerText);
+        const winOv = document.getElementById('hlWin');
+        const lossOv = document.getElementById('hlLoss');
+
+        winOv.style.display = 'none'; lossOv.style.display = 'none';
+
+        // Logic: 30% to win regardless of choice
+        const win = isWin();
+        let nextVal;
+
+        if (win) {
+            // Force a winning number
+            if(choice === 'high') nextVal = Math.floor(Math.random() * (100 - currentVal)) + currentVal + 1;
+            else nextVal = Math.floor(Math.random() * currentVal); 
+        } else {
+            // Force a losing number
+            if(choice === 'high') nextVal = Math.floor(Math.random() * currentVal); 
+            else nextVal = Math.floor(Math.random() * (100 - currentVal)) + currentVal + 1;
+        }
+
+        // Boundary safety check (if current is 0 or 100)
+        if (nextVal < 0 || isNaN(nextVal)) nextVal = 50;
+        if (nextVal > 100) nextVal = 50;
+
+        // Animation feel
+        display.style.transform = "scale(0.8)";
+        setTimeout(() => {
+            display.innerText = nextVal;
+            display.style.transform = "scale(1)";
+            
+            if(win) {
+                winOv.style.display = 'flex';
+                addPoints(50);
+            } else {
+                lossOv.style.display = 'flex';
+            }
+        }, 200);
+    }
+
+    // --- SLOTS ---
+    function playSlots() {
+        const btn = document.getElementById('btnSlot');
+        const s1 = document.getElementById('slot1');
+        const s2 = document.getElementById('slot2');
+        const s3 = document.getElementById('slot3');
+        const winOv = document.getElementById('slotWin');
+        const lossOv = document.getElementById('slotLoss');
+        const symbols = ["🍒", "🍋", "🔔", "💎", "7️⃣"];
+
+        btn.disabled = true;
+        winOv.style.display = 'none'; lossOv.style.display = 'none';
+        
+        // Add animation class
+        s1.classList.add('slot-anim');
+        s2.classList.add('slot-anim');
+        s3.classList.add('slot-anim');
+
+        const win = isWin();
+
+        setTimeout(() => {
+            s1.classList.remove('slot-anim');
+            s2.classList.remove('slot-anim');
+            s3.classList.remove('slot-anim');
+
+            if(win) {
+                // All same
+                const sym = symbols[Math.floor(Math.random() * symbols.length)];
+                s1.innerText = sym; s2.innerText = sym; s3.innerText = sym;
+                winOv.style.display = 'flex';
+                addPoints(50);
+                confetti({ particleCount: 50, spread: 40, origin: { y: 0.6 } });
+            } else {
+                // Random mix
+                s1.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                s2.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                s3.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                
+                // Ensure they aren't accidentally all matching (rare but possible)
+                if(s1.innerText === s2.innerText && s2.innerText === s3.innerText) {
+                    s3.innerText = s3.innerText === "🍒" ? "🍋" : "🍒";
+                }
+                lossOv.style.display = 'flex';
+            }
+            btn.disabled = false;
+        }, 1500);
+    }
+
 </script>
 </body>
 </html>
