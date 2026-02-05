@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <style>
         :root { 
             --bg: #030712; 
@@ -30,6 +31,7 @@
             margin: 0;
             display: flex;
             min-height: 100vh;
+            /* Inalis ang display:none dito para makita ang UI habang naglo-load */
         }
         .sidebar {
             width: 280px;
@@ -100,11 +102,6 @@
             padding: 2rem;
             margin-bottom: 2rem;
         }
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
         .ball-grid {
             display: grid;
             grid-template-columns: repeat(15, 1fr);
@@ -155,158 +152,212 @@
             justify-content: center;
             gap: 8px;
             transition: 0.2s;
+            margin-top: 10px;
         }
         .btn:active { transform: scale(0.98); }
         .btn-danger { background: var(--danger); }
         .btn-success { background: var(--success); }
-        .bring-me-img {
-            width: 100%;
-            max-height: 200px;
-            object-fit: contain;
-            border-radius: 12px;
-            margin-top: 1rem;
-        }
-        .redemption-card {
-            background: var(--glass);
-            padding: 1rem;
-            border-radius: 12px;
-            margin-bottom: 1rem;
-        }
+        
+        #adminSection { display: none; } /* Hidden until auth is checked */
     </style>
 </head>
 <body>
 
-<!-- ================= ORIGINAL BODY CONTENT (UNCHANGED) ================= -->
-<!-- (EXACT SAME AS YOUR FILE — NOT TOUCHED) -->
+<div id="adminSection" style="display: contents;">
+    <div class="sidebar">
+        <div class="logo"><i data-lucide="radio"></i> ADMIN PANEL</div>
+        <div class="nav-item active"><i data-lucide="layout-dashboard"></i> Dashboard</div>
+        <div class="nav-item" onclick="exportRedemptionsCSV()"><i data-lucide="download"></i> Export Data</div>
+        <div class="nav-item" onclick="firebase.auth().signOut()"><i data-lucide="log-out"></i> Logout</div>
+    </div>
+
+    <div class="main">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div style="color: #94a3b8;">Active Users</div>
+                <div class="stat-val" id="activeUsers">0</div>
+            </div>
+            <div class="stat-card">
+                <div style="color: var(--accent);">Balls Called</div>
+                <div class="stat-val" id="ballsCount">0/75</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h3><i data-lucide="circle-dot"></i> Bingo Control</h3>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn" onclick="startAutoDraw()">Auto Draw</button>
+                    <button class="btn btn-danger" onclick="stopAutoDraw()">Stop</button>
+                    <button class="btn btn-danger" onclick="resetBingo()">Reset All</button>
+                </div>
+            </div>
+            <div class="ball-grid" id="adminBallGrid">
+                </div>
+        </div>
+
+        <div class="card">
+            <h3><i data-lucide="camera"></i> Bring Me Challenge</h3>
+            <input type="text" id="bringMeItem" placeholder="Anong item ang hahanapin?">
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-success" onclick="updateBringMe(true)">Activate Challenge</button>
+                <button class="btn btn-danger" onclick="updateBringMe(false)">End Challenge</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3><i data-lucide="history"></i> Recent Submissions</h3>
+            <div id="submissionsList">
+                <p style="color: #64748b;">Waiting for submissions...</p>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
+    /* ========= INITIALIZATION ========= */
     const firebaseConfig = {
         databaseURL: "https://radiobingo-68749-default-rtdb.firebaseio.com/"
     };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
     const db = firebase.database();
-    /* ... ALL YOUR ORIGINAL SCRIPT HERE ... */
-</script>
+    const auth = firebase.auth();
 
-<!-- ========================================================= -->
-<!-- =============== APPENDED FEATURES (ADD ONLY) ============= -->
-<!-- ========================================================= -->
-
-<script>
-/* ========= ADMIN LOGS ========= */
-function logAdmin(action, details) {
-    db.ref('adminLogs').push({ action, details, time: Date.now() });
-}
-
-/* ========= AUTO DRAW ========= */
-let autoDrawTimer = null;
-function startAutoDraw(seconds = 8) {
-    if (autoDrawTimer) return alert("Auto draw already running");
-    autoDrawTimer = setInterval(() => {
-        db.ref('bingoBalls').once('value', s => {
-            const balls = s.val() || {};
-            const available = [];
-            for (let i = 1; i <= 75; i++) if (!balls[i]) available.push(i);
-            if (!available.length) return stopAutoDraw();
-            const pick = available[Math.floor(Math.random() * available.length)];
-            db.ref('bingoBalls/' + pick).set(true);
-            logAdmin("AUTO_DRAW", "Ball " + pick);
-        });
-    }, seconds * 1000);
-}
-
-function stopAutoDraw() {
-    clearInterval(autoDrawTimer);
-    autoDrawTimer = null;
-    logAdmin("SYSTEM", "Auto draw stopped");
-}
-
-/* ========= UNDO LAST BALL ========= */
-function undoLastBall() {
-    db.ref('bingoBalls').once('value', s => {
-        const keys = Object.keys(s.val() || {});
-        const last = keys[keys.length - 1];
-        if (last) {
-            db.ref('bingoBalls/' + last).remove();
-            logAdmin("UNDO", "Ball " + last);
+    /* ========= AUTH CHECK ========= */
+    auth.onAuthStateChanged(user => {
+        if (!user) {
+            alert("Admin login required");
+            location.href = "index.html"; 
+        } else {
+            document.getElementById('adminSection').style.display = 'contents';
+            initAdmin();
         }
     });
-}
 
-/* ========= EXPORT CSV ========= */
-function exportRedemptionsCSV() {
-    db.ref('redemptions').once('value', s => {
-        let csv = "User,Item,Gcash,Status\n";
-        s.forEach(c => {
-            const r = c.val();
-            csv += `${r.name},${r.item},${r.gcash},${r.status}\n`;
+    /* ========= BINGO GENERATION ========= */
+    function initAdmin() {
+        const grid = document.getElementById('adminBallGrid');
+        grid.innerHTML = '';
+        for (let i = 1; i <= 75; i++) {
+            const b = document.createElement('div');
+            b.className = 'ball';
+            b.innerText = i;
+            b.id = 'admin-ball-' + i;
+            b.onclick = () => toggleBall(i);
+            grid.appendChild(b);
+        }
+        
+        // Listen to Ball Changes
+        db.ref('bingoBalls').on('value', s => {
+            const balls = s.val() || {};
+            let count = 0;
+            document.querySelectorAll('.ball').forEach(el => el.classList.remove('active'));
+            Object.keys(balls).forEach(num => {
+                if (balls[num]) {
+                    document.getElementById('admin-ball-' + num).classList.add('active');
+                    count++;
+                }
+            });
+            document.getElementById('ballsCount').innerText = count + "/75";
         });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(new Blob([csv]));
-        a.download = "redemptions.csv";
-        a.click();
-        logAdmin("EXPORT", "Redemptions CSV");
+
+        // Listen to Active Users
+        db.ref('presence').on('value', s => {
+            document.getElementById('activeUsers').innerText = s.numChildren();
+        });
+    }
+
+    function toggleBall(num) {
+        const ref = db.ref('bingoBalls/' + num);
+        ref.once('value', s => {
+            if (s.exists()) ref.remove();
+            else ref.set(true);
+            logAdmin("MANUAL_TOGGLE", "Ball " + num);
+        });
+    }
+
+    function resetBingo() {
+        if(confirm("Sigurado ka? Buburahin lahat ng bola!")) {
+            db.ref('bingoBalls').remove();
+            logAdmin("RESET", "Bingo Balls Cleared");
+        }
+    }
+
+    function updateBringMe(active) {
+        const item = document.getElementById('bringMeItem').value;
+        db.ref('bringMe').set({
+            active: active,
+            item: active ? item : "",
+            time: Date.now()
+        });
+        logAdmin("BRING_ME", active ? "Started: " + item : "Ended");
+    }
+
+    /* ========= APPENDED FEATURES (FROM ORIGINAL) ========= */
+    function logAdmin(action, details) {
+        db.ref('adminLogs').push({ action, details, time: Date.now() });
+    }
+
+    let autoDrawTimer = null;
+    function startAutoDraw(seconds = 8) {
+        if (autoDrawTimer) return alert("Auto draw already running");
+        autoDrawTimer = setInterval(() => {
+            db.ref('bingoBalls').once('value', s => {
+                const balls = s.val() || {};
+                const available = [];
+                for (let i = 1; i <= 75; i++) if (!balls[i]) available.push(i);
+                if (!available.length) return stopAutoDraw();
+                const pick = available[Math.floor(Math.random() * available.length)];
+                db.ref('bingoBalls/' + pick).set(true);
+                logAdmin("AUTO_DRAW", "Ball " + pick);
+            });
+        }, seconds * 1000);
+        alert("Auto draw started (Every " + seconds + "s)");
+    }
+
+    function stopAutoDraw() {
+        clearInterval(autoDrawTimer);
+        autoDrawTimer = null;
+        logAdmin("SYSTEM", "Auto draw stopped");
+        alert("Auto draw stopped");
+    }
+
+    function undoLastBall() {
+        db.ref('bingoBalls').once('value', s => {
+            const keys = Object.keys(s.val() || {});
+            const last = keys[keys.length - 1];
+            if (last) {
+                db.ref('bingoBalls/' + last).remove();
+                logAdmin("UNDO", "Ball " + last);
+            }
+        });
+    }
+
+    function exportRedemptionsCSV() {
+        db.ref('bringMeSubmissions').once('value', s => {
+            let csv = "User,Time,ImageURL\n";
+            s.forEach(c => {
+                const r = c.val();
+                csv += `${r.userName},${new Date(r.time).toLocaleString()},${r.img.substring(0,20)}...\n`;
+            });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
+            a.download = "submissions.csv";
+            a.click();
+            logAdmin("EXPORT", "Submissions CSV");
+        });
+    }
+
+    /* ========= KEYBOARD SHORTCUTS ========= */
+    document.addEventListener('keydown', e => {
+        if (e.ctrlKey && e.key === 'z') undoLastBall();
+        if (e.ctrlKey && e.key === 'd') startAutoDraw();
+        if (e.ctrlKey && e.key === 's') stopAutoDraw();
     });
-}
 
-/* ========= KEYBOARD SHORTCUTS ========= */
-document.addEventListener('keydown', e => {
-    if (e.ctrlKey && e.key === 'z') undoLastBall();
-    if (e.ctrlKey && e.key === 'd') startAutoDraw();
-    if (e.ctrlKey && e.key === 's') stopAutoDraw();
-});
+    lucide.createIcons();
 </script>
-<!-- ================= DASHBOARD FAILSAFE FIX ================= -->
-<script>
-/* ========= HARD FIREBASE GUARD ========= */
-(function(){
-    if (typeof firebase === 'undefined') {
-        document.body.innerHTML =
-          '<h2 style="color:white;text-align:center;margin-top:40px">Firebase not loaded</h2>';
-        throw new Error("Firebase missing");
-    }
-})();
-
-/* ========= SAFE INIT (NO DOUBLE INIT) ========= */
-if (!firebase.apps.length) {
-    firebase.initializeApp({
-        databaseURL: "https://radiobingo-68749-default-rtdb.firebaseio.com/"
-    });
-}
-
-const db = firebase.database();
-const auth = firebase.auth();
-
-/* ========= AUTH GATE (PREVENT BLANK) ========= */
-document.body.style.display = 'none';
-
-auth.onAuthStateChanged(user => {
-    if (!user) {
-        alert("Admin login required");
-        location.href = "index.html";
-        return;
-    }
-
-    // OPTIONAL: ADMIN UID CHECK
-    const ADMINS = [
-        user.uid // palitan kung gusto mo
-    ];
-
-    if (!ADMINS.includes(user.uid)) {
-        alert("Unauthorized");
-        location.href = "index.html";
-        return;
-    }
-
-    document.body.style.display = 'block';
-});
-
-/* ========= GLOBAL ERROR SHIELD ========= */
-window.addEventListener('error', e => {
-    console.error("Dashboard Error:", e.message);
-});
-</script>
-<!-- ========================================================== -->
-
 </body>
 </html>
