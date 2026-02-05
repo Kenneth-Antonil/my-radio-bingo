@@ -251,6 +251,34 @@
         .legend-item { font-size: 10px; opacity: 0.6; display: flex; align-items: center; gap: 4px; font-weight: 600; }
         
         @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* NEW: Announcement Styling */
+        .announcement-box {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 16px;
+            margin-bottom: 15px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.5s ease-out;
+        }
+        .announcement-icon {
+            background: rgba(255,255,255,0.2);
+            padding: 8px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .announcement-text {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -280,6 +308,11 @@
 <div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang.</div></div>
 
 <div class="container">
+    <div id="announcementBox" class="announcement-box">
+        <div class="announcement-icon"><i data-lucide="megaphone" style="width:20px; height:20px;"></i></div>
+        <div id="announcementText" class="announcement-text"></div>
+    </div>
+
     <div class="video-feed-wrapper">
         <div class="video-container">
             <div id="videoOfflineOverlay" class="video-offline-overlay">
@@ -685,7 +718,7 @@
                     checkLateJoiner();
                 }
             });
-            initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenToBringMe();
+            initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenToBringMe(); listenToAnnouncements();
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
@@ -873,6 +906,22 @@
     function claimReferral() { const code = document.getElementById('referralInput').value.trim().toUpperCase(); db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => { if(s.exists()) { db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 }); alert("Claimed!"); } }); }
     function redeemItem(item, cost) { if((userData.points || 0) < cost) return alert("No points!"); db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost); db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() }); }
     function openMenuModal() { document.getElementById('menuModal').style.display = 'flex'; const hist = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { hist.innerHTML = ""; s.forEach(child => { const v = child.val(); const item = document.createElement('div'); item.className = 'history-item'; item.innerHTML = `<div class="hist-main"><span class="hist-title">${v.item}</span></div><span class="hist-status">${v.status}</span>`; hist.appendChild(item); }); }); }
+
+    // --- NEW: ANNOUNCEMENT SYSTEM LOGIC ---
+    function listenToAnnouncements() {
+        db.ref('gameState/announcement').on('value', (snapshot) => {
+            const msg = snapshot.val();
+            const box = document.getElementById('announcementBox');
+            const text = document.getElementById('announcementText');
+            if (msg && msg.trim() !== "") {
+                text.innerText = msg;
+                box.style.display = 'flex';
+                lucide.createIcons();
+            } else {
+                box.style.display = 'none';
+            }
+        });
+    }
 </script>
 </body>
 </html>
