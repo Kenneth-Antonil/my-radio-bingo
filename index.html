@@ -15,13 +15,13 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
     <style>
-        /* === SUMMER VIBE PALETTE (CLEANED UP) === */
+        /* === SUMMER VIBE PALETTE === */
         :root { 
             --bg-overlay: rgba(15, 23, 42, 0.92); 
             --glass-surface: rgba(30, 41, 59, 0.85);
             --glass-border: rgba(255, 255, 255, 0.15);
             
-            --accent: #0ea5e9; /* Ocean Blue */
+            --accent: #0ea5e9; 
             --accent-glow: #38bdf8;
             --text: #ffffff; 
             --gold: #fbbf24; 
@@ -40,10 +40,61 @@
             background-size: cover;
             color: var(--text); 
             margin: 0; 
-            padding-bottom: 30px; 
+            padding-bottom: 80px; /* Adjusted for floating buttons */
             overflow-x: hidden; 
             min-height: 100vh;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        /* === TOAST NOTIFICATION === */
+        #toast-container {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 99999; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 400px;
+        }
+        .toast {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white; padding: 12px 16px; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; align-items: center; gap: 12px;
+            backdrop-filter: blur(10px);
+            animation: slideInDown 0.3s ease forwards;
+            font-size: 13px; font-weight: 600;
+        }
+        .toast.success { border-left: 4px solid var(--success); }
+        .toast.error { border-left: 4px solid var(--danger); }
+        .toast.info { border-left: 4px solid var(--accent); }
+        @keyframes slideInDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeOutUp { from { opacity: 1; } to { opacity: 0; transform: translateY(-20px); } }
+
+        /* === FLOATING CHAT STYLES === */
+        .floating-chat-btn {
+            position: fixed; bottom: 20px; right: 20px;
+            width: 60px; height: 60px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.5);
+            display: flex; align-items: center; justify-content: center;
+            color: white; z-index: 500; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.2);
+            transition: transform 0.2s;
+        }
+        .floating-chat-btn:active { transform: scale(0.9); }
+        
+        .floating-chat-panel {
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 80vh;
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(20px);
+            border-top-left-radius: 25px; border-top-right-radius: 25px;
+            z-index: 1500; transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; flex-direction: column;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 -10px 50px rgba(0,0,0,0.8);
+        }
+        .floating-chat-panel.open { bottom: 0; }
+        
+        .chat-drag-handle {
+            width: 50px; height: 5px; background: rgba(255,255,255,0.2);
+            border-radius: 5px; margin: 10px auto; flex-shrink: 0;
         }
 
         /* === SHINY GLASSMORPHISM STYLES === */
@@ -98,7 +149,6 @@
         .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--surface); display: none; z-index: 10; box-shadow: 0 0 10px var(--danger); }
         .points-badge { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.4)); color: #fff; padding: 0 12px; height: 38px; border-radius: 12px; font-weight: 800; border: 1px solid rgba(251, 191, 36, 0.6); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
         
-        /* Updated Profile Picture in Nav */
         #userImg {
             width: 45px; height: 45px; border-radius: 50%; /* Circular */
             cursor: pointer; border: 2px solid var(--accent); 
@@ -254,8 +304,8 @@
         .winner-line { font-size: 13px; opacity: 1; margin-top: 5px; display: block; font-weight: 600; }
         @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         
-        .chat-box { height: 450px; display: flex; flex-direction: column; background: var(--glass-surface); border-radius: 24px; border: 1px solid var(--glass-border); overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.6); backdrop-filter: blur(20px); }
-        .chat-header { padding: 15px 20px; background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+        .chat-box { flex: 1; display: flex; flex-direction: column; background: transparent; overflow: hidden; height: 100%; }
+        .chat-header { padding: 15px 20px; background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; flex-shrink: 0; justify-content: space-between; }
         .chat-header h3 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: 0.5px; }
         #chatList { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 18px; scroll-behavior: smooth; }
         #chatList::-webkit-scrollbar { width: 5px; }
@@ -277,7 +327,7 @@
         .reply-pfp { width: 24px; height: 24px; border-radius: 8px; }
         .reply-bubble { background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 12px; flex: 1; }
         .reply-indicator { background: rgba(255,255,255,0.05); padding: 10px 15px; font-size: 12px; display: none; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .chat-input-area { background: rgba(0,0,0,0.3); padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .chat-input-area { background: rgba(0,0,0,0.3); padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
         .input-wrapper { display: flex; gap: 10px; background: rgba(15, 23, 42, 0.8); padding: 6px 6px 6px 15px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.2); transition: 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.4); }
         .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
         .input-wrapper input { flex: 1; background: none; border: none; color: white; outline: none; font-size: 14px; height: 42px; text-shadow: none; font-weight: 500; }
@@ -563,6 +613,16 @@
             box-shadow: 0 0 20px rgba(255,255,255,0.3); transition: 0.2s;
         }
         .btn-play-again:hover { transform: scale(1.1); box-shadow: 0 0 30px rgba(255,255,255,0.5); }
+        
+        .bet-input-container {
+            margin-bottom: 15px; width: 100%; text-align: center;
+            background: rgba(0,0,0,0.3); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .bet-input {
+            width: 100px; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.5); color: white; text-align: center; font-weight: 700; font-size: 16px; outline: none;
+        }
+        .bet-input:focus { border-color: var(--gold); }
 
         @keyframes blink { from { opacity: 0.5; } to { opacity: 1; } }
 
@@ -609,6 +669,8 @@
 </head>
 <body>
 
+<div id="toast-container"></div>
+
 <div id="loginOverlay">
     <div class="login-card">
         <div class="login-logo">RADIO<span>BINGO</span></div>
@@ -642,10 +704,6 @@
 
 <div class="notes-container-bg">
     <div id="notesSection" class="notes-wrapper">
-        <div class="note-item" onclick="setMyNote()">
-            <div class="add-note-btn"><i data-lucide="plus"></i></div>
-            <span class="note-name">My Note</span>
-        </div>
         </div>
 </div>
 
@@ -772,11 +830,21 @@
             </div>
         </div>
     </div>
+</div>
 
-    <div class="chat-box card" style="padding:0; margin-top:15px;">
+<div class="floating-chat-btn" onclick="toggleChatPanel()">
+    <i data-lucide="message-circle" style="width:24px;"></i>
+</div>
+
+<div id="floatingChatPanel" class="floating-chat-panel">
+    <div class="chat-drag-handle" onclick="toggleChatPanel()"></div>
+    <div class="chat-box" style="margin-top:0; border:none; box-shadow:none; border-radius:0; background:transparent;">
         <div class="chat-header">
-            <i data-lucide="message-square" style="width:18px; color:var(--accent-glow)"></i>
-            <h3>LIVE CHAT</h3>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <i data-lucide="message-square" style="width:18px; color:var(--accent-glow)"></i>
+                <h3>LIVE CHAT</h3>
+            </div>
+            <button onclick="toggleChatPanel()" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
         </div>
         <div id="chatList"></div>
         <div id="replyIndicator" class="reply-indicator">
@@ -812,14 +880,20 @@
                 </div>
             </div>
             
-            <div style="margin-top:50px; text-align:center; position:relative; width:100%;">
+            <div style="margin-top:30px; text-align:center; position:relative; width:100%;">
                 <div id="rouletteResult" class="result-modal">
                     <div class="res-title res-win" id="rouletteTitle">YOU WON!</div>
                     <div class="res-pts" id="rouletteSub">+50 Points</div>
                     <button class="btn-play-again" onclick="resetGameUI('roulette')">PLAY AGAIN</button>
                 </div>
+                
+                <div class="bet-input-container">
+                    <div style="font-size:10px; text-transform:uppercase; font-weight:700; color:var(--gold); margin-bottom:5px;">Place Your Bet</div>
+                    <input type="number" id="rouletteBet" class="bet-input" placeholder="Points" value="50">
+                </div>
+
                 <button id="btnSpinWheel" onclick="spinRoulette()" class="slot-lever-btn" style="background: linear-gradient(180deg, #10b981, #047857); box-shadow: 0 8px 0 #064e3b, 0 15px 25px rgba(0,0,0,0.5); border-top: 1px solid rgba(255,255,255,0.3);">SPIN THE WHEEL</button>
-                <p style="font-size:10px; margin-top:20px; opacity:0.8; font-weight:600; text-shadow:0 1px 2px black;">Red/Black 50/50 Chance</p>
+                <p style="font-size:10px; margin-top:20px; opacity:0.8; font-weight:600; text-shadow:0 1px 2px black;">Multiplier: 2x | 10% Chance</p>
             </div>
         </div>
     </div>
@@ -851,11 +925,16 @@
                 </div>
             </div>
 
+            <div class="bet-input-container">
+                <div style="font-size:10px; text-transform:uppercase; font-weight:700; color:var(--gold); margin-bottom:5px;">Place Your Bet</div>
+                <input type="number" id="hlBet" class="bet-input" placeholder="Points" value="50">
+            </div>
+
             <div class="hl-controls-new">
                 <button class="btn-guess bg-hi" id="btnHi" onclick="guessHighLow('high')">HIGHER ▲</button>
                 <button class="btn-guess bg-lo" id="btnLo" onclick="guessHighLow('low')">LOWER ▼</button>
             </div>
-            <p style="font-size:10px; margin-top:25px; opacity:0.8; font-weight:600; text-shadow:0 1px 2px black;">Guess the next number (1-100)</p>
+            <p style="font-size:10px; margin-top:25px; opacity:0.8; font-weight:600; text-shadow:0 1px 2px black;">Multiplier: 2x | 10% Chance</p>
         </div>
     </div>
 </div>
@@ -885,9 +964,15 @@
                 </div>
             </div>
 
+            <div class="bet-input-container">
+                <div style="font-size:10px; text-transform:uppercase; font-weight:700; color:var(--gold); margin-bottom:5px;">Place Your Bet</div>
+                <input type="number" id="slotBet" class="bet-input" placeholder="Points" value="50">
+            </div>
+
             <button class="slot-lever-btn" id="btnPullLever" onclick="pullSlotLever()">
                 SPIN
             </button>
+            <p style="font-size:10px; margin-top:10px; opacity:0.8; font-weight:600; text-shadow:0 1px 2px black;">Multiplier: 5x | 10% Chance</p>
         </div>
     </div>
 </div>
@@ -952,7 +1037,7 @@
         </div>
         <div class="ref-container">
             <span style="font-size:10px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="share-2" style="width:12px"></i> Invite & Earn</span>
-            <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom:10px;" onclick="this.select(); document.execCommand('copy'); alert('Copied Link!'); playSound('click');">
+            <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom:10px;" onclick="this.select(); document.execCommand('copy'); showToast('Copied Link!', 'success'); playSound('click');">
             <div id="referralInputSection">
                 <span style="font-size:10px; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px; margin-top:15px;"><i data-lucide="ticket" style="width:12px"></i> Claim Referral Code</span>
                 <div style="display:flex; gap:10px;">
@@ -1017,11 +1102,8 @@
 
     // === NEW UPDATED AUDIO SYSTEM ===
     const sounds = {
-        // Updated Click Sound (Cleaner/Crisp UI Tap)
         click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3'),
-        // NEW Specific Sound for Bingo Draw (Loud Pop/Ding)
         newBall: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3'),
-        // Existing sounds
         pop: new Audio('https://cdn.freesound.org/previews/536/536108_1415754-lq.mp3'),
         win: new Audio('https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3'),
         lose: new Audio('https://cdn.freesound.org/previews/76/76376_877451-lq.mp3'),
@@ -1035,6 +1117,33 @@
             sounds[type].currentTime = 0;
             sounds[type].play().catch(e => console.log("Audio play error", e));
         }
+    }
+
+    // === TOAST NOTIFICATION SYSTEM ===
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        let icon = 'info';
+        if(type === 'success') icon = 'check-circle';
+        if(type === 'error') icon = 'alert-triangle';
+        
+        toast.innerHTML = `<i data-lucide="${icon}" style="width:16px"></i> ${message}`;
+        container.appendChild(toast);
+        lucide.createIcons();
+
+        setTimeout(() => {
+            toast.style.animation = 'fadeOutUp 0.3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // === FLOATING CHAT LOGIC ===
+    function toggleChatPanel() {
+        const panel = document.getElementById('floatingChatPanel');
+        panel.classList.toggle('open');
+        playSound('click');
     }
 
     // === NEW: SERVICE WORKER REGISTRATION (FOR NOTIFICATIONS) ===
@@ -1061,7 +1170,7 @@
         if ("Notification" in window) {
             Notification.requestPermission().then(permission => {
                 if (permission === "granted") {
-                    new Notification("Notifications Enabled", { body: "You will be notified for games!" });
+                    showToast("Notifications Enabled", "success");
                 }
             });
         }
@@ -1098,8 +1207,8 @@
 
     async function handleBringMeUploadAdvanced(input) {
         if(!input.files || !input.files[0]) return;
-        if(userData.hasWonBringMeThisRound) { alert("Nakuha mo na ang points! Hintayin ang susunod."); return; }
-        if(!cocoModel) { alert("AI is still loading, please wait..."); return; }
+        if(userData.hasWonBringMeThisRound) { showToast("Nakuha mo na ang points! Hintayin ang susunod.", "error"); return; }
+        if(!cocoModel) { showToast("AI is still loading, please wait...", "error"); return; }
         const file = input.files[0]; const preview = document.getElementById('aiPreviewImg'); const placeholder = document.getElementById('aiPlaceholder'); const loader = document.getElementById('aiLoading'); const scanLine = document.getElementById('aiScanLine'); const statusText = document.getElementById('aiStatusText');
         preview.src = URL.createObjectURL(file); preview.style.display = 'block'; placeholder.style.display = 'none'; loader.style.display = 'block'; scanLine.style.display = 'block'; statusText.innerText = "AI IDENTIFYING OBJECT...";
         const img = new Image(); img.src = preview.src;
@@ -1126,15 +1235,15 @@
                     if(game && game.active && !game.winner) {
                         if(successfulMatch) { 
                             const confidencePercent = Math.round(successfulMatch.score * 100); 
-                            alert(`✅ AI SUCCESS: Sigurado ako (${confidencePercent}%) na ${successfulMatch.class} iyan!`); 
+                            showToast(`✅ AI SUCCESS: ${successfulMatch.class} (${confidencePercent}%)`, "success"); 
                             playSound('win');
                             triggerBringMeWin(); 
                         } 
                         else { 
                             playSound('lose');
-                            if (predictions.length > 0) { const detected = predictions.map(p => p.class).join(", "); alert(`❌ AI REJECTED: Ang nakita ko ay (${detected}), pero ang hanap ay ${targetItem.toUpperCase()}.`); } else { alert("❌ AI REJECTED: Walang malinaw na object na makita. Ayusin ang anggulo o ilaw."); } 
+                            if (predictions.length > 0) { const detected = predictions.map(p => p.class).join(", "); showToast(`❌ AI REJECTED: Saw ${detected}, need ${targetItem.toUpperCase()}.`, "error"); } else { showToast("❌ AI REJECTED: Not clear. Try again.", "error"); } 
                         }
-                    } else if (game.winner) { alert("May nanalo na!"); }
+                    } else if (game.winner) { showToast("May nanalo na!", "info"); }
                     loader.style.display = 'none'; scanLine.style.display = 'none';
                 });
             }, 2000);
@@ -1171,7 +1280,7 @@
                     if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 500); } }); }
                 } else {
                     const data = snapshot.val(); const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL };
-                    const today = new Date().toDateString(); if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 50; updates.lastLoginDate = today; alert("🎁 Daily Bonus! +50 points."); playSound('win'); }
+                    const today = new Date().toDateString(); if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 50; updates.lastLoginDate = today; showToast("🎁 Daily Bonus! +50 points.", "success"); playSound('win'); }
                     if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase(); userRef.update(updates);
                 }
             });
@@ -1219,11 +1328,7 @@
             const dot = document.getElementById('notifDot');
             if(count > 0) {
                 dot.style.display = 'block';
-                playSound('pop'); // Notification sound
-                // Browser notification
-                if(document.hidden && Notification.permission === "granted") {
-                    new Notification("New Message", { body: "You have unread inbox messages." });
-                }
+                playSound('pop');
             } else {
                 dot.style.display = 'none';
             }
@@ -1278,12 +1383,6 @@
         });
     }
 
-    function listenForForNextDraw() {
-        db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); });
-        db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); });
-    }
-    
-    // Fix function name in main execution
     function listenForNextDraw() {
          db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); });
          db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); });
@@ -1312,19 +1411,17 @@
         db.ref('gameState/latestWinner').on('value', s => {
             const win = s.val(); const banner = document.getElementById('winnerBanner'); const patternLine = document.getElementById('winnerPatternLine'); const cardCont = document.getElementById('bingoCardContainer'); const gameOverlay = document.getElementById('gameOverOverlay');
             
-            // REMOVE PURO STYLES IF WINNER IS ANNOUNCED
             cardCont.classList.remove('card-puro');
             document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting'));
 
             if(win && win.name) {
                 banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`; patternLine.innerText = `Pattern Won: ${currentPattern}`; banner.style.display = 'block';
-                playSound('win'); // PLAY WINNER SOUND
+                playSound('win'); 
                 if(win.uid === auth.currentUser.uid) { 
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; 
                 } 
                 else { 
                     cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; 
-                    // UPDATED GAME OVER MESSAGE
                     const nextTime = document.getElementById('nextDrawTime').innerText;
                     document.getElementById('gameOverMsg').innerHTML = `Sayang! Si <b>${win.name.toUpperCase()}</b> ang nanalo.<br><br>Bawi tayo sa next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ${nextTime}</span>`; 
                 }
@@ -1336,8 +1433,7 @@
             if(newGameDrawn.length > gameDrawn.length) { 
                 const newBall = newGameDrawn[newGameDrawn.length - 1]; 
                 speakNumber(newBall); 
-                playSound('newBall'); // UPDATED: NEW DRAW SOUND HERE
-                // Notification if background
+                playSound('newBall');
                 if(document.hidden && Notification.permission === "granted") new Notification("New Ball: " + newBall);
             }
             gameDrawn = newGameDrawn; document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
@@ -1345,7 +1441,6 @@
             if(gameDrawn.length > 0) { btn.disabled = true; btn.innerHTML = `<i data-lucide="lock" style="width:14px"></i> IN GAME`; } else { btn.disabled = false; btn.innerHTML = `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`; }
             lucide.createIcons(); checkLateJoiner(); updateGridHits(); renderPrevBalls(); 
             
-            // Order is important
             checkWin(); 
             checkPuroStatus();
         });
@@ -1456,7 +1551,7 @@
     }
 
     function generateNewCard() {
-        if(gameDrawn.length > 0) return alert("Bawal mag palit ng card kapag may bola na!");
+        if(gameDrawn.length > 0) return showToast("Bawal mag palit ng card kapag may bola na!", "error");
         playSound('click');
         const getCol = (min, max) => { let nums = []; while(nums.length < 5) { let r = Math.floor(Math.random() * (max - min + 1)) + min; if(!nums.includes(r)) nums.push(r); } return nums.sort((a,b) => a-b); };
         const b = getCol(1, 15), i = getCol(16, 30), n = getCol(31, 45), g = getCol(46, 60), o = getCol(61, 75);
@@ -1483,27 +1578,25 @@
         });
     }
 
-    // UPDATED: Added startPrivateChat onclick event
     function renderChatMessage(id, c) {
         const list = document.getElementById('chatList'); const likes = c.likes ? Object.keys(c.likes).length : 0; const isLiked = c.likes && c.likes[auth.currentUser.uid] ? 'liked' : '';
         const row = document.createElement('div'); row.className = 'chat-row'; row.id = `msg-${id}`;
         
-        // Add PM trigger on name click
         let nameHtml = `<span class="chat-name" onclick="startPrivateChat('${c.uid}', '${c.name}', '${c.pfp}')">${c.name} ${c.uid === auth.currentUser.uid ? '<small>(You)</small>' : ''}</span>`;
         if (c.uid === 'ai') nameHtml = `<span class="chat-name" style="color:var(--bringme)">SYSTEM AI</span>`;
 
         row.innerHTML = `<img src="${c.pfp}" class="chat-pfp"><div class="chat-content"><div class="bubble">${nameHtml}<span class="chat-text">${c.msg}</span></div><div class="chat-actions"><button class="action-btn ${isLiked}" onclick="likeChat('${id}')"><i data-lucide="heart" style="width:12px"></i> <span id="likes-${id}">${likes}</span></button><button class="action-btn" onclick="setReply('${id}', '${c.name}')"><i data-lucide="message-circle" style="width:12px"></i> Reply</button></div><div class="reply-box" id="replies-${id}"></div></div>`;
         list.appendChild(row); lucide.createIcons(); list.scrollTop = list.scrollHeight;
-        if(c.uid !== auth.currentUser.uid) playSound('pop'); // Message sound
+        if(c.uid !== auth.currentUser.uid) playSound('pop'); 
     }
 
     function likeChat(id) { const uid = auth.currentUser.uid; const likeRef = db.ref(`chats/${id}/likes/${uid}`); likeRef.once('value', s => { if(s.exists()) likeRef.remove(); else likeRef.set(true); }); }
     function setReply(id, name) { selectedReplyId = id; document.getElementById('replyIndicator').style.display = 'flex'; document.getElementById('replyText').innerText = `Replying to ${name}...`; document.getElementById('chatIn').focus(); }
     function cancelReply() { selectedReplyId = null; document.getElementById('replyIndicator').style.display = 'none'; }
     function sendChat() { const inp = document.getElementById('chatIn'); const msg = inp.value.trim(); if(!msg) return; if(selectedReplyId) { db.ref(`chats/${selectedReplyId}/replies`).push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() }); cancelReply(); } else { db.ref('chats').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() }); } inp.value = ""; }
-    function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length < 10) return alert("Error"); db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => alert("Saved!")); }
-    function claimReferral() { const code = document.getElementById('referralInput').value.trim().toUpperCase(); db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => { if(s.exists()) { db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 }); alert("Claimed!"); } }); }
-    function redeemItem(item, cost) { if((userData.points || 0) < cost) return alert("No points!"); playSound('click'); db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost); db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() }); }
+    function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length < 10) return showToast("Invalid GCash Number", "error"); db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => showToast("Saved!", "success")); }
+    function claimReferral() { const code = document.getElementById('referralInput').value.trim().toUpperCase(); db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => { if(s.exists()) { db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 }); showToast("Claimed!", "success"); } }); }
+    function redeemItem(item, cost) { if((userData.points || 0) < cost) return showToast("Not enough points!", "error"); playSound('click'); db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost); db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() }); }
     function openMenuModal() { playSound('click'); document.getElementById('menuModal').style.display = 'flex'; const hist = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { hist.innerHTML = ""; s.forEach(child => { const v = child.val(); const item = document.createElement('div'); item.className = 'history-item'; item.innerHTML = `<div class="hist-main"><span class="hist-title" style="color:white; font-size:13px; font-weight:700;">${v.item}</span></div><span class="hist-status" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:6px; background:rgba(251,191,36,0.1); color:#fbbf24;">${v.status.toUpperCase()}</span>`; hist.appendChild(item); }); }); }
 
     // ============================================
@@ -1542,9 +1635,10 @@
     }
 
     function addPoints(pts) { db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) + pts); }
+    function deductPoints(pts) { db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - pts); }
     
-    // STRICT 30% WIN CHANCE LOGIC
-    function isWin() { return Math.random() < 0.30; }
+    // STRICT 10% WIN CHANCE LOGIC (HIDDEN)
+    function isWin() { return Math.random() < 0.10; }
 
     // PLAY AGAIN RESET
     function resetGameUI(type) {
@@ -1566,6 +1660,14 @@
 
     // --- ROULETTE LOGIC ---
     function spinRoulette() {
+        const betInput = document.getElementById('rouletteBet');
+        const bet = parseInt(betInput.value);
+        if(!bet || bet <= 0) return showToast("Invalid bet!", "error");
+        if(userData.points < bet) return showToast("Not enough points!", "error");
+
+        // DEDUCT BET
+        deductPoints(bet);
+
         const btn = document.getElementById('btnSpinWheel');
         const inner = document.getElementById('wheelInner');
         const ballCont = document.getElementById('ballContainer');
@@ -1573,7 +1675,7 @@
         
         btn.disabled = true; resultModal.style.display = 'none';
 
-        playSound('spin'); // SOUND ON SPIN
+        playSound('spin');
 
         const win = isWin();
         const baseRot = 1080 + Math.floor(Math.random() * 360); // Wheel Spin
@@ -1592,14 +1694,15 @@
             const sub = document.getElementById('rouletteSub');
             
             if(win) {
+                const prize = bet * 2;
                 title.innerText = "YOU WON!"; title.className = "res-title res-win";
-                sub.innerText = "+50 Points";
-                addPoints(50);
+                sub.innerText = `+${prize} Points`;
+                addPoints(prize);
                 playSound('win');
                 confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
             } else {
                 title.innerText = "TRY AGAIN"; title.className = "res-title res-loss";
-                sub.innerText = "No luck this time";
+                sub.innerText = `Lost ${bet} Points`;
                 playSound('lose');
             }
         }, 3000);
@@ -1607,6 +1710,14 @@
 
     // --- HIGH LOW LOGIC (CARD FLIP) ---
     function guessHighLow(choice) {
+        const betInput = document.getElementById('hlBet');
+        const bet = parseInt(betInput.value);
+        if(!bet || bet <= 0) return showToast("Invalid bet!", "error");
+        if(userData.points < bet) return showToast("Not enough points!", "error");
+
+        // DEDUCT BET
+        deductPoints(bet);
+
         const card = document.getElementById('mainCard');
         const display = document.getElementById('cardValDisplay');
         const btnHi = document.getElementById('btnHi');
@@ -1623,6 +1734,7 @@
         const win = isWin();
         let nextVal = 50;
 
+        // Force logic based on win status
         if (win) {
              if(choice === 'high') nextVal = Math.floor(Math.random() * (100 - currentVal)) + currentVal + 1;
              else nextVal = Math.floor(Math.random() * currentVal); 
@@ -1645,13 +1757,14 @@
             setTimeout(() => {
                 resModal.style.display = 'flex';
                 if(win) {
+                    const prize = bet * 2;
                     title.innerText = "CORRECT!"; title.className = "res-title res-win";
-                    sub.innerText = "+50 Points";
+                    sub.innerText = `+${prize} Points`;
                     playSound('win');
-                    addPoints(50);
+                    addPoints(prize);
                 } else {
                     title.innerText = "WRONG"; title.className = "res-title res-loss";
-                    sub.innerText = "Maybe next time";
+                    sub.innerText = `Lost ${bet} Points`;
                     playSound('lose');
                 }
             }, 600);
@@ -1659,8 +1772,15 @@
     }
 
     // --- SLOTS LOGIC (REEL BLUR) ---
-    // UPDATED: Delay reel stopping for suspense
     function pullSlotLever() {
+        const betInput = document.getElementById('slotBet');
+        const bet = parseInt(betInput.value);
+        if(!bet || bet <= 0) return showToast("Invalid bet!", "error");
+        if(userData.points < bet) return showToast("Not enough points!", "error");
+
+        // DEDUCT BET
+        deductPoints(bet);
+
         const btn = document.getElementById('btnPullLever');
         const reels = [document.getElementById('reel1'), document.getElementById('reel2'), document.getElementById('reel3')];
         const resModal = document.getElementById('slotResult');
@@ -1706,7 +1826,7 @@
             reels[1].classList.add('reel-bounce');
             reels[1].querySelector('span').innerText = finalSymbols[1];
             playSound('stop');
-        }, 2200); // 700ms Delay
+        }, 2200); 
 
         // Reel 3 stop
         setTimeout(() => {
@@ -1718,32 +1838,33 @@
             // Show Result
             setTimeout(() => {
                 if(win) {
+                    const prize = bet * 5;
                     document.getElementById('slotTitle').innerText = "JACKPOT!";
                     document.getElementById('slotTitle').className = "res-title res-win";
-                    document.getElementById('slotSub').innerText = "+100 Points";
+                    document.getElementById('slotSub').innerText = `+${prize} Points`;
                     resModal.style.display = 'flex';
-                    addPoints(100);
+                    addPoints(prize);
                     playSound('win');
                     confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
                 } else {
                     document.getElementById('slotTitle').innerText = "NO LUCK";
                     document.getElementById('slotTitle').className = "res-title res-loss";
-                    document.getElementById('slotSub').innerText = "Try again";
+                    document.getElementById('slotSub').innerText = `Lost ${bet} Points`;
                     resModal.style.display = 'flex';
                     playSound('lose');
                 }
             }, 500);
 
-        }, 3000); // Another 800ms Delay
+        }, 3000); 
     }
 
     // ============================================
-    // NEW FEATURE LOGIC: NOTES & PRIVATE MESSAGING
+    // FIXED NOTES & PRIVATE MESSAGING
     // ============================================
 
-    // --- NOTES LOGIC ---
+    // --- NOTES LOGIC (FIXED) ---
     function initNotes() {
-        // Use 'status' node to check who is online + show their notes
+        // We listen to 'users' to get all notes
         db.ref('users').limitToLast(15).on('value', s => {
             const section = document.getElementById('notesSection');
             // Keep the "Add My Note" button
@@ -1756,10 +1877,8 @@
             let notesHtml = "";
             s.forEach(userSnap => {
                 const u = userSnap.val();
+                // Check if user has a note and photo
                 if(u.note && u.photo) {
-                    // Don't show if user is me (since I have the add button) - optional, but let's show anyway for visual
-                    if(userSnap.key === auth.currentUser.uid) return;
-                    
                     notesHtml += `
                     <div class="note-item" onclick="startPrivateChat('${userSnap.key}', '${u.name}', '${u.photo}')">
                         <div class="note-avatar-box">
@@ -1779,11 +1898,12 @@
     function setMyNote() {
         const note = prompt("Set a short note (max 15 chars):");
         if(note) {
-            if(note.length > 15) return alert("Too long! Max 15 chars.");
+            if(note.length > 15) return showToast("Too long! Max 15 chars.", "error");
+            // Important: Update 'users' node because that is what initNotes listens to
             db.ref('users/' + auth.currentUser.uid).update({ 
                 note: note, 
                 noteTime: Date.now() 
-            });
+            }).then(() => showToast("Note updated!", "success"));
         }
     }
 
@@ -1841,8 +1961,6 @@
             chats.forEach(c => {
                 const item = document.createElement('div');
                 item.className = 'pm-item';
-                // Fetch target user details (name/photo) from the stored data in chat node or users node
-                // For simplicity, we stored basic details in user_chats when creating
                 item.innerHTML = `
                     <img src="${c.photo || 'https://via.placeholder.com/40'}" class="pm-avatar">
                     <div class="pm-info">
@@ -1851,8 +1969,6 @@
                     </div>
                 `;
                 item.onclick = () => {
-                    // Extract target UID from Room ID (Room ID is sorted UIDs)
-                    // But simpler: we should store targetUid in the user_chats node
                     startPrivateChat(c.targetUid, c.name, c.photo);
                 };
                 list.appendChild(item);
@@ -1861,8 +1977,8 @@
     }
 
     function startPrivateChat(targetUid, name, photo) {
-        if(targetUid === auth.currentUser.uid) return alert("You cannot message yourself.");
-        if(targetUid === 'ai') return alert("Cannot DM the AI.");
+        if(targetUid === auth.currentUser.uid) return showToast("You cannot message yourself.", "error");
+        if(targetUid === 'ai') return showToast("Cannot DM the AI.", "error");
 
         const myUid = auth.currentUser.uid;
         const roomId = [myUid, targetUid].sort().join('_'); // Unique room ID
