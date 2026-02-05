@@ -73,7 +73,7 @@
 
         .camera-wrap { margin-top: 15px; background: rgba(0,0,0,0.3); border-radius: 16px; overflow: hidden; position: relative; }
         video { width: 100%; display: block; }
-        canvas { position: absolute; inset: 0; }
+        canvas { position: absolute; inset: 0; pointer-events: none; }
 
         .hidden { display: none; }
     </style>
@@ -109,8 +109,8 @@
 </div>
 
 <div class="tab-container">
-    <button class="tab-btn active" onclick="switchTab('bingo')">BINGO</button>
-    <button class="tab-btn" onclick="switchTab('bringme')">BRING ME</button>
+    <button class="tab-btn active" onclick="switchTab('bingo', event)">BINGO</button>
+    <button class="tab-btn" onclick="switchTab('bringme', event)">BRING ME</button>
 </div>
 
 <div class="content">
@@ -169,12 +169,12 @@
         auth.signOut();
     }
 
-    function switchTab(tab) {
+    function switchTab(tab, event) {
         currentTab = tab;
         document.getElementById('bingoTab').classList.toggle('hidden', tab !== 'bingo');
         document.getElementById('bringmeTab').classList.toggle('hidden', tab !== 'bringme');
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
+        if(event) event.target.classList.add('active');
     }
 
     /* ================= BINGO SYNC ================= */
@@ -231,7 +231,7 @@
 
     function openCamera() {
         document.getElementById('cameraWrap').classList.remove('hidden');
-        navigator.mediaDevices.getUserMedia({ video: true })
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
             .then(stream => video.srcObject = stream);
     }
 
@@ -239,15 +239,18 @@
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0);
-        canvas.toBlob(blob => {
-            const ref = db.ref('bringMeSubmissions').push();
-            ref.set({
-                uid: currentUser.uid,
-                userName: currentUser.displayName,
-                img: URL.createObjectURL(blob),
-                time: Date.now()
-            });
+        
+        // Inayos na submission logic: Gumamit ng DataURL para ma-save sa DB
+        const imgData = canvas.toDataURL('image/jpeg', 0.6);
+        const ref = db.ref('bringMeSubmissions').push();
+        ref.set({
+            uid: currentUser.uid,
+            userName: currentUser.displayName,
+            img: imgData,
+            time: Date.now()
+        }).then(() => {
             alert("Submitted!");
+            document.getElementById('cameraWrap').classList.add('hidden');
         });
     }
 
@@ -276,11 +279,6 @@
 
     lucide.createIcons();
 </script>
-
-<!-- ===================================================== -->
-<!-- =============== APPENDED NEW FEATURES ================ -->
-<!-- =============== (ADD ONLY – SAFE) =================== -->
-<!-- ===================================================== -->
 
 <script>
 /* ===== OFFLINE / ONLINE DETECTOR ===== */
