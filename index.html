@@ -101,26 +101,9 @@
         .card { background: var(--surface); border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative; transition: 0.3s; }
         
         .video-feed-wrapper { margin-bottom: 15px; border-radius: 20px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); }
-        .video-container { position: relative; height: 210px; width: 100%; background: #000; }
+        .video-container { position: relative; height: 210px; width: 100%; }
         .video-overlay-bl { position: absolute; bottom: 12px; left: 12px; z-index: 10; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--success); display: flex; align-items: center; gap: 5px; color: var(--success); font-size: 11px; font-weight: 800; }
         
-        /* NEW STYLES FOR OFFLINE FEED */
-        .video-offline-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.9);
-            z-index: 20;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            color: #94a3b8;
-            backdrop-filter: grayscale(1);
-        }
-        .video-offline-overlay i { margin-bottom: 10px; opacity: 0.5; }
-        .video-offline-overlay p { font-weight: 800; font-size: 14px; margin: 0; color: #cbd5e1; }
-
         .draw-panel { display: grid; grid-template-columns: 1fr 85px; gap: 10px; margin-bottom: 15px; }
         .prev-balls { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 10px; display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; }
         .ball-small { min-width: 38px; height: 38px; background: var(--surface-br); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); color: white; }
@@ -132,12 +115,12 @@
         .cell { aspect-ratio: 1; background: var(--surface-br); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; z-index: 2; }
         .cell.hit { background: var(--accent); color: white; transform: scale(1.02); }
 
-        /* [NEW LOGIC] - GREEN WINNING HIGHLIGHT */
-        .cell.win-highlight { background: var(--success) !important; color: white !important; border: 2px solid white !important; box-shadow: 0 0 20px var(--success); transform: scale(1.05); z-index: 10; }
-
         .card.card-win { border: 2px solid var(--success) !important; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
         .card.card-lost { opacity: 0.3; filter: grayscale(1); pointer-events: none; transform: scale(0.98); }
-        
+        .cell.win-glow { background: var(--success) !important; color: white; z-index: 3; position: relative; border: 2px solid white; box-shadow: 0 0 15px var(--success); }
+        .cell.win-glow::after { content: ''; position: absolute; inset: -3px; border: 2px solid white; border-radius: 10px; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
         .late-overlay, .game-over-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; }
         .late-text { font-weight: 800; font-size: 20px; color: white; margin-bottom: 8px; }
         .late-subtext { font-size: 13px; opacity: 0.9; color: #cbd5e1; font-weight: 600; line-height: 1.4; }
@@ -282,14 +265,8 @@
 <div class="container">
     <div class="video-feed-wrapper">
         <div class="video-container">
-            <div id="videoOfflineOverlay" class="video-offline-overlay">
-                <i data-lucide="video-off" style="width:40px; height:40px;"></i>
-                <p>WAIT FOR THE NEXT LIVE</p>
-                <small style="font-size:10px; opacity:0.6; margin-top:5px;">Host is currently offline</small>
-            </div>
-            
             <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
-            <iframe id="liveIframe" width="100%" height="100%" src="https://www.youtube.com/embed/trcBlSZfW_k?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none;"></iframe>
+            <iframe width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none;"></iframe>
         </div>
     </div>
 
@@ -316,468 +293,550 @@
             <div class="prev-balls" id="ballRow"></div>
             <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8;">NOW DRAWN</span><span id="currentBall" style="font-size:32px; font-weight:900;">--</span></div>
         </div>
-
         <div class="card" id="bingoCardContainer">
             <div id="lateOverlay" class="late-overlay">
                 <i data-lucide="clock" style="color:var(--gold); width:40px; height:40px; margin-bottom:10px;"></i>
                 <div class="late-text">Game is Ongoing</div>
                 <div class="late-subtext">Humingi ng paumanhin, nagsimula na ang bola bago ka makakuha ng card. Join in the next round!</div>
             </div>
-
             <div id="gameOverOverlay" class="game-over-overlay">
                 <img id="winnerAvatarDisplay" class="winner-avatar-big" src="">
                 <div class="late-text" id="winnerNameMsg">May nanalo na!</div>
-                <div class="late-subtext" id="winnerStatusMsg">Wait for the Host to reset the game.</div>
+                <div class="late-subtext" style="color:var(--danger); font-weight: 800;">Bawi na lang next draw.</div>
             </div>
-
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <div class="pattern-box"><div class="pattern-dot"></div><span class="pattern-text" id="patternNameDisplay">ANY PATTERN</span></div>
-                <button id="changeCardBtn" class="btn-change" onclick="generateNewCard()"><i data-lucide="refresh-cw"></i> NEW CARD</button>
+            <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
+                <div class="pattern-box">
+                    <div class="pattern-dot"></div>
+                    <span class="pattern-text" id="patternName">Normal Bingo</span>
+                </div>
+                <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
             </div>
-            
-            <div class="bingo-header">
-                <div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div>
-            </div>
+            <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
             <div class="grid" id="bingoGrid"></div>
-
             <div class="pattern-legend">
-                <div class="legend-item"><i data-lucide="check-circle" style="width:10px; color:var(--accent)"></i> Horizontal</div>
-                <div class="legend-item"><i data-lucide="check-circle" style="width:10px; color:var(--accent)"></i> Vertical</div>
-                <div class="legend-item"><i data-lucide="check-circle" style="width:10px; color:var(--accent)"></i> Diagonal</div>
+                <div class="legend-item"><i data-lucide="minus" style="width:10px"></i> Horizontal</div>
+                <div class="legend-item"><i data-lucide="separator-vertical" style="width:10px"></i> Vertical</div>
+                <div class="legend-item"><i data-lucide="x" style="width:10px"></i> Diagonal</div>
             </div>
         </div>
     </div>
 
     <div id="bringmeTab" class="bringme-content">
-        <div class="bringme-header-ai"><i data-lucide="cpu"></i> AI GAME MASTER POWERED</div>
+        <div class="bringme-header-ai">
+            <i data-lucide="cpu" style="width:14px"></i> ADVANCED AI VISION ACTIVE
+        </div>
         <div class="bringme-status">
-            <div id="aiScanningOverlay" class="ai-scanning-overlay"></div>
-            <div style="font-size: 10px; font-weight: 800; color: var(--bringme); text-transform: uppercase;">Current Objective</div>
-            <div id="bringMeTarget" class="bringme-target">SPOON</div>
-            <p id="bringMeDesc" class="bringme-desc">Take a clear photo of the item to win points!</p>
+            <div id="bringmeInstruction" class="bringme-desc">Maghintay sa utos ng Host...</div>
+            <div id="bringmeItem" class="bringme-target">SYSTEM READY</div>
             
             <div class="ai-camera-container">
+                <div id="aiScanLine" class="ai-scanning-overlay"></div>
                 <div id="aiPlaceholder" class="ai-placeholder">
-                    <i data-lucide="camera" style="width:48px; height:48px; color:var(--bringme); margin-bottom:10px;"></i>
-                    <div style="font-size:12px; font-weight:700;">Camera Preview</div>
+                    <i data-lucide="aperture" style="width:48px; height:48px; color:var(--bringme); margin-bottom:10px;"></i>
+                    <p style="font-size:11px; font-weight:700;">AI READY TO SCAN</p>
                 </div>
-                <img id="capturedImg">
+                <img id="aiPreviewImg" src="">
             </div>
 
-            <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="processAI(this)">
-            <button class="btn-upload-advanced" onclick="document.getElementById('cameraInput').click()">
-                <i data-lucide="aperture"></i> OPEN AI SCANNER
-            </button>
+            <div id="uploadZone" style="display:none;">
+                <input type="file" id="bringmeFile" accept="image/*" capture="environment" style="display:none;" onchange="handleBringMeUploadAdvanced(this)">
+                <button class="btn-upload-advanced" onclick="document.getElementById('bringmeFile').click()">
+                    <i data-lucide="camera"></i> CAPTURE & IDENTIFY
+                </button>
+                <p style="font-size:10px; opacity:0.5; margin-top:15px; font-weight:600;">AI will automatically identify the object in the photo.</p>
+            </div>
+
+            <div id="aiLoading" style="display:none; margin-top:15px; text-align:center;">
+                <div class="spinner" style="border:3px solid rgba(255,255,255,0.1); border-top:3px solid var(--bringme); width:24px; height:24px; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto;"></div>
+                <p id="aiStatusText" style="font-size:12px; margin-top:12px; font-weight:800; color:var(--bringme);">ANALYZING PIXELS...</p>
+            </div>
         </div>
     </div>
 
-    <div class="chat-box" style="margin-top: 20px;">
-        <div class="chat-header"><i data-lucide="message-circle" style="color:var(--accent); width:20px;"></i><h3>COMMUNITY CHAT</h3></div>
+    <div class="chat-box card" style="padding:0; margin-top:15px;">
+        <div class="chat-header">
+            <i data-lucide="message-square" style="width:18px; color:var(--accent)"></i>
+            <h3>LIVE CHAT</h3>
+        </div>
         <div id="chatList"></div>
         <div id="replyIndicator" class="reply-indicator">
             <span id="replyText">Replying to...</span>
-            <i data-lucide="x" style="width:14px; cursor:pointer;" onclick="cancelReply()"></i>
+            <button onclick="cancelReply()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" style="width:14px"></i></button>
         </div>
         <div class="chat-input-area">
-            <form onsubmit="sendMessage(event)" class="input-wrapper">
-                <input type="text" id="chatInput" placeholder="Write a message..." autocomplete="off">
-                <button type="submit" class="send-btn"><i data-lucide="send" style="width:18px"></i></button>
+            <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
+                <input type="text" id="chatIn" placeholder="Write a message..." autocomplete="off">
+                <button type="submit" class="send-btn">
+                    <i data-lucide="send" style="width:18px"></i>
+                </button>
             </form>
         </div>
     </div>
 </div>
 
-<div id="storeModal" class="modal">
-    <div class="modal-content">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h2 style="margin:0">Redeem Shop</h2>
-            <i data-lucide="x" style="cursor:pointer" onclick="this.closest('.modal').style.display='none'"></i>
+<div id="notifModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0">Inbox</h3>
+            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+        </div>
+        <div id="notifList"></div>
+    </div>
+</div>
+
+<div id="menuModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="profile-header">
+            <img id="profileImgLarge" class="profile-img-large" src="">
+            <div class="profile-name-info">
+                <h2 class="profile-name" id="profileNameDisplay">User Name</h2>
+                <span class="profile-uid" id="profileUidDisplay">UID: ---</span>
+            </div>
+            <button onclick="document.getElementById('menuModal').style.display='none'" style="background:none; border:none; color:white; opacity:0.5;"><i data-lucide="x"></i></button>
+        </div>
+        <div class="gcash-section">
+            <span class="input-label"><i data-lucide="smartphone" style="width:12px"></i> GCash Number</span>
+            <div style="display:flex; gap:10px;">
+                <input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx">
+                <button onclick="saveGcash()" style="background:var(--accent); border:none; color:white; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer;">SAVE</button>
+            </div>
+        </div>
+        <div class="ref-container">
+            <span class="input-label" style="color:var(--success)"><i data-lucide="share-2" style="width:12px"></i> Invite & Earn</span>
+            <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom:10px;" onclick="this.select(); document.execCommand('copy'); alert('Copied Link!');">
+            <div id="referralInputSection">
+                <span class="input-label" style="color:var(--gold); margin-top:15px;"><i data-lucide="ticket" style="width:12px"></i> Claim Referral Code</span>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="referralInput" class="styled-input" placeholder="ENTER CODE">
+                    <button onclick="claimReferral()" style="background:var(--gold); border:none; color:black; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer;">CLAIM</button>
+                </div>
+            </div>
+        </div>
+        <div class="history-box">
+            <span class="input-label"><i data-lucide="history" style="width:12px"></i> Transaction History</span>
+            <div id="historyList" class="history-list"></div>
+        </div>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); border-radius:14px; font-weight:800; margin-top:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i data-lucide="log-out" style="width:18px"></i> Sign Out
+        </button>
+    </div>
+</div>
+
+<div id="storeModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+            <div>
+                <h3 style="margin:0; font-size: 20px; font-weight: 900;">REWARDS SHOP</h3>
+                <p style="margin: 5px 0 0 0; font-size: 11px; opacity: 0.6; font-weight: 600;">Exchange your points for GCash credits</p>
+            </div>
+            <div class="points-badge" style="height:35px; border-radius: 10px;"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
         </div>
         <div class="reward-grid">
             <div class="reward-item">
                 <div class="reward-main">
-                    <div class="reward-icon-box"><i data-lucide="smartphone"></i></div>
-                    <div class="reward-info"><b>50 PESOS LOAD</b><small><i data-lucide="coins" style="width:12px"></i> 500 PTS</small></div>
+                    <div class="reward-icon-box"><i data-lucide="wallet" style="width:22px"></i></div>
+                    <div class="reward-info"><b>₱20 GCash</b><small><i data-lucide="database" style="width:10px"></i> 2,500 Pts</small></div>
                 </div>
-                <button class="btn-redeem" onclick="redeem('50 LOAD', 500)">REDEEM</button>
+                <button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">Redeem</button>
             </div>
             <div class="reward-item">
                 <div class="reward-main">
-                    <div class="reward-icon-box" style="color:#10b981; background:rgba(16, 185, 129,0.1);"><i data-lucide="wallet"></i></div>
-                    <div class="reward-info"><b>100 GCASH</b><small><i data-lucide="coins" style="width:12px"></i> 1,000 PTS</small></div>
+                    <div class="reward-icon-box" style="color:var(--gold); background:rgba(251, 191, 36, 0.1);"><i data-lucide="gift" style="width:22px"></i></div>
+                    <div class="reward-info"><b>₱50 GCash</b><small><i data-lucide="database" style="width:10px"></i> 6,000 Pts</small></div>
                 </div>
-                <button class="btn-redeem" onclick="redeem('100 GCASH', 1000)">REDEEM</button>
+                <button class="btn-redeem" onclick="redeemItem('₱50 GCash', 6000)">Redeem</button>
+            </div>
+            <div class="reward-item">
+                <div class="reward-main">
+                    <div class="reward-icon-box" style="color:var(--success); background:rgba(16, 185, 129, 0.1);"><i data-lucide="trophy" style="width:22px"></i></div>
+                    <div class="reward-info"><b>₱100 GCash</b><small><i data-lucide="database" style="width:10px"></i> 11,500 Pts</small></div>
+                </div>
+                <button class="btn-redeem" onclick="redeemItem('₱100 GCash', 11500)">Redeem</button>
             </div>
         </div>
-    </div>
-</div>
-
-<div id="menuModal" class="modal">
-    <div class="modal-content">
-        <div class="profile-header">
-            <img id="pfpLarge" class="profile-img-large" src="">
-            <div class="profile-name-info">
-                <h2 id="nameLarge" class="profile-name">User Name</h2>
-                <span id="uidDisplay" class="profile-uid">ID: ----</span>
-            </div>
-            <i data-lucide="x" style="cursor:pointer" onclick="closeMenuModal()"></i>
-        </div>
-
-        <div class="gcash-section">
-            <label class="input-label"><i data-lucide="wallet" style="width:12px"></i> GCash Number</label>
-            <div style="display:flex; gap:10px;">
-                <input type="number" id="gcashInput" class="styled-input" placeholder="09123456789">
-                <button class="btn-redeem" onclick="saveGcash()">SAVE</button>
-            </div>
-        </div>
-
-        <div class="ref-container">
-            <label class="input-label"><i data-lucide="users" style="width:12px"></i> Referral Code</label>
-            <div style="display:flex; gap:10px;">
-                <input type="text" id="referralInput" class="styled-input" placeholder="ENTER CODE">
-                <button class="btn-redeem" onclick="claimReferral()" style="background:var(--success)">CLAIM</button>
-            </div>
-            <div style="margin-top:10px; font-size:11px; font-weight:700;">YOUR CODE: <span id="myRefCode" style="color:var(--gold)">----</span></div>
-        </div>
-
-        <div class="history-box">
-            <h4 style="margin:0 0 15px 0; font-size:14px;">Redemption History</h4>
-            <div id="historyList" class="history-list"></div>
-        </div>
+        <p style="text-align: center; font-size: 10px; opacity: 0.4; margin-top: 25px; line-height: 1.5;">*Processing of GCash may take 24-48 hours.<br>Make sure your GCash number is correct.</p>
     </div>
 </div>
 
 <script>
-    const firebaseConfig = { databaseURL: "https://radiobingo-68749-default-rtdb.firebaseio.com/" };
+    lucide.createIcons();
+    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
+    const db = firebase.database(); const auth = firebase.auth();
+    let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo";
+    let lastNotifiedDraw = ""; let selectedReplyId = null;
 
-    let userData = {};
-    let myCard = [];
-    let drawnBalls = [];
-    let isGameOver = false;
-    let replyTo = null;
-
-    // LOGIN & AUTH
-    function login() {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider);
-    }
-
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('userPanel').style.display = 'flex';
-            document.getElementById('userImg').src = user.photoURL;
-            document.getElementById('pfpLarge').src = user.photoURL;
-            document.getElementById('nameLarge').innerText = user.displayName;
-            document.getElementById('uidDisplay').innerText = "ID: " + user.uid.substring(0,8);
-
-            db.ref('users/' + user.uid).on('value', s => {
-                userData = s.val() || {};
-                if(!userData.name) {
-                    db.ref('users/' + user.uid).update({
-                        name: user.displayName,
-                        photo: user.photoURL,
-                        points: 0,
-                        refCode: Math.random().toString(36).substring(2,8).toUpperCase()
-                    });
-                }
-                document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
-                document.getElementById('myRefCode').innerText = userData.refCode || '----';
-                document.getElementById('gcashInput').value = userData.gcash || '';
-                
-                if(userData.bingoCard) {
-                    myCard = userData.bingoCard;
-                    renderCard();
-                } else {
-                    generateNewCard();
-                }
-            });
-
-            // DASHBOARD SYNC: Online Status
-            db.ref('users/' + user.uid + '/isOnline').set(true);
-            db.ref('users/' + user.uid + '/isOnline').onDisconnect().set(false);
-
-            initSync();
-            initChat();
-            listenToAnnouncements(); // Added back to ensure full compatibility
-        }
+    // --- ADVANCED AI MODEL LOADING ---
+    let cocoModel = null;
+    cocoSsd.load().then(model => {
+        cocoModel = model;
+        console.log("Advanced AI Vision Model Loaded.");
+        document.getElementById('aiStatusText').innerText = "AI MODEL READY";
     });
 
-    function initSync() {
-        db.ref('bingoBalls').on('value', s => {
-            const balls = s.val() || {};
-            drawnBalls = Object.keys(balls).filter(k => balls[k]).map(Number);
+    // --- TAB SYSTEM ---
+    function switchTab(tab) {
+        const btns = document.querySelectorAll('.tab-btn');
+        btns.forEach(b => b.classList.remove('active'));
+        document.getElementById('bingoTab').style.display = 'none';
+        document.getElementById('bringmeTab').style.display = 'none';
+        
+        if(tab === 'bingo') {
+            document.getElementById('bingoTab').style.display = 'block';
+            btns[0].classList.add('active');
+        } else {
+            document.getElementById('bringmeTab').style.display = 'block';
+            btns[1].classList.add('active');
+        }
+    }
+
+    // --- LISTENING TO BRING ME ---
+    function listenToBringMe() {
+        db.ref('gameState/bringMe').on('value', s => {
+            const data = s.val();
+            const itemEl = document.getElementById('bringmeItem');
+            const instr = document.getElementById('bringmeInstruction');
+            const zone = document.getElementById('uploadZone');
             
-            const lastBall = drawnBalls[drawnBalls.length - 1];
-            document.getElementById('currentBall').innerText = lastBall || '--';
+            if(data && data.active) {
+                if(itemEl.innerText !== data.item) userData.hasWonBringMeThisRound = false;
+                itemEl.innerText = data.item;
+                instr.innerText = "DALI! MAGDALANG " + data.item;
+                zone.style.display = 'block';
+                if(data.winner) {
+                    itemEl.innerText = "WINNER: " + data.winner;
+                    zone.style.display = 'none';
+                }
+            } else {
+                itemEl.innerText = "WAITING...";
+                instr.innerText = "Maghintay sa utos ng Host...";
+                zone.style.display = 'none';
+                userData.hasWonBringMeThisRound = false;
+            }
+        });
+    }
+
+    // --- RE-ENGINEERED ADVANCED AI HANDLER ---
+    async function handleBringMeUploadAdvanced(input) {
+        if(!input.files || !input.files[0]) return;
+        if(userData.hasWonBringMeThisRound) { alert("Nakuha mo na ang points! Hintayin ang susunod."); return; }
+        if(!cocoModel) { alert("AI is still loading, please wait..."); return; }
+
+        const file = input.files[0];
+        const preview = document.getElementById('aiPreviewImg');
+        const placeholder = document.getElementById('aiPlaceholder');
+        const loader = document.getElementById('aiLoading');
+        const scanLine = document.getElementById('aiScanLine');
+        const statusText = document.getElementById('aiStatusText');
+
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+        loader.style.display = 'block';
+        scanLine.style.display = 'block';
+        statusText.innerText = "AI IDENTIFYING OBJECT...";
+
+        const img = new Image();
+        img.src = preview.src;
+        img.onload = async () => {
+            const predictions = await cocoModel.detect(img);
+            const targetItem = document.getElementById('bringmeItem').innerText.toLowerCase();
             
-            const ballRow = document.getElementById('ballRow');
-            ballRow.innerHTML = "";
-            drawnBalls.slice(-10).reverse().forEach(b => {
-                const div = document.createElement('div');
-                div.className = "ball-small";
-                div.innerText = b;
-                ballRow.appendChild(div);
+            const successfulMatch = predictions.find(p => {
+                const label = p.class.toLowerCase();
+                const score = p.score;
+                if (score < 0.65) return false;
+                if (targetItem.includes("mouse") && label === "mouse") return true;
+                if (targetItem.includes("keyboard") && label === "keyboard") return true;
+                if (targetItem.includes("cellphone") && (label === "cell phone" || label === "mobile phone")) return true;
+                if (targetItem.includes("baso") && (label === "cup" || label === "wine glass")) return true;
+                if (targetItem.includes("kutsara") && label === "spoon") return true;
+                if (targetItem.includes("tinidor") && label === "fork") return true;
+                if (targetItem.includes("bote") && label === "bottle") return true;
+                if (targetItem.includes("remote") && label === "remote") return true;
+                if (targetItem.includes("laptop") && label === "laptop") return true;
+                if (targetItem.includes("libro") && label === "book") return true;
+                if (targetItem === label) return true;
+                return false;
             });
 
-            // Late Join Check
-            if(drawnBalls.length > 0 && !userData.bingoCard) {
-                document.getElementById('lateOverlay').style.display = 'flex';
-            } else {
-                document.getElementById('lateOverlay').style.display = 'none';
-            }
+            setTimeout(() => {
+                db.ref('gameState/bringMe').once('value', snap => {
+                    const game = snap.val();
+                    if(game && game.active && !game.winner) {
+                        if(successfulMatch) {
+                            const confidencePercent = Math.round(successfulMatch.score * 100);
+                            alert(`✅ AI SUCCESS: Sigurado ako (${confidencePercent}%) na ${successfulMatch.class} iyan!`);
+                            triggerBringMeWin();
+                        } else {
+                            if (predictions.length > 0) {
+                                const detected = predictions.map(p => p.class).join(", ");
+                                alert(`❌ AI REJECTED: Ang nakita ko ay (${detected}), pero ang hanap ay ${targetItem.toUpperCase()}.`);
+                            } else {
+                                alert("❌ AI REJECTED: Walang malinaw na object na makita. Ayusin ang anggulo o ilaw.");
+                            }
+                        }
+                    } else if (game.winner) {
+                        alert("May nanalo na!");
+                    }
+                    loader.style.display = 'none';
+                    scanLine.style.display = 'none';
+                });
+            }, 2000);
+        };
+    }
 
-            renderCard();
-            checkBingo();
+    function triggerBringMeWin() {
+        const uid = auth.currentUser.uid;
+        db.ref('gameState/bringMe').update({ winner: auth.currentUser.displayName });
+        db.ref('users/' + uid + '/points').transaction(p => (p || 0) + 200);
+        userData.hasWonBringMeThisRound = true;
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.8 } });
+        db.ref('chats').push({
+            name: "SYSTEM AI", msg: `🏆 Si ${auth.currentUser.displayName} ang panalo sa Bring Me! +200 Pts!`, 
+            pfp: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg", uid: "ai"
         });
+    }
 
-        db.ref('gameState').on('value', s => {
-            const state = s.val() || {};
-            isGameOver = state.isGameOver;
-            if(isGameOver) {
-                document.getElementById('gameOverOverlay').style.display = 'flex';
-                document.getElementById('winnerAvatarDisplay').src = state.winnerPhoto || '';
-                document.getElementById('winnerNameMsg').innerText = (state.winnerName || 'Sinu') + " won!";
-                document.getElementById('winnerBanner').style.display = 'block';
-                document.getElementById('winnerPatternLine').innerText = "Pattern: " + (state.pattern || 'Bingo');
-                db.ref('users/' + auth.currentUser.uid + '/cardLocked').set(true);
-            } else {
-                document.getElementById('gameOverOverlay').style.display = 'none';
-                document.getElementById('winnerBanner').style.display = 'none';
-            }
-            document.getElementById('patternNameDisplay').innerText = state.pattern || 'ANY PATTERN';
-            
-            // Host Online Check
-            document.getElementById('videoOfflineOverlay').style.display = state.hostOnline ? 'none' : 'flex';
+    function fixDate(timestamp) {
+        if(!timestamp) return "No Date";
+        const d = new Date(parseInt(timestamp));
+        return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) + " " + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    if ("Notification" in window) { Notification.requestPermission(); }
+    function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+
+    auth.onAuthStateChanged(u => {
+        if(u) {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('userPanel').style.display = 'flex';
+            document.getElementById('userImg').src = u.photoURL;
+            document.getElementById('profileImgLarge').src = u.photoURL;
+            document.getElementById('profileNameDisplay').innerText = u.displayName;
+            document.getElementById('profileUidDisplay').innerText = "ID: " + u.uid.substring(0,8);
+            const userRef = db.ref('users/'+u.uid);
+            userRef.once('value', snapshot => {
+                if (!snapshot.exists()) {
+                    const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const referredBy = urlParams.get('ref');
+                    userRef.set({ name: u.displayName, photo: u.photoURL, points: 100, refCode: newRefCode, referredBy: referredBy || null, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false });
+                    if (referredBy) {
+                        db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => {
+                            if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 500); }
+                        });
+                    }
+                } else {
+                    const data = snapshot.val(); const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL };
+                    const today = new Date().toDateString();
+                    if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 50; updates.lastLoginDate = today; alert("🎁 Daily Bonus! +50 points."); }
+                    if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    userRef.update(updates);
+                }
+            });
+            userRef.on('value', s => { 
+                if(s.exists()){ 
+                    userData = s.val(); userData.uid = u.uid; 
+                    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
+                    document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString();
+                    document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || "");
+                    if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none';
+                    if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
+                    if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
+                    checkLateJoiner();
+                }
+            });
+            initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenToBringMe();
+        } else { document.getElementById('loginOverlay').style.display = 'flex'; }
+    });
+
+    function setupPresence(uid) {
+        const onlineRef = db.ref('.info/connected');
+        const userStatusRef = db.ref('status/' + uid);
+        onlineRef.on('value', (snapshot) => {
+            if (snapshot.val() === false) return;
+            userStatusRef.onDisconnect().remove().then(() => { userStatusRef.set({ state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP }); });
         });
+        db.ref('status').on('value', (s) => { document.getElementById('onlineCount').innerText = s.numChildren() || 0; });
+    }
 
-        db.ref('settings/nextDraw').on('value', s => {
-            if(s.val()) {
-                document.getElementById('nextDrawBanner').style.display = 'flex';
-                document.getElementById('nextDrawTime').innerText = s.val();
-            } else {
-                document.getElementById('nextDrawBanner').style.display = 'none';
+    function listenForNextDraw() {
+        db.ref('gameState/nextDraw').on('value', s => {
+            const nextDrawVal = s.val(); const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime');
+            if(nextDrawVal) { banner.style.display = 'flex'; timeEl.innerText = isNaN(nextDrawVal) ? nextDrawVal : fixDate(nextDrawVal); checkNotificationTime(nextDrawVal); } else { banner.style.display = 'none'; }
+        });
+    }
+
+    function checkNotificationTime(timeInput) {
+        setInterval(() => {
+            if(lastNotifiedDraw === timeInput) return;
+            let drawDate;
+            if(!isNaN(timeInput)) { drawDate = new Date(parseInt(timeInput)); } 
+            else { const now = new Date(); const [time, modifier] = timeInput.split(' '); let [hours, minutes] = time.split(':'); if (hours === '12') hours = '00'; if (modifier === 'PM') hours = parseInt(hours, 10) + 12; drawDate = new Date(); drawDate.setHours(hours, minutes, 0); }
+            const now = new Date(); const diff = drawDate.getTime() - now.getTime();
+            const minutesLeft = Math.floor(diff / 60000);
+            if (minutesLeft === 10) { if (Notification.permission === "granted") { new Notification("Radio Bingo Live", { body: "10 minutes na lang!", icon: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" }); lastNotifiedDraw = timeInput; } }
+        }, 30000);
+    }
+
+    function initBingo() {
+        db.ref('gameState/latestWinner').on('value', s => {
+            const win = s.val(); 
+            const banner = document.getElementById('winnerBanner'); 
+            const patternLine = document.getElementById('winnerPatternLine'); 
+            const cardCont = document.getElementById('bingoCardContainer'); 
+            const gameOverlay = document.getElementById('gameOverOverlay');
+            const winnerAvatar = document.getElementById('winnerAvatarDisplay');
+            const winnerNameText = document.getElementById('winnerNameMsg');
+
+            if(win && win.name) {
+                banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`;
+                patternLine.innerText = `Pattern Won: ${currentPattern}`;
+                banner.style.display = 'block';
+                
+                if(win.uid === auth.currentUser.uid) { 
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); 
+                    cardCont.classList.add('card-win'); 
+                    cardCont.classList.remove('card-lost'); 
+                    gameOverlay.style.display = 'none'; 
+                    applyWinGlowToCurrentCard(); 
+                } else { 
+                    cardCont.classList.add('card-lost'); 
+                    cardCont.classList.remove('card-win'); 
+                    gameOverlay.style.display = 'flex'; 
+                    winnerAvatar.src = win.photo || 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg';
+                    winnerNameText.innerText = `${win.name.toUpperCase()} ang nanalo!`; 
+                }
+            } else { 
+                banner.style.display = 'none'; 
+                cardCont.classList.remove('card-win', 'card-lost'); 
+                gameOverlay.style.display = 'none'; 
+                document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow')); 
             }
         });
+        db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternName').innerText = currentPattern; checkWin(); });
+        db.ref('drawnNumbers').on('value', s => {
+            const val = s.val(); gameDrawn = val ? Object.values(val).map(n => n.toString()) : [];
+            document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
+            const btn = document.getElementById('newCardBtn');
+            if(gameDrawn.length > 0) { btn.disabled = true; btn.innerHTML = `<i data-lucide="lock" style="width:14px"></i> IN GAME`; } 
+            else { btn.disabled = false; btn.innerHTML = `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`; }
+            lucide.createIcons(); checkLateJoiner(); updateGridHits(); renderPrevBalls(); checkWin();
+        });
+    }
 
-        db.ref('users').on('value', s => {
-            let online = 0;
-            s.forEach(u => { if(u.val().isOnline) online++; });
-            document.getElementById('onlineCount').innerText = online;
+    function checkWin() {
+        if(userData.hasWonCurrent || gameDrawn.length === 0) return;
+        db.ref('gameState/latestWinner').once('value', snap => {
+            if(snap.exists()) return;
+            let winningWays = [];
+            if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; }
+            else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; }
+            else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; }
+            else { winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; }
+            for(let w of winningWays) { if(w.every(i => marks.includes(i))) { triggerWin(); break; } }
+        });
+    }
+
+    function triggerWin() {
+        db.ref('gameState/latestWinner').set({ 
+            name: auth.currentUser.displayName, 
+            uid: auth.currentUser.uid, 
+            photo: auth.currentUser.photoURL,
+            time: Date.now() 
+        });
+        db.ref('users/'+userData.uid).update({ hasWonCurrent: true });
+        db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) + 500);
+    }
+
+    function checkLateJoiner() {
+        const overlay = document.getElementById('lateOverlay');
+        if (!gameDrawn || gameDrawn.length === 0) { overlay.style.display = 'none'; return; }
+        
+        db.ref('gameState/gameStartTime').once('value', s => {
+            const startTime = s.val() || 0; 
+            const cardTime = (userData && userData.cardTimestamp) ? userData.cardTimestamp : 0;
+            // FIX: Ang cardTime ay dapat palaging mas maaga kaysa sa startTime para makalaro.
+            // Kung mas bago ang card (cardTime > startTime), ibig sabihin kumuha siya habang may bola na.
+            if(gameDrawn.length > 0 && cardTime > startTime) { overlay.style.display = 'flex'; } 
+            else { overlay.style.display = 'none'; }
+        });
+    }
+
+    function applyWinGlowToCurrentCard() {
+        let winningWays = [];
+        if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; }
+        else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; }
+        else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; }
+        else { winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; }
+        
+        winningWays.forEach(w => {
+            if(w.every(i => marks.includes(i))) {
+                w.forEach(index => {
+                    const cell = document.getElementById('c-' + index);
+                    if(cell) cell.classList.add('win-glow');
+                });
+            }
+        });
+    }
+
+    function updateGridHits() {
+        marks = [12];
+        cardNumbers.forEach((n, i) => {
+            const el = document.getElementById('c-'+i); if(i === 12) { if(el) el.classList.add('hit'); return; }
+            if(gameDrawn.includes(n.toString())) { marks.push(i); if(el) el.classList.add('hit'); } 
+            else { if(el) el.classList.remove('hit'); }
         });
     }
 
     function generateNewCard() {
-        if(drawnBalls.length > 0) return alert("Bawal magpalit ng card habang may bola na.");
-        const card = [];
-        const ranges = [[1,15],[16,30],[31,45],[46,60],[61,75]];
-        for(let i=0; i<5; i++) {
-            const col = [];
-            while(col.length < 5) {
-                const r = Math.floor(Math.random() * (ranges[i][1] - ranges[i][0] + 1)) + ranges[i][0];
-                if(!col.includes(r)) col.push(r);
-            }
-            card.push(col);
-        }
-        const flat = [];
-        for(let r=0; r<5; r++) for(let c=0; c<5; c++) flat.push(card[c][r]);
-        flat[12] = 0; // FREE
-        db.ref('users/' + auth.currentUser.uid + '/bingoCard').set(flat);
+        if(gameDrawn.length > 0) return alert("Bawal mag palit ng card!");
+        const getCol = (min, max) => { let nums = []; while(nums.length < 5) { let r = Math.floor(Math.random() * (max - min + 1)) + min; if(!nums.includes(r)) nums.push(r); } return nums.sort((a,b) => a-b); };
+        const b = getCol(1, 15), i = getCol(16, 30), n = getCol(31, 45), g = getCol(46, 60), o = getCol(61, 75);
+        n[2] = "FREE"; cardNumbers = [];
+        for(let row=0; row<5; row++) cardNumbers.push(b[row], i[row], n[row], g[row], o[row]);
+        const now = Date.now();
+        db.ref('users/'+auth.currentUser.uid).update({ currentCard: cardNumbers, hasWonCurrent: false, cardTimestamp: now });
+        renderCard();
     }
 
     function renderCard() {
-        const grid = document.getElementById('bingoGrid');
-        grid.innerHTML = "";
-        myCard.forEach((num, i) => {
-            const div = document.createElement('div');
-            div.className = "cell";
-            div.id = `cell-${i}`;
-            if(num === 0) {
-                div.classList.add('hit');
-                div.innerHTML = "<i data-lucide='star' style='width:16px; fill:white;'></i>";
-            } else {
-                div.innerText = num;
-                if(drawnBalls.includes(num)) div.classList.add('hit');
-            }
-            grid.appendChild(div);
-        });
-        lucide.createIcons();
+        const grid = document.getElementById('bingoGrid'); grid.innerHTML = "";
+        cardNumbers.forEach((n, i) => { let d = document.createElement('div'); d.className = 'cell' + (i===12?' hit':''); d.id = 'c-'+i; d.innerText = n==="FREE"?"★":n; grid.appendChild(d); });
+        updateGridHits();
     }
 
-    // --- NEW LOGIC: GREEN WINNING HIGHLIGHT (NO DELETION) ---
-    function checkBingo() {
-        const patterns = [
-            [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],
-            [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],
-            [0,6,12,18,24],[4,8,12,16,20]
-        ];
-        
-        const isHit = (idx) => myCard[idx] === 0 || drawnBalls.includes(myCard[idx]);
-        let won = false;
-        let winningCells = [];
-
-        patterns.forEach(p => {
-            if(p.every(isHit)) {
-                won = true;
-                winningCells = winningCells.concat(p);
-            }
-        });
-
-        if(won) {
-            winningCells.forEach(idx => {
-                const el = document.getElementById(`cell-${idx}`);
-                if(el) el.classList.add('win-highlight');
-            });
-            db.ref('users/' + auth.currentUser.uid + '/isWinner').set(true);
-        } else {
-            db.ref('users/' + auth.currentUser.uid + '/isWinner').set(false);
-        }
+    function renderPrevBalls() {
+        const row = document.getElementById('ballRow'); row.innerHTML = "";
+        [...gameDrawn].reverse().slice(1,10).forEach(n => { const b = document.createElement('div'); b.className = 'ball-small'; b.innerText = n; row.appendChild(b); });
     }
 
-    // Existing Chat & Other functions (Unchanged)
-    function initChat() {
-        db.ref('chat').limitToLast(30).on('value', s => {
-            const list = document.getElementById('chatList');
-            list.innerHTML = "";
-            s.forEach(c => {
-                const m = c.val();
-                const row = document.createElement('div');
-                row.className = "chat-row";
-                row.innerHTML = `
-                    <img src="${m.pfp}" class="chat-pfp">
-                    <div class="chat-content">
-                        <div class="bubble">
-                            <div class="chat-name">${m.name}</div>
-                            ${m.replyingTo ? `<div style="font-size:10px; opacity:0.6; margin-bottom:5px;">Replying to ${m.replyingTo.name}</div>` : ''}
-                            <div class="chat-text">${m.text}</div>
-                        </div>
-                        <div class="chat-actions">
-                            <button class="action-btn" onclick="setReply('${c.key}', '${m.name}')">REPLY</button>
-                        </div>
-                    </div>
-                `;
-                list.appendChild(row);
-            });
-            list.scrollTop = list.scrollHeight;
+    function setupChat() {
+        db.ref('chats').limitToLast(25).on('child_added', s => { renderChatMessage(s.key, s.val()); });
+        db.ref('chats').on('child_changed', s => {
+            const likeCountEl = document.getElementById(`likes-${s.key}`); if(likeCountEl) likeCountEl.innerText = Object.keys(s.val().likes || {}).length;
+            if(s.val().replies) { const replyBox = document.getElementById(`replies-${s.key}`); replyBox.innerHTML = ""; Object.values(s.val().replies).forEach(r => { replyBox.innerHTML += `<div class="reply-item"><img src="${r.pfp}" class="reply-pfp"><div class="reply-bubble"><b style="font-size:10px; color:var(--accent); display:block;">${r.name}</b><span style="font-size:12px;">${r.msg}</span></div></div>`; }); }
         });
     }
 
-    function sendMessage(e) {
-        e.preventDefault();
-        const input = document.getElementById('chatInput');
-        if(!input.value.trim()) return;
-        db.ref('chat').push({
-            uid: auth.currentUser.uid,
-            name: auth.currentUser.displayName,
-            pfp: auth.currentUser.photoURL,
-            text: input.value,
-            replyingTo: replyTo,
-            time: Date.now()
-        });
-        input.value = "";
-        cancelReply();
+    function renderChatMessage(id, c) {
+        const list = document.getElementById('chatList'); const likes = c.likes ? Object.keys(c.likes).length : 0; const isLiked = c.likes && c.likes[auth.currentUser.uid] ? 'liked' : '';
+        const row = document.createElement('div'); row.className = 'chat-row'; row.id = `msg-${id}`;
+        row.innerHTML = `<img src="${c.pfp}" class="chat-pfp"><div class="chat-content"><div class="bubble"><span class="chat-name">${c.name} ${c.uid === auth.currentUser.uid ? '<small>(You)</small>' : ''}</span><span class="chat-text">${c.msg}</span></div><div class="chat-actions"><button class="action-btn ${isLiked}" onclick="likeChat('${id}')"><i data-lucide="heart" style="width:12px"></i> <span id="likes-${id}">${likes}</span></button><button class="action-btn" onclick="setReply('${id}', '${c.name}')"><i data-lucide="message-circle" style="width:12px"></i> Reply</button></div><div class="reply-box" id="replies-${id}"></div></div>`;
+        list.appendChild(row); lucide.createIcons(); list.scrollTop = list.scrollHeight;
     }
 
-    function setReply(key, name) {
-        replyTo = { key, name };
-        document.getElementById('replyIndicator').style.display = 'flex';
-        document.getElementById('replyText').innerText = "Replying to " + name;
-    }
-    function cancelReply() { replyTo = null; document.getElementById('replyIndicator').style.display = 'none'; }
-
-    function switchTab(t) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('bingoTab').style.display = (t === 'bingo') ? 'block' : 'none';
-        document.getElementById('bringmeTab').style.display = (t === 'bringme') ? 'block' : 'none';
-        event.currentTarget.classList.add('active');
-    }
-
-    function saveGcash() {
-        const num = document.getElementById('gcashInput').value;
-        if(num.length < 10) return alert("Invalid Number");
-        db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => alert("Saved!"));
-    }
-
-    function claimReferral() {
-        const code = document.getElementById('referralInput').value.trim().toUpperCase();
-        if(!code) return;
-        db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => {
-            if(s.exists()) {
-                db.ref('users/' + auth.currentUser.uid).update({ 
-                    referredBy: code, 
-                    points: (userData.points || 0) + 100 
-                });
-                alert("100 Points Claimed!");
-            } else alert("Invalid Code");
-        });
-    }
-
-    function redeem(item, cost) {
-        if((userData.points || 0) < cost) return alert("Not enough points!");
-        if(!userData.gcash) return alert("Please save GCash number first!");
-        db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost);
-        db.ref('redemptions').push({
-            uid: auth.currentUser.uid,
-            name: auth.currentUser.displayName,
-            gcash: userData.gcash,
-            item: item,
-            cost: cost,
-            status: 'pending',
-            time: Date.now()
-        });
-        alert("Request Sent!");
-    }
-
-    function openMenuModal() {
-        document.getElementById('menuModal').style.display = 'flex';
-        db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => {
-            const hist = document.getElementById('historyList');
-            hist.innerHTML = "";
-            s.forEach(c => {
-                const v = c.val();
-                hist.innerHTML += `<div class="history-item">
-                    <div class="hist-main"><span class="hist-title">${v.item}</span></div>
-                    <span class="hist-status status-${v.status}">${v.status}</span>
-                </div>`;
-            });
-        });
-    }
-
-    function closeMenuModal() { document.getElementById('menuModal').style.display = 'none'; }
-
-    // AI Scanner placeholder logic (keeping existing AI functions)
-    async function processAI(input) {
-        if(!input.files[0]) return;
-        const scan = document.getElementById('aiScanningOverlay');
-        const preview = document.getElementById('capturedImg');
-        const placeholder = document.getElementById('aiPlaceholder');
-        
-        scan.style.display = 'block';
-        placeholder.style.display = 'none';
-        preview.style.display = 'block';
-        preview.src = URL.createObjectURL(input.files[0]);
-
-        setTimeout(() => {
-            scan.style.display = 'none';
-            alert("AI Scanning is currently in Beta. Your photo has been sent to Host for manual verification.");
-        }, 3000);
-    }
-
-    // [BACKWARD COMPATIBILITY] Added back the missing announcement function
-    function listenToAnnouncements() {
-        db.ref('gameState/announcement').on('value', (snapshot) => {
-            const msg = snapshot.val();
-            if (msg && msg.trim() !== "") {
-                // You can use a toast or small popup here if needed
-                console.log("Broadcast:", msg);
-            }
-        });
-    }
-
-    lucide.createIcons();
+    function likeChat(id) { const uid = auth.currentUser.uid; const likeRef = db.ref(`chats/${id}/likes/${uid}`); likeRef.once('value', s => { if(s.exists()) likeRef.remove(); else likeRef.set(true); }); }
+    function setReply(id, name) { selectedReplyId = id; document.getElementById('replyIndicator').style.display = 'flex'; document.getElementById('replyText').innerText = `Replying to ${name}...`; document.getElementById('chatIn').focus(); }
+    function cancelReply() { selectedReplyId = null; document.getElementById('replyIndicator').style.display = 'none'; }
+    function sendChat() { const inp = document.getElementById('chatIn'); const msg = inp.value.trim(); if(!msg) return; if(selectedReplyId) { db.ref(`chats/${selectedReplyId}/replies`).push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() }); cancelReply(); } else { db.ref('chats').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() }); } inp.value = ""; }
+    function openNotifs() { document.getElementById('notifModal').style.display='flex'; document.getElementById('notifDot').style.display='none'; renderNotifs(); }
+    function renderNotifs() { const list = document.getElementById('notifList'); db.ref('notifications/' + auth.currentUser.uid).limitToLast(10).once('value', s => { list.innerHTML = ""; if(!s.exists()) { list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px;'>No messages</div>"; return; } s.forEach(n => { const val = n.val(); const div = document.createElement('div'); div.style.cssText = "background:var(--surface-br); padding:15px; border-radius:12px; margin-bottom:10px;"; div.innerHTML = `<div style="font-size:13px;">${val.msg}</div>`; list.prepend(div); }); }); }
+    function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length < 10) return alert("Error"); db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => alert("Saved!")); }
+    function claimReferral() { const code = document.getElementById('referralInput').value.trim().toUpperCase(); db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => { if(s.exists()) { db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 }); alert("Claimed!"); } }); }
+    function redeemItem(item, cost) { if((userData.points || 0) < cost) return alert("No points!"); db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost); db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() }); }
+    function openMenuModal() { document.getElementById('menuModal').style.display = 'flex'; const hist = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { hist.innerHTML = ""; s.forEach(child => { const v = child.val(); const item = document.createElement('div'); item.className = 'history-item'; item.innerHTML = `<div class="hist-main"><span class="hist-title">${v.item}</span></div><span class="hist-status">${v.status}</span>`; hist.appendChild(item); }); }); }
 </script>
 </body>
 </html>
