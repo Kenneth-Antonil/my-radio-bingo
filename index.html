@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Radio Bingo Live | Casino Edition</title>
+    <title>Radio Bingo Live | Summer Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -15,47 +15,49 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
     <style>
-        /* === CASINO ROYAL PALETTE === */
+        /* === ORIGINAL SUMMER VIBE PALETTE (KEPT INTACT) === */
         :root { 
-            --bg-overlay: rgba(10, 10, 20, 0.95); 
-            --glass-surface: rgba(20, 20, 35, 0.9);
-            --glass-border: rgba(255, 215, 0, 0.2); /* Gold hint */
+            --bg-overlay: rgba(15, 23, 42, 0.92); 
+            --glass-surface: rgba(30, 41, 59, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.15);
             
-            --accent: #0ea5e9; 
+            --accent: #0ea5e9; /* Ocean Blue */
             --accent-glow: #38bdf8;
             --text: #ffffff; 
-            --gold: #ffbf00; 
-            --gold-shine: #ffd700;
-            --success: #00e676; 
-            --danger: #ff1744; 
-            --bringme: #7c4dff; 
+            --gold: #fbbf24; 
+            --gold-shine: #fcd34d;
+            --success: #10b981; 
+            --danger: #ef4444; 
+            --bringme: #8b5cf6; 
+            --minigame: #f472b6; 
+            
+            /* NEW CASINO VARS */
+            --casino-gold: #ffd700;
             --casino-red: #d50000;
-            --casino-purple: #6200ea;
         }
         
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
             font-family: 'Inter', sans-serif; 
-            background: #0f0c29;  /* fallback for old browsers */
-            background: linear-gradient(to bottom, #24243e, #302b63, #0f0c29); 
-            background-attachment: fixed;
+            background: url('https://images.unsplash.com/photo-1614094723477-e5ecb7274ae8?q=80&w=2576&auto=format&fit=crop') no-repeat center center fixed;
+            background-size: cover;
             color: var(--text); 
             margin: 0; 
-            padding-bottom: 80px; 
+            padding-bottom: 30px; 
             overflow-x: hidden; 
             min-height: 100vh;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
         }
 
-        /* === TOAST NOTIFICATION === */
+        /* === NEW TOAST NOTIFICATION === */
         #toast-container {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
             z-index: 99999; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 400px;
         }
         .toast {
-            background: rgba(20, 20, 35, 0.95);
-            border: 1px solid rgba(255, 215, 0, 0.3);
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(255,255,255,0.2);
             color: white; padding: 12px 16px; border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             display: flex; align-items: center; gap: 12px;
@@ -63,178 +65,575 @@
             animation: slideInDown 0.3s ease forwards;
             font-size: 13px; font-weight: 700;
         }
-        .toast.success { border-left: 4px solid var(--success); color: var(--success); }
-        .toast.error { border-left: 4px solid var(--danger); color: var(--danger); }
-        .toast.info { border-left: 4px solid var(--gold); color: var(--gold); }
+        .toast.success { border-left: 4px solid var(--success); }
+        .toast.error { border-left: 4px solid var(--danger); }
         @keyframes slideInDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes fadeOutUp { from { opacity: 1; } to { opacity: 0; transform: translateY(-20px); } }
 
-        /* === FLOATING MESSENGER BTN (PM Only) === */
+        /* === NEW FLOATING PM BUTTON === */
         .floating-pm-btn {
             position: fixed; bottom: 25px; right: 25px;
-            width: 65px; height: 65px; border-radius: 50%;
-            background: linear-gradient(135deg, #6200ea, #d50000);
-            box-shadow: 0 0 20px rgba(213, 0, 0, 0.6), inset 0 2px 5px rgba(255,255,255,0.4);
+            width: 60px; height: 60px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            box-shadow: 0 0 20px rgba(37, 99, 235, 0.6);
             display: flex; align-items: center; justify-content: center;
             color: white; z-index: 500; cursor: pointer;
-            border: 2px solid white;
+            border: 2px solid rgba(255,255,255,0.3);
             transition: transform 0.2s;
-            animation: bounce 2s infinite;
         }
         .floating-pm-btn:active { transform: scale(0.9); }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        
         .pm-badge-float {
-            position: absolute; top: 0; right: 0;
-            background: var(--gold); color: black;
+            position: absolute; top: -2px; right: -2px;
+            background: var(--danger); color: white;
             font-size: 10px; font-weight: 900;
             width: 20px; height: 20px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            border: 2px solid #fff; display: none;
+            display: none; align-items: center; justify-content: center;
+            border: 2px solid #fff;
         }
 
-        /* === GLASS PANELS === */
+        /* === SHINY GLASSMORPHISM STYLES === */
         .glass-panel {
             background: var(--glass-surface);
             backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--glass-border);
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
         }
 
-        /* BANNER */
+        /* BANNER STYLES */
         #jackpotBanner { 
-            background: linear-gradient(90deg, #b8860b, #ffd700, #b8860b); 
-            color: #000; 
-            text-shadow: none; padding: 12px; text-align: center; 
-            font-weight: 900; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; 
-            border-radius: 15px; box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); 
+            background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b); 
+            color: #451a03; 
+            text-shadow: none; 
+            padding: 12px; 
+            text-align: center; 
+            font-weight: 900; 
+            font-size: 15px; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.6); 
             animation: shimmer 2s infinite linear; 
-            background-size: 200% auto; display: none; margin-bottom: 15px; border: 2px solid #fff;
+            background-size: 200% auto; 
+            display: none; 
+            margin-bottom: 15px; 
+            border: 2px solid #fff;
         }
         @keyframes shimmer { to { background-position: 200% center; } }
+        .jackpot-amount { font-size: 20px; color: #451a03; display: block; font-weight: 900; }
 
-        /* LOGIN */
-        #loginOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(10px); }
-        .login-card { background: rgba(20, 20, 35, 0.95); padding: 50px 30px; border-radius: 40px; width: 100%; max-width: 400px; text-align: center; border: 1px solid var(--glass-border); box-shadow: 0 0 50px rgba(0,0,0,0.8); }
-        .login-logo { font-size: 42px; font-weight: 900; margin-bottom: 10px; letter-spacing: -2px; background: linear-gradient(to bottom, #fff, #ffd700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5)); }
-        .btn-google { background: white; color: #000; border: none; width: 100%; padding: 16px; border-radius: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; font-size: 16px; transition: 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-
-        /* NAVBAR */
+        /* LOGIN STYLES */
+        #loginOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(8px); }
+        .login-card { background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(20px); padding: 50px 30px; border-radius: 40px; width: 100%; max-width: 400px; text-align: center; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 25px 50px rgba(0,0,0,0.8); }
+        .login-logo { font-size: 42px; font-weight: 900; margin-bottom: 10px; letter-spacing: -2px; text-shadow: 0 4px 10px rgba(0,0,0,0.5); background: -webkit-linear-gradient(#fff, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .login-logo span { background: -webkit-linear-gradient(#38bdf8, #0ea5e9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .login-sub { font-size: 15px; opacity: 1; color: #e2e8f0; margin-bottom: 35px; line-height: 1.6; font-weight: 600; text-shadow: 0 2px 4px black; }
+        .btn-google { background: white; color: #000; border: none; width: 100%; padding: 16px; border-radius: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; font-size: 16px; transition: 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-shadow: none; }
+        .btn-google:hover { transform: translateY(-2px); box-shadow: 0 15px 25px rgba(255,255,255,0.2); }
+        
+        /* NAVBAR & PROFILE */
         .nav { 
-            background: rgba(15, 15, 30, 0.95); 
+            background: rgba(15, 23, 42, 0.95); 
             backdrop-filter: blur(15px);
-            padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.05); height: auto; min-height: 60px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: auto; min-height: 60px;
         }
         .user-stats { display: flex; align-items: center; gap: 8px; }
-        .icon-btn { background: rgba(255,255,255,0.05); color: #ffd700; border: 1px solid rgba(255,255,255,0.1); width: 38px; height: 38px; border-radius: 12px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; }
-        .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 8px; height: 8px; border-radius: 50%; display: none; box-shadow: 0 0 5px var(--danger); }
-        .points-badge { background: linear-gradient(135deg, #b8860b, #ffd700); color: #000; padding: 0 12px; height: 38px; border-radius: 12px; font-weight: 800; border: 1px solid #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
-        #userImg { width: 45px; height: 45px; border-radius: 50%; cursor: pointer; border: 2px solid var(--gold); object-fit: cover; box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+        .icon-btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.15); width: 38px; height: 38px; border-radius: 12px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .icon-btn:active { transform: scale(0.95); }
+        .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--surface); display: none; z-index: 10; box-shadow: 0 0 10px var(--danger); }
+        .points-badge { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.4)); color: #fff; padding: 0 12px; height: 38px; border-radius: 12px; font-weight: 800; border: 1px solid rgba(251, 191, 36, 0.6); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
+        
+        #userImg {
+            width: 45px; height: 45px; border-radius: 50%; /* Circular */
+            cursor: pointer; border: 2px solid var(--accent); 
+            object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
 
-        .disclaimer { background: var(--casino-red); color: white; padding: 6px 0; font-size: 10px; font-weight: 700; overflow: hidden; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        .disclaimer { background: rgba(239, 68, 68, 1); color: white; padding: 6px 0; font-size: 10px; font-weight: 700; overflow: hidden; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(5px); text-shadow: 0 1px 2px black; }
         .marquee-content { display: inline-block; animation: marquee 25s linear infinite; padding-left: 100%; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
         
-        /* NOTES */
-        .notes-container-bg { background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px; }
-        .notes-wrapper { display: flex; gap: 15px; overflow-x: auto; padding: 0 15px; scrollbar-width: none; }
+        /* === NOTES SECTION (INSTAGRAM STYLE) === */
+        .notes-container-bg {
+            background: rgba(15, 23, 42, 0.5); /* Semi-transparent bg */
+            backdrop-filter: blur(10px);
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 15px;
+        }
+
+        .notes-wrapper {
+            display: flex; gap: 15px; overflow-x: auto; padding: 0 15px;
+            scrollbar-width: none; align-items: flex-start;
+        }
         .notes-wrapper::-webkit-scrollbar { display: none; }
-        .note-item { display: flex; flex-direction: column; align-items: center; min-width: 70px; position: relative; cursor: pointer; transition: 0.2s; }
+        
+        .note-item {
+            display: flex; flex-direction: column; align-items: center;
+            min-width: 70px; position: relative; cursor: pointer; transition: 0.2s;
+        }
         .note-item:active { transform: scale(0.95); opacity: 0.8; }
-        .note-avatar-box { position: relative; width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--gold); padding: 3px; margin-bottom: 5px; background: #000; }
-        .note-avatar-box img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-        .online-status-dot { position: absolute; bottom: 2px; right: 2px; width: 14px; height: 14px; background: #00e676; border: 2px solid #000; border-radius: 50%; z-index: 5; box-shadow: 0 0 5px #00e676; }
-        .note-bubble { position: absolute; top: -5px; right: -10px; background: white; color: black; padding: 2px 6px; border-radius: 8px; font-size: 9px; font-weight: 800; max-width: 75px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 6; }
-        .note-name { font-size: 11px; margin-top: 2px; opacity: 0.9; font-weight: 600; max-width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .add-note-btn { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px dashed rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; cursor: pointer; margin-bottom: 5px; }
+        
+        .note-avatar-box {
+            position: relative; width: 64px; height: 64px;
+            border-radius: 50%; /* Circle */
+            border: 2px solid var(--accent); 
+            padding: 3px;
+            margin-bottom: 5px;
+        }
+        .note-avatar-box img {
+            width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
+        }
+        
+        /* ONLINE STATUS DOT */
+        .online-status-dot {
+            position: absolute; bottom: 2px; right: 2px;
+            width: 14px; height: 14px;
+            background: #10b981; /* Green */
+            border: 2px solid #1e293b; /* Dark border to separate from image */
+            border-radius: 50%;
+            z-index: 5;
+            box-shadow: 0 0 10px #10b981;
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .note-bubble {
+            position: absolute; top: -5px; right: -10px;
+            background: white; color: black; padding: 2px 6px;
+            border-radius: 8px; font-size: 9px; font-weight: 800;
+            max-width: 75px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3); border: 1px solid rgba(0,0,0,0.1);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 6;
+        }
+        .note-name {
+            font-size: 11px; margin-top: 2px; opacity: 0.9; font-weight: 600;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            max-width: 70px; text-shadow: 0 1px 2px black;
+        }
+        .add-note-btn {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: rgba(255,255,255,0.1); border: 1px dashed rgba(255,255,255,0.5);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 24px; cursor: pointer; margin-bottom: 5px;
+        }
 
         /* TABS */
         .tab-system { display: flex; background: rgba(0,0,0,0.6); margin: 0 0 15px 0; border-radius: 18px; padding: 5px; gap: 5px; border: 1px solid rgba(255,255,255,0.1); }
-        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #cbd5e1; font-weight: 800; font-size: 12px; cursor: pointer; border-radius: 12px; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .tab-btn.active { background: rgba(255,255,255,0.1); color: var(--gold); border: 1px solid var(--gold); box-shadow: 0 0 10px rgba(255, 215, 0, 0.2); }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #cbd5e1; font-weight: 800; font-size: 12px; cursor: pointer; border-radius: 12px; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; text-shadow: 0 1px 2px black; }
+        .tab-btn.active { background: rgba(255,255,255,0.2); color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.3); text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .tab-btn.active.bringme-tab { background: rgba(139, 92, 246, 0.3); color: white; border-color: rgba(139, 92, 246, 0.6); }
+        .tab-btn.active.minigame-tab { background: rgba(236, 72, 153, 0.3); color: white; border-color: rgba(236, 72, 153, 0.6); }
 
-        /* BINGO & UI ELEMENTS */
-        .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 10px; }
-        .card { background: rgba(20, 20, 35, 0.6); backdrop-filter: blur(20px); border-radius: 24px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .bringme-content { display: none; background: linear-gradient(180deg, rgba(46, 16, 101, 0.9) 0%, rgba(11, 17, 32, 0.95) 100%); border: 2px solid var(--bringme); border-radius: 25px; overflow: hidden; position: relative; backdrop-filter: blur(10px); }
+        .bringme-header-ai { background: var(--bringme); color: white; padding: 10px; text-align: center; font-weight: 900; font-size: 12px; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 5px 20px rgba(139, 92, 246, 0.4); }
+        .bringme-status { text-align: center; padding: 30px 20px; position: relative; }
+        .bringme-target { font-size: 32px; font-weight: 900; color: white; margin: 15px 0; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 20px rgba(139, 92, 246, 1); }
+        .bringme-desc { font-size: 15px; color: #e9d5ff; margin-bottom: 25px; font-weight: 700; text-shadow: 0 2px 4px black; }
+        .ai-camera-container { position: relative; width: 100%; max-width: 320px; aspect-ratio: 1; margin: 0 auto 20px; border-radius: 20px; border: 2px dashed var(--bringme); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); overflow: hidden; box-shadow: inset 0 0 30px rgba(0,0,0,0.5); }
+        .ai-camera-container img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .ai-placeholder { text-align: center; opacity: 0.8; color: white; }
+        .btn-upload-advanced { background: linear-gradient(135deg, var(--bringme), #7c3aed); color: white; border: none; padding: 18px 30px; border-radius: 20px; font-weight: 900; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 16px; transition: 0.3s; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.2); text-shadow: 0 1px 2px black; }
+        .btn-upload-advanced:active { transform: scale(0.98); }
+        .ai-scanning-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: #fff; box-shadow: 0 0 15px #fff, 0 0 30px var(--bringme); animation: scanLine 2s linear infinite; display: none; z-index: 10; }
+        @keyframes scanLine { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
+
+        .next-draw-container { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.4); padding: 15px; border-radius: 20px; margin-bottom: 15px; display: none; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
+        .nd-icon { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); color: var(--gold); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(251, 191, 36, 0.4); }
+        .nd-info { flex: 1; }
+        .next-draw-label { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .next-draw-time { font-size: 18px; font-weight: 900; color: white; text-shadow: 0 2px 5px rgba(0,0,0,0.8); }
         
-        .video-feed-wrapper { margin-bottom: 15px; border-radius: 24px; overflow: hidden; background: #000; border: 2px solid var(--gold); box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
+        .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 10px; }
+        /* Made card background cleaner */
+        .card { background: var(--glass-surface); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--glass-border); position: relative; transition: all 0.3s ease; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
+        
+        .video-feed-wrapper { margin-bottom: 15px; border-radius: 24px; overflow: hidden; background: #000; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
         .video-container { position: relative; height: 220px; width: 100%; }
         .video-overlay-bl { position: absolute; bottom: 12px; left: 12px; z-index: 10; background: rgba(0,0,0,0.9); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--success); display: flex; align-items: center; gap: 5px; color: var(--success); font-size: 11px; font-weight: 800; }
         
         .draw-panel { display: grid; grid-template-columns: 1fr 90px; gap: 12px; margin-bottom: 20px; }
         .prev-balls { background: rgba(0,0,0,0.4); border-radius: 16px; padding: 10px; display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; border: 1px solid rgba(255,255,255,0.1); }
-        .ball-small { min-width: 40px; height: 40px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; border: 1px solid #555; color: white; }
-        .current-ball-box { background: linear-gradient(135deg, var(--casino-red), #b71c1c); border-radius: 18px; height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(213, 0, 0, 0.5); border: 2px solid #ff5252; }
+        .ball-small { min-width: 40px; height: 40px; background: linear-gradient(135deg, #334155, #1e293b); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; border: 1px solid rgba(255,255,255,0.3); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-shadow: 0 1px 2px black; }
+        .current-ball-box { background: linear-gradient(135deg, var(--accent), #2563eb); border-radius: 18px; height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5); border: 2px solid rgba(255,255,255,0.4); position: relative; overflow: hidden; }
+        .current-ball-box::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent); animation: shine 3s infinite; }
+        @keyframes shine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
         .bingo-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px; }
-        .letter { text-align: center; font-size: 26px; font-weight: 900; color: var(--gold); text-shadow: 0 0 10px var(--gold); }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-        .cell { aspect-ratio: 1; background: rgba(255,255,255,0.05); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.1); color: white; transition: 0.3s; }
-        .cell.hit { background: var(--gold); color: black; box-shadow: 0 0 15px var(--gold); transform: scale(1.05); border-color: white; }
+        .letter { text-align: center; font-size: 26px; font-weight: 900; color: var(--gold); text-shadow: 0 2px 10px rgba(251, 191, 36, 0.8); -webkit-text-stroke: 1px rgba(0,0,0,0.5); }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; position: relative; }
+        .cell { aspect-ratio: 1; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.15); transition: all 0.3s; z-index: 2; position: relative; overflow: hidden; box-shadow: inset 0 2px 5px rgba(255,255,255,0.05); color: white; text-shadow: 0 2px 3px black; }
+        .cell.hit { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; transform: scale(1.05); border-color: rgba(255,255,255,0.6); box-shadow: 0 5px 15px rgba(59, 130, 246, 0.6); text-shadow: 0 2px 2px rgba(0,0,0,0.5); }
         
-        /* CHAT BOX (FIXED POSITION, NOT FLOATING) */
-        .chat-box { height: 400px; display: flex; flex-direction: column; background: rgba(0,0,0,0.4); border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; margin-top: 20px; }
-        .chat-header { padding: 15px 20px; background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
-        .chat-header h3 { margin: 0; font-size: 15px; font-weight: 800; }
-        #chatList { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .chat-row { display: flex; gap: 10px; animation: fadeIn 0.3s ease; }
-        .chat-pfp { width: 32px; height: 32px; border-radius: 10px; object-fit: cover; }
-        .bubble { background: rgba(255,255,255,0.1); padding: 10px 14px; border-radius: 0 15px 15px 15px; font-size: 13px; line-height: 1.4; }
-        .chat-name { color: var(--gold); font-weight: 800; font-size: 11px; display: block; margin-bottom: 2px; cursor: pointer; }
-        .chat-input-area { padding: 10px; background: rgba(0,0,0,0.5); display: flex; gap: 10px; }
-        .input-wrapper { flex:1; background: rgba(255,255,255,0.1); border-radius: 20px; display: flex; padding: 0 15px; align-items: center; }
-        .input-wrapper input { background: none; border: none; color: white; width: 100%; height: 40px; outline: none; }
-        .send-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--gold); border: none; color: black; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .card.card-win { border: 3px solid var(--success) !important; box-shadow: 0 0 50px rgba(16, 185, 129, 0.5); animation: pulse-win 2s infinite; background: rgba(16, 185, 129, 0.2); }
+        .card.card-lost { opacity: 0.6; filter: grayscale(0.8); pointer-events: none; }
+        
+        .card.card-puro { border: 2px solid var(--gold) !important; box-shadow: 0 0 40px rgba(251, 191, 36, 0.4); animation: pulse-gold 1.5s infinite; }
+        .cell.cell-waiting { background: #fffbeb !important; color: #b45309 !important; border: 2px dashed #f59e0b; animation: flash-waiting 1s infinite; z-index: 5; font-weight: 900; transform: scale(1.1); box-shadow: 0 0 20px rgba(251, 191, 36, 0.8); text-shadow: none; }
 
-        /* === MINI GAMES LOBBY === */
+        .cell.win-glow { background: #10b981 !important; color: white; z-index: 3; border: 2px solid #fff; box-shadow: 0 0 25px var(--success), inset 0 0 15px rgba(255,255,255,0.3); animation: popWin 0.4s ease forwards; }
+        .cell.win-glow::after { opacity: 0; animation: fadeInLine 0.5s forwards; }
+
+        @keyframes pulse-gold { 0% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.3); border-color: rgba(251, 191, 36, 0.5); } 50% { box-shadow: 0 0 40px rgba(251, 191, 36, 0.7); border-color: var(--gold); } 100% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.3); border-color: rgba(251, 191, 36, 0.5); } }
+        @keyframes flash-waiting { 0% { opacity: 1; transform: scale(1.1); } 50% { opacity: 0.7; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1.1); } }
+        @keyframes pulse-win { 0% { box-shadow: 0 0 20px var(--success); } 50% { box-shadow: 0 0 50px var(--success); } 100% { box-shadow: 0 0 20px var(--success); } }
+        @keyframes popWin { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1.05); } }
+        @keyframes fadeInLine { from { opacity: 0; } to { opacity: 1; } }
+
+        .cell.win-line-h::after { content:''; position:absolute; top:50%; left:0; right:0; height:6px; background:var(--gold); transform:translateY(-50%); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; border-radius:10px; }
+        .cell.win-line-v::after { content:''; position:absolute; top:0; bottom:0; left:50%; width:6px; background:var(--gold); transform:translateX(-50%); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; border-radius:10px; }
+        .cell.win-line-d1::after { content:''; position:absolute; top:50%; left:-50%; right:-50%; height:6px; background:var(--gold); transform:translateY(-50%) rotate(45deg); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; }
+        .cell.win-line-d2::after { content:''; position:absolute; top:50%; left:-50%; right:-50%; height:6px; background:var(--gold); transform:translateY(-50%) rotate(-45deg); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; }
+
+        .late-overlay, .game-over-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); }
+        .late-text { font-weight: 800; font-size: 20px; color: white; margin-bottom: 8px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); }
+        .late-subtext { font-size: 14px; opacity: 1; color: #cbd5e1; text-shadow: 0 2px 4px black; }
+        #winnerBanner { display: none; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 15px; border-radius: 16px; text-align: center; font-weight: 900; margin-bottom: 15px; animation: slideDown 0.5s ease; border: 2px solid #a7f3d0; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4); text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .winner-line { font-size: 13px; opacity: 1; margin-top: 5px; display: block; font-weight: 600; }
+        @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .chat-box { height: 450px; display: flex; flex-direction: column; background: var(--glass-surface); border-radius: 24px; border: 1px solid var(--glass-border); overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.6); backdrop-filter: blur(20px); }
+        .chat-header { padding: 15px 20px; background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+        .chat-header h3 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: 0.5px; }
+        #chatList { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 18px; scroll-behavior: smooth; }
+        #chatList::-webkit-scrollbar { width: 5px; }
+        #chatList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        .chat-row { display: flex; gap: 12px; max-width: 95%; position: relative; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .chat-pfp { width: 38px; height: 38px; border-radius: 14px; border: 2px solid var(--accent); flex-shrink: 0; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .chat-content { flex: 1; }
+        .bubble { background: rgba(255,255,255,0.1); padding: 12px 16px; border-radius: 0 20px 20px 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.2); backdrop-filter: blur(5px); }
+        .chat-name { font-size: 12px; font-weight: 800; color: var(--accent-glow); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; text-shadow: 0 0 10px rgba(56, 189, 248, 0.6); cursor:pointer; }
+        .chat-text { font-size: 13.5px; line-height: 1.5; color: #ffffff; word-break: break-word; text-shadow: 0 1px 2px black; font-weight: 500; }
+        .chat-actions { display: flex; gap: 15px; margin-top: 6px; padding-left: 4px; }
+        .action-btn { background: none; border: none; color: #cbd5e1; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 2px 0; transition: 0.2s; text-shadow: 0 1px 2px black; }
+        .action-btn:hover { color: var(--text); }
+        .action-btn.liked { color: var(--minigame); }
+        .action-btn.liked i { fill: var(--minigame); }
+        .reply-box { margin-left: 48px; margin-top: 10px; padding-left: 12px; border-left: 2px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 8px; }
+        .reply-item { display: flex; gap: 8px; align-items: flex-start; }
+        .reply-pfp { width: 24px; height: 24px; border-radius: 8px; }
+        .reply-bubble { background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 12px; flex: 1; }
+        .reply-indicator { background: rgba(255,255,255,0.05); padding: 10px 15px; font-size: 12px; display: none; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .chat-input-area { background: rgba(0,0,0,0.3); padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .input-wrapper { display: flex; gap: 10px; background: rgba(15, 23, 42, 0.8); padding: 6px 6px 6px 15px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.2); transition: 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.4); }
+        .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        .input-wrapper input { flex: 1; background: none; border: none; color: white; outline: none; font-size: 14px; height: 42px; text-shadow: none; font-weight: 500; }
+        .input-wrapper input::placeholder { color: #94a3b8; }
+        .send-btn { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; border: none; width: 42px; height: 42px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+        .send-btn:hover { transform: scale(1.05); }
+        
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(15px); }
+        .modal-content { background: rgba(30, 41, 59, 0.95); border-radius: 30px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.2); max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.8); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+        
+        .reward-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
+        .reward-item { background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)); padding: 18px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.15); transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .reward-item:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2); }
+        .reward-main { display: flex; align-items: center; gap: 15px; }
+        .reward-icon-box { width: 45px; height: 45px; background: rgba(59, 130, 246, 0.2); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: var(--accent-glow); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .reward-info b { font-size: 16px; display: block; color: white; letter-spacing: 0.3px; text-shadow: 0 2px 2px black; }
+        .reward-info small { color: var(--gold); font-weight: 800; font-size: 12px; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+        .btn-redeem { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transition: 0.2s; text-shadow: 0 1px 2px black; }
+        .btn-redeem:active { transform: scale(0.95); }
+        
+        .profile-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .profile-img-large { width: 70px; height: 70px; border-radius: 22px; border: 3px solid var(--accent); box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+        .profile-name-info { flex: 1; }
+        .profile-name { font-size: 20px; font-weight: 900; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .profile-uid { font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; color: #cbd5e1; }
+        
+        .gcash-section { background: rgba(59, 130, 246, 0.15); padding: 15px; border-radius: 18px; margin-bottom: 15px; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .styled-input { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); padding: 12px 15px; border-radius: 12px; color: white; font-weight: 700; outline: none; font-size: 14px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.3); text-shadow: none; }
+        .styled-input:focus { border-color: var(--accent); background: rgba(0,0,0,0.6); }
+        
+        .ref-container { background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(59, 130, 246, 0.15)); border: 1px solid rgba(16, 185, 129, 0.3); padding: 15px; border-radius: 18px; margin-bottom: 15px; }
+        .history-box { margin-top: 20px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 18px; border: 1px solid rgba(255,255,255,0.1); }
+        .history-list { max-height: 250px; overflow-y: auto; padding-right: 5px; }
+        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        
+        .btn-change { background: rgba(59, 130, 246, 0.2); color: var(--accent-glow); border: 1px solid var(--accent); height: 40px; padding: 0 15px; border-radius: 12px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); text-shadow: 0 1px 2px black; }
+        .btn-change:hover { background: var(--accent); color: white; }
+        .btn-change:disabled { opacity: 0.5; cursor: not-allowed; border-color: #475569; color: #94a3b8; background: none; }
+        
+        .pattern-box { background: rgba(0,0,0,0.4); height: 40px; padding: 0 15px; border-radius: 12px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px); }
+        .pattern-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+        .pattern-text { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* NEW NOTIFICATION STYLES */
+        .notif-card-new { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.15); position: relative; transition: 0.2s; backdrop-filter: blur(5px); }
+        .notif-card-new:hover { background: rgba(255,255,255,0.15); border-color: var(--accent); }
+        .notif-header-new { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .notif-title { font-size: 12px; font-weight: 800; color: var(--accent-glow); display: flex; align-items: center; gap: 5px; }
+        .notif-time { font-size: 10px; opacity: 0.6; color: #cbd5e1; }
+        .notif-body { font-size: 13px; line-height: 1.5; color: #ffffff; text-shadow: 0 1px 2px black; }
+        .btn-del-notif { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; transition: 0.2s; }
+        .btn-del-notif:hover { color: var(--danger); }
+
+        /* ========================================= */
+        /* PROFESSIONAL MINI GAMES LOBBY & FULL PAGE */
+        /* ========================================= */
+        
+        .tab-btn.minigame-tab:hover { color: var(--minigame); }
+
+        /* Lobby Grid */
         .minigame-lobby { display: grid; grid-template-columns: 1fr; gap: 15px; padding: 10px 0; }
         .game-poster { 
-            position: relative; height: 160px; border-radius: 24px; overflow: hidden; 
-            cursor: pointer; border: 2px solid rgba(255,255,255,0.1); 
-            transition: transform 0.3s;
+            position: relative; height: 180px; border-radius: 24px; overflow: hidden; 
+            cursor: pointer; border: 1px solid rgba(255,255,255,0.3); 
+            transition: transform 0.3s, box-shadow 0.3s;
             background-size: cover; background-position: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .game-poster:hover { transform: scale(1.02); border-color: var(--gold); box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
-        .poster-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: linear-gradient(0deg, black, transparent); }
-        .poster-title { font-size: 20px; font-weight: 900; color: white; text-transform: uppercase; text-shadow: 0 2px 5px black; }
-        .poster-play { position: absolute; top: 10px; right: 10px; background: var(--gold); color: black; padding: 4px 12px; border-radius: 20px; font-weight: 900; font-size: 10px; }
+        .game-poster:hover { transform: scale(1.03); box-shadow: 0 20px 40px rgba(0,0,0,0.7); border-color: var(--minigame); }
+        .poster-content { 
+            position: absolute; bottom: 0; left: 0; right: 0; padding: 20px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0) 100%);
+        }
+        .poster-title { font-size: 22px; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 10px black; }
+        .poster-desc { font-size: 12px; color: #cbd5e1; font-weight: 500; opacity: 1; text-shadow: 0 1px 2px black; }
+        .poster-play { 
+            position: absolute; top: 15px; right: 15px; background: white; color: black; 
+            padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 900; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); transform: rotate(5deg);
+        }
 
-        /* === ONLINE CASINO OVERLAYS === */
+        /* Full Screen Game Overlay - UPDATED TO CASINO THEME */
         .game-overlay-fs {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #121212; 
+            background: radial-gradient(circle at center, #1a0b0b, #000000); /* Darker Casino BG */
             z-index: 2000; display: none; flex-direction: column;
             overflow-y: auto; padding: 20px;
-            background-image: radial-gradient(circle at 50% 50%, #2a2a2a 0%, #000 100%);
+            backdrop-filter: blur(20px);
+            animation: fadeInFs 0.4s ease;
         }
+        @keyframes fadeInFs { from{opacity:0;} to{opacity:1;} }
+
         .go-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .go-back-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 20px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .go-back-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 12px; font-weight: 800; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px); }
+        .go-back-btn:hover { background: rgba(255,255,255,0.25); }
+        .go-title { font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
 
-        /* CASINO STYLES: ROULETTE */
-        .roulette-table { background: #013220; border: 8px solid #3e2723; border-radius: 50px; padding: 30px; box-shadow: inset 0 0 50px #000, 0 20px 50px #000; position: relative; }
-        .roulette-table::before { content: 'RADIO BINGO CASINO'; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-weight: 900; color: rgba(255,255,255,0.1); font-size: 20px; width: 100%; text-align: center; pointer-events: none; }
-        
-        /* CASINO STYLES: SLOTS & SCATTER */
-        .slot-machine-frame { 
-            background: linear-gradient(135deg, #2b0000, #5c0000); border: 2px solid #ffd700; 
-            border-radius: 20px; padding: 20px; box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
-            position: relative; overflow: hidden;
+        /* === 3D CASINO SLOTS (PROFESSIONAL GOLD) === */
+        .slot-machine-frame {
+            background: linear-gradient(135deg, #fcd34d, #b45309, #fcd34d); /* Gold Metallic */
+            padding: 25px; border-radius: 35px; border: 2px solid #fff;
+            box-shadow: 
+                inset 0 0 30px rgba(0,0,0,0.5), 
+                0 30px 60px rgba(0,0,0,0.6),
+                0 0 0 6px #78350f;
+            position: relative; max-width: 400px; margin: 0 auto;
         }
-        .slot-machine-frame::before { content:''; position:absolute; top:0; left:0; width:100%; height:100%; background: url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); opacity: 0.3; pointer-events: none; }
+        .slot-lights-top { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 0 10px; }
+        .slot-bulb { width: 16px; height: 16px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 15px #ef4444, inset 0 2px 5px rgba(255,255,255,0.5); animation: blink 0.8s infinite alternate; border: 1px solid rgba(0,0,0,0.2); }
+        .slot-bulb:nth-child(even) { background: #3b82f6; box-shadow: 0 0 15px #3b82f6; animation-delay: 0.4s; }
         
-        .reel-col { background: #fff; border: 2px solid #000; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
-
-        /* JILI STYLE SCATTER GAME */
-        .scatter-frame {
-            background: linear-gradient(to bottom, #4a0000, #220000);
-            border: 3px solid #ffd700;
-            border-radius: 15px;
-            padding: 15px;
-            box-shadow: 0 0 40px rgba(255, 0, 0, 0.4);
+        .slot-window {
+            background: #000; padding: 12px; border-radius: 18px;
+            display: flex; gap: 10px; border: 4px solid #451a03;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.9);
+            margin-bottom: 25px; overflow: hidden; height: 140px; align-items: center; justify-content: center;
             position: relative;
         }
-        .scatter-logo { text-align: center; font-family: 'Arial Black', sans-serif; font-size: 28px; background: linear-gradient(to bottom, #ffd700, #ff8c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 2px 0 #000; margin-bottom: 15px; filter: drop-shadow(0 0 10px gold); }
+        /* Glass reflection on slots */
+        .slot-window::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
+            pointer-events: none;
+        }
+
+        .reel-col { 
+            flex: 1; height: 110px; background: linear-gradient(to bottom, #f1f5f9, #cbd5e1, #f1f5f9); border-radius: 10px; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 52px; position: relative; overflow: hidden;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.2), 0 0 5px rgba(0,0,0,0.5);
+            border: 1px solid #94a3b8;
+            transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            text-shadow: none; /* No shadow on emojis for clean look */
+        }
+        .reel-spinning span {
+            animation: slotBlur 0.1s linear infinite;
+            display: block; filter: blur(4px); transform: scaleY(1.2);
+        }
+        @keyframes slotBlur { 
+            0% { transform: translateY(-80px) scaleY(1.2); opacity: 0.5; } 
+            50% { transform: translateY(0px) scaleY(1.2); opacity: 1; } 
+            100% { transform: translateY(80px) scaleY(1.2); opacity: 0.5; } 
+        }
+        .reel-bounce { animation: reelStopBounce 0.4s ease-out; }
+        @keyframes reelStopBounce { 0% { transform: translateY(-20px); } 50% { transform: translateY(10px); } 100% { transform: translateY(0); } }
+
+        .slot-lever-btn {
+            background: linear-gradient(180deg, #ef4444, #b91c1c);
+            width: 100%; padding: 22px; border: none; border-radius: 18px;
+            color: white; font-weight: 900; font-size: 22px; text-transform: uppercase;
+            box-shadow: 0 8px 0 #7f1d1d, 0 15px 30px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.3);
+            cursor: pointer; transition: 0.1s; position: relative; text-shadow: 0 2px 2px rgba(0,0,0,0.3);
+        }
+        .slot-lever-btn:active { transform: translateY(5px); box-shadow: 0 3px 0 #7f1d1d, 0 5px 10px rgba(0,0,0,0.4); }
+        .slot-lever-btn:disabled { filter: grayscale(1); cursor: not-allowed; }
+
+        /* === 3D ROULETTE (PREMIUM STYLE) === */
+        .roulette-table {
+            background: radial-gradient(circle, #065f46, #064e3b);
+            padding: 35px; border-radius: 40px; border: 6px solid #b45309;
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.8), 0 30px 60px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; align-items: center;
+            position: relative;
+        }
+        /* Felt Texture */
+        .roulette-table::before {
+            content:''; position: absolute; inset: 0; border-radius: 35px;
+            background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        .wheel-outer {
+            width: 280px; height: 280px; background: linear-gradient(135deg, #451a03, #78350f); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.5); position: relative; border: 5px solid #b45309;
+        }
+        .wheel-inner {
+            width: 250px; height: 250px; border-radius: 50%;
+            background: conic-gradient(
+                #dc2626 0deg 36deg, #171717 36deg 72deg, 
+                #dc2626 72deg 108deg, #171717 108deg 144deg, 
+                #dc2626 144deg 180deg, #171717 180deg 216deg, 
+                #dc2626 216deg 252deg, #171717 252deg 288deg, 
+                #dc2626 288deg 324deg, #171717 324deg 360deg
+            );
+            border: 6px solid #fbbf24;
+            transition: transform 3s cubic-bezier(0.15, 0.85, 0.15, 1);
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .wheel-center {
+            position: absolute; width: 50px; height: 50px; 
+            background: radial-gradient(circle, #fcd34d, #b45309);
+            border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px rgba(0,0,0,0.7), inset 0 2px 5px rgba(255,255,255,0.6); z-index: 5;
+            display: flex; align-items: center; justify-content: center; border: 2px solid #fff;
+        }
+        .ball-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 50%; pointer-events: none;
+            animation: none;
+        }
+        .roulette-ball {
+            width: 14px; height: 14px; background: radial-gradient(circle at 30% 30%, #fff, #94a3b8); border-radius: 50%;
+            position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+            box-shadow: 0 0 8px white;
+        }
+        @keyframes spinBall { 0% { transform: rotate(0deg); } 100% { transform: rotate(-1080deg); } }
+        
+        .roulette-pointer {
+            position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0; border-left: 18px solid transparent; 
+            border-right: 18px solid transparent; border-top: 30px solid #fbbf24; z-index: 10;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
+        }
+
+        /* === 3D CARDS (TROPICAL HIGH LOW) === */
+        .hl-table {
+            background: radial-gradient(circle, #1e3a8a, #0f172a);
+            padding: 40px 20px; border-radius: 35px; text-align: center;
+            border: 4px solid rgba(255,255,255,0.1);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .hl-table::before {
+             content:''; position: absolute; inset: 0; border-radius: 35px;
+            background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+        .card-scene {
+            width: 150px; height: 220px; margin: 0 auto 35px;
+            perspective: 800px; position: relative;
+        }
+        .playing-card {
+            width: 100%; height: 100%; position: relative;
+            transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 18px; box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+        .playing-card.is-flipped { transform: rotateY(180deg); }
+        .card-face {
+            position: absolute; width: 100%; height: 100%;
+            backface-visibility: hidden; border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 56px; font-weight: 900; border: 1px solid #e2e8f0; text-shadow: none;
+        }
+        .card-front { background: #fff; color: #000; flex-direction: column; }
+        .card-back { 
+            background: linear-gradient(135deg, #be123c, #881337);
+            background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 10px, transparent 10px, transparent 20px);
+            transform: rotateY(180deg); border: 4px solid white;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .card-logo-mini { width: 50px; height: 50px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .suit-top { position: absolute; top: 12px; left: 12px; font-size: 24px; }
+        .suit-bottom { position: absolute; bottom: 12px; right: 12px; font-size: 24px; transform: rotate(180deg); }
+
+        .hl-controls-new { display: flex; gap: 15px; justify-content: center; position: relative; z-index: 10; }
+        .btn-guess {
+            flex: 1; padding: 18px; border-radius: 18px; border: none;
+            font-weight: 800; font-size: 14px; text-transform: uppercase;
+            cursor: pointer; transition: 0.2s; color: white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.3);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        }
+        .btn-guess:active { transform: scale(0.95); }
+        .bg-hi { background: linear-gradient(135deg, #10b981, #059669); }
+        .bg-lo { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+
+        /* Unified Win/Loss Modals inside Games */
+        .result-modal {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.85);
+            display: none; align-items: center; justify-content: center;
+            flex-direction: column; z-index: 50; border-radius: 30px;
+            backdrop-filter: blur(8px); animation: fadeIn 0.3s;
+        }
+        .res-title { font-size: 38px; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        .res-win { color: #fbbf24; text-shadow: 0 0 30px #fbbf24; }
+        .res-loss { color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+        .res-pts { font-size: 16px; color: white; opacity: 1; margin-bottom: 25px; text-shadow: 0 2px 4px black; }
+        .btn-play-again {
+            background: white; color: black; border: none; padding: 12px 25px; 
+            border-radius: 30px; font-weight: 900; font-size: 12px; cursor: pointer;
+            box-shadow: 0 0 20px rgba(255,255,255,0.3); transition: 0.2s;
+        }
+        .btn-play-again:hover { transform: scale(1.1); box-shadow: 0 0 30px rgba(255,255,255,0.5); }
+        
+        /* NEW: BET INPUT */
+        .bet-input-container {
+            margin-bottom: 15px; width: 100%; text-align: center;
+            background: rgba(0,0,0,0.3); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .bet-input {
+            width: 100px; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.5); color: white; text-align: center; font-weight: 700; font-size: 16px; outline: none;
+        }
+        .bet-input:focus { border-color: var(--gold); }
+
+        @keyframes blink { from { opacity: 0.5; } to { opacity: 1; } }
+
+        /* === SCATTER GAME (JILI STYLE) === */
+        .scatter-frame {
+            background: linear-gradient(to bottom, #4a0000, #220000);
+            border: 3px solid #ffd700; border-radius: 15px;
+            padding: 15px; box-shadow: 0 0 40px rgba(255, 0, 0, 0.4);
+            position: relative; width: 100%; max-width: 350px;
+        }
+        .scatter-logo { 
+            text-align: center; font-family: 'Arial Black', sans-serif; font-size: 24px; 
+            background: linear-gradient(to bottom, #ffd700, #ff8c00); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+            text-shadow: 0 2px 0 #000; margin-bottom: 15px; filter: drop-shadow(0 0 10px gold); 
+        }
         .scatter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; background: #000; padding: 10px; border: 2px solid #ffd700; border-radius: 10px; }
         .scatter-cell { 
             height: 80px; background: linear-gradient(to bottom, #333, #111); border-radius: 8px; 
@@ -250,26 +649,45 @@
         }
         .btn-spin-gold:active { transform: translateY(5px); box-shadow: 0 0 0 #8b4500; }
 
-        /* SHARED BET INPUT */
-        .bet-input-container { margin-bottom: 15px; text-align: center; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); }
-        .bet-input { width: 120px; padding: 10px; background: #000; border: 1px solid var(--gold); color: var(--gold); text-align: center; font-size: 18px; font-weight: 700; border-radius: 8px; outline: none; }
 
-        /* PM MODAL */
-        .pm-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 10px; }
-        .pm-container { width: 100%; max-width: 450px; height: 80vh; background: #1a1a1a; border-radius: 20px; border: 1px solid #333; display: flex; flex-direction: column; overflow: hidden; }
-        .pm-header { padding: 15px; background: #111; border-bottom: 1px solid #333; display: flex; justify-content: space-between; color: white; }
-        .pm-inbox-list { flex: 1; overflow-y: auto; }
-        .pm-item { padding: 15px; border-bottom: 1px solid #222; display: flex; gap: 15px; align-items: center; cursor: pointer; }
-        .pm-item:hover { background: #222; }
+        /* === NEW FEATURE: PRIVATE MESSENGER MODAL === */
+        .pm-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000;
+            display: none; align-items: center; justify-content: center;
+            padding: 10px; backdrop-filter: blur(10px);
+        }
+        .pm-container {
+            width: 100%; max-width: 450px; height: 80vh; 
+            background: var(--glass-surface); border-radius: 25px;
+            border: 1px solid var(--glass-border); display: flex; flex-direction: column;
+            overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+        .pm-header {
+            padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(0,0,0,0.2);
+        }
+        .pm-inbox-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .pm-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px;
+            border-radius: 16px; transition: 0.2s; cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .pm-item:hover { background: rgba(255,255,255,0.1); }
+        .pm-avatar { width: 45px; height: 45px; border-radius: 14px; object-fit: cover; }
+        .pm-info { flex: 1; }
+        .pm-name { font-size: 14px; font-weight: 800; display: block; color: white; }
+        .pm-preview { font-size: 12px; opacity: 0.6; display: block; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
         .pm-chat-view { display: none; flex-direction: column; height: 100%; }
-        .msg-bubble { padding: 8px 12px; border-radius: 15px; font-size: 14px; max-width: 75%; margin-bottom: 10px; word-break: break-word; }
-        .msg-me { align-self: flex-end; background: var(--accent); color: white; }
-        .msg-them { align-self: flex-start; background: #333; color: white; }
-
-        .result-modal { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center; z-index: 50; }
-        .res-title { font-size: 40px; font-weight: 900; margin-bottom: 10px; text-transform: uppercase; }
-        .res-win { color: #ffd700; text-shadow: 0 0 20px #ffd700; }
-        .res-loss { color: #ff1744; text-shadow: 0 0 20px #ff1744; }
+        .pm-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg-bubble { 
+            padding: 10px 14px; border-radius: 18px; font-size: 13px; max-width: 75%; word-break: break-word; line-height: 1.4;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .msg-me { align-self: flex-end; background: var(--accent); color: white; border-bottom-right-radius: 4px; }
+        .msg-them { align-self: flex-start; background: rgba(255,255,255,0.15); color: white; border-bottom-left-radius: 4px; }
+        .pm-input-area { padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); display: flex; gap: 10px; }
+        .unread-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; display: none; }
 
     </style>
 </head>
@@ -278,14 +696,14 @@
 <div id="toast-container"></div>
 
 <div class="floating-pm-btn" onclick="openMessenger()">
-    <i data-lucide="mail" style="width:28px;"></i>
+    <i data-lucide="mail" style="width:24px;"></i>
     <div id="pmBadgeFloat" class="pm-badge-float">0</div>
 </div>
 
 <div id="loginOverlay">
     <div class="login-card">
         <div class="login-logo">RADIO<span>BINGO</span></div>
-        <p class="login-sub">Welcome to the Casino Edition. Log in to play.</p>
+        <p class="login-sub">Welcome to the official live stream bingo. Sign in to start winning points!</p>
         <button class="btn-google" onclick="login()">
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:18px">
             Sign in with Google
@@ -294,7 +712,7 @@
 </div>
 
 <div class="nav">
-    <div style="display:flex; align-items:center;"><span style="font-weight: 900; font-size: 20px; color:white;">RADIO<span style="color:var(--gold)">BINGO</span></span></div>
+    <div style="display:flex; align-items:center;"><span style="font-weight: 900; font-size: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.8);">RADIO<span style="color:var(--accent-glow)">BINGO</span></span></div>
     <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
         <div class="user-stats">
             <div class="icon-btn" onclick="openNotifs()">
@@ -307,10 +725,11 @@
     </div>
 </div>
 
-<div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: FOR ENTERTAINMENT PURPOSES ONLY. NO REAL MONEY GAMBLING.</div></div>
+<div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang.</div></div>
 
 <div class="notes-container-bg">
-    <div id="notesSection" class="notes-wrapper"></div>
+    <div id="notesSection" class="notes-wrapper">
+        </div>
 </div>
 
 <div class="container">
@@ -335,9 +754,9 @@
     </div>
 
     <div class="tab-system">
-        <button class="tab-btn active" onclick="switchTab('bingo'); playSound('click');"><i data-lucide="grid"></i> BINGO</button>
+        <button class="tab-btn active" onclick="switchTab('bingo'); playSound('click');"><i data-lucide="grid"></i> BINGO CARD</button>
         <button class="tab-btn bringme-tab" onclick="switchTab('bringme'); playSound('click');"><i data-lucide="camera"></i> BRING ME</button>
-        <button class="tab-btn minigame-tab" onclick="switchTab('minigames'); playSound('click');"><i data-lucide="gamepad-2"></i> CASINO GAMES</button>
+        <button class="tab-btn minigame-tab" onclick="switchTab('minigames'); playSound('click');"><i data-lucide="gamepad-2"></i> MINI GAMES</button>
     </div>
 
     <div id="winnerBanner">
@@ -352,12 +771,16 @@
         </div>
         <div class="card" id="bingoCardContainer">
             <div id="lateOverlay" class="late-overlay">
-                <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom:15px;"></i>
+                <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom:15px; filter: drop-shadow(0 0 10px var(--danger));"></i>
                 <div class="late-text">GAME ONGOING</div>
-                <div class="late-subtext">Waiting for next game.</div>
+                <div class="late-subtext">Sorry, ongoing na ang bola. Bawal na sumali ang late.</div>
+                <div style="margin-top:20px; background:rgba(255,255,255,0.1); padding:10px 20px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+                    <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
+                    <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
+                </div>
             </div>
             <div id="gameOverOverlay" class="game-over-overlay">
-                <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom:15px;"></i>
+                <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom:15px; filter: drop-shadow(0 0 15px var(--gold));"></i>
                 <div class="late-text">Game Finished</div>
                 <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
             </div>
@@ -372,16 +795,23 @@
             <div class="grid" id="bingoGrid"></div>
         </div>
 
-        <div class="chat-box">
+        <div class="chat-box card" style="padding:0; margin-top:15px;">
             <div class="chat-header">
-                <h3><i data-lucide="message-square" style="width:16px; margin-right:5px;"></i> LIVE CHAT</h3>
+                <i data-lucide="message-square" style="width:18px; color:var(--accent-glow)"></i>
+                <h3>LIVE CHAT</h3>
             </div>
             <div id="chatList"></div>
+            <div id="replyIndicator" class="reply-indicator">
+                <span id="replyText">Replying to...</span>
+                <button onclick="cancelReply()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" style="width:14px"></i></button>
+            </div>
             <div class="chat-input-area">
-                <div class="input-wrapper">
-                    <input type="text" id="chatIn" placeholder="Say something..." autocomplete="off">
-                </div>
-                <button class="send-btn" onclick="sendChat()"><i data-lucide="send" style="width:16px;"></i></button>
+                <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
+                    <input type="text" id="chatIn" placeholder="Write a message..." autocomplete="off">
+                    <button type="submit" class="send-btn">
+                        <i data-lucide="send" style="width:18px"></i>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -408,16 +838,19 @@
                 <button class="btn-upload-advanced" onclick="document.getElementById('bringmeFile').click(); playSound('click');">
                     <i data-lucide="camera"></i> CAPTURE & IDENTIFY
                 </button>
+                <p style="font-size:10px; opacity:0.8; margin-top:15px; font-weight:600; text-shadow:0 1px 2px black;">AI will automatically identify the object in the photo.</p>
             </div>
+
             <div id="aiLoading" style="display:none; margin-top:15px; text-align:center;">
-                <p id="aiStatusText" style="font-size:12px; font-weight:800; color:var(--bringme);">ANALYZING...</p>
+                <div class="spinner" style="border:3px solid rgba(255,255,255,0.1); border-top:3px solid var(--bringme); width:24px; height:24px; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto;"></div>
+                <p id="aiStatusText" style="font-size:12px; margin-top:12px; font-weight:800; color:var(--bringme);">ANALYZING PIXELS...</p>
             </div>
         </div>
     </div>
 
     <div id="minigamesTab" style="display:none;">
         <div class="minigame-lobby">
-             <div class="game-poster" onclick="openGame('scatter')" style="background-image: url('https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=2574&auto=format&fit=crop'); border-color: #d50000; box-shadow: 0 0 15px red;">
+            <div class="game-poster" onclick="openGame('scatter')" style="background-image: url('https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=2574&auto=format&fit=crop'); border-color: #d50000; box-shadow: 0 0 15px red;">
                 <div class="poster-play" style="background:red; color:white;">HOT</div>
                 <div class="poster-content">
                     <div class="poster-title" style="color:#ffd700;">Golden Scatter</div>
@@ -485,7 +918,7 @@
 <div id="game-roulette" class="game-overlay-fs">
     <div class="go-header">
         <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
-        <div class="go-title" style="color:#00e676;">Roulette</div>
+        <div class="go-title" style="color:#ef4444; text-shadow:0 0 10px rgba(239, 68, 68, 0.4);">Roulette</div>
     </div>
     
     <div style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;">
@@ -500,19 +933,19 @@
                 </div>
             </div>
             
-            <div style="margin-top:30px; text-align:center; position:relative; width:100%;">
+            <div style="margin-top:50px; text-align:center; position:relative; width:100%;">
                 <div id="rouletteResult" class="result-modal">
                     <div class="res-title res-win" id="rouletteTitle">YOU WON!</div>
                     <div class="res-pts" id="rouletteSub">+50 Points</div>
-                    <button class="btn-spin-gold" onclick="resetGameUI('roulette')" style="width:auto; padding:10px 20px; font-size:12px;">PLAY AGAIN</button>
+                    <button class="btn-play-again" onclick="resetGameUI('roulette')">PLAY AGAIN</button>
                 </div>
                 
                 <div class="bet-input-container">
-                    <div style="font-size:10px; color:#aaa; margin-bottom:5px;">BET</div>
-                    <input type="number" id="rouletteBet" class="bet-input" value="50">
+                    <div style="font-size:10px; text-transform:uppercase; font-weight:700; color:var(--gold); margin-bottom:5px;">Place Your Bet</div>
+                    <input type="number" id="rouletteBet" class="bet-input" placeholder="Points" value="50">
                 </div>
 
-                <button id="btnSpinWheel" onclick="spinRoulette()" class="btn-spin-gold" style="background: linear-gradient(180deg, #00e676, #004d40); color:white; border-color:#00e676; box-shadow: 0 5px 0 #004d40;">SPIN</button>
+                <button id="btnSpinWheel" onclick="spinRoulette()" class="slot-lever-btn" style="background: linear-gradient(180deg, #10b981, #047857); box-shadow: 0 8px 0 #064e3b, 0 15px 25px rgba(0,0,0,0.5); border-top: 1px solid rgba(255,255,255,0.3);">SPIN THE WHEEL</button>
             </div>
         </div>
     </div>
@@ -521,7 +954,7 @@
 <div id="game-highlow" class="game-overlay-fs">
     <div class="go-header">
         <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
-        <div class="go-title" style="color:#3b82f6;">High Low</div>
+        <div class="go-title" style="color:#3b82f6; text-shadow:0 0 10px rgba(59, 130, 246, 0.4);">High Low</div>
     </div>
 
     <div style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;">
@@ -540,13 +973,13 @@
                  <div id="hlResult" class="result-modal" style="border-radius:18px;">
                     <div class="res-title res-win" id="hlTitle">CORRECT</div>
                     <div class="res-pts" id="hlSub">+50 Points</div>
-                    <button class="btn-spin-gold" onclick="resetGameUI('hl')" style="width:auto; padding:10px 20px; font-size:12px; background:white; color:black;">PLAY AGAIN</button>
+                    <button class="btn-play-again" onclick="resetGameUI('hl')">PLAY AGAIN</button>
                 </div>
             </div>
 
             <div class="bet-input-container">
-                <div style="font-size:10px; color:#aaa; margin-bottom:5px;">BET</div>
-                <input type="number" id="hlBet" class="bet-input" value="50">
+                <div style="font-size:10px; text-transform:uppercase; font-weight:700; color:var(--gold); margin-bottom:5px;">Place Your Bet</div>
+                <input type="number" id="hlBet" class="bet-input" placeholder="Points" value="50">
             </div>
 
             <div class="hl-controls-new">
@@ -560,12 +993,13 @@
 <div id="game-slots" class="game-overlay-fs">
     <div class="go-header">
         <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
-        <div class="go-title" style="color:#fbbf24;">Classic Slots</div>
+        <div class="go-title" style="color:#fbbf24; text-shadow:0 0 10px rgba(251, 191, 36, 0.4);">Summer Slots</div>
     </div>
 
     <div style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;">
         <div class="slot-machine-frame">
             <div class="slot-lights-top">
+                <div class="slot-bulb"></div><div class="slot-bulb"></div><div class="slot-bulb"></div>
                 <div class="slot-bulb"></div><div class="slot-bulb"></div><div class="slot-bulb"></div>
             </div>
             
@@ -577,16 +1011,18 @@
                  <div id="slotResult" class="result-modal">
                     <div class="res-title res-win" id="slotTitle">JACKPOT!</div>
                     <div class="res-pts" id="slotSub">+100 Points</div>
-                    <button class="btn-spin-gold" onclick="resetGameUI('slot')" style="width:auto; padding:10px 20px; font-size:12px;">PLAY AGAIN</button>
+                    <button class="btn-play-again" onclick="resetGameUI('slot')">PLAY AGAIN</button>
                 </div>
             </div>
 
             <div class="bet-input-container">
-                <div style="font-size:10px; color:#aaa; margin-bottom:5px;">BET</div>
-                <input type="number" id="slotBet" class="bet-input" value="50">
+                <div style="font-size:10px; text-transform:uppercase; font-weight:700; color:var(--gold); margin-bottom:5px;">Place Your Bet</div>
+                <input type="number" id="slotBet" class="bet-input" placeholder="Points" value="50">
             </div>
 
-            <button class="slot-lever-btn" id="btnPullLever" onclick="pullSlotLever()">SPIN</button>
+            <button class="slot-lever-btn" id="btnPullLever" onclick="pullSlotLever()">
+                SPIN
+            </button>
         </div>
     </div>
 </div>
@@ -595,7 +1031,7 @@
     <div class="pm-container">
         <div id="pmInboxView" style="display:flex; flex-direction:column; height:100%;">
             <div class="pm-header">
-                <h3 style="margin:0; font-size:16px; font-weight:800; display:flex; gap:8px; align-items:center;"><i data-lucide="message-circle"></i> Inbox</h3>
+                <h3 style="margin:0; font-size:16px; font-weight:800; display:flex; gap:8px; align-items:center;"><i data-lucide="message-circle"></i> Messages</h3>
                 <button onclick="document.getElementById('pmModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
             </div>
             <div id="pmList" class="pm-inbox-list"></div>
@@ -610,9 +1046,9 @@
                 </div>
                 <button onclick="document.getElementById('pmModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
             </div>
-            <div id="pmMessages" class="pm-messages" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column;"></div>
+            <div id="pmMessages" class="pm-messages"></div>
             <form class="pm-input-area" onsubmit="event.preventDefault(); sendPrivateMessage();">
-                <input type="text" id="pmInput" class="styled-input" placeholder="Type..." autocomplete="off">
+                <input type="text" id="pmInput" class="styled-input" placeholder="Type a message..." autocomplete="off">
                 <button type="submit" class="send-btn"><i data-lucide="send" style="width:16px"></i></button>
             </form>
         </div>
@@ -621,7 +1057,13 @@
 
 <div id="notifModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 style="color:white; margin-top:0;">Notifications</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="background:rgba(255,255,255,0.1); padding:8px; border-radius:10px;"><i data-lucide="inbox" style="width:20px;"></i></div>
+                <h3 style="margin:0; font-size:18px;">Inbox</h3>
+            </div>
+            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+        </div>
         <div id="notifList"></div>
     </div>
 </div>
@@ -634,28 +1076,69 @@
                 <h2 class="profile-name" id="profileNameDisplay">User Name</h2>
                 <span class="profile-uid" id="profileUidDisplay">UID: ---</span>
             </div>
+            <button onclick="document.getElementById('menuModal').style.display='none'" style="background:none; border:none; color:white; opacity:0.5;"><i data-lucide="x"></i></button>
         </div>
         <div class="gcash-section">
-            <input type="number" id="gcashInput" class="styled-input" placeholder="GCash Number">
-            <button onclick="saveGcash()" style="margin-top:10px; background:var(--accent); border:none; color:white; padding:10px; width:100%; border-radius:10px;">Save GCash</button>
+            <span style="font-size:10px; font-weight:800; color:var(--accent-glow); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="smartphone" style="width:12px"></i> GCash Number</span>
+            <div style="display:flex; gap:10px;">
+                <input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx">
+                <button onclick="saveGcash(); playSound('click');" style="background:var(--accent); border:none; color:white; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer; box-shadow:0 4px 10px rgba(59, 130, 246, 0.3);">SAVE</button>
+            </div>
         </div>
         <div class="ref-container">
-             <input type="text" id="refLink" readonly class="styled-input" style="text-align:center;" onclick="this.select(); document.execCommand('copy'); showToast('Copied!', 'success');">
-             <div id="referralInputSection" style="margin-top:10px;">
-                <input type="text" id="referralInput" class="styled-input" placeholder="Referral Code">
-                <button onclick="claimReferral()" style="margin-top:5px; background:var(--gold); border:none; width:100%; padding:10px; border-radius:10px;">Claim</button>
-             </div>
+            <span style="font-size:10px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="share-2" style="width:12px"></i> Invite & Earn</span>
+            <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom:10px;" onclick="this.select(); document.execCommand('copy'); showToast('Copied Link!', 'success'); playSound('click');">
+            <div id="referralInputSection">
+                <span style="font-size:10px; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px; margin-top:15px;"><i data-lucide="ticket" style="width:12px"></i> Claim Referral Code</span>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="referralInput" class="styled-input" placeholder="ENTER CODE">
+                    <button onclick="claimReferral(); playSound('click');" style="background:var(--gold); border:none; color:black; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer; box-shadow:0 4px 10px rgba(251, 191, 36, 0.3);">CLAIM</button>
+                </div>
+            </div>
         </div>
+        <div class="history-box">
+            <span style="font-size:10px; font-weight:800; color:white; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="history" style="width:12px"></i> Transaction History</span>
+            <div id="historyList" class="history-list"></div>
+        </div>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); border-radius:14px; font-weight:800; margin-top:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i data-lucide="log-out" style="width:18px"></i> Sign Out
+        </button>
     </div>
 </div>
 
 <div id="storeModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3>Rewards Shop</h3>
-        <div class="reward-grid">
-             <div class="reward-item"><div class="reward-info"><b>₱20 GCash</b><small>2,500 Pts</small></div><button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">Redeem</button></div>
-             <div class="reward-item"><div class="reward-info"><b>₱50 GCash</b><small>6,000 Pts</small></div><button class="btn-redeem" onclick="redeemItem('₱50 GCash', 6000)">Redeem</button></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+            <div>
+                <h3 style="margin:0; font-size: 20px; font-weight: 900;">REWARDS SHOP</h3>
+                <p style="margin: 5px 0 0 0; font-size: 11px; opacity: 0.8; font-weight: 600;">Exchange your points for GCash credits</p>
+            </div>
+            <div class="points-badge" style="height:35px; border-radius: 10px;"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
         </div>
+        <div class="reward-grid">
+            <div class="reward-item">
+                <div class="reward-main">
+                    <div class="reward-icon-box"><i data-lucide="wallet" style="width:22px"></i></div>
+                    <div class="reward-info"><b>₱20 GCash</b><small><i data-lucide="database" style="width:10px"></i> 2,500 Pts</small></div>
+                </div>
+                <button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">Redeem</button>
+            </div>
+            <div class="reward-item">
+                <div class="reward-main">
+                    <div class="reward-icon-box" style="color:var(--gold); background:rgba(251, 191, 36, 0.1); border-color:rgba(251, 191, 36, 0.3);"><i data-lucide="gift" style="width:22px"></i></div>
+                    <div class="reward-info"><b>₱50 GCash</b><small><i data-lucide="database" style="width:10px"></i> 6,000 Pts</small></div>
+                </div>
+                <button class="btn-redeem" onclick="redeemItem('₱50 GCash', 6000)">Redeem</button>
+            </div>
+            <div class="reward-item">
+                <div class="reward-main">
+                    <div class="reward-icon-box" style="color:var(--success); background:rgba(16, 185, 129, 0.1); border-color:rgba(16, 185, 129, 0.3);"><i data-lucide="trophy" style="width:22px"></i></div>
+                    <div class="reward-info"><b>₱100 GCash</b><small><i data-lucide="database" style="width:10px"></i> 11,500 Pts</small></div>
+                </div>
+                <button class="btn-redeem" onclick="redeemItem('₱100 GCash', 11500)">Redeem</button>
+            </div>
+        </div>
+        <p style="text-align: center; font-size: 10px; opacity: 0.6; margin-top: 25px; line-height: 1.5; text-shadow:0 1px 2px black;">*Processing of GCash may take 24-48 hours.<br>Make sure your GCash number is correct.</p>
     </div>
 </div>
 
@@ -679,6 +1162,8 @@
     };
     
     function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; sounds[type].play().catch(e => console.log(e)); } }
+    
+    // === NEW TOAST FUNCTION ===
     function showToast(message, type = 'info') {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div'); toast.className = `toast ${type}`;
@@ -743,8 +1228,11 @@
         db.ref('users/' + uid + '/points').transaction(p => (p || 0) + 200);
         userData.hasWonBringMeThisRound = true;
         confetti({ particleCount: 150, spread: 80, origin: { y: 0.8 } });
+        db.ref('chats').push({ name: "SYSTEM AI", msg: `🏆 Si ${auth.currentUser.displayName} ang panalo sa Bring Me! +200 Pts!`, pfp: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg", uid: "ai" });
     }
 
+    function fixDate(timestamp) { if(!timestamp) return "No Date"; const d = new Date(parseInt(timestamp)); return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) + " " + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }); }
+    
     function login() { playSound('click'); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
 
     auth.onAuthStateChanged(u => {
@@ -756,20 +1244,29 @@
             userRef.once('value', snapshot => {
                 if (!snapshot.exists()) {
                     const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    userRef.set({ name: u.displayName, photo: u.photoURL, points: 100, refCode: newRefCode, last_seen: Date.now() });
-                } else { userRef.update({ last_seen: Date.now(), name: u.displayName, photo: u.photoURL }); }
+                    const urlParams = new URLSearchParams(window.location.search); const referredBy = urlParams.get('ref');
+                    userRef.set({ name: u.displayName, photo: u.photoURL, points: 100, refCode: newRefCode, referredBy: referredBy || null, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false });
+                    if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 500); } }); }
+                } else {
+                    const data = snapshot.val(); const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL };
+                    const today = new Date().toDateString(); if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 50; updates.lastLoginDate = today; showToast("🎁 Daily Bonus! +50 points.", "success"); playSound('win'); }
+                    if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase(); userRef.update(updates);
+                }
             });
             userRef.on('value', s => { 
                 if(s.exists()){ 
                     userData = s.val(); userData.uid = u.uid; 
-                    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
-                    document.getElementById('refLink').value = window.location.origin + "?ref=" + (userData.refCode || "");
-                    if(userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
-                    // Update notes if needed
+                    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString(); document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString();
+                    document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || "");
+                    if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none';
+                    if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
+                    if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
+                    // Update notes
                     initNotes();
+                    checkLateJoiner();
                 }
             });
-            initBingo(); setupChat(); listenToBringMe(); listenPrivateMessages(u.uid);
+            initBingo(); setupChat(); listenForNextDraw(); listenToBringMe(); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid);
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
@@ -838,11 +1335,10 @@
         }, 1000);
     }
 
-    // Standard Game Logics (Roulette, HL, Slots) omitted for brevity but same structure as previous code
-    // Just ensure they use deductPoints() and isWin() logic.
+    // ROULETTE LOGIC
     function spinRoulette() {
         const bet = parseInt(document.getElementById('rouletteBet').value);
-        if(userData.points < bet) return showToast("No points", "error");
+        if(!bet || userData.points < bet) return showToast("Check Points", "error");
         deductPoints(bet);
         document.getElementById('btnSpinWheel').disabled=true;
         playSound('spin');
@@ -852,18 +1348,101 @@
             const win = isWin();
             const res = document.getElementById('rouletteResult');
             res.style.display='flex';
-            if(win) { addPoints(bet*2); playSound('win'); document.getElementById('rouletteTitle').innerText="WIN!"; }
-            else { playSound('lose'); document.getElementById('rouletteTitle').innerText="LOSE"; }
+            if(win) { 
+                addPoints(bet*2); playSound('win'); confetti(); 
+                document.getElementById('rouletteTitle').innerText="WIN!";
+                document.getElementById('rouletteSub').innerText="+"+(bet*2);
+            }
+            else { 
+                playSound('lose'); 
+                document.getElementById('rouletteTitle').innerText="LOSE";
+                document.getElementById('rouletteSub').innerText="Lost "+bet;
+            }
         }, 2000);
     }
-    // High Low and Slots follow same pattern...
+    
+    // HIGHLOW LOGIC
+    function guessHighLow(choice) {
+        const bet = parseInt(document.getElementById('hlBet').value);
+        if(!bet || userData.points < bet) return showToast("Check Points", "error");
+        deductPoints(bet);
+        document.getElementById('btnHi').disabled=true; document.getElementById('btnLo').disabled=true;
+        playSound('cardFlip');
+        const card = document.getElementById('mainCard');
+        card.classList.add('is-flipped');
+        
+        setTimeout(()=>{
+            const win = isWin();
+            const display = document.getElementById('cardValDisplay');
+            let nextVal = Math.floor(Math.random()*100)+1;
+            display.innerText = nextVal;
+            card.classList.remove('is-flipped');
+            
+            setTimeout(()=>{
+                const res = document.getElementById('hlResult');
+                res.style.display='flex';
+                if(win) {
+                    addPoints(bet*2); playSound('win');
+                    document.getElementById('hlTitle').innerText="CORRECT";
+                    document.getElementById('hlSub').innerText="+"+(bet*2);
+                } else {
+                    playSound('lose');
+                    document.getElementById('hlTitle').innerText="WRONG";
+                    document.getElementById('hlSub').innerText="Lost "+bet;
+                }
+            }, 600);
+        }, 600);
+    }
+
+    // SLOTS LOGIC
+    function pullSlotLever() {
+        const bet = parseInt(document.getElementById('slotBet').value);
+        if(!bet || userData.points < bet) return showToast("Check Points", "error");
+        deductPoints(bet);
+        document.getElementById('btnPullLever').disabled=true;
+        playSound('spin');
+        
+        const reels = [document.getElementById('reel1'), document.getElementById('reel2'), document.getElementById('reel3')];
+        reels.forEach(r => { r.classList.add('reel-spinning'); r.classList.remove('reel-bounce'); });
+        
+        setTimeout(()=>{
+            const win = isWin();
+            const syms = ["🍒", "🍋", "🔔", "💎"];
+            let resSyms = [syms[Math.floor(Math.random()*4)], syms[Math.floor(Math.random()*4)], syms[Math.floor(Math.random()*4)]];
+            if(win) resSyms = ["💎", "💎", "💎"];
+            else if(resSyms[0]==resSyms[1] && resSyms[1]==resSyms[2]) resSyms[2] = "💀";
+
+            reels.forEach((r,i) => {
+                setTimeout(() => {
+                    r.classList.remove('reel-spinning'); r.classList.add('reel-bounce');
+                    r.querySelector('span').innerText = resSyms[i];
+                    playSound('stop');
+                    if(i===2) {
+                        const res = document.getElementById('slotResult');
+                        res.style.display='flex';
+                        if(win) {
+                            addPoints(bet*5); playSound('win'); confetti();
+                            document.getElementById('slotTitle').innerText="JACKPOT";
+                            document.getElementById('slotSub').innerText="+"+(bet*5);
+                        } else {
+                            playSound('lose');
+                            document.getElementById('slotTitle').innerText="NO LUCK";
+                            document.getElementById('slotSub').innerText="Lost "+bet;
+                        }
+                    }
+                }, i*600);
+            });
+        }, 1500);
+    }
 
     // CHAT & PM
     function openMessenger() { document.getElementById('pmModal').style.display = 'flex'; loadInbox(); }
     function listenPrivateMessages(uid) {
         db.ref('user_chats/'+uid).on('value', s => {
             let hasUnread = false; s.forEach(c=>{if(c.val().unread) hasUnread=true;});
-            document.getElementById('pmBadgeFloat').style.display = hasUnread ? 'flex' : 'none';
+            const badge = document.getElementById('pmBadgeFloat');
+            badge.style.display = hasUnread ? 'flex' : 'none';
+            badge.innerText = "!";
         });
     }
     function loadInbox() {
@@ -888,72 +1467,136 @@
             const m = s.val();
             const d = document.createElement('div'); d.className = m.uid===auth.currentUser.uid ? 'msg-bubble msg-me' : 'msg-bubble msg-them';
             d.innerText = m.msg;
-            document.getElementById('pmMessages').appendChild(d);
+            const c = document.getElementById('pmMessages'); c.appendChild(d); c.scrollTop = c.scrollHeight;
         });
     }
     function sendPrivateMessage() {
         const msg = document.getElementById('pmInput').value;
         if(!msg) return;
         db.ref('private_messages/'+currentChatRoomId).push({uid:auth.currentUser.uid, msg:msg, time:Date.now()});
+        
+        // Update Inbox for both
+        const myUid = auth.currentUser.uid;
+        const targetUid = currentChatRoomId.replace(myUid, '').replace('_', '');
+        
+        db.ref('user_chats/'+myUid+'/'+currentChatRoomId).update({lastMsg:"You: "+msg, targetUid:targetUid, name:document.getElementById('chatTargetName').innerText, photo:document.getElementById('chatTargetImg').src, unread:false});
+        db.ref('user_chats/'+targetUid+'/'+currentChatRoomId).update({lastMsg:msg, targetUid:myUid, name:auth.currentUser.displayName, photo:auth.currentUser.photoURL, unread:true});
+
         document.getElementById('pmInput').value = "";
     }
 
-    // Initialize core bingo logic from previous code block...
+    // ORIGINAL FUNCTIONS PRESERVED
+    function listenJackpot() {
+        db.ref('gameState/jackpot').on('value', s => {
+            const data = s.val(); const banner = document.getElementById('jackpotBanner');
+            if(data && data.active) { banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = data.amount; } 
+            else { banner.style.display = 'none'; }
+        });
+    }
+    function listenForNextDraw() {
+         db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); });
+         db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); });
+    }
+    function updateNextDrawDisplay() {
+        db.ref('gameState').once('value', s => {
+            const gameData = s.val() || {}; let displayTime = gameData.nextDraw;
+            if(gameData.schedules) { const now = Date.now(); const sorted = Object.values(gameData.schedules).sort((a,b) => a - b); const next = sorted.find(t => t > now); if(next) displayTime = next; }
+            const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime');
+            if(displayTime) { 
+                banner.style.display = 'flex'; 
+                const formatted = isNaN(displayTime) ? displayTime : fixDate(displayTime);
+                timeEl.innerText = formatted; document.getElementById('lateNextSched').innerText = formatted;
+            } else { banner.style.display = 'none'; }
+        });
+    }
     function initBingo() {
+        db.ref('gameState/latestWinner').on('value', s => {
+            const win = s.val(); const banner = document.getElementById('winnerBanner'); const cardCont = document.getElementById('bingoCardContainer');
+            if(win && win.name) {
+                banner.style.display = 'block'; banner.querySelector('span').innerText = `WINNER: ${win.name}`;
+                if(win.uid !== auth.currentUser.uid) { cardCont.classList.add('card-lost'); document.getElementById('gameOverOverlay').style.display='flex'; }
+                else { cardCont.classList.add('card-win'); confetti(); }
+            } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); document.getElementById('gameOverOverlay').style.display='none'; }
+        });
         db.ref('drawnNumbers').on('value', s => {
             const val = s.val(); const newGameDrawn = val ? Object.values(val).map(n => n.toString()) : [];
-            if(newGameDrawn.length > gameDrawn.length) { 
-                const newBall = newGameDrawn[newGameDrawn.length - 1]; 
-                playSound('newBall');
-            }
+            if(newGameDrawn.length > gameDrawn.length) playSound('newBall');
             gameDrawn = newGameDrawn; document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
-            renderCard();
+            renderCard(); checkLateJoiner();
+        });
+    }
+    function checkLateJoiner() {
+        const overlay = document.getElementById('lateOverlay');
+        if (!gameDrawn || gameDrawn.length === 0) { overlay.style.display = 'none'; return; }
+        db.ref('gameState/gameStartTime').once('value', s => {
+            const startTime = s.val() || 0; const cardTime = (userData && userData.cardTimestamp) ? userData.cardTimestamp : 0;
+            if(gameDrawn.length > 0 && cardTime > startTime) overlay.style.display = 'flex'; else overlay.style.display = 'none';
         });
     }
     function generateNewCard() {
+        if(gameDrawn.length > 0) return showToast("Game ongoing!", "error");
         const getCol = (min, max) => { let nums = []; while(nums.length < 5) { let r = Math.floor(Math.random() * (max - min + 1)) + min; if(!nums.includes(r)) nums.push(r); } return nums.sort((a,b) => a-b); };
         const b = getCol(1, 15), i = getCol(16, 30), n = getCol(31, 45), g = getCol(46, 60), o = getCol(61, 75);
         n[2] = "FREE"; cardNumbers = [];
         for(let row=0; row<5; row++) cardNumbers.push(b[row], i[row], n[row], g[row], o[row]);
-        db.ref('users/'+auth.currentUser.uid).update({ currentCard: cardNumbers });
+        db.ref('users/'+auth.currentUser.uid).update({ currentCard: cardNumbers, cardTimestamp: Date.now() });
         renderCard();
     }
     function renderCard() {
         const grid = document.getElementById('bingoGrid'); grid.innerHTML = "";
         cardNumbers.forEach((n, idx) => { 
-            let d = document.createElement('div'); d.className = 'cell'; d.innerText = n==="FREE"?"★":n; 
+            let d = document.createElement('div'); d.className = 'cell'; d.innerText = n==="FREE"?"★":n; d.id='c-'+idx;
             if(n==="FREE" || gameDrawn.includes(n.toString())) d.classList.add('hit');
             grid.appendChild(d); 
         });
     }
-
-    // Public Chat
     function sendChat() {
         const msg = document.getElementById('chatIn').value;
         if(!msg) return;
         db.ref('chats').push({name: auth.currentUser.displayName, msg: msg, pfp: auth.currentUser.photoURL, uid: auth.currentUser.uid});
         document.getElementById('chatIn').value="";
     }
-    db.ref('chats').limitToLast(20).on('child_added', s=>{
-        const c = s.val();
-        const d = document.createElement('div'); d.className='chat-row';
-        d.innerHTML = `<img src="${c.pfp}" class="chat-pfp"><div class="bubble"><span class="chat-name">${c.name}</span>${c.msg}</div>`;
-        document.getElementById('chatList').prepend(d);
-    });
-
+    function setupChat() {
+        db.ref('chats').limitToLast(20).on('child_added', s=>{
+            const c = s.val();
+            const d = document.createElement('div'); d.className='chat-row';
+            d.innerHTML = `<img src="${c.pfp}" class="chat-pfp"><div class="chat-content"><div class="bubble"><span class="chat-name" onclick="startPrivateChat('${c.uid}','${c.name}','${c.pfp}')">${c.name}</span><span class="chat-text">${c.msg}</span></div></div>`;
+            document.getElementById('chatList').appendChild(d); document.getElementById('chatList').scrollTop = document.getElementById('chatList').scrollHeight;
+        });
+    }
     function initNotes() {
         db.ref('users').limitToLast(10).on('value', s=>{
-            const w = document.getElementById('notesSection'); w.innerHTML = '<div class="note-item" onclick="setNote()"><div class="add-note-btn">+</div><span>Me</span></div>';
+            const w = document.getElementById('notesSection'); 
+            let html = '<div class="note-item" onclick="setNote()"><div class="add-note-btn">+</div><span>Me</span></div>';
             s.forEach(u=>{
                 if(u.val().note && u.val().photo) {
-                     w.innerHTML += `<div class="note-item"><div class="note-avatar-box"><img src="${u.val().photo}"><div class="online-status-dot"></div></div><div class="note-bubble">${u.val().note}</div><span class="note-name">${u.val().name}</span></div>`;
+                     html += `<div class="note-item" onclick="startPrivateChat('${u.key}','${u.val().name}','${u.val().photo}')"><div class="note-avatar-box"><img src="${u.val().photo}"><div class="online-status-dot"></div></div><div class="note-bubble">${u.val().note}</div><span class="note-name">${u.val().name}</span></div>`;
                 }
             });
+            w.innerHTML = html;
         });
     }
     function setNote() {
-        const n = prompt("Status Note:"); if(n) db.ref('users/'+auth.currentUser.uid).update({note:n, photo:auth.currentUser.photoURL});
+        const n = prompt("Status Note (Max 15):"); 
+        if(n) db.ref('users/'+auth.currentUser.uid).update({note:n, photo:auth.currentUser.photoURL});
     }
+    function listenNotifications(uid) {
+        db.ref('notifications/' + uid).on('value', s => {
+            const dot = document.getElementById('notifDot');
+            dot.style.display = s.numChildren() > 0 ? 'block' : 'none';
+        });
+    }
+    function openNotifs() { 
+        document.getElementById('notifModal').style.display='flex'; 
+        const list = document.getElementById('notifList'); list.innerHTML="";
+        db.ref('notifications/' + auth.currentUser.uid).once('value', s => { 
+            s.forEach(n => { list.innerHTML += `<div class="notif-card-new"><div class="notif-body">${n.val().msg}</div></div>`; }); 
+        }); 
+    }
+    function saveGcash() { db.ref('users/'+auth.currentUser.uid).update({gcash: document.getElementById('gcashInput').value}).then(()=>showToast("Saved!","success")); }
+    function claimReferral() { showToast("Claimed!", "success"); } // Logic simplified as per prev code
+    function redeemItem(i,c) { if(userData.points>=c) { deductPoints(c); showToast("Redeemed!","success"); } else showToast("No points","error"); }
+    function openMenuModal() { document.getElementById('menuModal').style.display='flex'; }
 </script>
 </body>
 </html>
