@@ -193,7 +193,9 @@
 <script>
     lucide.createIcons();
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
     const db = firebase.database();
 
     // TABS LOGIC
@@ -290,9 +292,10 @@
         if(!s.exists()) return;
         s.forEach(child => {
             const data = child.val();
+            const safePhotoUrl = data.photoUrl || 'https://via.placeholder.com/150?text=No+Image';
             gallery.innerHTML += `
                 <div class="photo-card">
-                    <img src="${data.photoUrl}" onclick="window.open(this.src)" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                    <img src="${safePhotoUrl}" onclick="window.open(this.src)" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
                     <div class="photo-info">
                         <b>${data.userName || 'User'}</b><br>
                         <span style="color:var(--gold)">Score: ${data.aiScore || 0}%</span>
@@ -324,19 +327,30 @@
     });
 
     // ONLINE STATUS - FIXED NAME DISPLAY
-    db.ref('status').on('value', s => {
+    let activeUsersRenderVersion = 0;
+    db.ref('status').on('value', async s => {
+        const renderVersion = ++activeUsersRenderVersion;
         document.getElementById('countOnline').innerText = s.numChildren();
         const list = document.getElementById('activeUsersList');
+        const userIds = [];
+        s.forEach(u => userIds.push(u.key));
+
+        const names = await Promise.all(
+            userIds.map(async uid => {
+                const nameSnap = await db.ref('users/' + uid + '/name').once('value');
+                return nameSnap.val() || 'User';
+            })
+        );
+
+        // Avoid stale async renders if a newer realtime update already came in.
+        if (renderVersion !== activeUsersRenderVersion) return;
+
         list.innerHTML = "";
-        s.forEach(u => {
-            const uid = u.key;
-            db.ref('users/' + uid + '/name').once('value', nameSnap => {
-                const name = nameSnap.val() || 'User';
-                const userEl = document.createElement('div');
-                userEl.style.cssText = "padding:4px 0; border-bottom:1px solid var(--glass)";
-                userEl.innerText = `🟢 ${name}`;
-                list.appendChild(userEl);
-            });
+        names.forEach(name => {
+            const userEl = document.createElement('div');
+            userEl.style.cssText = "padding:4px 0; border-bottom:1px solid var(--glass)";
+            userEl.innerText = `🟢 ${name}`;
+            list.appendChild(userEl);
         });
     });
     db.ref('users').on('value', s => { document.getElementById('countUsers').innerText = s.numChildren(); });
