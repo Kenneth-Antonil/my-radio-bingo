@@ -100,14 +100,26 @@
         .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 12px; }
         .card { background: var(--surface); border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative; transition: 0.3s; }
         
-        /* UPDATED VIDEO FEED STYLES */
-        .video-feed-wrapper { margin-bottom: 15px; border-radius: 20px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); position: relative; }
-        .video-container { position: relative; height: 210px; width: 100%; transition: filter 0.5s ease; }
-        .video-container.offline { filter: grayscale(1) brightness(0.5); pointer-events: none; }
+        .video-feed-wrapper { margin-bottom: 15px; border-radius: 20px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); }
+        .video-container { position: relative; height: 210px; width: 100%; background: #000; }
         .video-overlay-bl { position: absolute; bottom: 12px; left: 12px; z-index: 10; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--success); display: flex; align-items: center; gap: 5px; color: var(--success); font-size: 11px; font-weight: 800; }
-        .no-live-overlay { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 20; color: white; text-align: center; }
-        .no-live-overlay i { margin-bottom: 10px; color: var(--danger); }
-        .no-live-overlay p { font-weight: 800; font-size: 14px; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* NEW STYLES FOR OFFLINE FEED */
+        .video-offline-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.9);
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #94a3b8;
+            backdrop-filter: grayscale(1);
+        }
+        .video-offline-overlay i { margin-bottom: 10px; opacity: 0.5; }
+        .video-offline-overlay p { font-weight: 800; font-size: 14px; margin: 0; color: #cbd5e1; }
 
         .draw-panel { display: grid; grid-template-columns: 1fr 85px; gap: 10px; margin-bottom: 15px; }
         .prev-balls { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 10px; display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; }
@@ -269,14 +281,15 @@
 
 <div class="container">
     <div class="video-feed-wrapper">
-        <div id="noLiveMessage" class="no-live-overlay">
-            <i data-lucide="video-off" style="width:48px; height:48px;"></i>
-            <p>WAIT FOR THE NEXT LIVE</p>
-        </div>
-        
-        <div id="videoMain" class="video-container">
+        <div class="video-container">
+            <div id="videoOfflineOverlay" class="video-offline-overlay">
+                <i data-lucide="video-off" style="width:40px; height:40px;"></i>
+                <p>WAIT FOR THE NEXT LIVE</p>
+                <small style="font-size:10px; opacity:0.6; margin-top:5px;">Host is currently offline</small>
+            </div>
+            
             <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
-            <iframe id="liveFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none;"></iframe>
+            <iframe id="liveIframe" width="100%" height="100%" src="https://www.youtube.com/embed/trcBlSZfW_k?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none;"></iframe>
         </div>
     </div>
 
@@ -476,25 +489,20 @@
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo";
     let lastNotifiedDraw = ""; let selectedReplyId = null;
 
-    // --- NEW RTMP & LIVE FEED DETECTION ---
-    const RTMP_LINK = "rtmp://a.rtmp.youtube.com/live2";
-    function checkLiveStatus() {
+    // --- NEW: OFFLINE FEED CONTROLLER ---
+    function monitorStreamStatus() {
+        // We listen to a specific node in Firebase to determine if the stream is officially LIVE
         db.ref('gameState/isLive').on('value', s => {
             const isLive = s.val();
-            const videoCont = document.getElementById('videoMain');
-            const noLiveMsg = document.getElementById('noLiveMessage');
-            
-            if(isLive === true) {
-                videoCont.classList.remove('offline');
-                noLiveMsg.style.display = 'none';
+            const overlay = document.getElementById('videoOfflineOverlay');
+            if(isLive === false) {
+                overlay.style.display = 'flex';
             } else {
-                videoCont.classList.add('offline');
-                noLiveMsg.style.display = 'flex';
+                overlay.style.display = 'none';
             }
         });
     }
-    // Tumawag sa checkLiveStatus pagka-load
-    checkLiveStatus();
+    monitorStreamStatus(); // Run initial status check
 
     // --- ADVANCED AI MODEL LOADING ---
     let cocoModel = null;
@@ -556,14 +564,14 @@
         const preview = document.getElementById('aiPreviewImg');
         const placeholder = document.getElementById('aiPlaceholder');
         const loader = document.getElementById('aiLoading');
-        const scanLine = document.getElementById('aiScanLine');
+        const scanLine = document.getElementById('aiScanningOverlay'); // Fixed id ref from your scanLine overlay
         const statusText = document.getElementById('aiStatusText');
 
         preview.src = URL.createObjectURL(file);
         preview.style.display = 'block';
         placeholder.style.display = 'none';
         loader.style.display = 'block';
-        scanLine.style.display = 'block';
+        if(document.getElementById('aiScanLine')) document.getElementById('aiScanLine').style.display = 'block';
         statusText.innerText = "AI IDENTIFYING OBJECT...";
 
         const img = new Image();
@@ -610,7 +618,7 @@
                         alert("May nanalo na!");
                     }
                     loader.style.display = 'none';
-                    scanLine.style.display = 'none';
+                    if(document.getElementById('aiScanLine')) document.getElementById('aiScanLine').style.display = 'none';
                 });
             }, 2000);
         };
