@@ -18,7 +18,7 @@
             --success: #10b981; 
             --danger: #ef4444; 
             --gold: #fbbf24; 
-            --puro: #f59e0b; /* Orange/Yellow for Puro */
+            --puro: #f59e0b;
             --bringme: #8b5cf6;
             --glass: rgba(255, 255, 255, 0.03);
         }
@@ -59,7 +59,6 @@
         .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
         .user-card-monitor { background: var(--surface-br); padding: 12px; border-radius: 16px; border: 2px solid transparent; transition: 0.3s; position: relative; }
         
-        /* PURO AND BINGO STYLES */
         .user-card-monitor.puro { border-color: var(--puro); box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); animation: pulse-puro 1s infinite; }
         .user-card-monitor.bingo { border-color: var(--success); background: #064e3b; box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); transform: scale(1.05); z-index: 10; }
         
@@ -72,7 +71,7 @@
         .mini-bingo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 8px; }
         .mini-cell { aspect-ratio: 1; background: rgba(0,0,0,0.3); font-size: 8px; display: flex; align-items: center; justify-content: center; border-radius: 2px; color: rgba(255,255,255,0.3); }
         .mini-cell.marked { background: var(--accent); color: white; }
-        .mini-cell.hit { background: var(--gold); color: black; } /* Part of winning pattern */
+        .mini-cell.hit { background: var(--gold); color: black; } 
 
         /* BRING ME GALLERY */
         .bringme-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
@@ -110,6 +109,11 @@
         .active .toggle-knob { background: var(--success); }
         .active .toggle-knob::after { left: 22px; }
 
+        /* SCHEDULER STYLES */
+        .sched-list { margin-top: 10px; max-height: 150px; overflow-y: auto; font-size: 11px; }
+        .sched-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px; margin-bottom: 5px; }
+        .btn-xs { padding: 4px 8px; font-size: 10px; border-radius: 6px; cursor: pointer; border: none; }
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: var(--surface-br); border-radius: 10px; }
     </style>
@@ -134,9 +138,12 @@
     </div>
 
     <div class="input-group">
-        <label>Next Draw Time</label>
-        <input type="text" id="nextDrawIn" placeholder="e.g. 8:00 PM">
-        <button class="btn btn-primary" onclick="setNextDraw()"><i data-lucide="clock"></i> Update Time</button>
+        <label>Game Schedule Manager</label>
+        <div style="display: flex; gap: 5px;">
+            <input type="datetime-local" id="schedInput">
+            <button class="btn btn-primary" onclick="addSchedule()" style="width: auto; margin-top: 0;">+</button>
+        </div>
+        <div id="scheduleList" class="sched-list"></div>
     </div>
 
     <div class="card" style="padding: 15px; background: rgba(0,0,0,0.2); flex:1; overflow:hidden; display:flex; flex-direction:column;">
@@ -247,6 +254,7 @@
     let autoDrawInterval = null;
     let isAutoDrawing = false;
     let jackpotVisible = false;
+    let schedules = {};
 
     // TABS LOGIC
     function openTab(tabId, btn) {
@@ -263,6 +271,57 @@
         b.onclick = () => toggleBall(i);
         document.getElementById('ballGrid').appendChild(b);
     }
+
+    // --- SCHEDULER SYSTEM ---
+    db.ref('gameState/schedules').on('value', s => {
+        schedules = s.val() || {};
+        renderSchedules();
+    });
+
+    function addSchedule() {
+        const input = document.getElementById('schedInput');
+        if(!input.value) return;
+        const time = new Date(input.value).getTime();
+        db.ref('gameState/schedules').push(time);
+        input.value = "";
+    }
+
+    function removeSchedule(key) {
+        db.ref('gameState/schedules/' + key).remove();
+    }
+
+    function renderSchedules() {
+        const list = document.getElementById('scheduleList');
+        list.innerHTML = "";
+        const sorted = Object.entries(schedules).sort(([,a], [,b]) => a - b);
+        
+        sorted.forEach(([key, val]) => {
+            const date = new Date(val);
+            const str = date.toLocaleDateString('en-PH', { month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString('en-PH', {hour:'2-digit', minute:'2-digit'});
+            list.innerHTML += `
+                <div class="sched-item">
+                    <span>${str}</span>
+                    <button class="btn-xs" style="background:var(--danger); color:white;" onclick="removeSchedule('${key}')">X</button>
+                </div>
+            `;
+        });
+    }
+
+    // --- BACKGROUND TIMER FOR AUTO-SCHEDULER ---
+    setInterval(() => {
+        const now = Date.now();
+        Object.entries(schedules).forEach(([key, time]) => {
+            // If time is reached (within a small window) and game not active
+            if(now >= time && now < time + 60000) {
+                if(!isAutoDrawing) {
+                    toggleAutoDraw(); // Force Start
+                    console.log("Scheduled Game Started!");
+                }
+                // Remove schedule so it doesn't trigger again loop
+                removeSchedule(key);
+            }
+        });
+    }, 5000); // Check every 5 seconds
 
     // LISTENER: DRAWN NUMBERS
     db.ref('drawnNumbers').on('value', s => {
@@ -282,7 +341,7 @@
     db.ref('gameState/currentPattern').on('value', s => {
         currentPattern = s.val() || "Normal Bingo";
         document.getElementById('patternSelect').value = currentPattern;
-        updateMonitorCards(); // Re-calc status when pattern changes
+        updateMonitorCards(); 
     });
 
     // JACKPOT SYSTEM
@@ -315,7 +374,6 @@
         }
     });
 
-    // LISTENER FOR REAL-TIME JACKPOT UPDATE
     document.getElementById('jackpotAmount').addEventListener('input', (e) => {
         if(jackpotVisible) {
             db.ref('gameState/jackpot').update({ amount: e.target.value });
@@ -325,30 +383,59 @@
     // AUTO DRAW SYSTEM
     function toggleAutoDraw() {
         const btn = document.getElementById('btnAutoDraw');
-        if(isAutoDrawing) {
-            clearInterval(autoDrawInterval);
-            isAutoDrawing = false;
-            btn.innerHTML = `<i data-lucide="play"></i> START AUTO DRAW`;
-            btn.style.background = "var(--success)";
+        
+        // Prevent start if there is already a winner
+        if(!isAutoDrawing) {
+            db.ref('gameState/latestWinner').once('value', s => {
+                if(s.exists()) {
+                   alert("May Winner Na! Reset Game muna bago mag start ulit.");
+                   return;
+                }
+                startAutoDrawLogic();
+            });
         } else {
-            const speed = document.getElementById('drawSpeed').value * 1000;
-            isAutoDrawing = true;
-            btn.innerHTML = `<i data-lucide="pause"></i> STOP AUTO DRAW`;
-            btn.style.background = "var(--danger)";
-            
-            autoDrawLogic();
-            autoDrawInterval = setInterval(autoDrawLogic, speed);
+            stopAutoDrawLogic();
         }
+    }
+
+    function startAutoDrawLogic() {
+        const btn = document.getElementById('btnAutoDraw');
+        const speed = document.getElementById('drawSpeed').value * 1000;
+        isAutoDrawing = true;
+        btn.innerHTML = `<i data-lucide="pause"></i> STOP AUTO DRAW`;
+        btn.style.background = "var(--danger)";
+        
+        autoDrawLogic();
+        autoDrawInterval = setInterval(autoDrawLogic, speed);
+        lucide.createIcons();
+    }
+
+    function stopAutoDrawLogic() {
+        const btn = document.getElementById('btnAutoDraw');
+        clearInterval(autoDrawInterval);
+        isAutoDrawing = false;
+        btn.innerHTML = `<i data-lucide="play"></i> START AUTO DRAW`;
+        btn.style.background = "var(--success)";
         lucide.createIcons();
     }
 
     function autoDrawLogic() {
-        if(drawnNumbers.length >= 75) { toggleAutoDraw(); return alert("Game Over! All numbers drawn."); }
-        let nextNum;
-        do {
-            nextNum = Math.floor(Math.random() * 75) + 1;
-        } while (drawnNumbers.includes(nextNum));
-        toggleBall(nextNum);
+        if(drawnNumbers.length >= 75) { stopAutoDrawLogic(); return alert("Game Over! All numbers drawn."); }
+        
+        // Check for winner locally via DB listener instead of loop to avoid race conditions
+        // But for safety, let's peek
+        db.ref('gameState/latestWinner').once('value', s => {
+            if(s.exists()) {
+                stopAutoDrawLogic();
+                return;
+            }
+            
+            let nextNum;
+            do {
+                nextNum = Math.floor(Math.random() * 75) + 1;
+            } while (drawnNumbers.includes(nextNum));
+            toggleBall(nextNum);
+        });
     }
 
     function speakNumber(num) {
@@ -385,11 +472,11 @@
             container.innerHTML = "";
             s.forEach(child => {
                 const user = child.val();
-                if(!user.card && !user.currentCard) return; // Support old/new structure
+                if(!user.card && !user.currentCard) return; 
                 
                 const card = user.currentCard || user.card;
                 const check = checkCardStatus(card, currentPattern, drawnNumbers);
-                const isBingo = check.isBingo || user.hasWonCurrent; // Trust DB winner status too
+                const isBingo = check.isBingo || user.hasWonCurrent; 
                 const isPuro = check.isPuro && !isBingo;
 
                 const cardDiv = document.createElement('div');
@@ -398,7 +485,6 @@
                 let gridHtml = '<div class="mini-bingo-grid">';
                 card.forEach((n, idx) => {
                     const marked = drawnNumbers.includes(n) || n === "FREE";
-                    // Check if this specific cell is part of the winning pattern
                     const isWinningCell = check.winningCells.includes(idx); 
                     
                     gridHtml += `<div class="mini-cell ${marked ? 'marked' : ''} ${isWinningCell ? 'hit' : ''}">
@@ -417,31 +503,28 @@
                     </div>
                     ${gridHtml}
                 `;
-                if(isBingo) container.prepend(cardDiv); // Winners top
-                else if(isPuro) container.insertBefore(cardDiv, container.children[1] || null); // Puro 2nd
+                if(isBingo) container.prepend(cardDiv); 
+                else if(isPuro) container.insertBefore(cardDiv, container.children[1] || null); 
                 else container.appendChild(cardDiv);
             });
         });
     }
 
     function checkCardStatus(card, pattern, drawn) {
-        // Map drawn numbers to indices on the card [0-24]
-        let markedIndices = [12]; // Center is free
+        let markedIndices = [12]; 
         card.forEach((val, idx) => {
             if(drawn.includes(val) && idx !== 12) markedIndices.push(idx);
         });
 
-        // Define Winning Indices per pattern
         let patterns = [];
         if (pattern === "Blackout") { patterns = [[...Array(25).keys()]]; }
         else if (pattern === "Letter X") { patterns = [[0,4,6,8,12,16,18,20,24]]; }
         else if (pattern === "Four Corners") { patterns = [[0,4,20,24]]; }
         else { 
-            // Normal Bingo (Rows, Cols, Diags)
             patterns = [
-                [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], // Rows
-                [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], // Cols
-                [0,6,12,18,24],[4,8,12,16,20] // Diags
+                [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], 
+                [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], 
+                [0,6,12,18,24],[4,8,12,16,20] 
             ];
         }
 
@@ -450,31 +533,29 @@
         let winningCells = [];
 
         for (let p of patterns) {
-            // Count how many needed indices are marked
             const hits = p.filter(idx => markedIndices.includes(idx));
             const needed = p.length;
             const got = hits.length;
 
             if (got === needed) {
                 isBingo = true;
-                winningCells = p; // Store winning cells to highlight
+                winningCells = p; 
                 break; 
             } else if (needed - got === 1) {
-                isPuro = true; // Flag as Puro, but keep checking for Bingo
+                isPuro = true; 
             }
         }
 
         return { isBingo, isPuro, winningCells };
     }
 
-    // UPDATED WINNER ANNOUNCEMENT TO SHOW PRIZE
+    // UPDATED WINNER ANNOUNCEMENT TO SHOW PRIZE AND STOP AUTO DRAW
     db.ref('gameState/latestWinner').on('value', s => {
         const marquee = document.getElementById('winnerAnnounce');
         if(s.exists()) {
             const winData = s.val();
             let msg = `🎉 BINGO WINNER: ${winData.name.toUpperCase()}!`;
             
-            // Syncs with player prize calculation
             if(winData.prize) {
                 msg += ` WON ₱${winData.prize.toLocaleString()} POINTS! 💰`;
             } else {
@@ -483,6 +564,12 @@
 
             marquee.style.display = 'block';
             document.getElementById('winnerMarqueeText').innerText = msg;
+            
+            // AUTO STOP
+            if(isAutoDrawing) {
+                stopAutoDrawLogic();
+                alert("AUTO STOP: We have a winner!");
+            }
         } else {
             marquee.style.display = 'none';
         }
@@ -536,11 +623,8 @@
     db.ref('users').on('value', s => { document.getElementById('countUsers').innerText = s.numChildren(); });
 
     function setPattern(p) { db.ref('gameState/currentPattern').set(p); }
-    function setNextDraw() { 
-        const val = document.getElementById('nextDrawIn').value;
-        db.ref('gameState/nextDraw').set(val);
-        alert("Updated!");
-    }
+    
+    // Reset now clears schedules? Optional. Here we keep schedules.
     function resetGame() {
         if(confirm("WARNING: This will reset the board, winner status, and drawn numbers. Proceed?")){
             db.ref('drawnNumbers').remove();
@@ -551,9 +635,7 @@
                 s.forEach(u => { updates[u.key + '/hasWonCurrent'] = false; });
                 db.ref('users').update(updates);
             });
-            isAutoDrawing = false;
-            clearInterval(autoDrawInterval);
-            document.getElementById('btnAutoDraw').innerHTML = `<i data-lucide="play"></i> START AUTO DRAW`;
+            stopAutoDrawLogic();
         }
     }
 
