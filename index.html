@@ -460,6 +460,28 @@
         .dice-display { display:flex; gap:15px; justify-content:center; margin:20px 0; }
         .dice-cube { width:50px; height:50px; background:white; border-radius:10px; color:black; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:900; box-shadow:0 4px 10px rgba(0,0,0,0.5); }
 
+        /* === PWA INSTALL BANNER (FORCED) === */
+        #pwaInstallBanner {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding: 15px 20px;
+            display: none; /* Shown by JS */
+            align-items: center; justify-content: space-between;
+            z-index: 9999;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+            animation: slideUp 0.5s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .pwa-text { font-size: 14px; font-weight: 800; color: white; }
+        .pwa-sub { font-size: 11px; color: #cbd5e1; display: block; }
+        .pwa-btn {
+            background: var(--accent); color: white; border: none;
+            padding: 10px 20px; border-radius: 12px; font-weight: 900;
+            font-size: 13px; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
     </style>
 </head>
 <body>
@@ -1259,6 +1281,14 @@
     </div>
 </div>
 
+<div id="pwaInstallBanner">
+    <div>
+        <span class="pwa-text">INSTALL APP</span>
+        <span class="pwa-sub">Download for better experience!</span>
+    </div>
+    <button id="pwaBottomBtn" class="pwa-btn">INSTALL</button>
+</div>
+
 <script>
     // --- PWA MANIFEST INJECTION ---
     const manifest = {
@@ -1287,18 +1317,23 @@
     const manifestURL = URL.createObjectURL(blob);
     document.querySelector('#myManifest').setAttribute('href', manifestURL);
 
-    // --- PWA INSTALL PROMPT LOGIC ---
+    // --- PWA INSTALL PROMPT LOGIC (UPDATED FOR FORCE BANNER) ---
     let deferredPrompt;
     const installBtn = document.getElementById('pwaInstallBtn');
+    const bottomBanner = document.getElementById('pwaInstallBanner');
+    const bottomBtn = document.getElementById('pwaBottomBtn');
 
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
         installBtn.style.display = 'flex';
+        bottomBanner.style.display = 'flex'; // FORCE SHOW BOTTOM BANNER
     });
 
-    installBtn.addEventListener('click', (e) => {
-        installBtn.style.display = 'none';
+    // Helper for install click
+    function triggerInstall() {
+        if(!deferredPrompt) return;
+        bottomBanner.style.display = 'none';
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
             if (choiceResult.outcome === 'accepted') {
@@ -1306,7 +1341,10 @@
             }
             deferredPrompt = null;
         });
-    });
+    }
+
+    installBtn.addEventListener('click', triggerInstall);
+    bottomBtn.addEventListener('click', triggerInstall);
 
     // --- MAIN APP LOGIC ---
     lucide.createIcons();
@@ -2247,6 +2285,200 @@
 
         inp.value = "";
     }
+
+    // --- MISSING FUNCTIONS ADDED HERE TO FIX MINI GAMES ---
+
+    let bIsSpinning = false;
+    function initBonanza() {
+        const grid = document.getElementById('bonanzaGrid');
+        grid.innerHTML = "";
+        for(let i=0; i<30; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'b-cell';
+            const sym = document.createElement('div');
+            sym.className = 'b-symbol';
+            sym.innerText = ['🍭','🍬','🍫','🧁','🍩'][Math.floor(Math.random()*5)];
+            cell.appendChild(sym);
+            grid.appendChild(cell);
+        }
+    }
+
+    function playBonanza() {
+        if(bIsSpinning) return;
+        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        addPoints(-currentBet);
+        bIsSpinning = true;
+        document.getElementById('bSpinBtn').classList.add('disabled');
+        playSound('spin');
+
+        // Simple animation simulation
+        const symbols = document.querySelectorAll('.b-symbol');
+        symbols.forEach(s => s.classList.add('falling'));
+        
+        setTimeout(() => {
+            initBonanza(); // Reset grid with new randoms
+            bIsSpinning = false;
+            document.getElementById('bSpinBtn').classList.remove('disabled');
+            
+            if(isWin()) {
+                const win = currentBet * 5;
+                addPoints(win);
+                playSound('win');
+                document.getElementById('bonanzaResult').style.display = 'flex';
+                document.getElementById('bResultTitle').innerText = "SWEET WIN!";
+                document.getElementById('bResultPoints').innerText = "+" + win;
+            } else {
+                playSound('drop');
+            }
+        }, 1000);
+    }
+    
+    function buyBonanzaFeature() {
+        const cost = currentBet * 100;
+        if((userData.points || 0) < cost) return alert("Not enough points!");
+        if(confirm("Buy Free Spins for " + cost + " points?")) {
+            addPoints(-cost);
+            document.getElementById('fsModal').style.display = 'flex';
+            playSound('win');
+        }
+    }
+
+    function spinRoulette() {
+        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        addPoints(-currentBet);
+        document.getElementById('btnSpinWheel').disabled = true;
+        playSound('spin');
+        
+        const wheel = document.getElementById('wheelInner');
+        const ball = document.querySelector('.ball-container');
+        
+        // Random rotation
+        const rot = 1080 + Math.floor(Math.random() * 360);
+        wheel.style.transition = "transform 3s cubic-bezier(0.15, 0.85, 0.15, 1)";
+        wheel.style.transform = `rotate(${rot}deg)`;
+        ball.style.animation = "spinBall 3s cubic-bezier(0.15, 0.85, 0.15, 1)";
+        
+        setTimeout(() => {
+            ball.style.animation = "none";
+            const win = isWin();
+            const resultModal = document.getElementById('rouletteResult');
+            const title = document.getElementById('rouletteTitle');
+            const sub = document.getElementById('rouletteSub');
+            
+            resultModal.style.display = 'flex';
+            if(win) {
+                const winAmt = currentBet * 2;
+                title.innerText = "YOU WON!"; title.className = "res-title res-win";
+                sub.innerText = "+" + winAmt + " Points";
+                addPoints(winAmt); playSound('win');
+            } else {
+                title.innerText = "YOU LOST"; title.className = "res-title res-loss";
+                sub.innerText = "Try again!";
+                playSound('lose');
+            }
+        }, 3000);
+    }
+
+    function guessHighLow(choice) {
+        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        addPoints(-currentBet);
+        document.getElementById('btnHi').disabled = true;
+        document.getElementById('btnLo').disabled = true;
+        playSound('cardFlip');
+        
+        const cardEl = document.getElementById('mainCard');
+        cardEl.classList.add('is-flipped');
+        
+        setTimeout(() => {
+            // Logic
+            const currentVal = parseInt(document.getElementById('cardValDisplay').innerText);
+            let nextVal = Math.floor(Math.random() * 100) + 1;
+            
+            // Force logic based on win rate
+            if(isWin()) {
+                if(choice === 'high') nextVal = currentVal + Math.floor(Math.random() * (100-currentVal));
+                else nextVal = Math.floor(Math.random() * currentVal);
+            } else {
+                 if(choice === 'high') nextVal = Math.floor(Math.random() * currentVal);
+                 else nextVal = currentVal + Math.floor(Math.random() * (100-currentVal));
+            }
+            if(nextVal < 1) nextVal = 1; if(nextVal > 100) nextVal = 100;
+            if(nextVal === currentVal) nextVal = currentVal + 1; // Prevent draw
+
+            document.getElementById('cardValDisplay').innerText = nextVal;
+            cardEl.classList.remove('is-flipped');
+            
+            const won = (choice === 'high' && nextVal > currentVal) || (choice === 'low' && nextVal < currentVal);
+            
+            setTimeout(() => {
+                 const modal = document.getElementById('hlResult');
+                 modal.style.display = 'flex';
+                 if(won) {
+                     const winAmt = currentBet * 2;
+                     document.getElementById('hlTitle').innerText = "CORRECT!";
+                     document.getElementById('hlTitle').className = "res-title res-win";
+                     document.getElementById('hlSub').innerText = "+" + winAmt + " Points";
+                     addPoints(winAmt); playSound('win');
+                 } else {
+                     document.getElementById('hlTitle').innerText = "WRONG!";
+                     document.getElementById('hlTitle').className = "res-title res-loss";
+                     document.getElementById('hlSub').innerText = "The number was " + nextVal;
+                     playSound('lose');
+                 }
+            }, 500);
+
+        }, 500);
+    }
+
+    function pullSlotLever() {
+        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        addPoints(-currentBet);
+        document.getElementById('btnPullLever').disabled = true;
+        playSound('spin');
+
+        const reels = [document.getElementById('reel1'), document.getElementById('reel2'), document.getElementById('reel3')];
+        reels.forEach(r => r.classList.add('reel-spinning'));
+        
+        setTimeout(() => {
+            const syms = ['🍒','🍋','🔔','💎','7️⃣'];
+            let res = [
+                syms[Math.floor(Math.random()*syms.length)],
+                syms[Math.floor(Math.random()*syms.length)],
+                syms[Math.floor(Math.random()*syms.length)]
+            ];
+            
+            if(isWin()) {
+                const winSym = syms[Math.floor(Math.random()*syms.length)];
+                res = [winSym, winSym, winSym];
+            }
+
+            reels.forEach((r, i) => {
+                r.classList.remove('reel-spinning');
+                r.classList.add('reel-bounce');
+                r.querySelector('span').innerText = res[i];
+                setTimeout(()=>r.classList.remove('reel-bounce'), 400);
+            });
+            
+            const won = (res[0] === res[1] && res[1] === res[2]);
+            const modal = document.getElementById('slotResult');
+            modal.style.display = 'flex';
+            
+            if(won) {
+                 const winAmt = currentBet * 10;
+                 document.getElementById('slotTitle').innerText = "JACKPOT!";
+                 document.getElementById('slotTitle').className = "res-title res-win";
+                 document.getElementById('slotSub').innerText = "+" + winAmt + " Points";
+                 addPoints(winAmt); playSound('win');
+            } else {
+                 document.getElementById('slotTitle').innerText = "LOSE";
+                 document.getElementById('slotTitle').className = "res-title res-loss";
+                 document.getElementById('slotSub').innerText = "Try again!";
+                 playSound('lose');
+            }
+
+        }, 2000);
+    }
+
 </script>
 </body>
 </html>
