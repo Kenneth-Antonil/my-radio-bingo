@@ -14,6 +14,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
+    <script src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
+    <script src="https://pl28660496.effectivegatecpm.com/a6/64/bf/a664bf7e7084386b4f4b428590030df3.js"></script>
+
     <style>
         /* === ORIGINAL VARIABLES + NEW THEME COLORS === */
         :root { 
@@ -1865,6 +1868,297 @@
         if(type === 'scratch') { document.getElementById('scratchResult').style.display = 'none'; document.getElementById('btnBuyCard').disabled = false; document.getElementById('scratchGrid').innerHTML=''; }
     }
 
+    // --- CANDY SMASH 1000 LOGIC (UPDATED WITH ADMIN SETTINGS) ---
+    const bSymbols = ['🍎','🍌','🍇','🍉','🫐','🟦','🟩','🟪', '🍭']; 
+    let bGrid = [];
+    let bIsSpinning = false;
+    let bFreeSpinsLeft = 0;
+    let bIsFreeSpinMode = false;
+
+    function initBonanza() {
+        const gridEl = document.getElementById('bonanzaGrid');
+        gridEl.innerHTML = '';
+        bGrid = [];
+        bFreeSpinsLeft = 0;
+        bIsFreeSpinMode = false;
+        updateFSPanel();
+
+        for(let r=0; r<5; r++) {
+            let row = [];
+            for(let c=0; c<6; c++) {
+                // Initial grid
+                const sym = bSymbols[Math.floor(Math.random() * (bSymbols.length - 1))];
+                row.push(sym);
+                const cell = document.createElement('div');
+                cell.className = 'b-cell';
+                cell.id = `cell-${r}-${c}`;
+                cell.innerHTML = `<div class="b-symbol">${sym}</div>`;
+                gridEl.appendChild(cell);
+            }
+            bGrid.push(row);
+        }
+    }
+
+    function updateFSPanel() {
+        const panel = document.getElementById('fsPanel');
+        const count = document.getElementById('fsCountDisplay');
+        if (bIsFreeSpinMode) {
+            panel.style.display = 'block';
+            count.innerText = bFreeSpinsLeft;
+        } else {
+            panel.style.display = 'none';
+        }
+    }
+
+    function buyBonanzaFeature() {
+        if(bIsSpinning || bIsFreeSpinMode) return;
+        const cost = currentBet * 100;
+        if((userData.points || 0) < cost) return alert("Not enough points to buy feature! (Cost: " + cost + ")");
+        if(!confirm("Buy Free Spins for " + cost + " points?")) return;
+        
+        addPoints(-cost);
+        bFreeSpinsLeft = 10;
+        bIsFreeSpinMode = true;
+        updateFSPanel();
+        showFsModal(); 
+        startBonanzaSequence(true); 
+    }
+    
+    function showFsModal() {
+        const m = document.getElementById('fsModal');
+        m.style.display = 'flex';
+        playSound('win');
+    }
+
+    async function playBonanza() {
+        if(bIsSpinning) return;
+        
+        if (!bIsFreeSpinMode) {
+            if((userData.points || 0) < currentBet) return alert("Not enough points!");
+            addPoints(-currentBet);
+        }
+
+        await startBonanzaSequence(false);
+    }
+
+    async function startBonanzaSequence(autoStart) {
+        bIsSpinning = true;
+        const btn = document.getElementById('bSpinBtn');
+        btn.classList.add('disabled');
+        document.getElementById('bWinDisplay').innerText = '';
+        document.getElementById('bonanzaResult').style.display = 'none';
+        
+        let totalSequenceWin = 0;
+
+        do {
+            if (bIsFreeSpinMode) {
+                 bFreeSpinsLeft--;
+                 updateFSPanel();
+            }
+
+            playSound('spin');
+            await performSpinAnimation(); 
+
+            // --- TUMBLE LOOP ---
+            let keepTumbling = true;
+            let loopCount = 0;
+            
+            while(keepTumbling && loopCount < 15) {
+                const result = checkClusterWins();
+                const wins = result.wins;
+                const scatterCount = result.scatterCount;
+
+                if (scatterCount >= 4) {
+                    highlightScatters();
+                    playSound('win');
+                    await new Promise(r => setTimeout(r, 1000));
+                    
+                    if (!bIsFreeSpinMode) {
+                        bIsFreeSpinMode = true;
+                        bFreeSpinsLeft = 10;
+                        showFsModal();
+                    } else {
+                        bFreeSpinsLeft += 5;
+                        alert("🍭 RETRIGGER! +5 FREE SPINS! 🍭");
+                    }
+                    updateFSPanel();
+                }
+
+                if(wins.length > 0) {
+                    let stepWin = 0;
+                    wins.forEach(w => {
+                        let baseVal = 2; 
+                        if(w.char === '🟦') baseVal = 5;
+                        if(w.char === '🟩') baseVal = 8;
+                        if(w.char === '🟪') baseVal = 15;
+                        if(w.char === '❤️') baseVal = 30; 
+
+                        let countMult = 1 + (w.count - 8) * 0.5;
+                        let winVal = Math.floor(baseVal * countMult * (currentBet / 10));
+                        
+                        stepWin += winVal;
+                    });
+                    
+                    totalSequenceWin += stepWin;
+                    addPoints(stepWin); 
+
+                    await highlightAndPop(wins, stepWin);
+                    updateGridData(wins); 
+                    await renderDrop(); 
+                    playSound('pop');
+                    loopCount++;
+                } else {
+                    keepTumbling = false; 
+                }
+            }
+
+            if (bIsFreeSpinMode && bFreeSpinsLeft > 0) {
+                await new Promise(r => setTimeout(r, 1500));
+            }
+
+        } while (bIsFreeSpinMode && bFreeSpinsLeft > 0);
+
+        if (bIsFreeSpinMode && bFreeSpinsLeft === 0) {
+            bIsFreeSpinMode = false;
+            updateFSPanel();
+        }
+
+        if(totalSequenceWin > 0) {
+            playSound('win');
+            document.getElementById('bResultTitle').innerText = totalSequenceWin > (currentBet * 20) ? "SENSATIONAL!" : "BIG WIN!";
+            document.getElementById('bResultPoints').innerText = "+" + totalSequenceWin;
+            document.getElementById('bonanzaResult').style.display = 'flex';
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        } else {
+             btn.classList.remove('disabled');
+        }
+        bIsSpinning = false;
+    }
+
+    function performSpinAnimation() {
+        return new Promise(resolve => {
+            bGrid = [];
+            for(let r=0; r<5; r++) {
+                let row = [];
+                for(let c=0; c<6; c++) {
+                    // UPDATED: Use Admin Scatter Chance Setting
+                    let sym = bSymbols[Math.floor(Math.random() * (bSymbols.length - 1))];
+                    if (Math.random() < scatterChance) sym = '🍭'; 
+                    row.push(sym);
+                }
+                bGrid.push(row);
+            }
+            // Visual Drop
+            let i = 0;
+            const interval = setInterval(() => {
+                if(i >= 30) {
+                    clearInterval(interval);
+                    resolve();
+                    return;
+                }
+                const r = Math.floor(i / 6);
+                const c = i % 6;
+                const cell = document.getElementById(`cell-${r}-${c}`);
+                const sym = bGrid[r][c];
+                
+                let extraClass = sym === '🍭' ? 'scatter-icon' : '';
+                cell.innerHTML = `<div class="b-symbol ${extraClass} falling">${sym}</div>`;
+                
+                setTimeout(() => playSound('drop'), Math.random() * 50);
+
+                i++;
+            }, 20); 
+        });
+    }
+
+    function checkClusterWins() {
+        let counts = {};
+        let scatterCount = 0;
+        
+        for(let r=0; r<5; r++) {
+            for(let c=0; c<6; c++) {
+                const char = bGrid[r][c];
+                if (char === '🍭') {
+                    scatterCount++;
+                } else if (char !== null) {
+                    if(!counts[char]) counts[char] = [];
+                    counts[char].push({r,c});
+                }
+            }
+        }
+        
+        let winSymbols = [];
+        Object.keys(counts).forEach(k => {
+            if(counts[k].length >= 8) { 
+                winSymbols.push({ char: k, indices: counts[k], count: counts[k].length });
+            }
+        });
+        
+        return { wins: winSymbols, scatterCount: scatterCount };
+    }
+
+    function highlightScatters() {
+        for(let r=0; r<5; r++) {
+            for(let c=0; c<6; c++) {
+                if (bGrid[r][c] === '🍭') {
+                    // Scatters already have .scatter-icon class which animates
+                }
+            }
+        }
+    }
+
+    function highlightAndPop(wins, amount) {
+        return new Promise(resolve => {
+            document.getElementById('bWinDisplay').innerText = amount + " Pts";
+            wins.forEach(w => {
+                w.indices.forEach(pos => {
+                    const el = document.getElementById(`cell-${pos.r}-${pos.c}`);
+                    el.classList.add('b-win');
+                    const pt = document.createElement('div');
+                    pt.className = 'b-pop-text';
+                    pt.innerText = (amount / w.count).toFixed(0); 
+                    el.appendChild(pt);
+                });
+            });
+            playSound('tumble');
+            setTimeout(() => { resolve(); }, 800);
+        });
+    }
+
+    function updateGridData(wins) {
+        wins.forEach(w => { w.indices.forEach(pos => { bGrid[pos.r][pos.c] = null; }); });
+        
+        for(let c=0; c<6; c++) {
+            let newCol = [];
+            for(let r=0; r<5; r++) { if(bGrid[r][c] !== null) newCol.push(bGrid[r][c]); }
+            
+            while(newCol.length < 5) { 
+                 // UPDATED: Use Admin Scatter Chance Setting
+                 let sym = bSymbols[Math.floor(Math.random() * (bSymbols.length - 1))];
+                 if (Math.random() < scatterChance) sym = '🍭'; 
+                 newCol.unshift(sym); 
+            }
+            
+            for(let r=0; r<5; r++) { bGrid[r][c] = newCol[r]; }
+        }
+    }
+
+    function renderDrop() {
+        return new Promise(resolve => {
+            for(let r=0; r<5; r++) {
+                for(let c=0; c<6; c++) {
+                    const cell = document.getElementById(`cell-${r}-${c}`);
+                    cell.className = 'b-cell'; 
+                    const sym = bGrid[r][c];
+                    let extraClass = sym === '🍭' ? 'scatter-icon' : '';
+                    cell.innerHTML = `<div class="b-symbol ${extraClass}" style="animation: bounceIn 0.3s">${sym}</div>`;
+                }
+            }
+            setTimeout(() => playSound('drop'), 100);
+            setTimeout(resolve, 300);
+        });
+    }
+
     // --- NEW GAME LOGIC (APPENDED) ---
 
     // 1. Color Game
@@ -2094,10 +2388,6 @@
         });
     }
 
-    // --- CANDY SMASH 1000 LOGIC (APPENDED, same logic) ---
-    // (Logic included in main code above)
-    
-    // --- PRIVATE MESSENGER LOGIC ---
     let currentChatRoomId = null;
     let currentChatTargetName = null;
 
