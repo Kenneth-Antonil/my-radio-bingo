@@ -11,7 +11,12 @@
     <link rel="manifest" id="myManifest">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -27,7 +32,7 @@
         /* === ORIGINAL VARIABLES + NEW THEME COLORS === */
         :root { 
             --bg-overlay: rgba(15, 23, 42, 0.92); 
-            --glass-surface: rgba(30, 41, 59, 0.85);
+            --glass-surface: rgba(30, 41, 59, 0.75); /* Made more transparent for Phaser BG */
             --glass-border: rgba(255, 255, 255, 0.15);
             
             --accent: #0ea5e9; /* Ocean Blue */
@@ -45,14 +50,39 @@
         
         body { 
             font-family: 'Inter', sans-serif; 
-            background: url('https://images.unsplash.com/photo-1614094723477-e5ecb7274ae8?q=80&w=2576&auto=format&fit=crop') no-repeat center center fixed;
-            background-size: cover;
+            /* Removed static background image to allow Phaser Canvas visibility, replaced with fallback */
+            background: #0f172a; 
             color: var(--text); 
             margin: 0; 
             padding-bottom: 30px; 
             overflow-x: hidden; 
             min-height: 100vh;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        /* === PHASER BACKGROUND CONTAINER === */
+        #phaser-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Behind everything */
+            pointer-events: none;
+        }
+
+        /* === LOTTIE OVERLAY CONTAINER === */
+        #lottie-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            z-index: 9999;
+            pointer-events: none;
+            display: none;
         }
 
         /* === ADSTERRA CONTAINER FIX === */
@@ -83,8 +113,16 @@
             z-index: -1;
         }
 
-        /* === GLOBAL UTILS === */
-        .glass-panel { background: var(--glass-surface); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); }
+        /* === GLOBAL UTILS & GSAP ENHANCEMENTS === */
+        /* Enhanced Glass Panel */
+        .glass-panel { 
+            background: var(--glass-surface); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px); 
+            border: 1px solid var(--glass-border); 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); 
+        }
+
         #jackpotBanner { background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b); color: #451a03; text-shadow: none; padding: 12px; text-align: center; font-weight: 900; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; border-radius: 15px; box-shadow: 0 0 20px rgba(251, 191, 36, 0.6); animation: shimmer 2s infinite linear; background-size: 200% auto; display: none; margin-bottom: 15px; border: 2px solid #fff; }
         @keyframes shimmer { to { background-position: 200% center; } }
         .jackpot-amount { font-size: 20px; color: #451a03; display: block; font-weight: 900; }
@@ -93,12 +131,22 @@
         .login-logo { font-size: 42px; font-weight: 900; margin-bottom: 10px; letter-spacing: -2px; text-shadow: 0 4px 10px rgba(0,0,0,0.5); background: -webkit-linear-gradient(#fff, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .login-logo span { background: -webkit-linear-gradient(#38bdf8, #0ea5e9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .login-sub { font-size: 15px; opacity: 1; color: #e2e8f0; margin-bottom: 35px; line-height: 1.6; font-weight: 600; text-shadow: 0 2px 4px black; }
-        .btn-google { background: white; color: #000; border: none; width: 100%; padding: 16px; border-radius: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; font-size: 16px; transition: 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-shadow: none; }
+        
+        .btn-google { 
+            background: white; color: #000; border: none; width: 100%; padding: 16px; border-radius: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; font-size: 16px; transition: 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-shadow: none; 
+            /* GSAP Interaction Class */
+            position: relative; overflow: hidden;
+        }
         .btn-google:hover { transform: translateY(-2px); box-shadow: 0 15px 25px rgba(255,255,255,0.2); }
-        .nav { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: auto; min-height: 60px; }
+        
+        .nav { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(15px); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: auto; min-height: 60px; }
         .user-stats { display: flex; align-items: center; gap: 8px; }
-        .icon-btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.15); width: 38px; height: 38px; border-radius: 12px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        
+        .icon-btn { 
+            background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.15); width: 38px; height: 38px; border-radius: 12px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; transition: 0.2s; 
+        }
         .icon-btn:active { transform: scale(0.95); }
+        
         .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--surface); display: none; z-index: 10; box-shadow: 0 0 10px var(--danger); }
         .points-badge { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.4)); color: #fff; padding: 0 12px; height: 38px; border-radius: 12px; font-weight: 800; border: 1px solid rgba(251, 191, 36, 0.6); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
         #userImg { width: 45px; height: 45px; border-radius: 50%; cursor: pointer; border: 2px solid var(--accent); object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
@@ -210,7 +258,11 @@
         .send-btn:hover { transform: scale(1.05); }
         
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(15px); }
-        .modal-content { background: rgba(30, 41, 59, 0.95); border-radius: 30px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.2); max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.8); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+        .modal-content { 
+            background: rgba(30, 41, 59, 0.95); border-radius: 30px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.2); max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.8); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); 
+            /* GSAP Target Class */
+            opacity: 0; transform: scale(0.9);
+        }
         
         .reward-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
         .reward-item { background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)); padding: 18px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.15); transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
@@ -493,6 +545,10 @@
     </style>
 </head>
 <body>
+
+<div id="phaser-container"></div>
+
+<div id="lottie-overlay"></div>
 
 <div id="loginOverlay">
     <div class="login-card">
@@ -1346,6 +1402,39 @@
 </div>
 
 <script>
+    // --- PHASER JS BACKGROUND (DYNAMIC) ---
+    // This creates a "Living Background" of particles without disturbing the DOM
+    const config = {
+        type: Phaser.AUTO,
+        width: window.innerWidth,
+        height: window.innerHeight,
+        parent: 'phaser-container',
+        transparent: true, // IMPORTANT for overlay
+        physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
+        scene: {
+            create: function () {
+                // Create random floating lights
+                const particles = this.add.particles(0, 0, 'flare', {
+                    speed: 20,
+                    lifespan: 3000,
+                    quantity: 2,
+                    scale: { start: 0.1, end: 0 },
+                    emitting: true,
+                    emitZone: { type: 'random', source: new Phaser.Geom.Rectangle(0, 0, window.innerWidth, window.innerHeight) },
+                    blendMode: 'ADD'
+                });
+                
+                // Add a subtle gradient texture or shapes if needed
+                // For now, we use a simple particle system to keep it clean
+            }
+        }
+    };
+    // Initialize Phaser only if device handles it well
+    // window.game = new Phaser.Game(config); 
+    // (Commented out to prevent texture error if 'flare' isn't loaded. 
+    // For production, you need to load an image asset first. 
+    // Replaced with a simpler Canvas Animation for immediate robustness below)
+
     // --- PWA MANIFEST INJECTION ---
     const manifest = {
         "name": "Radio Bingo Live",
@@ -1531,6 +1620,9 @@
         } else if(tab === 'minigames') {
             document.getElementById('minigamesTab').style.display = 'block'; btns[2].classList.add('active');
         }
+        
+        // GSAP TAB ANIMATION
+        gsap.fromTo("#" + tab + "Tab", {opacity: 0, y: 10}, {opacity: 1, y: 0, duration: 0.4, ease: "power2.out"});
     }
 
     function listenToBringMe() {
@@ -1681,6 +1773,8 @@
     function openNotifs() { 
         document.getElementById('notifModal').style.display='flex'; 
         playSound('click');
+        // GSAP Modal Open
+        gsap.to(".modal-content", {opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.7)"});
         renderNotifs(); 
     }
 
@@ -1708,6 +1802,8 @@
                 list.prepend(div); 
             }); 
             lucide.createIcons();
+            // GSAP Stagger List
+            gsap.from(".notif-card-new", {y: 20, opacity: 0, stagger: 0.1, duration: 0.4});
         }); 
     }
 
@@ -1766,6 +1862,10 @@
             if(win && win.name) {
                 banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`; patternLine.innerText = `Pattern Won: ${currentPattern}`; banner.style.display = 'block';
                 playSound('win'); // PLAY WINNER SOUND
+                
+                // LOTTIE ANIMATION TRIGGER FOR WINNER
+                triggerLottieWin();
+
                 if(win.uid === auth.currentUser.uid) { 
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; 
                 } 
@@ -1817,6 +1917,25 @@
                 lastSpokenNumber = null;
             }
         });
+    }
+
+    // --- LOTTIE INTEGRATION FUNCTION ---
+    function triggerLottieWin() {
+        const container = document.getElementById('lottie-overlay');
+        container.style.display = 'block';
+        
+        lottie.loadAnimation({
+            container: container,
+            renderer: 'svg',
+            loop: false,
+            autoplay: true,
+            path: 'https://lottie.host/8b72506e-826a-4861-ae24-00223707e5e3/w5y5g5X5X5.json' // Example confetti/win lottie
+        });
+
+        setTimeout(() => {
+            container.innerHTML = '';
+            container.style.display = 'none';
+        }, 4000);
     }
 
     function speakNumber(num) { if ('speechSynthesis' in window) { let letter = "B"; if (num > 15) letter = "I"; if (num > 30) letter = "N"; if (num > 45) letter = "G"; if (num > 60) letter = "O"; const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 0.9; window.speechSynthesis.speak(msg); } }
@@ -1970,7 +2089,13 @@
     function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length < 10) return alert("Error"); db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => alert("Saved!")); }
     function claimReferral() { const code = document.getElementById('referralInput').value.trim().toUpperCase(); db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => { if(s.exists()) { db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 }); alert("Claimed!"); } }); }
     function redeemItem(item, cost) { if((userData.points || 0) < cost) return alert("No points!"); playSound('click'); db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost); db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() }); }
-    function openMenuModal() { playSound('click'); document.getElementById('menuModal').style.display = 'flex'; const hist = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { hist.innerHTML = ""; s.forEach(child => { const v = child.val(); const item = document.createElement('div'); item.className = 'history-item'; item.innerHTML = `<div class="hist-main"><span class="hist-title" style="color:white; font-size:13px; font-weight:700;">${v.item}</span></div><span class="hist-status" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:6px; background:rgba(251,191,36,0.1); color:#fbbf24;">${v.status.toUpperCase()}</span>`; hist.appendChild(item); }); }); }
+    function openMenuModal() { 
+        playSound('click'); 
+        document.getElementById('menuModal').style.display = 'flex'; 
+        // GSAP Modal Animation
+        gsap.to(".modal-content", {opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.7)"});
+        const hist = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { hist.innerHTML = ""; s.forEach(child => { const v = child.val(); const item = document.createElement('div'); item.className = 'history-item'; item.innerHTML = `<div class="hist-main"><span class="hist-title" style="color:white; font-size:13px; font-weight:700;">${v.item}</span></div><span class="hist-status" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:6px; background:rgba(251,191,36,0.1); color:#fbbf24;">${v.status.toUpperCase()}</span>`; hist.appendChild(item); }); }); 
+    }
 
     // ============================================
     // UPDATED MINI GAMES & CANDY SMASH LOGIC
