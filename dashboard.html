@@ -320,6 +320,9 @@
         .user-option:hover { background: rgba(255,255,255,0.05); }
         .user-option.selected { background: var(--accent); color: white; border: none; }
 
+        /* NEW SETTINGS UI */
+        .card-settings { background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 15px; border-radius: 12px; margin-bottom: 10px; }
+
         /* MOBILE RESPONSIVE */
         @media (max-width: 900px) {
             body { grid-template-columns: 1fr; overflow-y: auto; height: auto; }
@@ -374,9 +377,35 @@
 
     <div class="tabs-nav">
         <button class="tab-btn active" onclick="openTab('bingo-tab', this)"><i data-lucide="layout-grid" width="16"></i> BINGO</button>
+        <button class="tab-btn" onclick="openTab('settings-tab', this)"><i data-lucide="sliders" width="16"></i> SETTINGS</button>
         <button class="tab-btn" onclick="openTab('bringme-tab', this)"><i data-lucide="camera" width="16"></i> BRING ME</button>
         <button class="tab-btn" onclick="openTab('users-tab', this)"><i data-lucide="user-cog" width="16"></i> PLAYERS</button>
         <button class="tab-btn" onclick="openTab('cashout-tab', this)"><i data-lucide="wallet" width="16"></i> CASHOUTS</button>
+    </div>
+
+    <div id="settings-tab" class="tab-content">
+        <div class="card">
+            <h2><i data-lucide="joystick"></i> Mini Game Probabilities</h2>
+            <div class="card-settings">
+                <label>Global Win Rate (%) - Roulette / HighLow / Slots</label>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="range" min="10" max="90" value="40" id="winRateSlider" oninput="updateSettingsUI()">
+                    <span id="winRateDisplay" style="font-weight:900; width:50px;">40%</span>
+                </div>
+                <p style="font-size:10px; opacity:0.6;">Control how often players win regular mini games.</p>
+            </div>
+
+            <div class="card-settings">
+                <label>Scatter Chance (%) - Candy Smash</label>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="range" min="1" max="20" value="3" id="scatterSlider" oninput="updateSettingsUI()">
+                    <span id="scatterDisplay" style="font-weight:900; width:50px;">3%</span>
+                </div>
+                <p style="font-size:10px; opacity:0.6;">Percentage chance for a Scatter (Lollipop) to appear on grid.</p>
+            </div>
+            
+            <button class="btn btn-primary" onclick="saveGameSettings()">SAVE SETTINGS</button>
+        </div>
     </div>
 
     <div id="bingo-tab" class="tab-content active">
@@ -508,9 +537,8 @@
     let schedules = {};
     let globalStatusData = {}; 
     let allUsersData = {}; 
-    let lastSpokenNumber = null; // FIXED: Added to track last spoken to prevent repeats
+    let lastSpokenNumber = null;
 
-    // --- HELPER FOR NAME CLEANING (NO CHINESE CHARS) ---
     function cleanName(name) {
         if(!name) return "Unknown";
         let cleaned = name.replace(/[\u4E00-\u9FFF\u3400-\u4DBF\u2000-\u206F]/g, '').trim();
@@ -524,13 +552,39 @@
         btn.classList.add('active');
     }
 
-    // Initialize Ball Grid
     for(let i=1; i<=75; i++) {
         let b = document.createElement('div'); b.className = 'ball'; b.id = 'ball-'+i; b.innerText = i; b.onclick = () => toggleBall(i);
         document.getElementById('ballGrid').appendChild(b);
     }
 
-    // Schedules
+    // --- GAME SETTINGS LOGIC ---
+    function updateSettingsUI() {
+        document.getElementById('winRateDisplay').innerText = document.getElementById('winRateSlider').value + "%";
+        document.getElementById('scatterDisplay').innerText = document.getElementById('scatterSlider').value + "%";
+    }
+
+    function saveGameSettings() {
+        const wr = parseInt(document.getElementById('winRateSlider').value);
+        const sc = parseInt(document.getElementById('scatterSlider').value);
+        
+        db.ref('gameState/settings').update({
+            minigameWinRate: wr,
+            scatterChance: sc
+        }).then(() => {
+            alert("Settings Updated! All clients will now use these probabilities.");
+        });
+    }
+
+    // Load initial settings
+    db.ref('gameState/settings').once('value', s => {
+        const val = s.val();
+        if(val) {
+            document.getElementById('winRateSlider').value = val.minigameWinRate || 40;
+            document.getElementById('scatterSlider').value = val.scatterChance || 3;
+            updateSettingsUI();
+        }
+    });
+
     db.ref('gameState/schedules').on('value', s => { schedules = s.val() || {}; renderSchedules(); });
     function addSchedule() { const input = document.getElementById('schedInput'); if(!input.value) return; const time = new Date(input.value).getTime(); db.ref('gameState/schedules').push(time); input.value = ""; }
     function removeSchedule(key) { db.ref('gameState/schedules/' + key).remove(); }
@@ -541,7 +595,6 @@
         list.innerHTML += `<div style="display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; margin-bottom:5px; font-size:11px;"><span>${str}</span><button style="background:var(--danger); border:none; color:white; border-radius:4px; cursor:pointer;" onclick="removeSchedule('${key}')">X</button></div>`; });
     }
 
-    // Scheduler Checker
     setInterval(() => {
         const now = Date.now();
         Object.entries(schedules).forEach(([key, time]) => { 
@@ -557,7 +610,6 @@
         });
     }, 5000);
 
-    // Drawn Numbers Listener (UPDATES GRID ONLY)
     db.ref('drawnNumbers').on('value', s => {
         drawnNumbers = s.val() ? Object.values(s.val()) : [];
         document.querySelectorAll('.ball').forEach(b => b.classList.remove('drawn'));
@@ -570,9 +622,6 @@
         if(s.exists()) {
             const num = s.val();
             document.getElementById('lastBall').innerText = num;
-            
-            // FIXED: Only speak if the number is DIFFERENT from the last one spoken.
-            // This prevents repeating the "Highest" number if the list resorts, and prevents repeating on re-renders.
             if (num !== lastSpokenNumber) {
                 speakNumber(num);
                 lastSpokenNumber = num;
@@ -585,7 +634,6 @@
 
     db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternSelect').value = currentPattern; updateMonitorCards(); });
 
-    // Jackpot
     function toggleJackpot() {
         jackpotVisible = !jackpotVisible; const amount = document.getElementById('jackpotAmount').value;
         const knob = document.getElementById('jackpotKnob'); const bg = document.getElementById('jackpotKnobBg');
@@ -595,7 +643,6 @@
     db.ref('gameState/jackpot').once('value', s => { if(s.exists()){ const d = s.val(); document.getElementById('jackpotAmount').value = d.amount || ""; if(d.active) { jackpotVisible = true; document.getElementById('jackpotKnob').style.left = "23px"; document.getElementById('jackpotKnobBg').style.background = "var(--success)"; document.getElementById('jackpotStatusText').innerText = "VISIBLE"; } } });
     document.getElementById('jackpotAmount').addEventListener('input', (e) => { if(jackpotVisible) { db.ref('gameState/jackpot').update({ amount: e.target.value }); } });
 
-    // Auto Draw Logic
     function toggleAutoDraw() {
         if(!isAutoDrawing) { db.ref('gameState/latestWinner').once('value', s => { if(s.exists()) { alert("May Winner Na! Reset Game muna bago mag start ulit."); return; } startAutoDrawLogic(); }); } 
         else { stopAutoDrawLogic(); }
@@ -637,24 +684,20 @@
 
     function speakNumber(num) { if ('speechSynthesis' in window) { let letter = "B"; if (num > 15) letter = "I"; if (num > 30) letter = "N"; if (num > 45) letter = "G"; if (num > 60) letter = "O"; const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 0.9; window.speechSynthesis.speak(msg); } }
     
-    // FIXED: Toggle Ball ensures lastCalled is set explicitly for the UI
     function toggleBall(num) { 
         const ref = db.ref('drawnNumbers/' + num); 
         ref.once('value', s => { 
             if(s.exists()) {
                 ref.remove(); 
-                // We do NOT update lastCalled when removing to avoid confusion
             } else { 
-                // Set drawn number
                 ref.set(num); 
-                // FIXED: Explicitly force update lastCalled so the listener picks up THIS number, not the "highest"
+                // FIXED: Explicitly force update lastCalled so the listener picks up THIS number
                 db.ref('gameState/lastCalled').set(num);
                 db.ref('gameState/gameStartTime').once('value', ss => { if(!ss.exists()) db.ref('gameState/gameStartTime').set(Date.now()); }); 
             } 
         }); 
     }
 
-    // --- MONITORING ---
     db.ref('status').on('value', s => {
         globalStatusData = s.val() || {};
         document.getElementById('countOnline').innerText = Object.keys(globalStatusData).length;
