@@ -32,7 +32,7 @@
             --minigame: #f472b6; 
         }
         
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
         
         body { 
             font-family: 'Inter', sans-serif; 
@@ -46,7 +46,7 @@
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
         }
 
-        /* === ORIGINAL STYLES PRESERVED === */
+        /* === GLOBAL UTILS === */
         .glass-panel { background: var(--glass-surface); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); }
         #jackpotBanner { background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b); color: #451a03; text-shadow: none; padding: 12px; text-align: center; font-weight: 900; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; border-radius: 15px; box-shadow: 0 0 20px rgba(251, 191, 36, 0.6); animation: shimmer 2s infinite linear; background-size: 200% auto; display: none; margin-bottom: 15px; border: 2px solid #fff; }
         @keyframes shimmer { to { background-position: 200% center; } }
@@ -293,7 +293,7 @@
         .bet-label { font-size: 10px; opacity: 0.7; display: block; letter-spacing: 1px; }
         .bet-val { font-size: 18px; font-weight: 900; color: var(--gold); display: flex; align-items: center; justify-content: center; gap: 5px; }
 
-        /* === CANDY SMASH 1000 RE-FIXED LAYOUT === */
+        /* === CANDY SMASH 1000 RE-FIXED LAYOUT (ULTIMATE) === */
         #game-bonanza {
             background: url('https://images.unsplash.com/photo-1626500145657-b4d63309623e?q=80&w=2670&auto=format&fit=crop') no-repeat center center fixed;
             background-size: cover;
@@ -330,7 +330,7 @@
             display: none;
         }
 
-        /* CLEANER GRID - REMOVED MESSY BORDERS */
+        /* CLEANER GRID - REMOVED MESSY BORDERS & FIXED CUT-OFF */
         .bonanza-grid-frame {
             background: rgba(45, 10, 60, 0.85); /* Solid dark purple, easy on eyes */
             padding: 10px; border-radius: 20px;
@@ -338,9 +338,12 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.8);
             position: relative;
             width: 100%;
-            /* Fix "putol" issue */
-            aspect-ratio: 6/5;
+            /* Fix "putol" issue by making it flexible but maintaining ratio */
             max-height: 60vh;
+            aspect-ratio: 6/5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .bonanza-grid {
@@ -356,29 +359,29 @@
             border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
             position: relative;
-            overflow: hidden;
+            overflow: visible; /* Important for scatter to pop out */
         }
 
         .b-symbol {
             font-size: 28px; /* Balanced size */
             filter: drop-shadow(0 4px 2px rgba(0,0,0,0.3));
-            animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 2; width: 100%; height: 100%;
             display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
+            will-change: transform;
         }
 
         /* NEW HUGE SCATTER STYLE */
         .b-symbol.scatter-icon {
-            font-size: 45px; /* Huge */
+            font-size: 60px; /* Huge */
             filter: drop-shadow(0 0 15px rgba(255, 105, 180, 0.8));
-            z-index: 10;
-            animation: bounceIn 0.4s, scatterPulse 1.5s infinite alternate !important;
+            z-index: 100;
+            position: absolute;
+            animation: scatterPulse 1.5s infinite alternate ease-in-out !important;
         }
 
         @keyframes scatterPulse {
-            0% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 10px #ff69b4); }
-            100% { transform: scale(1.15) rotate(5deg); filter: drop-shadow(0 0 25px #ff69b4); }
+            0% { transform: scale(1) rotate(-5deg); filter: drop-shadow(0 0 10px #ff69b4); }
+            100% { transform: scale(1.2) rotate(5deg); filter: drop-shadow(0 0 30px #ff69b4); }
         }
         
         .b-cell.b-win {
@@ -388,14 +391,14 @@
             z-index: 5;
         }
         
-        @keyframes bounceIn { 
-            0% { transform: scale(0) translateY(-20px); opacity: 0; } 
-            60% { transform: scale(1.1); opacity: 1; } 
-            100% { transform: scale(1) translateY(0); } 
+        /* SMOOTH FALL ANIMATION */
+        .b-symbol.falling {
+            animation: fallSmooth 0.5s cubic-bezier(0.25, 1, 0.5, 1);
         }
-        @keyframes fallDown { 
-            from { transform: translateY(-150px); opacity: 0; } 
-            to { transform: translateY(0); opacity: 1; } 
+
+        @keyframes fallSmooth { 
+            from { transform: translateY(-150%) scale(0.5); opacity: 0; } 
+            to { transform: translateY(0) scale(1); opacity: 1; } 
         }
         
         .b-pop-text {
@@ -1854,8 +1857,8 @@
                 const wins = result.wins;
                 const scatterCount = result.scatterCount;
 
-                // 2. Check Scatter Trigger (3 or more)
-                if (scatterCount >= 3) {
+                // 2. Check Scatter Trigger (4 or more) - HARDER
+                if (scatterCount >= 4) {
                     // Flash Scatters
                     highlightScatters();
                     playSound('win');
@@ -1933,9 +1936,9 @@
             for(let r=0; r<5; r++) {
                 let row = [];
                 for(let c=0; c<6; c++) {
-                    // FIXED: Strictly 10% Chance for Scatter
+                    // FIXED: Strictly 3% Chance for Scatter
                     let sym = bSymbols[Math.floor(Math.random() * (bSymbols.length - 1))];
-                    if (Math.random() < 0.10) sym = '🍭'; // Exact 10% logic
+                    if (Math.random() < 0.03) sym = '🍭'; // Exact 3% logic
                     row.push(sym);
                 }
                 bGrid.push(row);
@@ -1956,7 +1959,8 @@
                 // Add specific class for Scatter to make it HUGE
                 let extraClass = sym === '🍭' ? 'scatter-icon' : '';
                 
-                cell.innerHTML = `<div class="b-symbol ${extraClass}" style="animation: fallDown 0.3s ease forwards">${sym}</div>`;
+                // Use falling animation class
+                cell.innerHTML = `<div class="b-symbol ${extraClass} falling">${sym}</div>`;
                 
                 // Play satisfying drop sound staggered
                 setTimeout(() => playSound('drop'), Math.random() * 50);
@@ -2031,10 +2035,10 @@
             // Collect existing non-null
             for(let r=0; r<5; r++) { if(bGrid[r][c] !== null) newCol.push(bGrid[r][c]); }
             
-            // Fill top with new randoms (incl Scatter chance 10%)
+            // Fill top with new randoms (incl Scatter chance 3%)
             while(newCol.length < 5) { 
                  let sym = bSymbols[Math.floor(Math.random() * (bSymbols.length - 1))];
-                 if (Math.random() < 0.10) sym = '🍭'; // Exact 10% on tumbling too
+                 if (Math.random() < 0.03) sym = '🍭'; // Exact 3% on tumbling too
                  newCol.unshift(sym); 
             }
             
