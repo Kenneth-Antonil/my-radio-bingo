@@ -673,19 +673,25 @@
 
     function switchTab(tab) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        ['bingo','bringme','minigames'].forEach(t => document.getElementById(t+'Tab').style.display = 'none');
+        ['bingo','bringme','minigames'].forEach(t => {
+            const el = document.getElementById(t+'Tab');
+            if(el) el.style.display = 'none';
+        });
         
-        document.getElementById(tab+'Tab').style.display = 'block';
-        
-        // GSAP Tab Transition
-        gsap.fromTo("#" + tab + "Tab", {opacity: 0, y: 10}, {opacity: 1, y: 0, duration: 0.3});
+        const target = document.getElementById(tab+'Tab');
+        if(target) {
+            target.style.display = 'block';
+             // GSAP Tab Transition
+            gsap.fromTo(target, {opacity: 0, y: 10}, {opacity: 1, y: 0, duration: 0.3});
+        }
     }
 
     function openGame(game) {
         document.querySelector('.nav').style.display = 'none';
         document.querySelector('.tab-system').style.display = 'none';
         document.getElementById('minigamesTab').style.display = 'none';
-        document.getElementById('game-'+game).style.display = 'flex';
+        const gameEl = document.getElementById('game-'+game);
+        if(gameEl) gameEl.style.display = 'flex';
         
         if(game === 'bonanza') initBonanza();
     }
@@ -740,6 +746,109 @@
         bottomBanner.style.display = 'none';
     } else {
         installBtnProfile.style.display = 'flex';
+    }
+
+    /* === ADDED MISSING FUNCTIONS TO FIX BUGS === */
+    function openMenuModal() {
+        document.getElementById('menuModal').style.display = 'flex';
+    }
+
+    function openMessenger() {
+        alert("Messenger feature coming soon!");
+    }
+
+    function openNotifs() {
+        alert("No new notifications.");
+    }
+
+    function saveGcash() {
+        const num = document.getElementById('gcashInput').value;
+        if(num) {
+            db.ref('users/'+auth.currentUser.uid).update({ gcash: num });
+            alert("GCash Saved!");
+        }
+    }
+
+    function claimReferral() {
+        alert("Referral claimed (Demo Mode)");
+    }
+
+    function setupChat() {
+        db.ref('chat').limitToLast(20).on('child_added', snapshot => {
+            const msg = snapshot.val();
+            const div = document.createElement('div');
+            div.className = 'chat-row';
+            div.innerHTML = `<img src="${msg.photo}" class="chat-pfp"><div class="bubble"><div style="font-size:10px; opacity:0.7; margin-bottom:4px;">${msg.name}</div><div class="chat-text">${msg.text}</div></div>`;
+            document.getElementById('chatList').appendChild(div);
+            document.getElementById('chatList').scrollTop = document.getElementById('chatList').scrollHeight;
+        });
+    }
+
+    function sendChat() {
+        const input = document.getElementById('chatIn');
+        if(input.value.trim() !== "") {
+            db.ref('chat').push({
+                name: auth.currentUser.displayName,
+                photo: auth.currentUser.photoURL,
+                text: input.value,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+            input.value = "";
+        }
+    }
+
+    function cancelReply() {
+        document.getElementById('replyIndicator').style.display = 'none';
+    }
+
+    function handleBringMeUploadAdvanced(input) {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('aiPreviewImg').src = e.target.result;
+                document.getElementById('aiPreviewImg').style.display = 'block';
+                document.getElementById('aiLoading').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('aiLoading').style.display = 'none';
+                    alert("Image analyzed! (Demo Mode)");
+                }, 2000);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // Missing Mini Game Functions
+    function playLucky9() {
+        if(currentBet > (userData.points||0)) return alert("Low balance");
+        addPoints(-currentBet);
+        // Simple Demo Logic
+        document.getElementById('l9-player').innerText = Math.floor(Math.random()*9);
+        document.getElementById('l9-banker').innerText = Math.floor(Math.random()*9);
+        showResult('l9', isWin(), currentBet*2);
+    }
+
+    function playDice(type) {
+        if(currentBet > (userData.points||0)) return alert("Low balance");
+        addPoints(-currentBet);
+        document.getElementById('dice1').innerText = Math.floor(Math.random()*6)+1;
+        document.getElementById('dice2').innerText = Math.floor(Math.random()*6)+1;
+        showResult('dice', isWin(), currentBet*2);
+    }
+
+    function initScratchCard() {
+        if(currentBet > (userData.points||0)) return alert("Low balance");
+        addPoints(-currentBet);
+        const grid = document.getElementById('scratchGrid');
+        grid.innerHTML = '<div style="color:white; font-weight:bold; padding:20px;">SCRATCHED!</div>';
+        showResult('scratch', isWin(), currentBet*5);
+    }
+
+    function buyBonanzaFeature() {
+        if((userData.points||0) < 1000) return alert("Not enough points!");
+        addPoints(-1000);
+        document.getElementById('fsCountDisplay').innerText = 10;
+        alert("Free Spins Bought!");
     }
 
 </script>
