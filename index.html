@@ -1227,6 +1227,20 @@
             </div>
             <div class="points-badge" style="height:35px; border-radius: 10px;"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
         </div>
+
+        <div class="glass-panel" style="padding: 15px; border-radius: 18px; margin-bottom: 20px; border: 1px dashed var(--gold); text-align: center; position: relative; overflow: hidden;">
+            <h4 style="margin: 0 0 10px 0; color: var(--gold); font-size: 14px; text-transform: uppercase;">⚡ FREE POINTS ⚡</h4>
+            
+            <div id="adTimerOverlay" style="display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 50; align-items: center; justify-content: center; flex-direction: column;">
+                <div style="font-size: 24px; font-weight: 900; color: white;" id="adCountdown">15</div>
+                <div style="font-size: 10px; color: #cbd5e1;">Please wait...</div>
+            </div>
+
+            <button id="btnWatchAd" onclick="watchAdForReward()" style="background: linear-gradient(135deg, #f59e0b, #b45309); width: 100%; border: none; padding: 15px; border-radius: 12px; font-weight: 900; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4); text-shadow: 0 1px 2px black;">
+                <i data-lucide="play-circle" style="width: 20px;"></i> WATCH AD (+150 Pts)
+            </button>
+            <p style="font-size: 10px; opacity: 0.6; margin-top: 8px;">*View ad for 15 seconds to claim reward.</p>
+        </div>
         <div class="reward-grid">
             <div class="reward-item">
                 <div class="reward-main">
@@ -2344,6 +2358,74 @@
                 console.log("ADSTERRA: Container populated (potentially visible).");
             }
         }, 5000);
+    }
+
+    // === WATCH AD REWARD LOGIC ===
+    let isAdWatching = false;
+
+    function watchAdForReward() {
+        if(isAdWatching) return;
+
+        // 🔥 PALITAN MO ITO NG DIRECT LINK GALING ADSTERRA 🔥
+        const adsterraDirectLink = "https://www.effectivegatecpm.com/q1havtky?key=9c0aa600aefe07a77da853c501effbfa"; 
+
+        if (adsterraDirectLink.includes("replace-this")) {
+            alert("Please setup the Direct Link in the code first!");
+            return;
+        }
+
+        // 1. Buksan ang Ad sa New Tab
+        window.open(adsterraDirectLink, '_blank');
+
+        // 2. Start Timer UI
+        const btn = document.getElementById('btnWatchAd');
+        const overlay = document.getElementById('adTimerOverlay');
+        const countEl = document.getElementById('adCountdown');
+        
+        isAdWatching = true;
+        overlay.style.display = 'flex';
+        btn.disabled = true;
+        
+        let timeLeft = 15; // 15 Seconds Timer
+        countEl.innerText = timeLeft;
+
+        const timer = setInterval(() => {
+            timeLeft--;
+            countEl.innerText = timeLeft;
+
+            if(timeLeft <= 0) {
+                clearInterval(timer);
+                completeAdReward();
+            }
+        }, 1000);
+    }
+
+    function completeAdReward() {
+        const overlay = document.getElementById('adTimerOverlay');
+        const btn = document.getElementById('btnWatchAd');
+        
+        // 3. Give Points (Firebase)
+        const rewardPoints = 150; // Points na makukuha
+        db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) + rewardPoints);
+        
+        // 4. Reset UI
+        overlay.style.display = 'none';
+        btn.innerHTML = `<i data-lucide="check-circle"></i> CLAIMED!`;
+        btn.style.background = "var(--success)";
+        
+        playSound('win');
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        
+        alert(`🎉 SUCCESS! Added +${rewardPoints} Points!`);
+
+        // Cooldown ng 1 minute bago maka-watch ulit (iwas spam)
+        setTimeout(() => {
+            isAdWatching = false;
+            btn.disabled = false;
+            btn.innerHTML = `<i data-lucide="play-circle"></i> WATCH AD (+150 Pts)`;
+            btn.style.background = "linear-gradient(135deg, #f59e0b, #b45309)";
+            lucide.createIcons();
+        }, 60000); 
     }
 </script>
 </body>
