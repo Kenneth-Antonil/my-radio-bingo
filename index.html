@@ -2352,4 +2352,56 @@
 
         db.ref('private_messages/' + roomId).limitToLast(50).on('child_added', s => {
             const m = s.val(); const div = document.createElement('div');
-            div.className = `msg-bubble ${m.uid === myUid ? '
+            // DITO YUNG NAWALA, INAYOS KO NA:
+            div.className = `msg-bubble ${m.uid === myUid ? 'msg-me' : 'msg-them'}`;
+            div.innerText = m.msg;
+            const container = document.getElementById('pmMessages');
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        });
+    }
+
+    // NAWALA ITONG FUNCTION NA ITO SA PREVIOUS CODE MO, KAYA DI NAGSESEND
+    function sendPrivateMessage() {
+        if(!currentChatRoomId) return;
+        const inp = document.getElementById('pmInput');
+        const msg = inp.value.trim();
+        if(!msg) return;
+
+        const myUid = auth.currentUser.uid;
+        // Identify the other person's UID from the room ID
+        const targetUid = currentChatRoomId.replace(myUid, '').replace('_', '');
+
+        // Push message
+        db.ref('private_messages/' + currentChatRoomId).push({
+            uid: myUid,
+            name: auth.currentUser.displayName,
+            msg: msg,
+            time: Date.now()
+        });
+
+        // Update my inbox
+        db.ref('user_chats/' + myUid + '/' + currentChatRoomId).update({
+            lastMsg: "You: " + msg,
+            lastMsgTime: Date.now(),
+            targetUid: targetUid,
+            name: currentChatTargetName,
+            photo: document.getElementById('chatTargetImg').src,
+            unread: false
+        });
+
+        // Update their inbox
+        db.ref('user_chats/' + targetUid + '/' + currentChatRoomId).update({
+            lastMsg: msg,
+            lastMsgTime: Date.now(),
+            targetUid: myUid,
+            name: auth.currentUser.displayName,
+            photo: auth.currentUser.photoURL,
+            unread: true
+        });
+
+        inp.value = "";
+    }
+</script>
+</body>
+</html>
