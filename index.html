@@ -482,6 +482,14 @@
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
         }
 
+        /* === INSTALL INSTRUCTIONS MODAL === */
+        .install-tabs { display: flex; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 12px; }
+        .install-tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: #94a3b8; font-weight: 800; border-radius: 8px; cursor: pointer; }
+        .install-tab-btn.active { background: var(--accent); color: white; }
+        .guide-step { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .step-num { width: 30px; height: 30px; background: var(--gold); color: black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; flex-shrink: 0; }
+        .step-text { font-size: 13px; line-height: 1.4; color: #e2e8f0; }
+
     </style>
 </head>
 <body>
@@ -1176,6 +1184,50 @@
     </div>
 </div>
 
+<div id="installGuideModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; font-size:18px; font-weight:900;">INSTALL GUIDE</h3>
+            <button onclick="document.getElementById('installGuideModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+        </div>
+
+        <div class="install-tabs">
+            <button class="install-tab-btn active" id="tabAndroid" onclick="showGuide('android')">ANDROID</button>
+            <button class="install-tab-btn" id="tabIOS" onclick="showGuide('ios')">iOS</button>
+        </div>
+
+        <div id="guideAndroidContent">
+            <div class="guide-step">
+                <div class="step-num">1</div>
+                <div class="step-text">Pindutin ang <b>Three Dots (⋮)</b> sa upper right corner ng Google Chrome browser.</div>
+            </div>
+            <div class="guide-step">
+                <div class="step-num">2</div>
+                <div class="step-text">Hanapin at pindutin ang <b>"Install App"</b> o <b>"Add to Home Screen"</b>.</div>
+            </div>
+            <div class="guide-step">
+                <div class="step-num">3</div>
+                <div class="step-text">Click <b>Install</b> para mapunta ito sa iyong home screen.</div>
+            </div>
+        </div>
+
+        <div id="guideIOSContent" style="display:none;">
+            <div class="guide-step">
+                <div class="step-num">1</div>
+                <div class="step-text">Gamitin ang <b>Safari Browser</b> at pindutin ang <b>Share Icon</b> <i data-lucide="share" style="width:12px"></i> sa ibaba.</div>
+            </div>
+            <div class="guide-step">
+                <div class="step-num">2</div>
+                <div class="step-text">Mag-scroll pababa at hanapin ang <b>"Add to Home Screen"</b> <i data-lucide="plus-square" style="width:12px"></i>.</div>
+            </div>
+            <div class="guide-step">
+                <div class="step-num">3</div>
+                <div class="step-text">Click <b>Add</b> sa upper right corner.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="menuModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
         <div class="profile-header">
@@ -1187,11 +1239,11 @@
             <button onclick="document.getElementById('menuModal').style.display='none'" style="background:none; border:none; color:white; opacity:0.5;"><i data-lucide="x"></i></button>
         </div>
         
-        <button id="pwaInstallBtnProfile" style="width:100%; padding:15px; background:linear-gradient(90deg, #0ea5e9, #2563eb); color:white; border:none; border-radius:16px; font-weight:900; margin-bottom:20px; cursor:pointer; display:none; align-items:center; justify-content:center; gap:10px; box-shadow:0 8px 20px rgba(14, 165, 233, 0.4); border:1px solid rgba(255,255,255,0.2);">
+        <button id="pwaInstallBtnProfile" style="width:100%; padding:15px; background:linear-gradient(90deg, #0ea5e9, #2563eb); color:white; border:none; border-radius:16px; font-weight:900; margin-bottom:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 8px 20px rgba(14, 165, 233, 0.4); border:1px solid rgba(255,255,255,0.2);">
             <i data-lucide="download-cloud" style="width:24px; height:24px;"></i>
             <div style="text-align:left;">
                 <span style="display:block; font-size:14px;">INSTALL APP</span>
-                <span style="display:block; font-size:10px; opacity:0.8; font-weight:500;">Mas mabilis at walang address bar</span>
+                <span style="display:block; font-size:10px; opacity:0.8; font-weight:500;">Click here to install now</span>
             </div>
         </button>
 
@@ -1321,36 +1373,73 @@
     const manifestURL = URL.createObjectURL(blob);
     document.querySelector('#myManifest').setAttribute('href', manifestURL);
 
-    // --- PWA INSTALL PROMPT LOGIC (UPDATED FOR PROFILE + BOTTOM BANNER) ---
+    // --- PWA INSTALL PROMPT LOGIC (UPDATED WITH MODAL INSTRUCTIONS) ---
     let deferredPrompt;
     
-    // NEW PROFILE BUTTON
     const installBtnProfile = document.getElementById('pwaInstallBtnProfile');
     const bottomBanner = document.getElementById('pwaInstallBanner');
     const bottomBtn = document.getElementById('pwaBottomBtn');
 
+    // Check if already installed (Standalone Mode)
+    function checkInstallState() {
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+            installBtnProfile.style.display = 'none';
+            bottomBanner.style.display = 'none';
+        } else {
+            // Force show profile button if not installed
+            installBtnProfile.style.display = 'flex'; 
+        }
+    }
+    checkInstallState();
+
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        
-        // Show BOTH buttons (Profile & Bottom Banner)
-        installBtnProfile.style.display = 'flex';
-        bottomBanner.style.display = 'flex';
+        bottomBanner.style.display = 'flex'; // Show bottom banner only when event fires
     });
 
-    // Helper for install click
+    // Helper for install click (Handles both Android Automatic & Manual Guide)
     function triggerInstall() {
-        if(!deferredPrompt) return;
-        bottomBanner.style.display = 'none';
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-                console.log('User accepted the install prompt');
-                // Hide buttons after install
-                installBtnProfile.style.display = 'none';
+        if (deferredPrompt) {
+            // Scenario A: Browser supports automatic install prompt (Android)
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                    installBtnProfile.style.display = 'none';
+                    bottomBanner.style.display = 'none';
+                }
+                deferredPrompt = null;
+            });
+        } else {
+            // Scenario B: Browser does not support auto prompt (iOS, or Android dismissed)
+            // Show Manual Instructions Modal
+            document.getElementById('installGuideModal').style.display = 'flex';
+            
+            // Auto-detect iOS to switch tab
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if (isIOS) {
+                showGuide('ios');
+            } else {
+                showGuide('android');
             }
-            deferredPrompt = null;
-        });
+        }
+        // Hide bottom banner if clicked
+        bottomBanner.style.display = 'none';
+    }
+
+    // Modal Tab Logic
+    function showGuide(os) {
+        document.querySelectorAll('.install-tab-btn').forEach(b => b.classList.remove('active'));
+        if(os === 'android') {
+            document.getElementById('tabAndroid').classList.add('active');
+            document.getElementById('guideAndroidContent').style.display = 'block';
+            document.getElementById('guideIOSContent').style.display = 'none';
+        } else {
+            document.getElementById('tabIOS').classList.add('active');
+            document.getElementById('guideAndroidContent').style.display = 'none';
+            document.getElementById('guideIOSContent').style.display = 'block';
+        }
     }
 
     installBtnProfile.addEventListener('click', triggerInstall);
