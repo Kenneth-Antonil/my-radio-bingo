@@ -1907,8 +1907,23 @@
     // --- UPDATED NEXT DRAW LOGIC WITH "NO SCHEDULE" STATE ---
     function updateNextDrawDisplay() {
         db.ref('gameState').once('value', s => {
-            const gameData = s.val() || {}; let displayTime = gameData.nextDraw;
-            if(gameData.schedules) { const now = Date.now(); const sorted = Object.values(gameData.schedules).sort((a,b) => a - b); const next = sorted.find(t => t > now); if(next) displayTime = next; }
+            const gameData = s.val() || {}; 
+            let displayTime = null;
+
+            // Priority 1: Check manual nextDraw override
+            if (gameData.nextDraw && gameData.nextDraw > Date.now()) {
+                displayTime = gameData.nextDraw;
+            } 
+            // Priority 2: Check schedule list
+            else if (gameData.schedules) {
+                const now = Date.now();
+                // Ensure values are numbers and sorted correctly
+                const sorted = Object.values(gameData.schedules)
+                    .map(t => parseInt(t))
+                    .sort((a, b) => a - b);
+                const next = sorted.find(t => t > now);
+                if (next) displayTime = next;
+            }
             
             const banner = document.getElementById('nextDrawBanner'); 
             const timeEl = document.getElementById('nextDrawTime');
@@ -1917,9 +1932,10 @@
             
             if(displayTime) { 
                 banner.style.display = 'flex'; 
-                const formatted = isNaN(displayTime) ? displayTime : fixDate(displayTime);
+                const formatted = fixDate(displayTime);
                 timeEl.innerText = formatted; 
                 timeEl.style.fontSize = "18px";
+                timeEl.style.color = "white"; // Reset color
                 labelEl.innerText = "SUSUNOD NA BOLA";
                 lateSched.innerText = formatted;
                 checkNotificationTime(displayTime); 
@@ -1929,7 +1945,8 @@
                 banner.style.display = 'flex'; 
                 labelEl.innerText = "NO SCHEDULE YET";
                 timeEl.innerText = "WAIT FOR ANNOUNCEMENT";
-                timeEl.style.fontSize = "14px";
+                timeEl.style.fontSize = "13px";
+                timeEl.style.color = "#94a3b8"; // Dimmed color
                 lateSched.innerText = "--:--";
             }
         });
