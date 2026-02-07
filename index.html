@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Radio Bingo Live | Summer Edition</title>
     
-    <link rel="manifest" id="myManifest">
+    <link rel="manifest" href="manifest.json">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -1346,32 +1346,8 @@
 </div>
 
 <script>
-    // --- PWA MANIFEST INJECTION ---
-    const manifest = {
-        "name": "Radio Bingo Live",
-        "short_name": "RB Live",
-        "start_url": ".",
-        "display": "standalone",
-        "background_color": "#0f172a",
-        "theme_color": "#0f172a",
-        "orientation": "portrait",
-        "icons": [
-            {
-                "src": "https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg", 
-                "sizes": "192x192",
-                "type": "image/svg+xml"
-            },
-            {
-                "src": "https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg",
-                "sizes": "512x512",
-                "type": "image/svg+xml"
-            }
-        ]
-    };
-    const stringManifest = JSON.stringify(manifest);
-    const blob = new Blob([stringManifest], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(blob);
-    document.querySelector('#myManifest').setAttribute('href', manifestURL);
+    // --- PWA MANIFEST INJECTION (REMOVED: Now using external manifest.json) ---
+    // The previous blob logic has been removed to allow standard PWA installation via GitHub.
 
     // --- PWA INSTALL PROMPT LOGIC (UPDATED WITH MODAL INSTRUCTIONS) ---
     let deferredPrompt;
@@ -1383,11 +1359,11 @@
     // Check if already installed (Standalone Mode)
     function checkInstallState() {
         if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
-            installBtnProfile.style.display = 'none';
-            bottomBanner.style.display = 'none';
+            if(installBtnProfile) installBtnProfile.style.display = 'none';
+            if(bottomBanner) bottomBanner.style.display = 'none';
         } else {
             // Force show profile button if not installed
-            installBtnProfile.style.display = 'flex'; 
+            if(installBtnProfile) installBtnProfile.style.display = 'flex'; 
         }
     }
     checkInstallState();
@@ -1395,7 +1371,7 @@
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        bottomBanner.style.display = 'flex'; // Show bottom banner only when event fires
+        if(bottomBanner) bottomBanner.style.display = 'flex'; // Show bottom banner only when event fires
     });
 
     // Helper for install click (Handles both Android Automatic & Manual Guide)
@@ -1406,8 +1382,8 @@
             deferredPrompt.userChoice.then((choiceResult) => {
                 if (choiceResult.outcome === 'accepted') {
                     console.log('User accepted the install prompt');
-                    installBtnProfile.style.display = 'none';
-                    bottomBanner.style.display = 'none';
+                    if(installBtnProfile) installBtnProfile.style.display = 'none';
+                    if(bottomBanner) bottomBanner.style.display = 'none';
                 }
                 deferredPrompt = null;
             });
@@ -1425,7 +1401,7 @@
             }
         }
         // Hide bottom banner if clicked
-        bottomBanner.style.display = 'none';
+        if(bottomBanner) bottomBanner.style.display = 'none';
     }
 
     // Modal Tab Logic
@@ -1442,8 +1418,8 @@
         }
     }
 
-    installBtnProfile.addEventListener('click', triggerInstall);
-    bottomBtn.addEventListener('click', triggerInstall);
+    if(installBtnProfile) installBtnProfile.addEventListener('click', triggerInstall);
+    if(bottomBtn) bottomBtn.addEventListener('click', triggerInstall);
 
     // --- MAIN APP LOGIC ---
     lucide.createIcons();
@@ -1492,17 +1468,12 @@
     }
 
     if ('serviceWorker' in navigator) {
-        // Use a simple cached service worker approach for PWA
-        const swCode = `
-            self.addEventListener('install', (event) => { self.skipWaiting(); });
-            self.addEventListener('activate', (event) => { event.waitUntil(self.clients.claim()); });
-            self.addEventListener('fetch', (event) => { }); 
-        `;
-        const blob = new Blob([swCode], {type: 'application/javascript'});
-        const blobURL = URL.createObjectURL(blob);
-        navigator.serviceWorker.register(blobURL).then(reg => {
-            console.log("Service Worker Registered");
-        }).catch(err => console.log("SW Fail", err));
+        // --- FINAL PWA REGISTRATION (UPDATED) ---
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker Registered!', reg))
+                .catch(err => console.log('SW Failed:', err));
+        });
     }
 
     function requestNotifyPermission() {
