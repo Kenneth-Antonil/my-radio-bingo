@@ -529,6 +529,24 @@
         .step-num { width: 30px; height: 30px; background: var(--gold); color: black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; flex-shrink: 0; }
         .step-text { font-size: 13px; line-height: 1.4; color: #e2e8f0; }
 
+        /* === CUSTOM CONFIRM MODAL === */
+        #customConfirmModal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100000;
+            display: none; align-items: center; justify-content: center; padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .conf-content {
+            background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 24px; padding: 25px; width: 100%; max-width: 320px;
+            text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+            transform: scale(0.9); animation: popScale 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .conf-title { font-size: 18px; font-weight: 900; color: white; margin: 0 0 10px 0; }
+        .conf-msg { font-size: 13px; color: #cbd5e1; margin-bottom: 25px; line-height: 1.5; }
+        .conf-actions { display: flex; gap: 10px; justify-content: center; }
+        .btn-conf-yes { background: var(--accent); color: white; flex: 1; padding: 12px; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
+        .btn-conf-no { background: rgba(255,255,255,0.1); color: #94a3b8; flex: 1; padding: 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-weight: 800; cursor: pointer; }
+
     </style>
 </head>
 <body>
@@ -541,6 +559,18 @@
 <div id="customToast">
     <i data-lucide="info" class="toast-icon"></i>
     <span class="toast-msg" id="toastMsg">Notification!</span>
+</div>
+
+<div id="customConfirmModal">
+    <div class="conf-content">
+        <i data-lucide="alert-circle" style="width: 40px; height: 40px; color: var(--gold); margin-bottom: 15px;"></i>
+        <h3 class="conf-title" id="confTitle">Confirm Action</h3>
+        <p class="conf-msg" id="confMsg">Are you sure you want to proceed?</p>
+        <div class="conf-actions">
+            <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
+            <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
+        </div>
+    </div>
 </div>
 
 <div id="loginOverlay">
@@ -1424,6 +1454,27 @@
         }, 3000);
     }
 
+    // --- NEW: CUSTOM CONFIRM LOGIC (REPLACES DEFAULT ALERT/CONFIRM) ---
+    let confirmCallback = null;
+
+    function showCustomConfirm(title, msg, onYes) {
+        document.getElementById('confTitle').innerText = title;
+        document.getElementById('confMsg').innerText = msg;
+        document.getElementById('customConfirmModal').style.display = 'flex';
+        confirmCallback = onYes;
+        playSound('click');
+    }
+
+    function closeCustomConfirm() {
+        document.getElementById('customConfirmModal').style.display = 'none';
+        confirmCallback = null;
+    }
+
+    document.getElementById('confYesBtn').addEventListener('click', () => {
+        if(confirmCallback) confirmCallback();
+        closeCustomConfirm();
+    });
+
     // --- NEW: 5-MINUTE NOTIFICATION LOGIC ---
     let notifiedFiveMins = false;
     let lastCheckedSchedule = null;
@@ -1828,10 +1879,11 @@
     }
 
     function deleteNotif(key) {
-        if(confirm("Delete this notification?")) {
+        showCustomConfirm("DELETE NOTIFICATION?", "Are you sure you want to remove this message?", () => {
             db.ref('notifications/' + auth.currentUser.uid + '/' + key).remove();
             renderNotifs(); 
-        }
+            showToast("Message Deleted");
+        });
     }
 
     function listenJackpot() {
@@ -1861,6 +1913,7 @@
             const banner = document.getElementById('nextDrawBanner'); 
             const timeEl = document.getElementById('nextDrawTime');
             const labelEl = document.querySelector('.next-draw-label');
+            const lateSched = document.getElementById('lateNextSched');
             
             if(displayTime) { 
                 banner.style.display = 'flex'; 
@@ -1868,15 +1921,16 @@
                 timeEl.innerText = formatted; 
                 timeEl.style.fontSize = "18px";
                 labelEl.innerText = "SUSUNOD NA BOLA";
-                document.getElementById('lateNextSched').innerText = formatted; 
+                lateSched.innerText = formatted;
                 checkNotificationTime(displayTime); 
                 checkFiveMinuteNotification(displayTime);
             } else { 
-                // UPDATED: Show "No Schedule" instead of hiding
+                // UPDATED: Show "No Schedule" explicit text
                 banner.style.display = 'flex'; 
                 labelEl.innerText = "NO SCHEDULE YET";
                 timeEl.innerText = "WAIT FOR ANNOUNCEMENT";
                 timeEl.style.fontSize = "14px";
+                lateSched.innerText = "--:--";
             }
         });
     }
@@ -2423,13 +2477,14 @@
     }
 
     function buyBonanzaFeature() {
-        if(userData.points < 1000) return showToast("Need 1000 pts to buy feature!");
-        if(confirm("Buy 10 Free Spins for 1000 pts?")) {
+         if(userData.points < 1000) return showToast("Need 1000 pts to buy feature!");
+         // UPDATED: Use Custom Confirm
+         showCustomConfirm("BUY FREE SPINS?", "Spend 1,000 Points for 10 Free Spins?", () => {
             deductPoints(1000);
             fsCount += 10;
             updateBonanzaUI();
             showToast("Feature Bought!");
-        }
+         });
     }
 
     function updateBonanzaUI() {
@@ -2741,7 +2796,8 @@
     function redeemItem(name, cost) {
         if(userData.points >= cost) {
             if(!userData.gcash) return showToast("Save GCash number first!");
-            if(confirm("Redeem " + name + "?")) {
+            // UPDATED: Use Custom Confirm
+            showCustomConfirm("REDEEM REWARD?", "Exchange " + cost + " pts for " + name + "?", () => {
                 deductPoints(cost);
                 db.ref('redemptions').push({
                     uid: userData.uid, name: userData.name, gcash: userData.gcash, item: name, cost: cost,
@@ -2749,7 +2805,7 @@
                 });
                 showToast("Request Sent! Wait for approval.");
                 loadHistory();
-            }
+            });
         } else { showToast("Insufficient Points"); }
     }
 
