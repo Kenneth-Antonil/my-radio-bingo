@@ -8,6 +8,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Radio Bingo Live | Summer Edition</title>
     
+    <link rel="icon" type="image/png" href="https://i.imgur.com/7D8u8h6.png">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/7D8u8h6.png">
     <link rel="manifest" href="manifest.json">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -83,7 +85,7 @@
         #customToast {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%);
             background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent);
-            padding: 16px 24px; border-radius: 16px; z-index: 100000; display: flex; align-items: center; gap: 12px;
+            padding: 16px 24px; border-radius: 16px; z-index: 100000; display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.8); backdrop-filter: blur(12px);
             transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             min-width: 280px; max-width: 90%;
@@ -162,7 +164,7 @@
         .ai-scanning-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: #fff; box-shadow: 0 0 15px #fff, 0 0 30px var(--bringme); animation: scanLine 2s linear infinite; display: none; z-index: 10; }
         @keyframes scanLine { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
 
-        .next-draw-container { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.4); padding: 15px; border-radius: 20px; margin-bottom: 15px; display: none; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
+        .next-draw-container { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.4); padding: 15px; border-radius: 20px; margin-bottom: 15px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
         .nd-icon { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); color: var(--gold); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(251, 191, 36, 0.4); }
         .nd-info { flex: 1; }
         .next-draw-label { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
@@ -1448,9 +1450,6 @@
         }
     }
 
-    // --- PWA MANIFEST INJECTION (REMOVED: Now using external manifest.json) ---
-    // The previous blob logic has been removed to allow standard PWA installation via GitHub.
-
     // --- PWA INSTALL PROMPT LOGIC (UPDATED WITH MODAL INSTRUCTIONS) ---
     let deferredPrompt;
     
@@ -1581,7 +1580,11 @@
         // --- FINAL PWA REGISTRATION (UPDATED) ---
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('Service Worker Registered!', reg))
+                .then(reg => {
+                     console.log('Service Worker Registered!', reg);
+                     // Ask for permission for notifications
+                     Notification.requestPermission();
+                })
                 .catch(err => console.log('SW Failed:', err));
         });
     }
@@ -1713,8 +1716,8 @@
                 // Foreground Message Handler
                 messaging.onMessage((payload) => {
                     console.log('Message received. ', payload);
-                    const title = payload.notification.title;
-                    const body = payload.notification.body;
+                    const title = payload.notification ? payload.notification.title : "Notification";
+                    const body = payload.notification ? payload.notification.body : "New message";
                     showToast(title + ": " + body);
                     playSound('pop');
                 });
@@ -1849,18 +1852,32 @@
          db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); });
     }
 
+    // --- UPDATED NEXT DRAW LOGIC WITH "NO SCHEDULE" STATE ---
     function updateNextDrawDisplay() {
         db.ref('gameState').once('value', s => {
             const gameData = s.val() || {}; let displayTime = gameData.nextDraw;
             if(gameData.schedules) { const now = Date.now(); const sorted = Object.values(gameData.schedules).sort((a,b) => a - b); const next = sorted.find(t => t > now); if(next) displayTime = next; }
-            const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime');
+            
+            const banner = document.getElementById('nextDrawBanner'); 
+            const timeEl = document.getElementById('nextDrawTime');
+            const labelEl = document.querySelector('.next-draw-label');
+            
             if(displayTime) { 
                 banner.style.display = 'flex'; 
                 const formatted = isNaN(displayTime) ? displayTime : fixDate(displayTime);
-                timeEl.innerText = formatted; document.getElementById('lateNextSched').innerText = formatted; 
+                timeEl.innerText = formatted; 
+                timeEl.style.fontSize = "18px";
+                labelEl.innerText = "SUSUNOD NA BOLA";
+                document.getElementById('lateNextSched').innerText = formatted; 
                 checkNotificationTime(displayTime); 
-                checkFiveMinuteNotification(displayTime); // NEW 5 MINUTE CHECK
-            } else { banner.style.display = 'none'; }
+                checkFiveMinuteNotification(displayTime);
+            } else { 
+                // UPDATED: Show "No Schedule" instead of hiding
+                banner.style.display = 'flex'; 
+                labelEl.innerText = "NO SCHEDULE YET";
+                timeEl.innerText = "WAIT FOR ANNOUNCEMENT";
+                timeEl.style.fontSize = "14px";
+            }
         });
     }
 
