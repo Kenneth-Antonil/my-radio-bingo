@@ -55,6 +55,42 @@
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
         }
 
+        /* === NEW FEATURE: ANIMATED SPLASH SCREEN === */
+        #splash-screen {
+            position: fixed; inset: 0; background: #0f172a; z-index: 99999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.8s ease, visibility 0.8s;
+        }
+        .splash-logo {
+            font-size: 60px; font-weight: 900; letter-spacing: -3px; color: white;
+            animation: pulseLogo 2s infinite ease-in-out;
+            text-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+        }
+        .splash-logo span { color: var(--accent-glow); }
+        .splash-loader {
+            width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid var(--accent); border-radius: 50%;
+            margin-top: 20px; animation: spin 1s linear infinite;
+        }
+        @keyframes pulseLogo { 
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(56,189,248,0.2)); }
+            50% { transform: scale(1.1); filter: drop-shadow(0 0 30px rgba(56,189,248,0.8)); }
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* === NEW FEATURE: CUSTOM TOAST NOTIFICATION === */
+        #customToast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%);
+            background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent);
+            padding: 16px 24px; border-radius: 16px; z-index: 100000; display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8); backdrop-filter: blur(12px);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-width: 280px; max-width: 90%;
+        }
+        #customToast.show { transform: translateX(-50%) translateY(0); }
+        .toast-icon { color: var(--gold); flex-shrink: 0; }
+        .toast-msg { font-size: 14px; font-weight: 700; color: white; line-height: 1.4; }
+
         /* === ADSTERRA CONTAINER FIX === */
         .ad-container-global {
             position: relative;
@@ -493,6 +529,16 @@
     </style>
 </head>
 <body>
+
+<div id="splash-screen">
+    <div class="splash-logo">RB<span>LIVE</span></div>
+    <div class="splash-loader"></div>
+</div>
+
+<div id="customToast">
+    <i data-lucide="info" class="toast-icon"></i>
+    <span class="toast-msg" id="toastMsg">Notification!</span>
+</div>
 
 <div id="loginOverlay">
     <div class="login-card">
@@ -1256,7 +1302,7 @@
         </div>
         <div class="ref-container">
             <span style="font-size:10px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="share-2" style="width:12px"></i> Invite & Earn</span>
-            <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom:10px;" onclick="this.select(); document.execCommand('copy'); alert('Copied Link!'); playSound('click');">
+            <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom:10px;" onclick="this.select(); document.execCommand('copy'); showToast('Copied Link!'); playSound('click');">
             <div id="referralInputSection">
                 <span style="font-size:10px; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px; margin-top:15px;"><i data-lucide="ticket" style="width:12px"></i> Claim Referral Code</span>
                 <div style="display:flex; gap:10px;">
@@ -1346,6 +1392,53 @@
 </div>
 
 <script>
+    // --- NEW: SPLASH SCREEN LOGIC ---
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const ss = document.getElementById('splash-screen');
+            ss.style.opacity = '0';
+            setTimeout(() => ss.style.display = 'none', 800);
+        }, 2000);
+    });
+
+    // --- NEW: CUSTOM TOAST LOGIC ---
+    function showToast(msg) {
+        const toast = document.getElementById('customToast');
+        const msgEl = document.getElementById('toastMsg');
+        msgEl.innerText = msg;
+        toast.classList.add('show');
+        playSound('click'); // Adding sound to notification
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    // --- NEW: 5-MINUTE NOTIFICATION LOGIC ---
+    let notifiedFiveMins = false;
+    let lastCheckedSchedule = null;
+
+    function checkFiveMinuteNotification(timeInput) {
+        if(notifiedFiveMins && lastCheckedSchedule === timeInput) return;
+        
+        let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput);
+        if(drawTime > 0) { 
+            const diff = drawTime - Date.now(); 
+            const mins = Math.floor(diff / 60000); 
+            
+            if(mins === 5) { 
+                if(Notification.permission === "granted") {
+                    new Notification("RB LIVE BINGO", { body: "Dali! 5 minutes na lang bola na! Buksan na ang app." }); 
+                }
+                showToast("⚠️ 5 minutes na lang, bola na!");
+                notifiedFiveMins = true; 
+                lastCheckedSchedule = timeInput;
+            } 
+            
+            // Reset if new schedule
+            if(mins > 5) notifiedFiveMins = false;
+        }
+    }
+
     // --- PWA MANIFEST INJECTION (REMOVED: Now using external manifest.json) ---
     // The previous blob logic has been removed to allow standard PWA installation via GitHub.
 
@@ -1517,8 +1610,8 @@
 
     async function handleBringMeUploadAdvanced(input) {
         if(!input.files || !input.files[0]) return;
-        if(userData.hasWonBringMeThisRound) { alert("Nakuha mo na ang points! Hintayin ang susunod."); return; }
-        if(!cocoModel) { alert("AI is still loading, please wait..."); return; }
+        if(userData.hasWonBringMeThisRound) { showToast("Nakuha mo na ang points! Hintayin ang susunod."); return; }
+        if(!cocoModel) { showToast("AI is still loading, please wait..."); return; }
         const file = input.files[0]; const preview = document.getElementById('aiPreviewImg'); const placeholder = document.getElementById('aiPlaceholder'); const loader = document.getElementById('aiLoading'); const scanLine = document.getElementById('aiScanLine'); const statusText = document.getElementById('aiStatusText');
         preview.src = URL.createObjectURL(file); preview.style.display = 'block'; placeholder.style.display = 'none'; loader.style.display = 'block'; scanLine.style.display = 'block'; statusText.innerText = "AI IDENTIFYING OBJECT...";
         const img = new Image(); img.src = preview.src;
@@ -1545,15 +1638,15 @@
                     if(game && game.active && !game.winner) {
                         if(successfulMatch) { 
                             const confidencePercent = Math.round(successfulMatch.score * 100); 
-                            alert(`✅ AI SUCCESS: Sigurado ako (${confidencePercent}%) na ${successfulMatch.class} iyan!`); 
+                            showToast(`✅ AI SUCCESS: Sigurado ako (${confidencePercent}%) na ${successfulMatch.class} iyan!`); 
                             playSound('win');
                             triggerBringMeWin(); 
                         } 
                         else { 
                             playSound('lose');
-                            if (predictions.length > 0) { const detected = predictions.map(p => p.class).join(", "); alert(`❌ AI REJECTED: Ang nakita ko ay (${detected}), pero ang hanap ay ${targetItem.toUpperCase()}.`); } else { alert("❌ AI REJECTED: Walang malinaw na object na makita. Ayusin ang anggulo o ilaw."); } 
+                            if (predictions.length > 0) { const detected = predictions.map(p => p.class).join(", "); showToast(`❌ AI REJECTED: Ang nakita ko ay (${detected}), pero ang hanap ay ${targetItem.toUpperCase()}.`); } else { showToast("❌ AI REJECTED: Walang malinaw na object na makita. Ayusin ang anggulo o ilaw."); } 
                         }
-                    } else if (game.winner) { alert("May nanalo na!"); }
+                    } else if (game.winner) { showToast("May nanalo na!"); }
                     loader.style.display = 'none'; scanLine.style.display = 'none';
                 });
             }, 2000);
@@ -1590,7 +1683,7 @@
                     if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 500); } }); }
                 } else {
                     const data = snapshot.val(); const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL };
-                    const today = new Date().toDateString(); if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 50; updates.lastLoginDate = today; alert("🎁 Daily Bonus! +50 points."); playSound('win'); }
+                    const today = new Date().toDateString(); if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 50; updates.lastLoginDate = today; showToast("🎁 Daily Bonus! +50 points."); playSound('win'); }
                     if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase(); userRef.update(updates);
                 }
             });
@@ -1715,7 +1808,9 @@
             if(displayTime) { 
                 banner.style.display = 'flex'; 
                 const formatted = isNaN(displayTime) ? displayTime : fixDate(displayTime);
-                timeEl.innerText = formatted; document.getElementById('lateNextSched').innerText = formatted; checkNotificationTime(displayTime); 
+                timeEl.innerText = formatted; document.getElementById('lateNextSched').innerText = formatted; 
+                checkNotificationTime(displayTime); 
+                checkFiveMinuteNotification(displayTime); // NEW 5 MINUTE CHECK
             } else { banner.style.display = 'none'; }
         });
     }
@@ -1757,6 +1852,8 @@
                 const newBall = newGameDrawn[newGameDrawn.length - 1]; 
                 // speakNumber moved to lastCalled listener to prevent repeating highest number
                 playSound('newBall'); 
+                // REPLACED ALERT WITH TOAST
+                showToast("Bola: " + newBall);
                 if(document.hidden && Notification.permission === "granted") new Notification("New Ball: " + newBall);
             }
             gameDrawn = newGameDrawn; 
@@ -1789,6 +1886,8 @@
             }
         });
     }
+
+    let lastSpokenNumber = null;
 
     function speakNumber(num) { if ('speechSynthesis' in window) { let letter = "B"; if (num > 15) letter = "I"; if (num > 30) letter = "N"; if (num > 45) letter = "G"; if (num > 60) letter = "O"; const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 0.9; window.speechSynthesis.speak(msg); } }
 
@@ -1895,7 +1994,7 @@
     }
 
     function generateNewCard() {
-        if(gameDrawn.length > 0) return alert("Bawal mag palit ng card kapag may bola na!");
+        if(gameDrawn.length > 0) return showToast("Bawal mag palit ng card kapag may bola na!");
         playSound('click');
         const getCol = (min, max) => { let nums = []; while(nums.length < 5) { let r = Math.floor(Math.random() * (max - min + 1)) + min; if(!nums.includes(r)) nums.push(r); } return nums.sort((a,b) => a-b); };
         const b = getCol(1, 15), i = getCol(16, 30), n = getCol(31, 45), g = getCol(46, 60), o = getCol(61, 75);
@@ -1938,17 +2037,15 @@
     function setReply(id, name) { selectedReplyId = id; document.getElementById('replyIndicator').style.display = 'flex'; document.getElementById('replyText').innerText = `Replying to ${name}...`; document.getElementById('chatIn').focus(); }
     function cancelReply() { selectedReplyId = null; document.getElementById('replyIndicator').style.display = 'none'; }
     function sendChat() { const inp = document.getElementById('chatIn'); const msg = inp.value.trim(); if(!msg) return; if(selectedReplyId) { db.ref(`chats/${selectedReplyId}/replies`).push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() }); cancelReply(); } else { db.ref('chats').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, pfp: auth.currentUser.photoURL, msg: msg, time: Date.now() }); } inp.value = ""; }
-    function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length < 10) return alert("Error"); db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => alert("Saved!")); }
-    function claimReferral() { const code = document.getElementById('referralInput').value.trim().toUpperCase(); db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => { if(s.exists()) { db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 }); alert("Claimed!"); } }); }
-    function redeemItem(item, cost) { if((userData.points || 0) < cost) return alert("No points!"); playSound('click'); db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost); db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() }); }
+    function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length < 10) return showToast("Error"); db.ref('users/' + auth.currentUser.uid).update({ gcash: num }).then(() => showToast("Saved!")); }
+    function claimReferral() { const code = document.getElementById('referralInput').value.trim().toUpperCase(); db.ref('users').orderByChild('refCode').equalTo(code).once('value', s => { if(s.exists()) { db.ref('users/' + auth.currentUser.uid).update({ referredBy: code, points: (userData.points || 0) + 100 }); showToast("Claimed!"); } }); }
+    function redeemItem(item, cost) { if((userData.points || 0) < cost) return showToast("No points!"); playSound('click'); db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) - cost); db.ref('redemptions').push({ uid: auth.currentUser.uid, name: auth.currentUser.displayName, gcash: userData.gcash, item: item, cost: cost, status: 'pending', time: Date.now() }); }
     function openMenuModal() { playSound('click'); document.getElementById('menuModal').style.display = 'flex'; const hist = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { hist.innerHTML = ""; s.forEach(child => { const v = child.val(); const item = document.createElement('div'); item.className = 'history-item'; item.innerHTML = `<div class="hist-main"><span class="hist-title" style="color:white; font-size:13px; font-weight:700;">${v.item}</span></div><span class="hist-status" style="font-size:10px; font-weight:800; padding:4px 8px; border-radius:6px; background:rgba(251,191,36,0.1); color:#fbbf24;">${v.status.toUpperCase()}</span>`; hist.appendChild(item); }); }); }
 
     // ============================================
     // UPDATED MINI GAMES & CANDY SMASH LOGIC
     // ============================================
 
-    let currentBet = 10;
-    
     function adjustBet(amount) {
         let newBet = currentBet + amount;
         if (newBet < 10) newBet = 10;
@@ -2035,7 +2132,7 @@
 
     // 1. Color Game
     function playColor(choice) {
-        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        if((userData.points || 0) < currentBet) return showToast("Not enough points!");
         addPoints(-currentBet);
         playSound('spin');
 
@@ -2096,7 +2193,7 @@
 
     // 2. Lucky 9
     function playLucky9() {
-        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        if((userData.points || 0) < currentBet) return showToast("Not enough points!");
         addPoints(-currentBet);
         document.getElementById('btnDealL9').disabled = true;
         playSound('cardFlip');
@@ -2146,7 +2243,7 @@
 
     // 3. Dice Roll
     function playDice(bet) {
-        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        if((userData.points || 0) < currentBet) return showToast("Not enough points!");
         addPoints(-currentBet);
         playSound('spin');
 
@@ -2206,7 +2303,7 @@
     // 4. Scratch Card
     let scratchWin = false;
     function initScratchCard() {
-        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        if((userData.points || 0) < currentBet) return showToast("Not enough points!");
         addPoints(-currentBet);
         document.getElementById('btnBuyCard').disabled = true;
 
@@ -2293,8 +2390,8 @@
     }
 
     function startPrivateChat(targetUid, name, photo) {
-        if(targetUid === auth.currentUser.uid) return alert("You cannot message yourself.");
-        if(targetUid === 'ai') return alert("Cannot DM the AI.");
+        if(targetUid === auth.currentUser.uid) return showToast("You cannot message yourself.");
+        if(targetUid === 'ai') return showToast("Cannot DM the AI.");
 
         const myUid = auth.currentUser.uid;
         const roomId = [myUid, targetUid].sort().join('_');
@@ -2375,7 +2472,7 @@
 
     function playBonanza() {
         if(bIsSpinning) return;
-        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        if((userData.points || 0) < currentBet) return showToast("Not enough points!");
         addPoints(-currentBet);
         bIsSpinning = true;
         document.getElementById('bSpinBtn').classList.add('disabled');
@@ -2405,7 +2502,7 @@
     
     function buyBonanzaFeature() {
         const cost = currentBet * 100;
-        if((userData.points || 0) < cost) return alert("Not enough points!");
+        if((userData.points || 0) < cost) return showToast("Not enough points!");
         if(confirm("Buy Free Spins for " + cost + " points?")) {
             addPoints(-cost);
             document.getElementById('fsModal').style.display = 'flex';
@@ -2414,7 +2511,7 @@
     }
 
     function spinRoulette() {
-        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        if((userData.points || 0) < currentBet) return showToast("Not enough points!");
         addPoints(-currentBet);
         document.getElementById('btnSpinWheel').disabled = true;
         playSound('spin');
@@ -2450,7 +2547,7 @@
     }
 
     function guessHighLow(choice) {
-        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        if((userData.points || 0) < currentBet) return showToast("Not enough points!");
         addPoints(-currentBet);
         document.getElementById('btnHi').disabled = true;
         document.getElementById('btnLo').disabled = true;
@@ -2501,7 +2598,7 @@
     }
 
     function pullSlotLever() {
-        if((userData.points || 0) < currentBet) return alert("Not enough points!");
+        if((userData.points || 0) < currentBet) return showToast("Not enough points!");
         addPoints(-currentBet);
         document.getElementById('btnPullLever').disabled = true;
         playSound('spin');
