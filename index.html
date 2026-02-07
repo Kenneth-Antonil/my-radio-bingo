@@ -15,6 +15,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
@@ -1519,6 +1520,14 @@
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
+    // === NEW: INITIALIZE MESSAGING ===
+    let messaging;
+    try {
+        messaging = firebase.messaging();
+    } catch(e) {
+        console.log("Messaging failed to init (likely unsupported browser): ", e);
+    }
+
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo";
     let lastNotifiedDraw = ""; let selectedReplyId = null;
 
@@ -1569,11 +1578,27 @@
         });
     }
 
+    // UPDATED PERMISSION REQUEST (Supports Both Local & FCM)
     function requestNotifyPermission() {
         if ("Notification" in window) {
             Notification.requestPermission().then(permission => {
                 if (permission === "granted") {
-                    new Notification("Notifications Enabled", { body: "You will be notified for games!" });
+                    console.log("Notification permission granted.");
+                    // After permission, get FCM Token
+                    if(messaging) {
+                        messaging.getToken({ vapidKey: 'BMcWdK... (Optional if handled by config)' }).then((currentToken) => {
+                            if (currentToken) {
+                                console.log("FCM Token:", currentToken);
+                                if(auth.currentUser) {
+                                    db.ref('users/' + auth.currentUser.uid).update({ fcmToken: currentToken });
+                                }
+                            } else {
+                                console.log('No registration token available. Request permission to generate one.');
+                            }
+                        }).catch((err) => {
+                            console.log('An error occurred while retrieving token. ', err);
+                        });
+                    }
                 }
             });
         }
@@ -1671,6 +1696,22 @@
 
     auth.onAuthStateChanged(u => {
         if(u) {
+            // === NEW: Refresh Token on Login ===
+            if(messaging) {
+                messaging.getToken().then((token) => {
+                    if(token) db.ref('users/' + u.uid).update({ fcmToken: token });
+                }).catch((err)=>console.log(err));
+                
+                // Foreground Message Handler
+                messaging.onMessage((payload) => {
+                    console.log('Message received. ', payload);
+                    const title = payload.notification.title;
+                    const body = payload.notification.body;
+                    showToast(title + ": " + body);
+                    playSound('pop');
+                });
+            }
+            
             document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('userPanel').style.display = 'flex';
             document.getElementById('userImg').src = u.photoURL; document.getElementById('profileImgLarge').src = u.photoURL;
             document.getElementById('profileNameDisplay').innerText = u.displayName; document.getElementById('profileUidDisplay').innerText = "ID: " + u.uid.substring(0,8);
