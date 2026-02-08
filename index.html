@@ -55,6 +55,41 @@
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
         }
 
+        /* === NOTIFICATION BLOCKER GATE === */
+        #notifBlocker {
+            position: fixed; inset: 0; z-index: 9999999;
+            background: rgba(15, 23, 42, 0.98);
+            display: none; /* Shown by JS */
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .notif-gate-icon {
+            width: 80px; height: 80px; background: rgba(59, 130, 246, 0.2);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
+            animation: pulseGate 2s infinite;
+        }
+        @keyframes pulseGate { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        
+        .notif-gate-title { font-size: 24px; font-weight: 900; margin-bottom: 10px; color: white; }
+        .notif-gate-desc { font-size: 14px; color: #cbd5e1; margin-bottom: 30px; line-height: 1.6; max-width: 300px; }
+        
+        .btn-allow-notif {
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            color: white; border: none; padding: 15px 30px; border-radius: 16px;
+            font-weight: 800; font-size: 16px; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+            transition: 0.3s; width: 100%; max-width: 250px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-allow-notif:hover { transform: translateY(-3px); }
+
+        .blocked-help { 
+            display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 15px; border-radius: 12px; margin-top: 20px; font-size: 12px; text-align: left;
+        }
+
         /* === SPLASH SCREEN === */
         #splash-screen {
             position: fixed; inset: 0; background: #0f172a; z-index: 99999;
@@ -600,6 +635,26 @@
     </style>
 </head>
 <body>
+
+<div id="notifBlocker">
+    <div class="notif-gate-icon">
+        <i data-lucide="bell-ring" style="width: 40px; height: 40px; color: #3b82f6;"></i>
+    </div>
+    <div class="notif-gate-title">ENABLE NOTIFICATIONS</div>
+    <p class="notif-gate-desc">To ensure fairness and real-time updates for Bingo Calls, this app requires push notifications to be enabled.</p>
+    
+    <button onclick="requestGatePermission()" class="btn-allow-notif">
+        <i data-lucide="check-circle" style="width:20px"></i> ALLOW NOTIFICATIONS
+    </button>
+
+    <div id="blockedHelp" class="blocked-help">
+        <strong style="color:var(--danger); display:block; margin-bottom:5px;">⚠️ NOTIFICATIONS ARE BLOCKED!</strong>
+        1. Click the <b>Lock Icon 🔒</b> or <b>Settings Icon</b> beside the URL bar.<br>
+        2. Click <b>Permissions</b> or <b>Site Settings</b>.<br>
+        3. Find <b>Notifications</b> and set to <b>Allow</b>.<br>
+        4. Reload this page.
+    </div>
+</div>
 
 <div id="splash-screen">
     <div class="splash-logo">RB<span>LIVE</span></div>
@@ -1428,10 +1483,49 @@
 </div>
 
 <script>
-    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); });
+    // === NOTIFICATION BLOCKER LOGIC ===
+    window.addEventListener('load', () => { 
+        setTimeout(hideSplash, 2000); 
+        checkNotifGate(); 
+    });
     setTimeout(hideSplash, 5000);
     function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
     
+    // Function to check permission state
+    function checkNotifGate() {
+        const blocker = document.getElementById('notifBlocker');
+        const help = document.getElementById('blockedHelp');
+        
+        if (!("Notification" in window)) {
+            // Not supported, let them pass but warn
+            showToast("Notifications not supported on this device.");
+            blocker.style.display = 'none';
+            return;
+        }
+
+        if (Notification.permission === "granted") {
+            blocker.style.display = 'none';
+        } else if (Notification.permission === "denied") {
+            blocker.style.display = 'flex';
+            help.style.display = 'block';
+        } else {
+            // Default (Prompt needed)
+            blocker.style.display = 'flex';
+            help.style.display = 'none';
+        }
+    }
+
+    function requestGatePermission() {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                checkNotifGate();
+                requestNotifyPermission(); // Proceed with token gen
+            } else {
+                checkNotifGate(); // Show blocked UI
+            }
+        });
+    }
+
     function showToast(msg) { const toast = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; toast.classList.add('show'); playSound('click'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
 
     let confirmCallback = null;
@@ -1477,7 +1571,7 @@
     };
     function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; if(type === 'drop') sounds[type].volume = 0.3; else sounds[type].volume = 1.0; sounds[type].play().catch(e => console.log("Audio play error", e)); } }
 
-    if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').then(reg => { Notification.requestPermission(); }).catch(err => console.log('SW Failed:', err)); }); }
+    if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').then(reg => { }).catch(err => console.log('SW Failed:', err)); }); }
     function requestNotifyPermission() { if ("Notification" in window) { Notification.requestPermission().then(permission => { if (permission === "granted" && messaging) { messaging.getToken().then((currentToken) => { if (currentToken && auth.currentUser) db.ref('users/' + auth.currentUser.uid).update({ fcmToken: currentToken }); }).catch((err) => console.log('Err token', err)); } }); } }
 
     function switchTab(tab) { const btns = document.querySelectorAll('.tab-btn'); btns.forEach(b => b.classList.remove('active')); document.getElementById('bingoTab').style.display = 'none'; document.getElementById('minigamesTab').style.display = 'none'; if(tab === 'bingo') { document.getElementById('bingoTab').style.display = 'block'; btns[0].classList.add('active'); } else if(tab === 'minigames') { document.getElementById('minigamesTab').style.display = 'block'; btns[1].classList.add('active'); } }
@@ -1507,7 +1601,7 @@
     // REMOVED BRING ME & AI FUNCTIONS
 
     function fixDate(timestamp) { if(!timestamp) return "No Date"; const d = new Date(parseInt(timestamp)); return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) + " " + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }); }
-    function login() { playSound('click'); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(() => requestNotifyPermission()); }
+    function login() { playSound('click'); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(() => { requestNotifyPermission(); checkNotifGate(); }); }
 
     auth.onAuthStateChanged(u => {
         if(u) {
