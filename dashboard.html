@@ -79,6 +79,18 @@
 </head>
 <body>
 
+<div id="lockScreen" style="position:fixed; inset:0; background:#0f172a; z-index:999999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white;">
+    <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);">
+        <i data-lucide="lock" style="width: 40px; height: 40px; color: var(--accent);"></i>
+    </div>
+    <div style="font-size:24px; font-weight:900; margin-bottom:10px; letter-spacing: -1px;">ADMIN <span style="color:var(--accent);">LOCKED</span></div>
+    <p style="opacity: 0.6; font-size: 12px; margin-bottom: 30px;">Enter security PIN to access control panel.</p>
+    <div style="display:flex; gap:10px;">
+        <input type="password" id="adminPassInput" placeholder="Enter PIN" style="width:180px; padding:12px; text-align:center; border-radius:12px; border:1px solid #334155; background:#1e293b; color:white; font-weight:900; letter-spacing: 2px; outline: none;">
+        <button onclick="checkAdminLock()" class="btn btn-primary" style="width:auto; padding:12px 20px; margin:0;"><i data-lucide="arrow-right"></i></button>
+    </div>
+</div>
+
 <div class="sidebar">
     <div class="logo-text">ADMIN<span style="color:var(--accent)">PANEL</span> <span style="font-size:10px; vertical-align:middle; background:var(--gold); color:black; padding:2px 6px; border-radius:4px;">PRO</span></div>
     
@@ -246,6 +258,25 @@
 </div>
 
 <script>
+    // --- LOCK SCREEN LOGIC ---
+    const ADMIN_PIN = "12345"; // <--- CHANGE THIS TO YOUR DESIRED PIN
+    
+    function checkAdminLock() {
+        const val = document.getElementById('adminPassInput').value;
+        if(val === ADMIN_PIN) {
+            document.getElementById('lockScreen').style.opacity = '0';
+            setTimeout(() => { document.getElementById('lockScreen').style.display = 'none'; }, 500);
+            sessionStorage.setItem('admin_unlocked', 'true');
+        } else {
+            alert("WRONG PIN! ACCESS DENIED.");
+            document.getElementById('adminPassInput').value = "";
+        }
+    }
+    // Check if already unlocked in this session
+    if(sessionStorage.getItem('admin_unlocked') === 'true') {
+        document.getElementById('lockScreen').style.display = 'none';
+    }
+
     lucide.createIcons();
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
