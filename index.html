@@ -1747,14 +1747,47 @@
 
     function listenForNextDraw() { db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); }); db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); }); }
     
-    // === UPDATED NEXT DRAW DISPLAY LOGIC (WITH ANTI-STUCK FIX) ===
+    // === UPDATED NEXT DRAW DISPLAY LOGIC (WITH ONGOING STATE) ===
     function updateNextDrawDisplay() { 
         db.ref('gameState').on('value', s => { 
             const gameData = s.val() || {}; 
-            let displayTime = null; // Default to null
             const now = Date.now(); 
 
-            // 1. Check Schedules list first (Highest Priority)
+            // === 1. CHECK IF GAME IS ONGOING FIRST ===
+            // If drawnNumbers exists and has items, the game is ONGOING.
+            if(gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0) {
+                 const banner = document.getElementById('nextDrawBanner'); 
+                 const timeEl = document.getElementById('nextDrawTime'); 
+                 const labelEl = document.querySelector('.next-draw-label'); 
+                 const ndIcon = document.querySelector('.nd-icon');
+
+                 // Set Gray Style for Ongoing
+                 banner.style.display = 'flex';
+                 banner.style.background = 'rgba(71, 85, 105, 0.9)'; // Slate Gray
+                 banner.style.borderColor = '#94a3b8'; // Lighter Gray Border
+                 banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+                 
+                 labelEl.innerText = "GAME STATUS";
+                 labelEl.style.color = "#e2e8f0"; // Light gray text
+
+                 timeEl.innerText = "GAME ONGOING";
+                 timeEl.style.fontSize = "20px";
+                 timeEl.style.color = "#ffffff";
+                 timeEl.style.fontWeight = "900";
+                 
+                 // Update icon style slightly
+                 if(ndIcon) {
+                    ndIcon.style.background = 'rgba(255,255,255,0.1)';
+                    ndIcon.style.color = 'white';
+                    ndIcon.style.borderColor = 'rgba(255,255,255,0.2)';
+                 }
+                 return; // Stop here so we don't overwrite with schedule
+            }
+
+            // === 2. IF NOT ONGOING, CHECK SCHEDULES ===
+            let displayTime = null; 
+
+            // Check Schedules list first (Highest Priority)
             if(gameData.schedules) { 
                 const rawScheds = Object.values(gameData.schedules); 
                 const times = rawScheds.map(val => (typeof val === 'object' && val.time) ? val.time : val); 
@@ -1767,7 +1800,7 @@
                 }
             } 
             
-            // 2. Fallback to single nextDraw value IF it is in the future
+            // Fallback to single nextDraw value IF it is in the future
             if(!displayTime && gameData.nextDraw) {
                 if(gameData.nextDraw > now) {
                     displayTime = gameData.nextDraw;
@@ -1778,6 +1811,14 @@
             const timeEl = document.getElementById('nextDrawTime'); 
             const labelEl = document.querySelector('.next-draw-label'); 
             const lateSched = document.getElementById('lateNextSched'); 
+            const ndIcon = document.querySelector('.nd-icon');
+
+            // Reset Icon Styles from Ongoing State
+            if(ndIcon) {
+                ndIcon.style.background = ''; 
+                ndIcon.style.color = '';
+                ndIcon.style.borderColor = '';
+            }
             
             // STRICT CHECK: Display Time must exist AND be in the future
             if(displayTime && displayTime > now) { 
