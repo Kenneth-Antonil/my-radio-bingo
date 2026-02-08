@@ -692,7 +692,7 @@
     <div class="video-feed-wrapper">
         <div class="video-container">
             <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
-            <iframe width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none;"></iframe>
+            <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none;"></iframe>
         </div>
     </div>
 
@@ -1519,16 +1519,36 @@
             userRef.once('value', snapshot => { if (!snapshot.exists()) { const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase(); const urlParams = new URLSearchParams(window.location.search); const referredBy = urlParams.get('ref'); userRef.set({ name: u.displayName, photo: u.photoURL, points: 100, refCode: newRefCode, referredBy: referredBy || null, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false }); if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 500); } }); } } else { const data = snapshot.val(); const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL }; const today = new Date().toDateString(); if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 50; updates.lastLoginDate = today; showToast("🎁 Daily Bonus! +50 points."); playSound('win'); } if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase(); userRef.update(updates); } });
             userRef.on('value', s => { if(s.exists()){ userData = s.val(); userData.uid = u.uid; document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString(); document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString(); document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || ""); if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none'; if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash; if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); } updateBetDisplays(); updatePresenceData(u.uid, userData.name, userData.points, userData.photo); checkLateJoiner(); } });
             initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid);
+            listenVideoUpdate(); // LISTENER ADDED FOR VIDEO FEED
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
     function setupPresence(uid) { const onlineRef = db.ref('.info/connected'); const userStatusRef = db.ref('status/' + uid); onlineRef.on('value', (snapshot) => { if (snapshot.val() === false) return; userStatusRef.onDisconnect().remove().then(() => { userStatusRef.set({ state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP }); }); }); db.ref('status').on('value', (s) => { document.getElementById('onlineCount').innerText = s.numChildren() || 0; }); }
     function updatePresenceData(uid, name, points, photo) { db.ref('status/' + uid).update({ name: name, points: points, photo: photo }); }
-    function listenNotifications(uid) { db.ref('notifications/' + uid).on('value', s => { const count = s.numChildren(); const dot = document.getElementById('notifDot'); if(count > 0) { dot.style.display = 'block'; playSound('pop'); } else { dot.style.display = 'none'; } }); }
+    function listenNotifications(uid) { db.ref('notifications/' + uid).on('value', s => { const count = s.numChildren(); const dot = document.getElementById('notifDot'); if(count > 0) { dot.style.display = 'block'; playSound('pop'); showToast("You have a new notification!"); } else { dot.style.display = 'none'; } }); }
     function openNotifs() { document.getElementById('notifModal').style.display='flex'; playSound('click'); renderNotifs(); }
     function renderNotifs() { const list = document.getElementById('notifList'); db.ref('notifications/' + auth.currentUser.uid).once('value', s => { list.innerHTML = ""; if(!s.exists()) { list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:40px;'>No new messages</div>"; return; } s.forEach(n => { const val = n.val(); const key = n.key; const div = document.createElement('div'); div.className = 'notif-card-new'; div.innerHTML = `<div class="notif-header-new"><div class="notif-title"><i data-lucide="info" style="width:14px"></i> SYSTEM MSG</div><button class="btn-del-notif" onclick="deleteNotif('${key}')"><i data-lucide="trash-2" style="width:14px"></i></button></div><div class="notif-body">${val.msg}</div><div style="font-size:9px; opacity:0.4; margin-top:8px; text-align:right;">${fixDate(val.time)}</div>`; list.prepend(div); }); lucide.createIcons(); }); }
     function deleteNotif(key) { showCustomConfirm("DELETE?", "Remove message?", () => { db.ref('notifications/' + auth.currentUser.uid + '/' + key).remove(); renderNotifs(); showToast("Message Deleted"); }); }
     function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { const data = s.val(); const banner = document.getElementById('jackpotBanner'); if(data && data.active) { banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = data.amount; isJackpotActive = true; const rawAmount = parseInt(data.amount.replace(/[^0-9]/g, '')); currentJackpotAmount = isNaN(rawAmount) ? 500 : rawAmount; } else { banner.style.display = 'none'; isJackpotActive = false; currentJackpotAmount = 500; } }); }
+
+    // === NEW FUNCTION: LISTEN FOR VIDEO FEED UPDATES ===
+    function listenVideoUpdate() {
+        db.ref('gameState/videoSettings').on('value', s => {
+            const v = s.val();
+            if(v && v.url) {
+                let embedUrl = v.url;
+                // Auto-convert standard YouTube watch links to embed links
+                if(v.url.includes('watch?v=')) {
+                    embedUrl = v.url.replace('watch?v=', 'embed/');
+                    if(embedUrl.includes('&')) embedUrl = embedUrl.split('&')[0]; // Clean params
+                } else if(!v.url.includes('embed') && !v.url.includes('http')) {
+                    // Assuming it's just an ID
+                    embedUrl = "https://www.youtube.com/embed/" + v.url;
+                }
+                document.getElementById('liveVideoFrame').src = embedUrl + "?autoplay=1&mute=1";
+            }
+        });
+    }
 
     function listenForNextDraw() { db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); }); db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); }); }
     function updateNextDrawDisplay() { db.ref('gameState').on('value', s => { const gameData = s.val() || {}; let displayTime = gameData.nextDraw; if(gameData.schedules) { const now = Date.now(); const rawScheds = Object.values(gameData.schedules); const times = rawScheds.map(val => (typeof val === 'object' && val.time) ? val.time : val); const sorted = times.sort((a,b) => a - b); const next = sorted.find(t => t > now); if(next) displayTime = next; } const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const lateSched = document.getElementById('lateNextSched'); if(displayTime) { banner.style.display = 'flex'; const formatted = isNaN(displayTime) ? displayTime : fixDate(displayTime); timeEl.innerText = formatted; timeEl.style.fontSize = "18px"; labelEl.innerText = "SUSUNOD NA BOLA"; lateSched.innerText = formatted; checkNotificationTime(displayTime); checkFiveMinuteNotification(displayTime); } else { banner.style.display = 'flex'; labelEl.innerText = "NO SCHEDULE YET"; timeEl.innerText = "WAIT FOR ANNOUNCEMENT"; timeEl.style.fontSize = "14px"; lateSched.innerText = "--:--"; } }); }
