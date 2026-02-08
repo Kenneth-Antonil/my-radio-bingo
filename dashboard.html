@@ -251,7 +251,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     
-    // --- SERVICE ACCOUNT LOGIC (Retained) ---
+    // --- SERVICE ACCOUNT LOGIC ---
     let serviceAccount = null;
     const savedSA = localStorage.getItem('rb_service_account');
     if(savedSA) { try { serviceAccount = JSON.parse(savedSA); document.getElementById('serviceAccountJson').value = savedSA; } catch(e) {} }
@@ -259,7 +259,7 @@
         const val = document.getElementById('serviceAccountJson').value.trim();
         try { const json = JSON.parse(val); if(!json.private_key || !json.client_email) throw new Error("Invalid JSON"); serviceAccount = json; localStorage.setItem('rb_service_account', val); alert("Service Account Saved! Push notifications enabled."); } catch(e) { alert("Error: Invalid Service Account JSON. Please copy the whole file."); }
     }
-    // (JWT Generation Function Retained)
+    // JWT Generation for HTTP v1
     function getAccessToken() {
         return new Promise((resolve, reject) => {
             if(!serviceAccount) return reject("No Service Account Loaded");
@@ -306,23 +306,20 @@
         sorted.forEach(([key, val]) => { let timeVal = typeof val === 'object' ? val.time : val; const date = new Date(timeVal); const str = date.toLocaleDateString('en-PH', { month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString('en-PH', {hour:'2-digit', minute:'2-digit'}); list.innerHTML += `<div style="display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; margin-bottom:5px; font-size:11px;"><span>${str}</span><button style="background:var(--danger); border:none; color:white; border-radius:4px; cursor:pointer;" onclick="removeSchedule('${key}')">X</button></div>`; });
     }
 
-    // INTERVAL CHECKER (The Sync Fix)
+    // INTERVAL CHECKER (Sync Fix)
     setInterval(() => {
         const now = Date.now();
         Object.entries(schedules).forEach(([key, val]) => { 
             let time = val; let notified = false; if(typeof val === 'object') { time = val.time; notified = val.notified5min; }
-            // 5-min warning
             if(!notified && (time - now) <= 300000 && (time - now) > 0) {
                 console.log("Sending 5 min warning...");
                 sendPushToAll("RB LIVE ALERT", "⚠️ 5 Minutes na lang! Magsisimula na ang Bingo draw! Buksan na ang app.");
                 if(typeof val === 'object') { db.ref('gameState/schedules/' + key).update({ notified5min: true }); }
             }
-            // Start Game Logic
             if(now >= time && now < time + 60000) { 
                 console.log("Scheduled Game Started!"); 
                 db.ref('gameState/latestWinner').once('value', w => {
                     if(!w.exists() && !isAutoDrawing) {
-                        // ** CRITICAL SYNC UPDATE **
                         db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() });
                         startAutoDrawLogic(); 
                     }
@@ -347,11 +344,242 @@
     
     function startAutoDrawLogic() { 
         if(isAutoDrawing) return; 
-        // ** SYNC UPDATE **
         db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() });
         const btn = document.getElementById('btnAutoDraw'); const speed = document.getElementById('drawSpeed').value * 1000; 
         isAutoDrawing = true; btn.innerHTML = `<i data-lucide="pause"></i> STOP AUTO DRAW`; btn.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)"; 
         autoDrawLogic(); autoDrawInterval = setInterval(autoDrawLogic, speed); lucide.createIcons(); 
     }
     function stopAutoDrawLogic() { 
-        const btn = document.getElementById('btnAutoDraw'); clearInterval(autoDrawInterval); isAutoDrawing = false;
+        const btn = document.getElementById('btnAutoDraw'); clearInterval(autoDrawInterval); isAutoDrawing = false; 
+        btn.innerHTML = `<i data-lucide="play"></i> START AUTO DRAW`; btn.style.background = ""; lucide.createIcons(); 
+    }
+    function autoDrawLogic() {
+        let available = []; for(let i=1; i<=75; i++) if(!drawnNumbers.includes(i)) available.push(i);
+        if(available.length === 0) return stopAutoDrawLogic();
+        const next = available[Math.floor(Math.random() * available.length)];
+        toggleBall(next);
+    }
+    function toggleBall(num) {
+        let newDrawn = [...drawnNumbers];
+        if(newDrawn.includes(num)) return; 
+        newDrawn.push(num);
+        db.ref('drawnNumbers').set(newDrawn);
+        db.ref('gameState/lastCalled').set(num);
+    }
+    function speakNumber(num) {
+        if ('speechSynthesis' in window) {
+            let letter = "B"; if (num > 15) letter = "I"; if (num > 30) letter = "N"; if (num > 45) letter = "G"; if (num > 60) letter = "O";
+            const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 1.0; window.speechSynthesis.speak(msg);
+        }
+    }
+    function setPattern(p) { db.ref('gameState/currentPattern').set(p); }
+    function resetGame() {
+        if(!confirm("ARE YOU SURE? This will clear all drawn numbers and winners.")) return;
+        stopAutoDrawLogic();
+        db.ref('drawnNumbers').remove();
+        db.ref('gameState/lastCalled').remove();
+        db.ref('gameState/latestWinner').remove();
+        db.ref('gameState').update({ status: 'waiting' });
+        document.getElementById('lastBall').innerText = "--";
+        db.ref('users').once('value', s => {
+            s.forEach(u => {
+                db.ref('users/' + u.key).update({ hasWonCurrent: false, currentCard: null });
+            });
+        });
+        document.getElementById('winnerAnnounce').style.display = 'none';
+        alert("Game Reset Complete!");
+    }
+
+    db.ref('status').on('value', s => {
+        globalStatusData = s.val() || {};
+        document.getElementById('countOnline').innerText = s.numChildren();
+        const activeList = document.getElementById('activeUsersList'); activeList.innerHTML = "";
+        s.forEach(ss => {
+            const d = ss.val();
+            const div = document.createElement('div'); div.style.padding = "5px"; div.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+            div.innerHTML = `<span class="online-dot" style="margin-right:5px"></span> ${cleanName(d.name)} <span style="opacity:0.5; font-size:10px;">(${d.points} pts)</span>`;
+            activeList.appendChild(div);
+        });
+    });
+
+    db.ref('users').on('value', s => {
+        allUsersData = s.val() || {};
+        document.getElementById('countUsers').innerText = s.numChildren();
+        const pList = document.getElementById('pointsUserList'); 
+        pList.innerHTML = "";
+        Object.entries(allUsersData).forEach(([uid, u]) => {
+            const div = document.createElement('div'); div.className = 'user-option';
+            div.innerHTML = `<span>${cleanName(u.name)}</span><span>${u.points} pts</span>`;
+            div.onclick = () => {
+                document.querySelectorAll('.user-option').forEach(x => x.classList.remove('selected'));
+                div.classList.add('selected');
+                document.getElementById('selectedUserForPoints').value = uid;
+                document.getElementById('notifRecipient').innerHTML = `<option value="all">ALL USERS (Include Push)</option><option value="${uid}">SELECTED: ${u.name}</option>`;
+            };
+            pList.appendChild(div);
+        });
+        updateMonitorCards();
+    });
+
+    function updateMonitorCards() {
+        const grid = document.getElementById('liveCardsContainer'); grid.innerHTML = "";
+        Object.entries(allUsersData).forEach(([uid, u]) => {
+            if(!u.currentCard) return;
+            const isOnline = globalStatusData[uid] ? true : false;
+            let hits = 0; let marks = [12];
+            u.currentCard.forEach((n, i) => { if(drawnNumbers.includes(n) || n === "FREE") { hits++; marks.push(i); } });
+            
+            let isPuro = false; let isBingo = false;
+            let winningWays = [];
+            if (currentPattern === "Blackout") winningWays = [Array.from({length: 25}, (_, i) => i)];
+            else if (currentPattern === "Letter X") winningWays = [[0,4,6,8,12,16,18,20,24]];
+            else if (currentPattern === "Four Corners") winningWays = [[0,4,20,24]];
+            else winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
+
+            winningWays.forEach(w => {
+                const missing = w.filter(idx => !marks.includes(idx));
+                if(missing.length === 0) isBingo = true;
+                if(missing.length === 1) isPuro = true;
+            });
+
+            const cardDiv = document.createElement('div');
+            cardDiv.className = `user-card-monitor ${isOnline?'':'offline'} ${isBingo?'bingo':(isPuro?'puro':'')}`;
+            let miniGrid = '<div class="mini-bingo-grid">';
+            u.currentCard.forEach((n, i) => {
+                const marked = marks.includes(i);
+                miniGrid += `<div class="mini-cell ${marked?'marked':''} ${marked && isBingo?'hit':''}">${n==="FREE"?"★":n}</div>`;
+            });
+            miniGrid += '</div>';
+
+            cardDiv.innerHTML = `<div class="monitor-badge"></div><div style="font-size:11px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${cleanName(u.name)}</div><div style="font-size:9px; opacity:0.7;">UID: ${uid.substring(0,4)}</div>${miniGrid}`;
+            grid.appendChild(cardDiv);
+        });
+    }
+
+    db.ref('gameState/latestWinner').on('value', s => {
+        if(s.exists()) {
+            const w = s.val();
+            document.getElementById('winnerMarqueeText').innerText = `WINNER: ${w.name} - PRIZE: ₱${w.prize}`;
+            document.getElementById('winnerAnnounce').style.display = 'block';
+            stopAutoDrawLogic();
+        } else {
+            document.getElementById('winnerAnnounce').style.display = 'none';
+        }
+    });
+
+    function modifyUserPoints() {
+        const uid = document.getElementById('selectedUserForPoints').value;
+        const amt = parseInt(document.getElementById('pointsAmount').value);
+        if(!uid || isNaN(amt)) return alert("Select user and enter valid amount");
+        db.ref('users/' + uid + '/points').transaction(p => (p || 0) + amt).then(() => {
+            alert("Points Updated!");
+            document.getElementById('pointsAmount').value = "";
+        });
+    }
+
+    // --- UPDATED NOTIFICATION SYSTEM (DB WRITE + PUSH) ---
+    function sendAdminNotification() {
+        const recip = document.getElementById('notifRecipient').value;
+        const msg = document.getElementById('notifMessage').value;
+        if(!msg) return alert("Enter message");
+        const statusDiv = document.getElementById('sendStatus');
+        statusDiv.innerText = "Sending...";
+
+        if(recip === 'all') {
+            // 1. Send Push
+            sendPushToAll("ADMIN ANNOUNCEMENT", msg);
+            // 2. Write to DB for Red Dot (All Users)
+            Object.keys(allUsersData).forEach(uid => {
+                db.ref('notifications/' + uid).push({ msg: msg, time: Date.now(), type: 'admin' });
+            });
+            statusDiv.innerText = "Sent to ALL (DB + Push)";
+        } else {
+            // 1. Send Push (Single)
+            const token = allUsersData[recip].fcmToken;
+            if(token) sendPushSingle(token, "ADMIN MSG", msg);
+            // 2. Write to DB for Red Dot (Single)
+            db.ref('notifications/' + recip).push({ msg: msg, time: Date.now(), type: 'admin' });
+            statusDiv.innerText = "Sent to Single User";
+        }
+        document.getElementById('notifMessage').value = "";
+    }
+
+    function sendPushToAll(title, body) {
+        if(!serviceAccount) return console.log("No Service Account");
+        getAccessToken().then(token => {
+            Object.values(allUsersData).forEach(u => {
+                if(u.fcmToken) sendPushSingle(u.fcmToken, title, body, token);
+            });
+        });
+    }
+    function sendPushSingle(fcmToken, title, body, existingAccessToken = null) {
+        const send = (token) => {
+            fetch(`https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ message: { token: fcmToken, notification: { title: title, body: body } } })
+            });
+        };
+        if(existingAccessToken) send(existingAccessToken);
+        else getAccessToken().then(t => send(t));
+    }
+
+    // --- BRING ME LOGIC ---
+    function startBringMe() {
+        const item = document.getElementById('bringmeItemIn').value;
+        if(!item) return alert("Enter Item");
+        db.ref('gameState/bringMe').set({ active: true, item: item, startTime: Date.now() });
+        db.ref('bringMeSubmissions').remove(); // Clear old
+        document.getElementById('bringmeStatusBadge').className = "status-badge status-active";
+        document.getElementById('bringmeStatusBadge').innerText = "ACTIVE";
+        sendPushToAll("BRING ME!", "Dalhin ang: " + item);
+        // Alert DB for red dot
+        Object.keys(allUsersData).forEach(uid => {
+             db.ref('notifications/' + uid).push({ msg: "BRING ME: " + item, time: Date.now(), type: 'game' });
+        });
+    }
+    function stopBringMe() {
+        db.ref('gameState/bringMe').update({ active: false });
+        document.getElementById('bringmeStatusBadge').className = "status-badge status-off";
+        document.getElementById('bringmeStatusBadge').innerText = "ENDED";
+    }
+    db.ref('bringMeSubmissions').on('value', s => {
+        const gall = document.getElementById('bringmeGallery'); gall.innerHTML = "";
+        s.forEach(snap => {
+            const d = snap.val();
+            const div = document.createElement('div'); div.className = 'card'; div.style.padding = "10px"; div.style.margin = "0";
+            div.innerHTML = `<img src="${d.img}" style="width:100%; height:120px; object-fit:cover; border-radius:8px; margin-bottom:5px;">
+            <div style="font-weight:800; font-size:12px;">${cleanName(d.name)}</div>
+            <button class="btn btn-primary" style="margin-top:5px; padding:5px; font-size:10px;" onclick="winnerBringMe('${d.uid}', '${d.name}')">DECLARE WINNER</button>`;
+            gall.appendChild(div);
+        });
+    });
+    function winnerBringMe(uid, name) {
+        if(confirm(`Declare ${name} as winner?`)) {
+            db.ref('users/' + uid + '/points').transaction(p => (p || 0) + 500);
+            sendPushToAll("WINNER!", `Nanalo si ${name} sa Bring Me!`);
+            stopBringMe();
+        }
+    }
+
+    // --- CASHOUT LOGIC ---
+    db.ref('redemptions').orderByChild('status').equalTo('pending').on('value', s => {
+        const list = document.getElementById('cashoutList'); list.innerHTML = "";
+        s.forEach(child => {
+            const r = child.val(); const key = child.key;
+            const div = document.createElement('div'); div.className = 'card'; div.style.padding = "15px"; div.style.marginBottom = "10px";
+            div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;">
+                <div><div style="font-weight:800;">${cleanName(r.name)} - <span style="color:var(--gold)">${r.item}</span></div><div style="font-size:11px; opacity:0.6;">GCash: ${r.gcash}</div></div>
+                <div style="display:flex; gap:10px;"><button class="btn btn-primary" style="width:auto; padding:8px 20px" onclick="updateStatus('${key}', 'sent')">PAID</button><button class="btn btn-danger" style="width:auto; padding:8px 20px" onclick="updateStatus('${key}', 'denied')">X</button></div>
+            </div>`;
+            list.prepend(div);
+        });
+    });
+    function updateStatus(key, status) {
+        if(confirm(`${status} this request?`)) {
+            db.ref('redemptions/' + key).update({ status: status });
+        }
+    }
+</script>
+</body>
+</html>
