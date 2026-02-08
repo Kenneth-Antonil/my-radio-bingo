@@ -620,6 +620,51 @@
         .btn-conf-yes { background: var(--accent); color: white; flex: 1; padding: 12px; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
         .btn-conf-no { background: rgba(255,255,255,0.1); color: #94a3b8; flex: 1; padding: 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-weight: 800; cursor: pointer; }
 
+        /* === GRAND JACKPOT ANIMATION (BONGGA) === */
+        #grandJackpotModal {
+            position: fixed; inset: 0; z-index: 99999;
+            background: rgba(0,0,0,0.95);
+            display: none; align-items: center; justify-content: center; flex-direction: column;
+            overflow: hidden; perspective: 1000px;
+        }
+        .jackpot-rays {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 200vmax; height: 200vmax;
+            background: conic-gradient(from 0deg, transparent 0deg, rgba(251, 191, 36, 0.1) 10deg, transparent 20deg, rgba(251, 191, 36, 0.1) 30deg, transparent 40deg, rgba(251, 191, 36, 0.1) 50deg, transparent 60deg, rgba(251, 191, 36, 0.1) 70deg, transparent 80deg, rgba(251, 191, 36, 0.1) 90deg, transparent 100deg, rgba(251, 191, 36, 0.1) 110deg, transparent 120deg, rgba(251, 191, 36, 0.1) 130deg, transparent 140deg, rgba(251, 191, 36, 0.1) 150deg, transparent 160deg, rgba(251, 191, 36, 0.1) 170deg, transparent 180deg, rgba(251, 191, 36, 0.1) 190deg, transparent 200deg, rgba(251, 191, 36, 0.1) 210deg, transparent 220deg, rgba(251, 191, 36, 0.1) 230deg, transparent 240deg, rgba(251, 191, 36, 0.1) 250deg, transparent 260deg, rgba(251, 191, 36, 0.1) 270deg, transparent 280deg, rgba(251, 191, 36, 0.1) 290deg, transparent 300deg, rgba(251, 191, 36, 0.1) 310deg, transparent 320deg, rgba(251, 191, 36, 0.1) 330deg, transparent 340deg, rgba(251, 191, 36, 0.1) 350deg, transparent 360deg);
+            animation: spinRays 20s linear infinite; pointer-events: none;
+        }
+        @keyframes spinRays { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+        
+        .jackpot-content {
+            position: relative; z-index: 10; text-align: center;
+            animation: jpPopIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes jpPopIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        .jp-title {
+            font-size: 40px; font-weight: 900; color: #fbbf24;
+            text-transform: uppercase; letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.8), 0 0 40px rgba(251, 191, 36, 0.4);
+            margin-bottom: 10px; animation: pulseText 1s infinite alternate;
+        }
+        .jp-amount {
+            font-size: 56px; font-weight: 900; color: white;
+            background: linear-gradient(135deg, #fff, #fcd34d); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin: 0; line-height: 1;
+        }
+        .jp-name {
+            font-size: 18px; color: #cbd5e1; margin-top: 15px; font-weight: 600; letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .icon-glow {
+            filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
+            animation: bounceIcon 2s infinite ease-in-out;
+            color: #fbbf24;
+        }
+        @keyframes bounceIcon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes pulseText { from { transform: scale(1); } to { transform: scale(1.05); } }
+
     </style>
 </head>
 <body>
@@ -739,7 +784,7 @@
     </div>
 
     <div id="winnerBanner">
-        <span>🎉 BINGO WINNER! 🎉</span>
+        <span><i data-lucide="party-popper" style="width:24px; height:24px;"></i> BINGO WINNER!</span>
         <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
     </div>
 
@@ -943,6 +988,19 @@
         <div class="fs-title">CONGRATS!</div>
         <div class="fs-sub">YOU WON 10 FREE SPINS</div>
         <div style="font-size:11px; opacity:0.8; margin-top:10px; color:#fbcfe8;">Tap anywhere to start</div>
+    </div>
+</div>
+
+<div id="grandJackpotModal" onclick="this.style.display='none'">
+    <div class="jackpot-rays"></div>
+    <div class="jackpot-content">
+        <div class="icon-glow">
+            <i data-lucide="crown" style="width: 80px; height: 80px;"></i>
+        </div>
+        <h1 class="jp-title">JACKPOT WIN!</h1>
+        <h2 class="jp-amount" id="grandPrizeAmount">₱10,000</h2>
+        <div class="jp-name" id="jpWinnerName">WINNER NAME</div>
+        <p style="font-size: 11px; color: white; opacity: 0.7; margin-top: 20px;">Tap anywhere to close</p>
     </div>
 </div>
 
@@ -1686,6 +1744,10 @@
     // === GLOBAL WIN RATES (DEFAULT) ===
     let globalWinRate = 0.40;
     let scatterChance = 0.03;
+    
+    // === NEW: JACKPOT TRACKER ===
+    let currentJackpotAmount = 500; // Default
+    let isJackpotActive = false;
 
     // LISTEN FOR SETTINGS UPDATES FROM ADMIN
     db.ref('gameState/settings').on('value', s => {
@@ -1982,9 +2044,23 @@
 
     function listenJackpot() {
         db.ref('gameState/jackpot').on('value', s => {
-            const data = s.val(); const banner = document.getElementById('jackpotBanner');
-            if(data && data.active) { banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = data.amount; } 
-            else { banner.style.display = 'none'; }
+            const data = s.val(); 
+            const banner = document.getElementById('jackpotBanner');
+            
+            if(data && data.active) { 
+                banner.style.display = 'block'; 
+                document.getElementById('jackpotDisplayVal').innerText = data.amount;
+                // === NEW: TRACK JACKPOT STATUS ===
+                isJackpotActive = true;
+                // Parse amount just in case it has symbols like ₱ or ,
+                const rawAmount = parseInt(data.amount.replace(/[^0-9]/g, ''));
+                currentJackpotAmount = isNaN(rawAmount) ? 500 : rawAmount;
+            } 
+            else { 
+                banner.style.display = 'none'; 
+                isJackpotActive = false;
+                currentJackpotAmount = 500; // Default win if no jackpot
+            }
         });
     }
 
@@ -2056,8 +2132,13 @@
             document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting'));
 
             if(win && win.name) {
-                banner.querySelector('span').innerText = `🎉 WINNER: ${win.name.toUpperCase()} 🎉`; patternLine.innerText = `Pattern Won: ${currentPattern}`; banner.style.display = 'block';
+                // UPDATE: Using Lucide Icons inside the banner instead of emoji
+                banner.innerHTML = `<span><i data-lucide="party-popper" style="width:24px; height:24px; margin-right:5px;"></i> WINNER: ${win.name.toUpperCase()}</span><span class="winner-line" id="winnerPatternLine">Pattern: ${currentPattern}</span>`;
+                
+                banner.style.display = 'block';
                 playSound('win'); // PLAY WINNER SOUND
+                lucide.createIcons(); // Render icons
+                
                 if(win.uid === auth.currentUser.uid) { 
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; 
                 } 
@@ -2195,10 +2276,26 @@
 
     function triggerWin() {
         const uid = auth.currentUser.uid;
-        db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: 500 });
-        db.ref('users/' + uid + '/points').transaction(p => (p || 0) + 500);
+        
+        // === NEW: DYNAMIC PRIZE LOGIC ===
+        let winPrize = 500; // Default
+        if (isJackpotActive) {
+            winPrize = currentJackpotAmount;
+        }
+
+        db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize });
+        db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize);
         db.ref('users/' + uid).update({ hasWonCurrent: true });
         userData.hasWonCurrent = true;
+
+        // === NEW: TRIGGER BONGGANG ANIMATION IF JACKPOT ===
+        if (isJackpotActive) {
+            const jpModal = document.getElementById('grandJackpotModal');
+            document.getElementById('grandPrizeAmount').innerText = "₱" + winPrize.toLocaleString();
+            document.getElementById('jpWinnerName').innerText = userData.name;
+            jpModal.style.display = 'flex';
+            confetti({ particleCount: 500, spread: 120, startVelocity: 60 });
+        }
     }
 
     function generateNewCard() {
