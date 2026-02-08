@@ -113,7 +113,11 @@
     <div class="card" style="padding: 15px; margin: 0; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2);">
         <label style="color:var(--accent-glow)"><i data-lucide="video" style="width:12px"></i> Video Stream Manager</label>
         <input type="text" id="videoUrlInput" placeholder="Paste YouTube Link or ID here..." style="margin-bottom:10px;">
-        <button class="btn btn-primary" onclick="updateVideoFeed()" style="width: 100%; padding: 8px;">UPDATE VIDEO</button>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+            <button class="btn btn-primary" onclick="updateVideoFeed()" style="padding: 8px;">GO LIVE</button>
+            <button class="btn btn-danger" onclick="setStreamOffline()" style="padding: 8px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); box-shadow:none;">GO OFFLINE</button>
+        </div>
+        <div style="font-size:10px; margin-top:5px; opacity:0.7;">Offline = Shows "Waiting for Live" to players.</div>
     </div>
 
     <div class="input-group">
@@ -310,7 +314,7 @@
     function saveGameSettings() { const wr = parseInt(document.getElementById('winRateSlider').value); const sc = parseInt(document.getElementById('scatterSlider').value); db.ref('gameState/settings').update({ minigameWinRate: wr, scatterChance: sc }).then(() => { alert("Settings Updated! All clients will now use these probabilities."); }); }
     db.ref('gameState/settings').once('value', s => { const val = s.val(); if(val) { document.getElementById('winRateSlider').value = val.minigameWinRate || 40; document.getElementById('scatterSlider').value = val.scatterChance || 3; updateSettingsUI(); } });
 
-    // --- NEW VIDEO FEED LOGIC ---
+    // --- UPDATED VIDEO FEED LOGIC ---
     function updateVideoFeed() {
         const url = document.getElementById('videoUrlInput').value;
         if(!url) return alert("Please enter a valid YouTube Link or ID.");
@@ -319,11 +323,24 @@
             url: url,
             updatedAt: Date.now()
         }).then(() => {
-            alert("Video Stream Updated Successfully!");
+            alert("Video Stream Updated Successfully! LIVE NOW.");
             document.getElementById('videoUrlInput').value = "";
         }).catch(err => {
             alert("Error updating video: " + err.message);
         });
+    }
+
+    function setStreamOffline() {
+        if(confirm("Are you sure you want to STOP the stream and show the 'Waiting' screen?")) {
+            db.ref('gameState/videoSettings').set({
+                type: 'offline', // New type for your client to handle
+                url: '',
+                updatedAt: Date.now()
+            }).then(() => {
+                alert("Stream set to OFFLINE. Players will see the waiting message.");
+                document.getElementById('videoUrlInput').value = "";
+            });
+        }
     }
 
     // --- SCHEDULE SYNC LOGIC ---
