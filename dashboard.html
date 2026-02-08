@@ -145,7 +145,6 @@
     <div class="tabs-nav">
         <button class="tab-btn active" onclick="openTab('bingo-tab', this)"><i data-lucide="layout-grid" width="16"></i> BINGO</button>
         <button class="tab-btn" onclick="openTab('settings-tab', this)"><i data-lucide="sliders" width="16"></i> SETTINGS</button>
-        <button class="tab-btn" onclick="openTab('bringme-tab', this)"><i data-lucide="camera" width="16"></i> BRING ME</button>
         <button class="tab-btn" onclick="openTab('users-tab', this)"><i data-lucide="user-cog" width="16"></i> PLAYERS</button>
         <button class="tab-btn" onclick="openTab('cashout-tab', this)"><i data-lucide="wallet" width="16"></i> CASHOUTS</button>
     </div>
@@ -242,22 +241,16 @@
                 <button class="btn btn-bringme" onclick="sendAdminNotification()">SEND PUSH NOTIFICATION (HTTP v1)</button>
                 <div id="sendStatus" style="font-size:10px; margin-top:5px; color:var(--text-muted);"></div>
             </div>
-        </div>
-    </div>
-    <div id="bringme-tab" class="tab-content">
-        <div class="card" style="background: linear-gradient(135deg, #4c1d95, #2e1065); border: 1px solid rgba(139, 92, 246, 0.3);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="color:white; margin:0; text-shadow:0 0 10px rgba(139, 92, 246, 0.6);"><i data-lucide="zap"></i> AI BRING ME</h2>
-                <div id="bringmeStatusBadge" class="status-badge status-off">OFFLINE</div>
-            </div>
-            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:15px; align-items:end;">
-                <div class="input-group" style="margin:0;"><label style="color:rgba(255,255,255,0.7)">Item Target</label><input type="text" id="bringmeItemIn" placeholder="e.g. Spoon" style="background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.2);"></div>
-                <button class="btn btn-bringme" onclick="startBringMe()"><i data-lucide="play"></i> START</button>
-                <button class="btn btn-danger" onclick="stopBringMe()"><i data-lucide="square"></i> STOP</button>
+            
+            <div class="card" style="grid-column: 1 / -1;">
+                <h2><i data-lucide="history"></i> Points Transaction History: <span id="historyUserName" style="color:var(--accent); margin-left:10px;">Select a User</span></h2>
+                <div id="pointHistoryList" style="max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border:1px solid var(--glass-border);">
+                    <div style="opacity:0.5; text-align:center; padding:20px; font-size:12px;">Select a user to view their points history.</div>
+                </div>
             </div>
         </div>
-        <div class="card"><h2><i data-lucide="image"></i> Submissions Gallery</h2><div id="bringmeGallery" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 20px;"></div></div>
     </div>
+
     <div id="cashout-tab" class="tab-content"><div class="card"><h2><i data-lucide="wallet"></i> GCash Requests</h2><div id="cashoutList"></div></div></div>
 </div>
 
@@ -414,8 +407,48 @@
     db.ref('status').on('value', s => { globalStatusData = s.val() || {}; document.getElementById('countOnline').innerText = Object.keys(globalStatusData).length; renderActiveUserList(); updateMonitorCards(); });
     function renderActiveUserList() { const list = document.getElementById('activeUsersList'); list.innerHTML = ""; Object.entries(globalStatusData).forEach(([uid, data]) => { let name = "Unknown"; if(allUsersData[uid] && allUsersData[uid].name) name = allUsersData[uid].name; else if(data.name) name = data.name; const safeName = cleanName(name); list.innerHTML += `<div style="padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px;"><span class="online-dot"></span> ${safeName}</div>`; }); }
     
-    db.ref('users').on('value', s => { allUsersData = s.val() || {}; const list = document.getElementById('pointsUserList'); const currentSelected = document.getElementById('selectedUserForPoints').value; list.innerHTML = ""; document.getElementById('countUsers').innerText = s.numChildren(); s.forEach(child => { const u = child.val(); const uid = child.key; const safeName = cleanName(u.name); const isSel = currentSelected === uid ? 'selected' : ''; const div = document.createElement('div'); div.className = `user-option ${isSel}`; div.onclick = () => selectUserForMgmt(uid, div); div.innerHTML = `<span>${safeName}</span> <span>${u.points || 0} pts</span>`; list.appendChild(div); }); renderActiveUserList(); updateMonitorCards(); });
-    function selectUserForMgmt(uid, el) { document.querySelectorAll('.user-option').forEach(e => e.classList.remove('selected')); el.classList.add('selected'); document.getElementById('selectedUserForPoints').value = uid; }
+    db.ref('users').on('value', s => { allUsersData = s.val() || {}; const list = document.getElementById('pointsUserList'); const currentSelected = document.getElementById('selectedUserForPoints').value; list.innerHTML = ""; document.getElementById('countUsers').innerText = s.numChildren(); s.forEach(child => { const u = child.val(); const uid = child.key; const safeName = cleanName(u.name); const isSel = currentSelected === uid ? 'selected' : ''; const div = document.createElement('div'); div.className = `user-option ${isSel}`; div.onclick = () => selectUserForMgmt(uid, div, safeName); div.innerHTML = `<span>${safeName}</span> <span>${u.points || 0} pts</span>`; list.appendChild(div); }); renderActiveUserList(); updateMonitorCards(); });
+    
+    function selectUserForMgmt(uid, el, name) { 
+        document.querySelectorAll('.user-option').forEach(e => e.classList.remove('selected')); 
+        el.classList.add('selected'); 
+        document.getElementById('selectedUserForPoints').value = uid; 
+        document.getElementById('historyUserName').innerText = name;
+        renderUserHistory(uid);
+    }
+    
+    function renderUserHistory(uid) {
+        const list = document.getElementById('pointHistoryList');
+        list.innerHTML = "<div style='text-align:center; padding:10px;'>Loading...</div>";
+        
+        db.ref('pointLogs/' + uid).orderByChild('timestamp').limitToLast(50).once('value', s => {
+            if(!s.exists()) {
+                list.innerHTML = "<div style='opacity:0.5; text-align:center; padding:20px; font-size:12px;'>No history found for this user.</div>";
+                return;
+            }
+            list.innerHTML = "";
+            let items = [];
+            s.forEach(c => items.push(c.val()));
+            items.reverse(); // Newest first
+            
+            items.forEach(log => {
+                const date = new Date(log.timestamp).toLocaleString();
+                const isAdd = log.amount >= 0;
+                const color = isAdd ? 'var(--success)' : 'var(--danger)';
+                const sign = isAdd ? '+' : '';
+                
+                list.innerHTML += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; margin-bottom:5px; font-size:12px;">
+                        <div>
+                            <div style="font-weight:700;">${log.reason || "Point Adjustment"}</div>
+                            <div style="font-size:10px; opacity:0.6;">${date}</div>
+                        </div>
+                        <div style="color:${color}; font-weight:900;">${sign}${log.amount}</div>
+                    </div>
+                `;
+            });
+        });
+    }
 
     function updateMonitorCards() {
         const container = document.getElementById('liveCardsContainer'); container.innerHTML = ""; let usersArray = [];
@@ -453,7 +486,32 @@
         } else { marquee.style.display = 'none'; updateMonitorCards(); } 
     });
 
-    function modifyUserPoints() { const uid = document.getElementById('selectedUserForPoints').value; const amount = document.getElementById('pointsAmount').value; if(!uid) return alert("Select a user first!"); if(!amount) return alert("Enter amount"); db.ref(`users/${uid}/points`).transaction(current => (current || 0) + parseInt(amount)); alert("Points updated!"); document.getElementById('pointsAmount').value = ""; }
+    // --- MODIFIED: UPDATE POINTS WITH HISTORY LOGGING ---
+    function modifyUserPoints() { 
+        const uid = document.getElementById('selectedUserForPoints').value; 
+        const amount = document.getElementById('pointsAmount').value; 
+        if(!uid) return alert("Select a user first!"); 
+        if(!amount) return alert("Enter amount"); 
+        
+        const amountInt = parseInt(amount);
+        
+        db.ref(`users/${uid}/points`).transaction(current => (current || 0) + amountInt, (error, committed, snapshot) => {
+            if (committed) {
+                // Log the transaction
+                const logData = {
+                    amount: amountInt,
+                    reason: "Admin Adjustment",
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    by: "Admin"
+                };
+                db.ref(`pointLogs/${uid}`).push(logData);
+                
+                alert("Points updated and logged!"); 
+                document.getElementById('pointsAmount').value = "";
+                renderUserHistory(uid); // Refresh the history view immediately
+            }
+        }); 
+    }
 
     async function sendPushNotification(token, title, body) {
         if(!serviceAccount) { console.error("NO SERVICE ACCOUNT"); return false; }
@@ -499,12 +557,6 @@
         } 
         document.getElementById('notifMessage').value = ""; 
     }
-    
-    // Bring Me
-    db.ref('gameState/bringMeSubmissions').on('value', s => { const gallery = document.getElementById('bringmeGallery'); gallery.innerHTML = ""; s.forEach(child => { const data = child.val(); const safeName = cleanName(data.userName); gallery.innerHTML += `<div style="background:rgba(255,255,255,0.05); border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.1);"><img src="${data.photoUrl}" style="width:100%; height:140px; object-fit:cover;" onclick="window.open(this.src)"><div style="padding:10px; font-size:11px;"><b>${safeName}</b><br><span style="color:var(--gold)">Score: ${data.aiScore || 0}%</span></div></div>`; }); });
-    function startBringMe() { const item = document.getElementById('bringmeItemIn').value.trim(); if(!item) return alert("Maglagay ng item!"); db.ref('gameState/bringMe').set({ active: true, item: item, winner: null, startTime: Date.now() }); db.ref('gameState/bringMeSubmissions').remove(); }
-    function stopBringMe() { db.ref('gameState/bringMe').update({ active: false }); }
-    db.ref('gameState/bringMe').on('value', s => { const data = s.val(); const badge = document.getElementById('bringmeStatusBadge'); if(data && data.active) { badge.innerText = "LIVE NOW"; badge.className = "status-badge status-active"; } else { badge.innerText = "OFFLINE"; badge.className = "status-badge status-off"; } });
 
     function setPattern(p) { db.ref('gameState/currentPattern').set(p); }
     function resetGame() {
