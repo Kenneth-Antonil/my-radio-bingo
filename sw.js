@@ -1,4 +1,3 @@
-// Filename: sw.js
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
@@ -15,43 +14,38 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Ito ang magha-handle ng message kapag naka-close o naka-minimize ang app
+// BACKGROUND HANDLER (Kapag closed ang app)
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
   
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: payload.notification.icon || 'https://i.imgur.com/7D8u8h6.png', // Default icon kung wala sa payload
-    badge: 'https://i.imgur.com/7D8u8h6.png',
-    data: {
-        url: payload.data?.url || '/' // Kunin ang URL mula sa data payload
-    }
+    icon: payload.notification.icon || 'https://i.imgur.com/7D8u8h6.png',
+    data: payload.data
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Ito ang magbubukas ng APP kapag kinlick ang notification
+// NOTIFICATION CLICK HANDLER (Para bumukas ang app pag kinlick)
 self.addEventListener('notificationclick', function(event) {
     console.log('Notification click received.');
-    event.notification.close(); // Isara ang notification
+    event.notification.close();
 
-    // Kunin ang URL na bubuksan (default sa root '/')
-    const urlToOpen = event.notification.data?.url || '/';
-
+    // Buksan ang root URL ng app
     event.waitUntil(
         clients.matchAll({type: 'window', includeUncontrolled: true}).then(function(clientList) {
-            // Kung bukas na ang tab, i-focus ito
+            // Kung bukas na, i-focus lang
             for (var i = 0; i < clientList.length; i++) {
                 var client = clientList[i];
-                if (client.url.includes(urlToOpen) && 'focus' in client) {
+                if (client.url === '/' && 'focus' in client) {
                     return client.focus();
                 }
             }
-            // Kung walang bukas na tab, magbukas ng bago
+            // Kung hindi bukas, magbukas ng bago
             if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
+                return clients.openWindow('/');
             }
         })
     );
