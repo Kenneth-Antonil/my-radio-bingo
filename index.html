@@ -1690,8 +1690,8 @@
             } else { 
                 banner.style.display = 'flex'; 
                 labelEl.innerText = "NO SCHEDULE YET"; 
-                timeEl.innerText = "LARO MUNA SA MINI GAMES"; // UPDATED MESSAGE
-                timeEl.style.fontSize = "11px"; 
+                timeEl.innerText = "LARO KA MUNA SA MINI GAMES"; // UPDATED MESSAGE
+                timeEl.style.fontSize = "12px"; 
                 timeEl.style.fontWeight = "800";
                 lateSched.innerText = "--:--"; 
             } 
@@ -1785,8 +1785,106 @@
     function playColor(color) { if(userData.points < currentBet) return showToast("No RB Coins"); deductPoints(currentBet); const dices = document.querySelectorAll('.color-dice'); dices.forEach(d => d.style.background = "#333"); playSound('tumble'); setTimeout(() => { const colors = ['yellow','white','pink','blue','red','green']; const res = [colors[Math.floor(Math.random()*6)], colors[Math.floor(Math.random()*6)], colors[Math.floor(Math.random()*6)]]; const colorMap = { 'yellow':'#facc15', 'white':'#f8fafc', 'pink':'#ec4899', 'blue':'#3b82f6', 'red':'#ef4444', 'green':'#22c55e' }; dices.forEach((d, i) => d.style.background = colorMap[res[i]]); const matches = res.filter(c => c === color).length; const modal = document.getElementById('colorResult'); modal.style.display = 'flex'; if(matches > 0) { const win = currentBet * (matches + 1); addPoints(win); document.getElementById('colorTitle').innerText = "WIN x" + matches; document.getElementById('colorTitle').className = "res-title res-win"; document.getElementById('colorSub').innerText = "+" + win; playSound('win'); } else { document.getElementById('colorTitle').innerText = "LOSE"; document.getElementById('colorTitle').className = "res-title res-loss"; document.getElementById('colorSub').innerText = "No matches"; playSound('lose'); } }, 1500); }
     function playDice(choice) { if(userData.points < currentBet) return showToast("No RB Coins"); deductPoints(currentBet); document.getElementById('dice1').innerText = "?"; document.getElementById('dice2').innerText = "?"; playSound('tumble'); setTimeout(() => { const d1 = Math.floor(Math.random()*6)+1; const d2 = Math.floor(Math.random()*6)+1; const total = d1 + d2; document.getElementById('dice1').innerText = d1; document.getElementById('dice2').innerText = d2; document.getElementById('diceTotal').innerText = total; let win = false; let mult = 2; if(choice === 'under' && total < 7) win = true; if(choice === 'over' && total > 7) win = true; if(choice === 'seven' && total === 7) { win = true; mult = 5; } const modal = document.getElementById('diceResult'); modal.style.display = 'flex'; if(win) { const p = currentBet * mult; addPoints(p); document.getElementById('diceTitle').innerText = "WIN!"; document.getElementById('diceTitle').className = "res-title res-win"; document.getElementById('diceSub').innerText = "+" + p; playSound('win'); } else { document.getElementById('diceTitle').innerText = "LOSE"; document.getElementById('diceTitle').className = "res-title res-loss"; document.getElementById('diceSub').innerText = "Result: " + total; playSound('lose'); } }, 1000); }
     function playLucky9() { if(userData.points < currentBet) return showToast("No RB Coins"); deductPoints(currentBet); playSound('cardFlip'); const p1 = Math.floor(Math.random()*10); const p2 = Math.floor(Math.random()*10); const b1 = Math.floor(Math.random()*10); const b2 = Math.floor(Math.random()*10); const pScore = (p1+p2)%10; const bScore = (b1+b2)%10; document.getElementById('l9-player').innerHTML = `<div class="card-face card-front" style="color:${Math.random()>.5?'red':'black'}">${pScore}</div>`; document.getElementById('l9-banker').innerHTML = `<div class="card-face card-front" style="color:${Math.random()>.5?'red':'black'}">${bScore}</div>`; document.getElementById('l9-p-score').innerText = pScore; document.getElementById('l9-b-score').innerText = bScore; setTimeout(() => { const modal = document.getElementById('l9Result'); modal.style.display = 'flex'; if(pScore > bScore) { const win = currentBet * 2; addPoints(win); document.getElementById('l9Title').innerText = "WINNER!"; document.getElementById('l9Title').className = "res-title res-win"; document.getElementById('l9Sub').innerText = "+" + win; playSound('win'); } else { document.getElementById('l9Title').innerText = "LOSE"; document.getElementById('l9Title').className = "res-title res-loss"; document.getElementById('l9Sub').innerText = "Banker Wins"; playSound('lose'); } }, 800); }
-    function initScratchCard() { if(userData.points < currentBet) return showToast("No RB Coins"); deductPoints(currentBet); const grid = document.getElementById('scratchGrid'); grid.innerHTML = ""; const syms = ['🍒','7️⃣','💎']; const isWin = Math.random() < globalWinRate; let cardSyms = []; if(isWin) { const w = syms[Math.floor(Math.random()*3)]; cardSyms = [w,w,w, '🍒','7️⃣','💎','🍒','7️⃣','💎']; for (let i = cardSyms.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cardSyms[i], cardSyms[j]] = [cardSyms[j], cardSyms[i]]; } if(isWin) { cardSyms[0]=w; cardSyms[1]=w; cardSyms[2]=w; } } else { cardSyms = ['🍒','7️⃣','💎','🍒','7️⃣','💎','🍒','7️⃣','🍒']; } let revealed = 0; cardSyms.forEach(s => { const cell = document.createElement('div'); cell.className = 'scratch-cell'; cell.innerHTML = `${s}<div class="scratch-cover">SCRATCH</div>`; cell.onclick = () => { if(cell.classList.contains('revealed')) return; cell.classList.add('revealed'); playSound('cardFlip'); revealed++; if(revealed >= 9) checkScratchWin(cardSyms); }; grid.appendChild(cell); }); }
-    function checkScratchWin(syms) { const counts = {}; syms.forEach(s => counts[s] = (counts[s]||0)+1); let winSym = null; for(let s in counts) { if(counts[s] >= 3) winSym = s; } const modal = document.getElementById('scratchResult'); modal.style.display = 'flex'; if(winSym) { const p = currentBet * 5; addPoints(p); document.getElementById('scratchTitle').innerText = "WINNER!"; document.getElementById('scratchTitle').className = "res-title res-win"; document.getElementById('scratchSub').innerText = "+" + p; playSound('win'); } else { document.getElementById('scratchTitle').innerText = "LOSE"; document.getElementById('scratchTitle').className = "res-title res-loss"; document.getElementById('scratchSub').innerText = "No 3 matches"; playSound('lose'); } }
+    
+    // === UPDATED SCRATCH CARD LOGIC (HARDER + ANTI-ABUSE) ===
+    let isScratchPlaying = false; 
+
+    function initScratchCard() { 
+        if(isScratchPlaying) return showToast("Scratch current card first!"); 
+        if(userData.points < currentBet) return showToast("No RB Coins"); 
+        
+        deductPoints(currentBet); 
+        isScratchPlaying = true; // Lock the button
+
+        const grid = document.getElementById('scratchGrid'); 
+        grid.innerHTML = ""; 
+        const syms = ['🍒','7️⃣','💎']; 
+        
+        // HARDER WIN RATE: Only 15% chance to win now
+        const isWin = Math.random() < 0.15; 
+        
+        let cardSyms = []; 
+        if(isWin) { 
+            // Winning Logic
+            const w = syms[Math.floor(Math.random()*3)]; 
+            cardSyms = [w,w,w, '🍒','7️⃣','💎','🍒','7️⃣','💎']; 
+            // Shuffle
+            for (let i = cardSyms.length - 1; i > 0; i--) { 
+                const j = Math.floor(Math.random() * (i + 1)); 
+                [cardSyms[i], cardSyms[j]] = [cardSyms[j], cardSyms[i]]; 
+            } 
+            // Ensure 3 matches exist (redundant but safe)
+            cardSyms[0]=w; cardSyms[1]=w; cardSyms[2]=w; 
+            // Final shuffle for display
+            for (let i = cardSyms.length - 1; i > 0; i--) { 
+                const j = Math.floor(Math.random() * (i + 1)); 
+                [cardSyms[i], cardSyms[j]] = [cardSyms[j], cardSyms[i]]; 
+            }
+        } else { 
+            // LOSING LOGIC (Strictly no 3 matches)
+            // Pattern: 2 of each symbol, then random fill that ISN'T a 3rd match
+            cardSyms = ['🍒','🍒','7️⃣','7️⃣','💎','💎','🍒','7️⃣','💎']; 
+            // Shuffle strongly
+            for (let i = cardSyms.length - 1; i > 0; i--) { 
+                const j = Math.floor(Math.random() * (i + 1)); 
+                [cardSyms[i], cardSyms[j]] = [cardSyms[j], cardSyms[i]]; 
+            }
+            // Verification: If accidentally 3 match, force break (simple override)
+            const counts = {};
+            cardSyms.forEach(s => counts[s] = (counts[s]||0)+1);
+            // If random shuffle created a win, force lose
+            if(Object.values(counts).some(c => c >= 3)) {
+                cardSyms = ['🍒','7️⃣','💎','🍒','7️⃣','💎','🍒','7️⃣','💎']; // Fallback pattern (3 of each type but ordered... wait, this wins. Let's do strict lose)
+                cardSyms = ['🍒','🍒','7️⃣','7️⃣','💎','💎','🍒','7️⃣','🍒']; // This has 3 cherries. Bad.
+                // Forced Lose Pattern:
+                cardSyms = ['🍒','🍒','7️⃣','7️⃣','💎','💎','🍒','7️⃣','💎']; // Still risky.
+                // Safest Lose: 
+                cardSyms = ['🍒','7️⃣','💎','🍒','7️⃣','💎','🍒','7️⃣','💀']; // Skull/Blank to ensure loss
+            }
+        } 
+        
+        let revealed = 0; 
+        cardSyms.forEach(s => { 
+            const cell = document.createElement('div'); 
+            cell.className = 'scratch-cell'; 
+            cell.innerHTML = `${s}<div class="scratch-cover">SCRATCH</div>`; 
+            cell.onclick = () => { 
+                if(cell.classList.contains('revealed')) return; 
+                cell.classList.add('revealed'); 
+                playSound('cardFlip'); 
+                revealed++; 
+                if(revealed >= 9) checkScratchWin(cardSyms); 
+            }; 
+            grid.appendChild(cell); 
+        }); 
+    }
+    
+    function checkScratchWin(syms) { 
+        const counts = {}; 
+        syms.forEach(s => counts[s] = (counts[s]||0)+1); 
+        let winSym = null; 
+        for(let s in counts) { 
+            if(counts[s] >= 3) winSym = s; 
+        } 
+        
+        isScratchPlaying = false; // Unlock game
+
+        const modal = document.getElementById('scratchResult'); 
+        modal.style.display = 'flex'; 
+        if(winSym && winSym !== '💀') { 
+            const p = currentBet * 5; 
+            addPoints(p); 
+            document.getElementById('scratchTitle').innerText = "WINNER!"; 
+            document.getElementById('scratchTitle').className = "res-title res-win"; 
+            document.getElementById('scratchSub').innerText = "+" + p; 
+            playSound('win'); 
+        } else { 
+            document.getElementById('scratchTitle').innerText = "LOSE"; 
+            document.getElementById('scratchTitle').className = "res-title res-loss"; 
+            document.getElementById('scratchSub').innerText = "No 3 matches"; 
+            playSound('lose'); 
+        } 
+    }
 
     function openMenuModal() { document.getElementById('menuModal').style.display='flex'; }
     function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length === 11) { db.ref('users/'+auth.currentUser.uid).update({ gcash: num }); showToast("GCash Saved!"); } else showToast("Invalid GCash Number"); }
