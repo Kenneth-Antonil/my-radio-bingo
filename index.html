@@ -2000,9 +2000,21 @@
 
     // --- UPDATED NEXT DRAW LOGIC WITH "NO SCHEDULE" STATE ---
     function updateNextDrawDisplay() {
-        db.ref('gameState').once('value', s => {
-            const gameData = s.val() || {}; let displayTime = gameData.nextDraw;
-            if(gameData.schedules) { const now = Date.now(); const sorted = Object.values(gameData.schedules).sort((a,b) => a - b); const next = sorted.find(t => t > now); if(next) displayTime = next; }
+        db.ref('gameState').on('value', s => {
+            const gameData = s.val() || {}; 
+            let displayTime = gameData.nextDraw;
+            
+            if(gameData.schedules) { 
+                const now = Date.now();
+                // FIX: Handle object structure from Admin panel
+                // Convert object values to array, then map to get .time property if it exists
+                const rawScheds = Object.values(gameData.schedules);
+                const times = rawScheds.map(val => (typeof val === 'object' && val.time) ? val.time : val);
+                
+                const sorted = times.sort((a,b) => a - b);
+                const next = sorted.find(t => t > now); 
+                if(next) displayTime = next; 
+            }
             
             const banner = document.getElementById('nextDrawBanner'); 
             const timeEl = document.getElementById('nextDrawTime');
