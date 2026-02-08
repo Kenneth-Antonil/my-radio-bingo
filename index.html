@@ -24,13 +24,20 @@
     <script src="https://pl28660496.effectivegatecpm.com/a6/64/bf/a664bf7e7084386b4f4b428590030df3.js"></script>
 
     <style>
+        /* === ORIGINAL VARIABLES + NEW APP THEME === */
         :root { 
             --bg-overlay: rgba(15, 23, 42, 0.95); 
             --glass-surface: rgba(30, 41, 59, 0.75);
             --glass-border: rgba(255, 255, 255, 0.1);
-            --accent: #0ea5e9; --accent-glow: #38bdf8;
-            --text: #ffffff; --gold: #fbbf24; --gold-shine: #fcd34d;
-            --success: #10b981; --danger: #ef4444; --minigame: #f472b6; 
+            
+            --accent: #0ea5e9; /* Ocean Blue */
+            --accent-glow: #38bdf8;
+            --text: #ffffff; 
+            --gold: #fbbf24; 
+            --gold-shine: #fcd34d;
+            --success: #10b981; 
+            --danger: #ef4444; 
+            --minigame: #f472b6; 
         }
         
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
@@ -47,122 +54,627 @@
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
         }
 
-        /* INSTALL GATE */
-        #installGate { position: fixed; inset: 0; z-index: 2147483647; background: #0f172a; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }
-        .gate-logo { font-size: 64px; font-weight: 900; letter-spacing: -3px; color: white; margin-bottom: 10px; text-shadow: 0 0 40px rgba(14, 165, 233, 0.6); animation: floatLogo 3s ease-in-out infinite; }
+        /* === INSTALL GATE LANDING PAGE STYLES (NEW) === */
+        #installGate {
+            position: fixed; inset: 0; z-index: 2147483647; /* Highest possible Z-index */
+            background: #0f172a;
+            background-image: radial-gradient(circle at top right, rgba(14, 165, 233, 0.2), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(251, 191, 36, 0.1), transparent 40%);
+            display: none; /* Controlled by JS */
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 30px;
+        }
+        .gate-logo {
+            font-size: 64px; font-weight: 900; letter-spacing: -3px; color: white;
+            margin-bottom: 10px; text-shadow: 0 0 40px rgba(14, 165, 233, 0.6);
+            animation: floatLogo 3s ease-in-out infinite;
+        }
         .gate-logo span { color: var(--accent-glow); }
         @keyframes floatLogo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        .gate-title { font-size: 24px; font-weight: 800; margin-bottom: 15px; }
-        .gate-desc { font-size: 14px; color: #cbd5e1; max-width: 320px; margin-bottom: 40px; opacity: 0.8; }
-        .gate-btn-install { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; border: none; padding: 18px 40px; border-radius: 50px; font-weight: 900; cursor: pointer; animation: pulseBtn 2s infinite; }
-        .gate-ios-note { margin-top: 30px; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); max-width: 320px; text-align: left; display: none; }
         
-        /* NOTIF BLOCKER */
-        #notifBlocker { position: fixed; inset: 0; z-index: 9999999; background: rgba(15, 23, 42, 0.98); display: none; flex-direction: column; align-items: center; justify-content: center; padding: 30px; backdrop-filter: blur(10px); }
-        .notif-gate-icon { width: 80px; height: 80px; background: rgba(59, 130, 246, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; animation: pulseGate 2s infinite; }
-        .notif-gate-title { font-size: 24px; font-weight: 900; margin-bottom: 10px; }
-        .btn-allow-notif { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; border: none; padding: 15px 30px; border-radius: 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 10px; }
-        .blocked-help { display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 12px; margin-top: 20px; font-size: 12px; text-align: left; }
+        .gate-title { font-size: 24px; font-weight: 800; color: white; margin-bottom: 15px; line-height: 1.3; }
+        .gate-desc { font-size: 14px; color: #cbd5e1; max-width: 320px; margin-bottom: 40px; line-height: 1.6; opacity: 0.8; }
+        
+        .gate-btn-install {
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            color: white; border: none; padding: 18px 40px; border-radius: 50px;
+            font-weight: 900; font-size: 16px; cursor: pointer;
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+            transition: transform 0.2s; display: flex; align-items: center; gap: 10px;
+            border: 2px solid rgba(255,255,255,0.2);
+            animation: pulseBtn 2s infinite;
+        }
+        .gate-btn-install:active { transform: scale(0.95); }
+        @keyframes pulseBtn { 0% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(14, 165, 233, 0); } 100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); } }
 
-        /* SPLASH & TOAST */
-        #splash-screen { position: fixed; inset: 0; background: #0f172a; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.8s ease, visibility 0.8s; }
-        .splash-logo { font-size: 60px; font-weight: 900; letter-spacing: -3px; color: white; animation: pulseLogo 2s infinite; }
+        .gate-ios-note {
+            margin-top: 30px; background: rgba(255,255,255,0.05); padding: 20px;
+            border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); max-width: 320px;
+            text-align: left; display: none; /* Shown by JS for iOS */
+        }
+        .ios-step { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; font-size: 13px; color: #e2e8f0; }
+        .ios-icon { color: var(--accent-glow); }
+
+        /* === NOTIFICATION BLOCKER GATE === */
+        #notifBlocker {
+            position: fixed; inset: 0; z-index: 9999999;
+            background: rgba(15, 23, 42, 0.98);
+            display: none; /* Shown by JS */
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .notif-gate-icon {
+            width: 80px; height: 80px; background: rgba(59, 130, 246, 0.2);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
+            animation: pulseGate 2s infinite;
+        }
+        @keyframes pulseGate { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        
+        .notif-gate-title { font-size: 24px; font-weight: 900; margin-bottom: 10px; color: white; }
+        .notif-gate-desc { font-size: 14px; color: #cbd5e1; margin-bottom: 30px; line-height: 1.6; max-width: 300px; }
+        .btn-allow-notif {
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            color: white; border: none; padding: 15px 30px; border-radius: 16px;
+            font-weight: 800; font-size: 16px; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+            transition: 0.3s; width: 100%; max-width: 250px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-allow-notif:hover { transform: translateY(-3px); }
+        .blocked-help { 
+            display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 15px; border-radius: 12px; margin-top: 20px; font-size: 12px; text-align: left;
+        }
+
+        /* === SPLASH SCREEN === */
+        #splash-screen {
+            position: fixed; inset: 0; background: #0f172a; z-index: 99999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.8s ease, visibility 0.8s;
+        }
+        .splash-logo {
+            font-size: 60px; font-weight: 900; letter-spacing: -3px; color: white;
+            animation: pulseLogo 2s infinite ease-in-out;
+            text-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+        }
         .splash-logo span { color: var(--accent-glow); }
-        .splash-loader { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent); border-radius: 50%; margin-top: 20px; animation: spin 1s linear infinite; }
-        @keyframes pulseLogo { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .splash-loader {
+            width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid var(--accent); border-radius: 50%;
+            margin-top: 20px; animation: spin 1s linear infinite;
+        }
+        @keyframes pulseLogo { 
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(56,189,248,0.2)); }
+            50% { transform: scale(1.1); filter: drop-shadow(0 0 30px rgba(56,189,248,0.8)); }
+        }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        #customToast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%); background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 16px 24px; border-radius: 16px; z-index: 100000; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); transition: transform 0.4s; }
+
+        /* === TOAST === */
+        #customToast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%);
+            background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent);
+            padding: 16px 24px; border-radius: 16px; z-index: 100000; display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8); backdrop-filter: blur(12px);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-width: 280px; max-width: 90%;
+        }
         #customToast.show { transform: translateX(-50%) translateY(0); }
+        .toast-icon { color: var(--gold); flex-shrink: 0; }
+        .toast-msg { font-size: 14px; font-weight: 700; color: white; line-height: 1.4; }
 
-        /* GENERAL UTILS */
-        .glass-panel { background: var(--glass-surface); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); }
-        .ad-container-global { position: relative; z-index: 10; width: 320px; height: 50px; display: flex; justify-content: center; align-items: center; margin: 15px auto; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden; }
+        /* === GLOBAL UTILS === */
+        .glass-panel { background: var(--glass-surface); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); }
+        .ad-container-global { position: relative; z-index: 10 !important; width: 320px; height: 50px; display: flex; justify-content: center; align-items: center; margin: 15px auto; background: rgba(0,0,0,0.4); border-radius: 4px; border: 1px dashed rgba(255,255,255,0.3); text-align: center; overflow: hidden; clear: both; }
 
-        /* JACKPOT BANNER */
-        #jackpotBanner { background: linear-gradient(135deg, #271a00, #451a03, #000); border: 2px solid #fbbf24; color: #fbbf24; padding: 15px; text-align: center; border-radius: 18px; display: none; margin-bottom: 15px; position: relative; overflow: hidden; animation: pulse-border 2s infinite; }
-        .jackpot-amount { font-size: 32px; font-weight: 900; background: linear-gradient(to bottom, #fff, #fcd34d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        @keyframes pulse-border { 0%, 100% { border-color: #b45309; } 50% { border-color: #fbbf24; box-shadow: 0 0 35px rgba(251, 191, 36, 0.6); } }
-
-        /* LOGIN */
-        #loginOverlay { position: fixed; inset: 0; background: radial-gradient(circle, #1e293b, #0f172a); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        .app-logo-lg { font-size: 56px; font-weight: 900; letter-spacing: -3px; color: white; margin-bottom: 10px; }
+        /* === PREMIUM JACKPOT BANNER (GOLD & BLACK) === */
+        #jackpotBanner { 
+            background: linear-gradient(135deg, #271a00 0%, #451a03 50%, #000000 100%);
+            border: 2px solid #fbbf24;
+            color: #fbbf24; 
+            padding: 15px; 
+            text-align: center; 
+            border-radius: 18px; 
+            box-shadow: 0 0 25px rgba(251, 191, 36, 0.3), inset 0 0 20px rgba(251, 191, 36, 0.1); 
+            display: none; 
+            margin-bottom: 15px; 
+            position: relative;
+            overflow: hidden;
+            animation: pulse-border 2s infinite;
+        }
+        #jackpotBanner::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(251, 191, 36, 0.2), transparent);
+            animation: shimmer 3s infinite linear;
+        }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        @keyframes pulse-border { 0% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); border-color: #b45309; } 50% { box-shadow: 0 0 35px rgba(251, 191, 36, 0.6); border-color: #fbbf24; } 100% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); border-color: #b45309; } }
+        
+        .jp-label-new { 
+            font-size: 11px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; 
+            display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px;
+            color: #fcd34d; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        .jackpot-amount { 
+            font-size: 32px; color: #ffffff; display: block; font-weight: 900; 
+            text-shadow: 0 2px 15px rgba(251, 191, 36, 0.8);
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom, #ffffff, #fcd34d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* === LOGIN PAGE === */
+        #loginOverlay { position: fixed; inset: 0; background: radial-gradient(circle at top right, #1e293b, #0f172a 70%); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; overflow: hidden; }
+        .login-bg-blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.4; z-index: -1; }
+        .blob-1 { width: 300px; height: 300px; background: var(--accent); top: -100px; right: -50px; animation: floatBlob 10s infinite alternate; }
+        .blob-2 { width: 250px; height: 250px; background: var(--minigame); bottom: -50px; left: -50px; animation: floatBlob 12s infinite alternate-reverse; }
+        @keyframes floatBlob { from { transform: translate(0,0); } to { transform: translate(30px, 50px); } }
+        .login-app-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; text-align: center; animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUpFade { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .app-logo-lg { font-size: 56px; font-weight: 900; letter-spacing: -3px; color: white; margin-bottom: 10px; text-shadow: 0 10px 30px rgba(14, 165, 233, 0.3); }
         .app-logo-lg span { color: var(--accent-glow); }
-        .btn-main-auth { background: white; color: black; border: none; width: 100%; padding: 18px; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 15px; }
-        
-        /* NAV */
-        .nav { background: rgba(15, 23, 42, 0.95); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .app-tagline { font-size: 16px; color: #cbd5e1; font-weight: 500; margin-bottom: 40px; line-height: 1.5; opacity: 0.9; }
+        .promo-badge { background: linear-gradient(90deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.2)); border: 1px solid rgba(251, 191, 36, 0.3); color: var(--gold); padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 30px; display: flex; align-items: center; gap: 8px; box-shadow: 0 0 15px rgba(251, 191, 36, 0.1); }
+        .auth-btn-group { width: 100%; display: flex; flex-direction: column; gap: 15px; margin-bottom: 40px; }
+        .btn-main-auth { background: white; color: black; border: none; width: 100%; padding: 18px; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; transition: 0.3s; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .btn-main-auth:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
+        .btn-sec-auth { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); width: 100%; padding: 18px; border-radius: 16px; font-weight: 700; font-size: 16px; cursor: pointer; backdrop-filter: blur(10px); transition: 0.3s; }
+        .btn-sec-auth:hover { background: rgba(255,255,255,0.15); border-color: white; }
+        .login-footer-legal { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; padding: 0 20px; }
+        .legal-text { font-size: 10px; color: #64748b; line-height: 1.4; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: flex; flex-direction: column; gap: 5px; align-items: center; }
+
+        /* === NAV & HEADER === */
+        .nav { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: auto; min-height: 60px; }
         .user-stats { display: flex; align-items: center; gap: 8px; }
-        .icon-btn { background: rgba(255,255,255,0.1); width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; }
-        .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 8px; height: 8px; border-radius: 50%; display: none; }
-        .points-badge { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.4)); padding: 0 12px; height: 38px; border-radius: 12px; font-weight: 800; border: 1px solid var(--gold); display: flex; align-items: center; gap: 6px; }
-        #userImg { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; }
+        .icon-btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.15); width: 38px; height: 38px; border-radius: 12px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .icon-btn:active { transform: scale(0.95); }
+        .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--surface); display: none; z-index: 10; box-shadow: 0 0 10px var(--danger); }
+        .points-badge { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.4)); color: #fff; padding: 0 12px; height: 38px; border-radius: 12px; font-weight: 800; border: 1px solid rgba(251, 191, 36, 0.6); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
+        #userImg { width: 45px; height: 45px; border-radius: 50%; cursor: pointer; border: 2px solid var(--accent); object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .disclaimer { background: rgba(239, 68, 68, 1); color: white; padding: 6px 0; font-size: 10px; font-weight: 700; overflow: hidden; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(5px); text-shadow: 0 1px 2px black; }
+        .marquee-content { display: inline-block; animation: marquee 25s linear infinite; padding-left: 100%; }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* TABS */
-        .tab-system { display: flex; background: rgba(0,0,0,0.6); margin: 0 0 15px 0; border-radius: 18px; padding: 5px; gap: 5px; }
-        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #cbd5e1; font-weight: 800; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .tab-btn.active { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); }
+        /* === TABS SYSTEM === */
+        .tab-system { display: flex; background: rgba(0,0,0,0.6); margin: 0 0 15px 0; border-radius: 18px; padding: 5px; gap: 5px; border: 1px solid rgba(255,255,255,0.1); }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: #cbd5e1; font-weight: 800; font-size: 12px; cursor: pointer; border-radius: 12px; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; text-shadow: 0 1px 2px black; }
+        .tab-btn.active { background: rgba(255,255,255,0.2); color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.3); text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .tab-btn.active.minigame-tab { background: rgba(236, 72, 153, 0.3); color: white; border-color: rgba(236, 72, 153, 0.6); }
+
+        /* === BINGO CARD & GAMEPLAY === */
+        .next-draw-container { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.4); padding: 15px; border-radius: 20px; margin-bottom: 15px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
+        .nd-icon { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2)); color: var(--gold); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(251, 191, 36, 0.4); }
+        .nd-info { flex: 1; }
+        .next-draw-label { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .next-draw-time { font-size: 18px; font-weight: 900; color: white; text-shadow: 0 2px 5px rgba(0,0,0,0.8); }
         
-        /* BINGO CARD */
-        .card { background: var(--glass-surface); padding: 20px; border-radius: 24px; margin-bottom: 20px; border: 1px solid var(--glass-border); position: relative; }
+        .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 10px; }
+        .card { background: var(--glass-surface); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--glass-border); position: relative; transition: all 0.3s ease; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
+        
+        /* UPDATED VIDEO CONTAINER - 16:9 FIXED */
+        .video-feed-wrapper { margin-bottom: 15px; border-radius: 24px; overflow: hidden; background: #000; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+        .video-container { position: relative; width: 100%; aspect-ratio: 16 / 9; }
+        .video-overlay-bl { position: absolute; bottom: 12px; left: 12px; z-index: 10; background: rgba(0,0,0,0.9); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--success); display: flex; align-items: center; gap: 5px; color: var(--success); font-size: 11px; font-weight: 800; }
+        
+        .draw-panel { display: grid; grid-template-columns: 1fr 90px; gap: 12px; margin-bottom: 20px; }
+        .prev-balls { background: rgba(0,0,0,0.4); border-radius: 16px; padding: 10px; display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; border: 1px solid rgba(255,255,255,0.1); }
+        .ball-small { min-width: 40px; height: 40px; background: linear-gradient(135deg, #334155, #1e293b); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; border: 1px solid rgba(255,255,255,0.3); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-shadow: 0 1px 2px black; }
+        .current-ball-box { background: linear-gradient(135deg, var(--accent), #2563eb); border-radius: 18px; height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5); border: 2px solid rgba(255,255,255,0.4); position: relative; overflow: hidden; }
+        .current-ball-box::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent); animation: shine 3s infinite; }
+        @keyframes shine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
         .bingo-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px; }
-        .letter { text-align: center; font-size: 26px; font-weight: 900; color: var(--gold); }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-        .cell { aspect-ratio: 1; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.15); color: white; position: relative; }
-        .cell.hit { background: linear-gradient(135deg, var(--accent), #2563eb); transform: scale(1.05); box-shadow: 0 5px 15px rgba(59, 130, 246, 0.6); }
-        .cell.win-glow { background: #10b981 !important; animation: popWin 0.4s ease forwards; }
-        @keyframes popWin { 50% { transform: scale(1.15); } }
+        .letter { text-align: center; font-size: 26px; font-weight: 900; color: var(--gold); text-shadow: 0 2px 10px rgba(251, 191, 36, 0.8); -webkit-text-stroke: 1px rgba(0,0,0,0.5); }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; position: relative; }
+        .cell { aspect-ratio: 1; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.15); transition: all 0.3s; z-index: 2; position: relative; overflow: hidden; box-shadow: inset 0 2px 5px rgba(255,255,255,0.05); color: white; text-shadow: 0 2px 3px black; }
+        .cell.hit { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; transform: scale(1.05); border-color: rgba(255,255,255,0.6); box-shadow: 0 5px 15px rgba(59, 130, 246, 0.6); text-shadow: 0 2px 2px rgba(0,0,0,0.5); }
         
-        /* VIDEO */
-        .video-container { position: relative; width: 100%; aspect-ratio: 16 / 9; background: black; border-radius: 16px; overflow: hidden; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.2); }
-        .video-overlay-bl { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 5px 10px; border-radius: 8px; color: var(--success); font-weight: 800; font-size: 11px; display: flex; gap: 5px; }
+        .card.card-win { border: 3px solid var(--success) !important; box-shadow: 0 0 50px rgba(16, 185, 129, 0.5); animation: pulse-win 2s infinite; background: rgba(16, 185, 129, 0.2); }
+        .card.card-lost { opacity: 0.6; filter: grayscale(0.8); pointer-events: none; }
+        
+        .card.card-puro { border: 2px solid var(--gold) !important; box-shadow: 0 0 40px rgba(251, 191, 36, 0.4); animation: pulse-gold 1.5s infinite; }
+        .cell.cell-waiting { background: #fffbeb !important; color: #b45309 !important; border: 2px dashed #f59e0b; animation: flash-waiting 1s infinite; z-index: 5; font-weight: 900; transform: scale(1.1); box-shadow: 0 0 20px rgba(251, 191, 36, 0.8); text-shadow: none; }
 
-        /* MINI GAMES LOBBY */
-        .minigame-lobby { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 0; }
-        .game-poster { height: 140px; border-radius: 20px; position: relative; overflow: hidden; cursor: pointer; border: 1px solid rgba(255,255,255,0.15); display: flex; flex-direction: column; justify-content: flex-end; padding: 15px; background: #334155; }
+        .cell.win-glow { background: #10b981 !important; color: white; z-index: 3; border: 2px solid #fff; box-shadow: 0 0 25px var(--success), inset 0 0 15px rgba(255,255,255,0.3); animation: popWin 0.4s ease forwards; }
+        .cell.win-glow::after { opacity: 0; animation: fadeInLine 0.5s forwards; }
+
+        @keyframes pulse-gold { 0% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.3); border-color: rgba(251, 191, 36, 0.5); } 50% { box-shadow: 0 0 40px rgba(251, 191, 36, 0.7); border-color: var(--gold); } 100% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.3); border-color: rgba(251, 191, 36, 0.5); } }
+        @keyframes flash-waiting { 0% { opacity: 1; transform: scale(1.1); } 50% { opacity: 0.7; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1.1); } }
+        @keyframes pulse-win { 0% { box-shadow: 0 0 20px var(--success); } 50% { box-shadow: 0 0 50px var(--success); } 100% { box-shadow: 0 0 20px var(--success); } }
+        @keyframes popWin { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1.05); } }
+        @keyframes fadeInLine { from { opacity: 0; } to { opacity: 1; } }
+
+        .cell.win-line-h::after { content:''; position:absolute; top:50%; left:0; right:0; height:6px; background:var(--gold); transform:translateY(-50%); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; border-radius:10px; }
+        .cell.win-line-v::after { content:''; position:absolute; top:0; bottom:0; left:50%; width:6px; background:var(--gold); transform:translateX(-50%); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; border-radius:10px; }
+        .cell.win-line-d1::after { content:''; position:absolute; top:50%; left:-50%; right:-50%; height:6px; background:var(--gold); transform:translateY(-50%) rotate(45deg); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; }
+        .cell.win-line-d2::after { content:''; position:absolute; top:50%; left:-50%; right:-50%; height:6px; background:var(--gold); transform:translateY(-50%) rotate(-45deg); box-shadow:0 0 10px rgba(0,0,0,0.5); z-index:10; }
+
+        .late-overlay, .game-over-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); }
+        .late-text { font-weight: 800; font-size: 20px; color: white; margin-bottom: 8px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); }
+        .late-subtext { font-size: 14px; opacity: 1; color: #cbd5e1; text-shadow: 0 2px 4px black; }
+        #winnerBanner { display: none; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 15px; border-radius: 16px; text-align: center; font-weight: 900; margin-bottom: 15px; animation: slideDown 0.5s ease; border: 2px solid #a7f3d0; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4); text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .winner-line { font-size: 13px; opacity: 1; margin-top: 5px; display: block; font-weight: 600; }
+        @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .chat-box { height: 450px; display: flex; flex-direction: column; background: var(--glass-surface); border-radius: 24px; border: 1px solid var(--glass-border); overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.6); backdrop-filter: blur(20px); }
+        .chat-header { padding: 15px 20px; background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+        .chat-header h3 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: 0.5px; }
+        #chatList { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 18px; scroll-behavior: smooth; }
+        #chatList::-webkit-scrollbar { width: 5px; }
+        #chatList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        .chat-row { display: flex; gap: 12px; max-width: 95%; position: relative; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .chat-pfp { width: 38px; height: 38px; border-radius: 14px; border: 2px solid var(--accent); flex-shrink: 0; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .chat-content { flex: 1; }
+        .bubble { background: rgba(255,255,255,0.1); padding: 12px 16px; border-radius: 0 20px 20px 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.2); backdrop-filter: blur(5px); }
+        .chat-name { font-size: 12px; font-weight: 800; color: var(--accent-glow); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; text-shadow: 0 0 10px rgba(56, 189, 248, 0.6); cursor:pointer; }
+        .chat-text { font-size: 13.5px; line-height: 1.5; color: #ffffff; word-break: break-word; text-shadow: 0 1px 2px black; font-weight: 500; }
+        .chat-actions { display: flex; gap: 15px; margin-top: 6px; padding-left: 4px; }
+        .action-btn { background: none; border: none; color: #cbd5e1; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 2px 0; transition: 0.2s; text-shadow: 0 1px 2px black; }
+        .action-btn:hover { color: var(--text); }
+        .action-btn.liked { color: var(--minigame); }
+        .action-btn.liked i { fill: var(--minigame); }
+        .reply-box { margin-left: 48px; margin-top: 10px; padding-left: 12px; border-left: 2px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 8px; }
+        .reply-item { display: flex; gap: 8px; align-items: flex-start; }
+        .reply-pfp { width: 24px; height: 24px; border-radius: 8px; }
+        .reply-bubble { background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 12px; flex: 1; }
+        .reply-indicator { background: rgba(255,255,255,0.05); padding: 10px 15px; font-size: 12px; display: none; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .chat-input-area { background: rgba(0,0,0,0.3); padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); display: flex; gap: 10px; }
+        .input-wrapper { display: flex; gap: 10px; background: rgba(15, 23, 42, 0.8); padding: 6px 6px 6px 15px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.2); transition: 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.4); }
+        .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        .input-wrapper input { flex: 1; background: none; border: none; color: white; outline: none; font-size: 14px; height: 42px; text-shadow: none; font-weight: 500; }
+        .input-wrapper input::placeholder { color: #94a3b8; }
+        .send-btn { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; border: none; width: 42px; height: 42px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+        .send-btn:hover { transform: scale(1.05); }
+        
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(15px); }
+        .modal-content { background: rgba(30, 41, 59, 0.95); border-radius: 30px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.2); max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.8); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+        
+        .reward-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
+        .reward-item { background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)); padding: 18px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.15); transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .reward-item:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2); }
+        .reward-main { display: flex; align-items: center; gap: 15px; }
+        .reward-icon-box { width: 45px; height: 45px; background: rgba(59, 130, 246, 0.2); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: var(--accent-glow); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .reward-info b { font-size: 16px; display: block; color: white; letter-spacing: 0.3px; text-shadow: 0 2px 2px black; }
+        .reward-info small { color: var(--gold); font-weight: 800; font-size: 12px; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+        .btn-redeem { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transition: 0.2s; text-shadow: 0 1px 2px black; }
+        .btn-redeem:active { transform: scale(0.95); }
+        
+        .profile-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .profile-img-large { width: 70px; height: 70px; border-radius: 22px; border: 3px solid var(--accent); box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+        .profile-name-info { flex: 1; }
+        .profile-name { font-size: 20px; font-weight: 900; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .profile-uid { font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; color: #cbd5e1; }
+        
+        .gcash-section { background: rgba(59, 130, 246, 0.15); padding: 15px; border-radius: 18px; margin-bottom: 15px; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .styled-input { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); padding: 12px 15px; border-radius: 12px; color: white; font-weight: 700; outline: none; font-size: 14px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.3); text-shadow: none; }
+        .styled-input:focus { border-color: var(--accent); background: rgba(0,0,0,0.6); }
+        
+        .ref-container { background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(59, 130, 246, 0.15)); border: 1px solid rgba(16, 185, 129, 0.3); padding: 15px; border-radius: 18px; margin-bottom: 15px; }
+        .history-box { margin-top: 20px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 18px; border: 1px solid rgba(255,255,255,0.1); }
+        .history-list { max-height: 250px; overflow-y: auto; padding-right: 5px; }
+        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        
+        .btn-change { background: rgba(59, 130, 246, 0.2); color: var(--accent-glow); border: 1px solid var(--accent); height: 40px; padding: 0 15px; border-radius: 12px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); text-shadow: 0 1px 2px black; }
+        .btn-change:hover { background: var(--accent); color: white; }
+        .btn-change:disabled { opacity: 0.5; cursor: not-allowed; border-color: #475569; color: #94a3b8; background: none; }
+        
+        .pattern-box { background: rgba(0,0,0,0.4); height: 40px; padding: 0 15px; border-radius: 12px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px); }
+        .pattern-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+        .pattern-text { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .notif-card-new { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.15); position: relative; transition: 0.2s; backdrop-filter: blur(5px); }
+        .notif-card-new:hover { background: rgba(255,255,255,0.15); border-color: var(--accent); }
+        .notif-header-new { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .notif-title { font-size: 12px; font-weight: 800; color: var(--accent-glow); display: flex; align-items: center; gap: 5px; }
+        .notif-time { font-size: 10px; opacity: 0.6; color: #cbd5e1; }
+        .notif-body { font-size: 13px; line-height: 1.5; color: #ffffff; text-shadow: 0 1px 2px black; }
+        .btn-del-notif { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; transition: 0.2s; }
+        .btn-del-notif:hover { color: var(--danger); }
+
+        /* ========================================= */
+        /* PROFESSIONAL MINI GAMES LOBBY (CASINO STYLE) */
+        /* ========================================= */
+        
+        .tab-btn.minigame-tab:hover { color: var(--minigame); }
+
+        /* CATEGORY BAR */
+        .casino-category-bar {
+            display: flex; gap: 10px; padding: 10px 0; overflow-x: auto; scrollbar-width: none; margin-bottom: 10px;
+        }
+        .cat-chip {
+            background: rgba(30, 41, 59, 0.8); color: #94a3b8; padding: 10px 18px; border-radius: 12px; font-size: 12px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap; cursor: pointer; transition: 0.2s;
+        }
+        .cat-chip.active, .cat-chip:hover { background: var(--accent); color: white; border-color: var(--accent-glow); box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3); }
+
+        /* UPDATED LOBBY GRID - 2 COLUMNS (MOBILE APP STYLE) */
+        .minigame-lobby { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); /* 2 columns for app-like feel */
+            gap: 12px; 
+            padding: 10px 0; 
+        }
+        
+        /* UPDATED GAME POSTER */
+        .game-poster {
+            height: 140px; /* Slightly compact */
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+            border: 1px solid rgba(255,255,255,0.15);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 15px;
+        }
+
+        .game-poster:hover { transform: scale(1.03); box-shadow: 0 20px 40px rgba(0,0,0,0.6); border-color: rgba(255,255,255,0.4); }
+        .game-poster::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.95), transparent 80%); z-index: 1; }
+
+        /* Specific Backgrounds */
         .poster-roulette { background: radial-gradient(circle at top left, #10b981, #065f46); }
         .poster-highlow { background: radial-gradient(circle at bottom right, #3b82f6, #1e3a8a); }
         .poster-slots { background: radial-gradient(circle at center, #f59e0b, #b45309); }
         .poster-color { background: radial-gradient(circle at top, #8b5cf6, #4c1d95); }
         .poster-lucky9 { background: radial-gradient(circle at top left, #059669, #022c22); }
         .poster-dice { background: radial-gradient(circle at bottom, #f43f5e, #be123c); }
-        .poster-title { font-size: 15px; font-weight: 900; color: white; text-transform: uppercase; z-index: 2; }
-        .poster-icon { position: absolute; top: 10px; right: 10px; width: 50px; height: 50px; opacity: 0.3; color: white; }
 
-        /* GAME OVERLAYS (FULLSCREEN) */
-        .game-overlay-fs { position: fixed; inset: 0; background: #0f172a; z-index: 2000; display: none; flex-direction: column; overflow-y: auto; }
-        .go-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(30, 41, 59, 0.95); border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .game-balance-pill { background: rgba(0,0,0,0.4); border: 1px solid var(--gold); padding: 5px 12px; border-radius: 20px; display: flex; gap: 6px; color: var(--gold); font-weight: 800; font-size: 13px; }
+        .poster-content { position: relative; z-index: 2; width: 100%; }
+        .poster-title { font-size: 15px; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); margin-bottom: 2px; line-height: 1.1; }
+        .poster-desc { font-size: 10px; color: rgba(255,255,255,0.8); font-weight: 600; text-transform: uppercase; }
         
-        /* BETTING UI */
-        .bet-controls { display: flex; align-items: center; justify-content: center; gap: 10px; background: rgba(30, 41, 59, 0.8); padding: 8px; border-radius: 20px; margin: 15px auto; width: 100%; max-width: 350px; }
-        .bet-btn-adjust { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.1); color: white; font-weight: 900; border: 1px solid rgba(255,255,255,0.2); }
-        .bet-val { font-size: 20px; font-weight: 900; color: var(--gold); }
-        .result-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 50; border-radius: 30px; backdrop-filter: blur(8px); }
-        .res-win { color: #fbbf24; font-size: 38px; font-weight: 900; }
+        .poster-badge { position: absolute; top: 10px; left: 10px; padding: 4px 8px; border-radius: 8px; font-size: 9px; font-weight: 900; z-index: 2; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .badge-hot { background: #ef4444; color: white; }
+        .badge-new { background: #10b981; color: white; }
 
-        /* CHAT */
-        .chat-box { height: 450px; display: flex; flex-direction: column; background: var(--glass-surface); border-radius: 24px; overflow: hidden; }
-        #chatList { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .bubble { background: rgba(255,255,255,0.1); padding: 10px 14px; border-radius: 0 16px 16px 16px; font-size: 13px; }
-        .chat-input-area { padding: 15px; background: rgba(0,0,0,0.2); display: flex; gap: 10px; }
-        .input-wrapper { display: flex; flex: 1; background: rgba(15, 23, 42, 0.8); border-radius: 18px; padding: 5px; border: 1px solid rgba(255,255,255,0.2); }
-        .input-wrapper input { flex: 1; background: none; border: none; color: white; padding: 8px; outline: none; }
-        
-        /* MODALS */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(10px); }
-        .modal-content { background: #1e293b; border-radius: 24px; padding: 25px; width: 100%; max-width: 450px; border: 1px solid rgba(255,255,255,0.1); max-height: 90vh; overflow-y: auto; }
-        
-        /* GAME SPECIFICS (Simplified for length) */
-        .slot-window { display:flex; gap:10px; justify-content:center; margin-bottom:20px; }
-        .reel-col { width:60px; height:80px; background:white; color:black; font-size:40px; display:flex; align-items:center; justify-content:center; border-radius:10px; }
-        .wheel-outer { width:250px; height:250px; border-radius:50%; background:conic-gradient(red, black, red, black, red, black); margin:0 auto 20px; position:relative; animation:none; border:5px solid #fbbf24; }
-        .playing-card { width:100px; height:150px; background:white; color:black; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:40px; font-weight:900; margin:0 auto 20px; }
+        .poster-icon { position: absolute; top: 10px; right: 10px; opacity: 0.3; transform: rotate(15deg) scale(1.2); width: 60px; height: 60px; color: white; z-index: 0; filter: drop-shadow(0 0 10px rgba(255,255,255,0.3)); transition: transform 0.5s; }
+        .game-poster:hover .poster-icon { transform: rotate(0deg) scale(1.1); opacity: 0.5; }
 
-        /* PWA BANNER */
-        #pwaInstallBanner { position: fixed; bottom: 0; left: 0; right: 0; background: #1e293b; padding: 15px; display: none; align-items: center; justify-content: space-between; z-index: 9999; border-top: 1px solid rgba(255,255,255,0.2); }
+        /* === UNIFIED GAME HEADER & OVERLAY === */
+        .game-overlay-fs {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a; 
+            z-index: 2000; display: none; flex-direction: column;
+            overflow-y: auto; 
+            animation: fadeInFs 0.4s ease;
+        }
+        @keyframes fadeInFs { from{opacity:0; transform: scale(0.95);} to{opacity:1; transform: scale(1);} }
+
+        /* NEW UNIFIED HEADER STYLE */
+        .go-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 15px 20px; background: rgba(30, 41, 59, 0.95); 
+            border-bottom: 1px solid rgba(255,255,255,0.1); 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            position: sticky; top: 0; z-index: 50;
+        }
+        .go-back-btn { background: transparent; border: none; color: white; font-weight: 800; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.2s; font-size: 14px; opacity: 0.8; }
+        .go-back-btn:hover { opacity: 1; transform: translateX(-3px); }
+        .go-title { font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: white; }
         
-        /* ANIMATIONS */
-        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.1); } 70% { box-shadow: 0 0 0 15px rgba(0,0,0,0); } }
+        /* NEW BALANCE PILL IN GAME HEADER */
+        .game-balance-pill {
+            background: rgba(0,0,0,0.4); border: 1px solid var(--gold);
+            padding: 5px 12px; border-radius: 20px;
+            display: flex; align-items: center; gap: 6px;
+            color: var(--gold); font-weight: 800; font-size: 13px;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
+        }
+
+        /* === GLOBAL BETTING UI === */
+        .bet-controls {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            background: rgba(30, 41, 59, 0.8); padding: 8px; border-radius: 20px;
+            margin: 15px auto; border: 1px solid rgba(255,255,255,0.1); width: 100%; max-width: 350px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .bet-btn-adjust {
+            width: 40px; height: 40px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1); color: white; font-weight: 900;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px;
+            transition: 0.2s;
+        }
+        .bet-btn-adjust:active { background: white; color: black; transform: scale(0.9); }
+        .bet-display { flex: 1; text-align: center; }
+        .bet-label { font-size: 10px; opacity: 0.6; display: block; letter-spacing: 1px; font-weight: 700; text-transform: uppercase; }
+        .bet-val { font-size: 20px; font-weight: 900; color: var(--gold); display: flex; align-items: center; justify-content: center; gap: 5px; text-shadow: 0 0 10px rgba(251, 191, 36, 0.4); }
+
+        /* === 3D CASINO SLOTS === */
+        .slot-machine-frame { background: linear-gradient(135deg, #fcd34d, #b45309, #fcd34d); padding: 25px; border-radius: 35px; border: 2px solid #fff; box-shadow: inset 0 0 30px rgba(0,0,0,0.5), 0 30px 60px rgba(0,0,0,0.6), 0 0 0 6px #78350f; position: relative; max-width: 400px; margin: 0 auto; }
+        .slot-lights-top { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 0 10px; }
+        .slot-bulb { width: 16px; height: 16px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 15px #ef4444, inset 0 2px 5px rgba(255,255,255,0.5); animation: blink 0.8s infinite alternate; border: 1px solid rgba(0,0,0,0.2); }
+        .slot-bulb:nth-child(even) { background: #3b82f6; box-shadow: 0 0 15px #3b82f6; animation-delay: 0.4s; }
+        .slot-window { background: #000; padding: 12px; border-radius: 18px; display: flex; gap: 10px; border: 4px solid #451a03; box-shadow: inset 0 0 30px rgba(0,0,0,0.9); margin-bottom: 25px; overflow: hidden; height: 140px; align-items: center; justify-content: center; position: relative; }
+        .slot-window::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%; background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent); pointer-events: none; }
+        .reel-col { flex: 1; height: 110px; background: linear-gradient(to bottom, #f1f5f9, #cbd5e1, #f1f5f9); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 52px; position: relative; overflow: hidden; box-shadow: inset 0 0 15px rgba(0,0,0,0.2), 0 0 5px rgba(0,0,0,0.5); border: 1px solid #94a3b8; transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28); text-shadow: none; }
+        .reel-spinning span { animation: slotBlur 0.1s linear infinite; display: block; filter: blur(4px); transform: scaleY(1.2); }
+        @keyframes slotBlur { 0% { transform: translateY(-80px) scaleY(1.2); opacity: 0.5; } 50% { transform: translateY(0px) scaleY(1.2); opacity: 1; } 100% { transform: translateY(80px) scaleY(1.2); opacity: 0.5; } }
+        .reel-bounce { animation: reelStopBounce 0.4s ease-out; }
+        @keyframes reelStopBounce { 0% { transform: translateY(-20px); } 50% { transform: translateY(10px); } 100% { transform: translateY(0); } }
+        .slot-lever-btn { background: linear-gradient(180deg, #ef4444, #b91c1c); width: 100%; padding: 22px; border: none; border-radius: 18px; color: white; font-weight: 900; font-size: 22px; text-transform: uppercase; box-shadow: 0 8px 0 #7f1d1d, 0 15px 30px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.3); cursor: pointer; transition: 0.1s; position: relative; text-shadow: 0 2px 2px rgba(0,0,0,0.3); }
+        .slot-lever-btn:active { transform: translateY(5px); box-shadow: 0 3px 0 #7f1d1d, 0 5px 10px rgba(0,0,0,0.4); }
+        .slot-lever-btn:disabled { filter: grayscale(1); cursor: not-allowed; }
+
+        /* === 3D ROULETTE === */
+        .roulette-table { background: radial-gradient(circle, #065f46, #064e3b); padding: 35px; border-radius: 40px; border: 6px solid #b45309; box-shadow: inset 0 0 80px rgba(0,0,0,0.8), 0 30px 60px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; position: relative; }
+        .roulette-table::before { content:''; position: absolute; inset: 0; border-radius: 35px; background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E"); pointer-events: none; }
+        .wheel-outer { width: 280px; height: 280px; background: linear-gradient(135deg, #451a03, #78350f); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.5); position: relative; border: 5px solid #b45309; }
+        .wheel-inner { width: 250px; height: 250px; border-radius: 50%; background: conic-gradient(#dc2626 0deg 36deg, #171717 36deg 72deg, #dc2626 72deg 108deg, #171717 108deg 144deg, #dc2626 144deg 180deg, #171717 180deg 216deg, #dc2626 216deg 252deg, #171717 252deg 288deg, #dc2626 288deg 324deg, #171717 324deg 360deg); border: 6px solid #fbbf24; transition: transform 3s cubic-bezier(0.15, 0.85, 0.15, 1); position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .wheel-center { position: absolute; width: 50px; height: 50px; background: radial-gradient(circle, #fcd34d, #b45309); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(0,0,0,0.7), inset 0 2px 5px rgba(255,255,255,0.6); z-index: 5; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
+        .ball-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; pointer-events: none; animation: none; }
+        .roulette-ball { width: 14px; height: 14px; background: radial-gradient(circle at 30% 30%, #fff, #94a3b8); border-radius: 50%; position: absolute; top: 12px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 8px white; }
+        @keyframes spinBall { 0% { transform: rotate(0deg); } 100% { transform: rotate(-1080deg); } }
+        .roulette-pointer { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 18px solid transparent; border-right: 18px solid transparent; border-top: 30px solid #fbbf24; z-index: 10; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6)); }
+
+        /* === 3D CARDS (TROPICAL HIGH LOW) === */
+        .hl-table { background: radial-gradient(circle, #1e3a8a, #0f172a); padding: 40px 20px; border-radius: 35px; text-align: center; border: 4px solid rgba(255,255,255,0.1); box-shadow: 0 30px 60px rgba(0,0,0,0.5); position: relative; }
+        .hl-table::before { content:''; position: absolute; inset: 0; border-radius: 35px; background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E"); pointer-events: none; }
+        .card-scene { width: 150px; height: 220px; margin: 0 auto 35px; perspective: 800px; position: relative; }
+        .playing-card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); border-radius: 18px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        .playing-card.is-flipped { transform: rotateY(180deg); }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 56px; font-weight: 900; border: 1px solid #e2e8f0; text-shadow: none; }
+        .card-front { background: #fff; color: #000; flex-direction: column; }
+        .card-back { background: linear-gradient(135deg, #be123c, #881337); background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 10px, transparent 10px, transparent 20px); transform: rotateY(180deg); border: 4px solid white; display: flex; align-items: center; justify-content: center; }
+        .card-logo-mini { width: 50px; height: 50px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .suit-top { position: absolute; top: 12px; left: 12px; font-size: 24px; }
+        .suit-bottom { position: absolute; bottom: 12px; right: 12px; font-size: 24px; transform: rotate(180deg); }
+        .hl-controls-new { display: flex; gap: 15px; justify-content: center; position: relative; z-index: 10; }
+        .btn-guess { flex: 1; padding: 18px; border-radius: 18px; border: none; font-weight: 800; font-size: 14px; text-transform: uppercase; cursor: pointer; transition: 0.2s; color: white; box-shadow: 0 8px 20px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.3); text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+        .btn-guess:active { transform: scale(0.95); }
+        .bg-hi { background: linear-gradient(135deg, #10b981, #059669); }
+        .bg-lo { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+
+        /* Unified Win/Loss Modals inside Games */
+        .result-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 50; border-radius: 30px; backdrop-filter: blur(8px); animation: fadeIn 0.3s; }
+        .res-title { font-size: 38px; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        .res-win { color: #fbbf24; text-shadow: 0 0 30px #fbbf24; }
+        .res-loss { color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+        .res-pts { font-size: 16px; color: white; opacity: 1; margin-bottom: 25px; text-shadow: 0 2px 4px black; }
+        .btn-play-again { background: white; color: black; border: none; padding: 12px 25px; border-radius: 30px; font-weight: 900; font-size: 12px; cursor: pointer; box-shadow: 0 0 20px rgba(255,255,255,0.3); transition: 0.2s; }
+        .btn-play-again:hover { transform: scale(1.1); box-shadow: 0 0 30px rgba(255,255,255,0.5); }
+
+        @keyframes blink { from { opacity: 0.5; } to { opacity: 1; } }
+
+        /* === PRIVATE MESSENGER === */
+        .pm-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 10px; backdrop-filter: blur(10px); }
+        .pm-container { width: 100%; max-width: 450px; height: 80vh; background: var(--glass-surface); border-radius: 25px; border: 1px solid var(--glass-border); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        .pm-header { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); }
+        .pm-inbox-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .pm-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; transition: 0.2s; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .pm-item:hover { background: rgba(255,255,255,0.1); }
+        .pm-avatar { width: 45px; height: 45px; border-radius: 14px; object-fit: cover; }
+        .pm-info { flex: 1; }
+        .pm-name { font-size: 14px; font-weight: 800; display: block; color: white; }
+        .pm-preview { font-size: 12px; opacity: 0.6; display: block; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        .pm-chat-view { display: none; flex-direction: column; height: 100%; }
+        .pm-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg-bubble { padding: 10px 14px; border-radius: 18px; font-size: 13px; max-width: 75%; word-break: break-word; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .msg-me { align-self: flex-end; background: var(--accent); color: white; border-bottom-right-radius: 4px; }
+        .msg-them { align-self: flex-start; background: rgba(255,255,255,0.15); color: white; border-bottom-left-radius: 4px; }
+        .pm-input-area { padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); display: flex; gap: 10px; }
+        .unread-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; display: none; }
+
+        /* === 4 NEW GAMES === */
+        /* Color Game */
+        .color-table { background: radial-gradient(circle, #475569, #1e293b); padding: 20px; border-radius: 30px; border: 4px solid rgba(255,255,255,0.1); width: 100%; max-width: 350px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .color-dice-container { display:flex; gap:12px; justify-content:center; margin-bottom:20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 20px; }
+        .color-dice { width:60px; height:60px; border-radius:12px; border:2px solid white; box-shadow:0 10px 20px rgba(0,0,0,0.5); transform: rotateX(10deg); }
+        .color-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; width:100%; }
+        .color-btn { height:70px; border-radius:18px; border:none; cursor:pointer; transition:0.2s; box-shadow:0 6px 0 rgba(0,0,0,0.3), 0 10px 20px rgba(0,0,0,0.3); position: relative; overflow: hidden; border: 2px solid rgba(255,255,255,0.2); }
+        .color-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.3); }
+        .color-btn::after { content:''; position: absolute; inset: 0; background: linear-gradient(to bottom right, rgba(255,255,255,0.4), transparent); }
+
+        /* Dice */
+        .dice-table { background: #be123c; padding: 30px; border-radius: 40px; border: 6px solid #881337; box-shadow: inset 0 0 50px rgba(0,0,0,0.5); width: 100%; max-width: 350px; display: flex; flex-direction: column; align-items: center; }
+        .dice-display { display:flex; gap:20px; justify-content:center; margin:20px 0; perspective: 500px; }
+        .dice-cube { width:70px; height:70px; background:white; border-radius:12px; color:black; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:900; box-shadow:0 10px 25px rgba(0,0,0,0.4); transform: rotateX(10deg) rotateY(10deg); border: 1px solid #e2e8f0; }
+
+        /* Lucky 9 */
+        .l9-table { background: #064e3b; padding: 20px; border-radius: 30px; border: 8px solid #3f2c22; width: 100%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); position: relative; }
+        .l9-table::before { content:''; position: absolute; inset:0; border-radius: 20px; background-image: radial-gradient(white 1px, transparent 1px); background-size: 20px 20px; opacity: 0.1; pointer-events: none; }
+        .l9-spot { background: rgba(0,0,0,0.2); border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; padding: 10px; width: 100px; height: 140px; display: flex; align-items: center; justify-content: center; }
+
+        /* === PWA INSTALL BANNER === */
+        #pwaInstallBanner {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding: 15px 20px;
+            display: none; /* Shown by JS */
+            align-items: center; justify-content: space-between;
+            z-index: 9999;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+            animation: slideUp 0.5s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .pwa-text { font-size: 14px; font-weight: 800; color: white; }
+        .pwa-sub { font-size: 11px; color: #cbd5e1; display: block; }
+        .pwa-btn {
+            background: var(--accent); color: white; border: none;
+            padding: 10px 20px; border-radius: 12px; font-weight: 900;
+            font-size: 13px; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        /* === INSTALL INSTRUCTIONS === */
+        .install-tabs { display: flex; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 12px; }
+        .install-tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: #94a3b8; font-weight: 800; border-radius: 8px; cursor: pointer; }
+        .install-tab-btn.active { background: var(--accent); color: white; }
+        .guide-step { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .step-num { width: 30px; height: 30px; background: var(--gold); color: black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; flex-shrink: 0; }
+        .step-text { font-size: 13px; line-height: 1.4; color: #e2e8f0; }
+
+        /* === CUSTOM CONFIRM MODAL === */
+        #customConfirmModal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100000;
+            display: none; align-items: center; justify-content: center; padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .conf-content {
+            background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 24px; padding: 25px; width: 100%; max-width: 320px;
+            text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+            transform: scale(0.9); animation: popScale 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .conf-title { font-size: 18px; font-weight: 900; color: white; margin: 0 0 10px 0; }
+        .conf-msg { font-size: 13px; color: #cbd5e1; margin-bottom: 25px; line-height: 1.5; }
+        .conf-actions { display: flex; gap: 10px; justify-content: center; }
+        .btn-conf-yes { background: var(--accent); color: white; flex: 1; padding: 12px; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
+        .btn-conf-no { background: rgba(255,255,255,0.1); color: #94a3b8; flex: 1; padding: 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-weight: 800; cursor: pointer; }
+
+        /* === GRAND JACKPOT ANIMATION === */
+        #grandJackpotModal {
+            position: fixed; inset: 0; z-index: 99999;
+            background: rgba(0,0,0,0.95);
+            display: none; align-items: center; justify-content: center; flex-direction: column;
+            overflow: hidden; perspective: 1000px;
+        }
+        .jackpot-rays {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 200vmax; height: 200vmax;
+            background: conic-gradient(from 0deg, transparent 0deg, rgba(251, 191, 36, 0.1) 10deg, transparent 20deg, rgba(251, 191, 36, 0.1) 30deg, transparent 40deg, rgba(251, 191, 36, 0.1) 50deg, transparent 60deg, rgba(251, 191, 36, 0.1) 70deg, transparent 80deg, rgba(251, 191, 36, 0.1) 90deg, transparent 100deg, rgba(251, 191, 36, 0.1) 110deg, transparent 120deg, rgba(251, 191, 36, 0.1) 130deg, transparent 140deg, rgba(251, 191, 36, 0.1) 150deg, transparent 160deg, rgba(251, 191, 36, 0.1) 170deg, transparent 180deg, rgba(251, 191, 36, 0.1) 190deg, transparent 200deg, rgba(251, 191, 36, 0.1) 210deg, transparent 220deg, rgba(251, 191, 36, 0.1) 230deg, transparent 240deg, rgba(251, 191, 36, 0.1) 250deg, transparent 260deg, rgba(251, 191, 36, 0.1) 270deg, transparent 280deg, rgba(251, 191, 36, 0.1) 290deg, transparent 300deg, rgba(251, 191, 36, 0.1) 310deg, transparent 320deg, rgba(251, 191, 36, 0.1) 330deg, transparent 340deg, rgba(251, 191, 36, 0.1) 350deg, transparent 360deg);
+            animation: spinRays 20s linear infinite; pointer-events: none;
+        }
+        @keyframes spinRays { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+        
+        .jackpot-content {
+            position: relative; z-index: 10; text-align: center;
+            animation: jpPopIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes jpPopIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+
+        .jp-title {
+            font-size: 40px; font-weight: 900; color: #fbbf24;
+            text-transform: uppercase; letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.8), 0 0 40px rgba(251, 191, 36, 0.4);
+            margin-bottom: 10px; animation: pulseText 1s infinite alternate;
+        }
+        .jp-amount {
+            font-size: 56px; font-weight: 900; color: white;
+            background: linear-gradient(135deg, #fff, #fcd34d); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin: 0; line-height: 1;
+        }
+        .jp-name {
+            font-size: 18px; color: #cbd5e1; margin-top: 15px; font-weight: 600; letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .icon-glow {
+            filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
+            animation: bounceIcon 2s infinite ease-in-out;
+            color: #fbbf24;
+        }
+        @keyframes bounceIcon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes pulseText { from { transform: scale(1); } to { transform: scale(1.05); } }
+        
+        /* NEW WAITING ANIMATION */
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.1); } 70% { box-shadow: 0 0 0 15px rgba(255,255,255,0); } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } }
+
     </style>
 </head>
 <body>
@@ -170,323 +682,1277 @@
 <div id="installGate">
     <div class="gate-logo">RB<span>LIVE</span></div>
     <div class="gate-title">Install to Play</div>
-    <p class="gate-desc">To access the full experience, install the App.</p>
-    <button id="gateInstallBtn" class="gate-btn-install" onclick="triggerInstall()">INSTALL APP</button>
+    <p class="gate-desc">To access the full Radio Bingo & Casino experience, you must install the official App.</p>
+    
+    <button id="gateInstallBtn" class="gate-btn-install" onclick="triggerInstall()">
+        <i data-lucide="download-cloud" style="width:20px; height:20px;"></i> INSTALL APP
+    </button>
+
+    <div id="gateIosNote" class="gate-ios-note">
+        <div style="font-weight:800; color:white; margin-bottom:10px; text-transform:uppercase;">iOS Instructions:</div>
+        <div class="ios-step"><i data-lucide="share" class="ios-icon" style="width:16px;"></i> 1. Tap the Share button below.</div>
+        <div class="ios-step"><i data-lucide="plus-square" class="ios-icon" style="width:16px;"></i> 2. Scroll down & tap 'Add to Home Screen'.</div>
+        <div class="ios-step"><i data-lucide="check" class="ios-icon" style="width:16px;"></i> 3. Launch App from Home Screen.</div>
+    </div>
 </div>
 
 <div id="notifBlocker">
-    <div class="notif-gate-icon"><i data-lucide="bell-ring" style="width:40px; height:40px; color:#3b82f6;"></i></div>
+    <div class="notif-gate-icon">
+        <i data-lucide="bell-ring" style="width: 40px; height: 40px; color: #3b82f6;"></i>
+    </div>
     <div class="notif-gate-title">ENABLE NOTIFICATIONS</div>
-    <p style="opacity:0.7; margin-bottom:20px;">Required for live game updates.</p>
-    <button onclick="requestGatePermission()" class="btn-allow-notif">ALLOW NOTIFICATIONS</button>
-    <div id="blockedHelp" class="blocked-help">⚠️ Notifications Blocked. Reset permissions in browser settings.</div>
+    <p class="notif-gate-desc">To ensure fairness and real-time updates for Bingo Calls, this app requires push notifications to be enabled.</p>
+    
+    <button onclick="requestGatePermission()" class="btn-allow-notif">
+        <i data-lucide="check-circle" style="width:20px"></i> ALLOW NOTIFICATIONS
+    </button>
+
+    <div id="blockedHelp" class="blocked-help">
+        <strong style="color:var(--danger); display:block; margin-bottom:5px;">⚠️ NOTIFICATIONS ARE BLOCKED!</strong>
+        1. Click the <b>Lock Icon 🔒</b> or <b>Settings Icon</b> beside the URL bar.<br>
+        2. Click <b>Permissions</b> or <b>Site Settings</b>.<br>
+        3. Find <b>Notifications</b> and set to <b>Allow</b>.<br>
+        4. Reload this page.
+    </div>
 </div>
 
-<div id="splash-screen"><div class="splash-logo">RB<span>LIVE</span></div><div class="splash-loader"></div></div>
-<div id="customToast"><i data-lucide="info"></i><span id="toastMsg">Msg</span></div>
+<div id="splash-screen">
+    <div class="splash-logo">RB<span>LIVE</span></div>
+    <div class="splash-loader"></div>
+</div>
+
+<div id="customToast">
+    <i data-lucide="info" class="toast-icon"></i>
+    <span class="toast-msg" id="toastMsg">Notification!</span>
+</div>
+
+<div id="customConfirmModal">
+    <div class="conf-content">
+        <i data-lucide="alert-circle" style="width: 40px; height: 40px; color: var(--gold); margin-bottom: 15px;"></i>
+        <h3 class="conf-title" id="confTitle">Confirm Action</h3>
+        <p class="conf-msg" id="confMsg">Are you sure you want to proceed?</p>
+        <div class="conf-actions">
+            <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
+            <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
+        </div>
+    </div>
+</div>
 
 <div id="loginOverlay">
-    <div class="app-logo-lg">RB<span>LIVE</span></div>
-    <button class="btn-main-auth" onclick="login()">Sign in with Google</button>
+    <div class="login-bg-blob blob-1"></div>
+    <div class="login-bg-blob blob-2"></div>
+
+    <div class="login-app-container">
+        <div class="app-logo-lg">RB<span>LIVE</span></div>
+        <p class="app-tagline">The ultimate live bingo experience.<br>Play, Win, and Redeem Rewards.</p>
+        
+        <div class="promo-badge">
+            <i data-lucide="gift" style="width:16px"></i> 
+            <span>Register now & Get 100 Free RB Coins</span>
+        </div>
+
+        <div class="auth-btn-group">
+            <button class="btn-main-auth" onclick="login()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:20px">
+                Sign in with Google
+            </button>
+            <button class="btn-sec-auth" onclick="login()">
+                Create Account
+            </button>
+        </div>
+    </div>
+
+    <div class="login-footer-legal">
+        <div class="legal-text">
+            <span>⚠️ DISCLAIMER: NOT A GAMBLING SITE</span>
+            <span style="opacity: 0.6; font-size: 9px;">For entertainment purposes only. No real money betting.</span>
+        </div>
+    </div>
 </div>
 
 <div class="nav">
-    <div style="font-weight:900; font-size:20px;">RB <span style="color:var(--accent-glow)">LIVE</span></div>
-    <div id="userPanel" style="display:none; align-items:center; gap:10px;">
+    <div style="display:flex; align-items:center;"><span style="font-weight: 900; font-size: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.8);">RB <span style="color:var(--accent-glow)">LIVE</span></span></div>
+    <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
         <div class="user-stats">
-            <div class="icon-btn" onclick="openMessenger()"><i data-lucide="message-circle"></i><span id="pmBadge" class="notif-badge"></span></div>
-            <div class="icon-btn" onclick="openNotifs()"><i data-lucide="bell"></i><span id="notifDot" class="notif-badge"></span></div>
-            <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'"><i data-lucide="coins" style="width:16px"></i> <span id="userPoints">0</span></div>
+            <div class="icon-btn" onclick="openMessenger()">
+                <i data-lucide="message-circle" style="width:20px"></i>
+                <span id="pmBadge" class="notif-badge"></span>
+            </div>
+            <div class="icon-btn" onclick="openNotifs()">
+                <i data-lucide="bell" style="width:20px"></i>
+                <span id="notifDot" class="notif-badge"></span>
+            </div>
+            <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'"><i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span></div>
         </div>
         <img id="userImg" onclick="openMenuModal()" src="">
     </div>
 </div>
 
-<div style="background:var(--danger); color:white; font-size:10px; padding:5px; text-align:center; font-weight:700;">⚠️ DISCLAIMER: ENTERTAINMENT ONLY. NO REAL MONEY GAMBLING.</div>
+<div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang.</div></div>
 
-<div class="container" style="max-width:500px; margin:0 auto; padding:10px;">
-    
+<div class="container">
     <div class="ad-container-global">
         <script type="text/javascript">
-            atOptions = { 'key' : '59f94c5cb7bcd84edb277947774c3b9d', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+            atOptions = {
+                'key' : '59f94c5cb7bcd84edb277947774c3b9d',
+                'format' : 'iframe',
+                'height' : 50,
+                'width' : 320,
+                'params' : {}
+            };
         </script>
         <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"></script>
     </div>
 
-    <div class="video-container">
-        <div class="video-overlay-bl"><i data-lucide="users" style="width:12px"></i><span id="onlineCount">0</span> ONLINE</div>
-        <div id="videoOfflineState" style="display:none; position:absolute; inset:0; background:#0f172a; flex-direction:column; align-items:center; justify-content:center; z-index:20;">
-            <h3>WAITING FOR LIVE</h3>
+    <div class="video-feed-wrapper">
+        <div class="video-container">
+            <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
+            
+            <div id="videoOfflineState" style="display:none; position:absolute; inset:0; background:#0f172a; flex-direction:column; align-items:center; justify-content:center; z-index:20;">
+                <div style="width:60px; height:60px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:15px; animation:pulse-ring 2s infinite;">
+                    <i data-lucide="radio" style="width:30px; height:30px; color:#94a3b8;"></i>
+                </div>
+                <h3 style="margin:0; font-size:16px; font-weight:900; color:white; letter-spacing:1px;">WAITING FOR LIVE</h3>
+                <p style="margin:5px 0 0; font-size:12px; color:#64748b;">Stand by for the next draw.</p>
+            </div>
+            
+            <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none;"></iframe>
         </div>
-        <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" frameborder="0" allowfullscreen></iframe>
     </div>
 
     <div id="jackpotBanner">
-        <div style="font-size:10px; font-weight:900; color:#fcd34d;">JACKPOT ROUND</div>
-        <div class="jackpot-amount" id="jackpotDisplayVal">0</div>
+        <div class="jp-label-new">
+            <i data-lucide="crown" style="width: 16px;"></i> JACKPOT ROUND <i data-lucide="crown" style="width: 16px;"></i>
+        </div>
+        <span class="jackpot-amount" id="jackpotDisplayVal">5,000</span>
+        <div style="font-size: 10px; opacity: 0.7; margin-top: 5px; color: #fbbf24;">RB COINS GRAND PRIZE</div>
+    </div>
+
+    <div id="nextDrawBanner" class="next-draw-container">
+        <div class="nd-icon"><i data-lucide="calendar-days"></i></div>
+        <div class="nd-info">
+            <div class="next-draw-label">Susunod na Bola</div>
+            <div id="nextDrawTime" class="next-draw-time">--:-- --</div>
+        </div>
     </div>
 
     <div class="tab-system">
-        <button class="tab-btn active" onclick="switchTab('bingo')"><i data-lucide="grid-3x3"></i> CARD</button>
-        <button class="tab-btn" onclick="switchTab('minigames')"><i data-lucide="gamepad-2"></i> GAMES</button>
+        <button class="tab-btn active" onclick="switchTab('bingo'); playSound('click');"><i data-lucide="grid-3x3"></i> BINGO CARD</button>
+        <button class="tab-btn minigame-tab" onclick="switchTab('minigames'); playSound('click');"><i data-lucide="gamepad-2"></i> MINI GAMES</button>
+    </div>
+
+    <div id="winnerBanner">
+        <span><i data-lucide="party-popper" style="width:24px; height:24px;"></i> BINGO WINNER!</span>
+        <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
     </div>
 
     <div id="bingoTab">
-        <div style="display:flex; justify-content:space-between; margin-bottom:10px; align-items:center;">
-            <div id="ballRow" style="display:flex; gap:5px; overflow-x:auto;"></div>
-            <div style="background:var(--accent); padding:10px; border-radius:12px; font-weight:900; font-size:24px;" id="currentBall">--</div>
+        <div class="draw-panel">
+            <div class="prev-balls" id="ballRow"></div>
+            <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">NOW DRAWN</span><span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.5);">--</span></div>
         </div>
         
-        <div class="card">
+        <div class="ad-container-global">
+            <script type="text/javascript">
+                atOptions = {
+                    'key' : '59f94c5cb7bcd84edb277947774c3b9d',
+                    'format' : 'iframe',
+                    'height' : 50,
+                    'width' : 320,
+                    'params' : {}
+                };
+            </script>
+            <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"></script>
+        </div>
+
+        <div class="card" id="bingoCardContainer">
+            <div id="lateOverlay" class="late-overlay">
+                <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom:15px; filter: drop-shadow(0 0 10px var(--danger));"></i>
+                <div class="late-text">GAME ONGOING</div>
+                <div class="late-subtext">Sorry, ongoing na ang bola. Bawal na sumali ang late.</div>
+                <div style="margin-top:20px; background:rgba(255,255,255,0.1); padding:10px 20px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+                    <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
+                    <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
+                </div>
+            </div>
+            <div id="gameOverOverlay" class="game-over-overlay">
+                <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom:15px; filter: drop-shadow(0 0 15px var(--gold));"></i>
+                <div class="late-text">Game Finished</div>
+                <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
+            </div>
+            <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
+                <div class="pattern-box">
+                    <div class="pattern-dot"></div>
+                    <span class="pattern-text" id="patternName">Normal Bingo</span>
+                </div>
+                <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
+            </div>
             <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
             <div class="grid" id="bingoGrid"></div>
-            <button onclick="generateNewCard()" style="width:100%; padding:12px; margin-top:15px; background:rgba(255,255,255,0.1); border:none; color:white; border-radius:12px;">NEW CARD</button>
         </div>
     </div>
-
+    
     <div id="minigamesTab" style="display:none;">
-        <div class="minigame-lobby">
-            <div class="game-poster poster-roulette" onclick="openGame('roulette')"><div class="poster-title">Roulette</div><i data-lucide="disc-3" class="poster-icon"></i></div>
-            <div class="game-poster poster-slots" onclick="openGame('slots')"><div class="poster-title">Slots</div><i data-lucide="gem" class="poster-icon"></i></div>
-            <div class="game-poster poster-highlow" onclick="openGame('highlow')"><div class="poster-title">High Low</div><i data-lucide="move-vertical" class="poster-icon"></i></div>
-            <div class="game-poster poster-color" onclick="openGame('color')"><div class="poster-title">Color Game</div><i data-lucide="palette" class="poster-icon"></i></div>
-            <div class="game-poster poster-lucky9" onclick="openGame('lucky9')"><div class="poster-title">Lucky 9</div><i data-lucide="clover" class="poster-icon"></i></div>
-            <div class="game-poster poster-dice" onclick="openGame('dice')"><div class="poster-title">Dice</div><i data-lucide="dices" class="poster-icon"></i></div>
+        <div class="ad-container-global">
+            <script type="text/javascript">
+                atOptions = {
+                    'key' : '59f94c5cb7bcd84edb277947774c3b9d',
+                    'format' : 'iframe',
+                    'height' : 50,
+                    'width' : 320,
+                    'params' : {}
+                };
+            </script>
+            <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"></script>
+        </div>
+
+        <div class="casino-category-bar">
+            <div class="cat-chip active" onclick="filterGames('all')"><i data-lucide="layout-grid" style="width:12px; vertical-align:middle;"></i> All Games</div>
+            <div class="cat-chip" onclick="filterGames('slots')"><i data-lucide="cherry" style="width:12px; vertical-align:middle;"></i> Slots</div>
+            <div class="cat-chip" onclick="filterGames('table')"><i data-lucide="diamond" style="width:12px; vertical-align:middle;"></i> Table</div>
+        </div>
+
+        <div class="minigame-lobby" id="gamesGrid">
+            
+            <div class="game-poster poster-roulette" data-cat="table" onclick="openGame('roulette')">
+                 <i data-lucide="disc-3" class="poster-icon"></i>
+                <div class="poster-content">
+                    <div class="poster-title">Roulette</div>
+                    <div class="poster-desc">Classic Wheel</div>
+                </div>
+            </div>
+            
+             <div class="game-poster poster-slots" data-cat="slots" onclick="openGame('slots')">
+                <i data-lucide="gem" class="poster-icon"></i>
+                <div class="poster-content">
+                    <div class="poster-title">Summer Slots</div>
+                    <div class="poster-desc">Jackpot 777</div>
+                </div>
+            </div>
+
+             <div class="game-poster poster-color" data-cat="table" onclick="openGame('color')">
+                <div class="poster-badge badge-new">NEW</div>
+                <i data-lucide="palette" class="poster-icon"></i>
+                <div class="poster-content">
+                    <div class="poster-title">Color Game</div>
+                    <div class="poster-desc">Perya Classic</div>
+                </div>
+            </div>
+
+            <div class="game-poster poster-highlow" data-cat="table" onclick="openGame('highlow')">
+                <i data-lucide="move-vertical" class="poster-icon"></i>
+                <div class="poster-content">
+                    <div class="poster-title">High Low</div>
+                    <div class="poster-desc">Predict Cards</div>
+                </div>
+            </div>
+
+            <div class="game-poster poster-lucky9" data-cat="table" onclick="openGame('lucky9')">
+                <i data-lucide="clover" class="poster-icon"></i>
+                <div class="poster-content">
+                    <div class="poster-title">Lucky 9</div>
+                    <div class="poster-desc">Banker vs Player</div>
+                </div>
+            </div>
+
+            <div class="game-poster poster-dice" data-cat="table" onclick="openGame('dice')">
+                <i data-lucide="dices" class="poster-icon"></i>
+                <div class="poster-content">
+                    <div class="poster-title">Dice Roll</div>
+                    <div class="poster-desc">Over / Under 7</div>
+                </div>
+            </div>
+
+        </div>
+        
+        <div class="ad-container-global">
+            <script type="text/javascript">
+                atOptions = {
+                    'key' : '59f94c5cb7bcd84edb277947774c3b9d',
+                    'format' : 'iframe',
+                    'height' : 50,
+                    'width' : 320,
+                    'params' : {}
+                };
+            </script>
+            <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"></script>
         </div>
     </div>
 
-    <div class="chat-box">
-        <div style="padding:15px; border-bottom:1px solid rgba(255,255,255,0.1);"><b>LIVE CHAT</b></div>
+    <div class="chat-box card" style="padding:0; margin-top:15px;">
+        <div class="chat-header">
+            <i data-lucide="message-square" style="width:18px; color:var(--accent-glow)"></i>
+            <h3>LIVE CHAT</h3>
+        </div>
         <div id="chatList"></div>
+        <div id="replyIndicator" class="reply-indicator">
+            <span id="replyText">Replying to...</span>
+            <button onclick="cancelReply()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" style="width:14px"></i></button>
+        </div>
         <div class="chat-input-area">
             <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
-                <input type="text" id="chatIn" placeholder="Message..." autocomplete="off">
-                <button type="submit" style="background:var(--accent); border:none; border-radius:10px; width:40px;"><i data-lucide="send" style="width:18px; color:white;"></i></button>
+                <input type="text" id="chatIn" placeholder="Write a message..." autocomplete="off">
+                <button type="submit" class="send-btn">
+                    <i data-lucide="send" style="width:18px"></i>
+                </button>
             </form>
         </div>
     </div>
 </div>
 
-<div id="game-roulette" class="game-overlay-fs">
-    <div class="go-header"><button onclick="closeGame()" style="background:none; border:none; color:white;">BACK</button><div class="game-balance-pill"><span id="rouletteBetVal_balance">0</span></div></div>
-    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-        <div class="wheel-outer" id="rouletteWheel"></div>
-        <div id="rouletteResult" class="result-modal"><div class="res-win">WIN!</div><button onclick="resetGameUI('roulette')">AGAIN</button></div>
-        <div class="bet-controls">
-            <button class="bet-btn-adjust" onclick="adjustBet(-10)">-</button><div class="bet-val" id="rouletteBetVal">10</div><button class="bet-btn-adjust" onclick="adjustBet(10)">+</button>
+<div id="grandJackpotModal" onclick="this.style.display='none'">
+    <div class="jackpot-rays"></div>
+    <div class="jackpot-content">
+        <div class="icon-glow">
+            <i data-lucide="crown" style="width: 80px; height: 80px;"></i>
         </div>
-        <button onclick="spinRoulette()" style="margin-top:20px; padding:15px 40px; background:var(--success); border:none; border-radius:12px; font-weight:900;">SPIN</button>
+        <h1 class="jp-title">JACKPOT WIN!</h1>
+        <h2 class="jp-amount" id="grandPrizeAmount">10,000 RB COINS</h2>
+        <div class="jp-name" id="jpWinnerName">WINNER NAME</div>
+        <p style="font-size: 11px; color: white; opacity: 0.7; margin-top: 20px;">Tap anywhere to close</p>
     </div>
 </div>
 
-<div id="game-slots" class="game-overlay-fs">
-    <div class="go-header"><button onclick="closeGame()" style="background:none; border:none; color:white;">BACK</button><div class="game-balance-pill"><span id="slotBetVal_balance">0</span></div></div>
-    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-        <div class="slot-window">
-            <div class="reel-col" id="reel1">🍒</div><div class="reel-col" id="reel2">🍋</div><div class="reel-col" id="reel3">🔔</div>
+<div id="game-roulette" class="game-overlay-fs">
+    <div class="go-header">
+        <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
+        <div class="go-title" style="color:#10b981;">Roulette</div>
+        <div class="game-balance-pill"><i data-lucide="coins" style="width:14px"></i> <span id="rouletteBetVal_balance">0</span></div>
+    </div>
+    
+    <div style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+        <div class="roulette-table">
+            <div class="wheel-outer">
+                <div class="roulette-pointer"></div>
+                <div class="wheel-inner" id="wheelInner">
+                    <div class="wheel-center"><div style="width:10px; height:10px; background:white; border-radius:50%;"></div></div>
+                </div>
+                <div class="ball-container" id="ballContainer">
+                    <div class="roulette-ball"></div>
+                </div>
+            </div>
+            
+            <div class="ad-container-global">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : '59f94c5cb7bcd84edb277947774c3b9d',
+                        'format' : 'iframe',
+                        'height' : 50,
+                        'width' : 320,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"></script>
+            </div>
+
+            <div style="margin-top:20px; text-align:center; position:relative; width:100%;">
+                
+                <div class="bet-controls">
+                    <button class="bet-btn-adjust" onclick="adjustBet(-10)">-</button>
+                    <div class="bet-display">
+                        <span class="bet-label">BET RB COINS</span>
+                        <span class="bet-val"><i data-lucide="coins" style="width:14px; color:var(--gold);"></i> <span id="rouletteBetVal">10</span></span>
+                    </div>
+                    <button class="bet-btn-adjust" onclick="adjustBet(10)">+</button>
+                </div>
+
+                <div id="rouletteResult" class="result-modal">
+                    <div class="res-title res-win" id="rouletteTitle">YOU WON!</div>
+                    <div class="res-pts" id="rouletteSub">+50 RB Coins</div>
+                    <button class="btn-play-again" onclick="resetGameUI('roulette')">PLAY AGAIN</button>
+                </div>
+                <button id="btnSpinWheel" onclick="spinRoulette()" class="slot-lever-btn" style="background: linear-gradient(180deg, #10b981, #047857); box-shadow: 0 8px 0 #064e3b, 0 15px 25px rgba(0,0,0,0.5); border-top: 1px solid rgba(255,255,255,0.3);">SPIN THE WHEEL</button>
+                <p style="font-size:10px; margin-top:20px; opacity:0.8; font-weight:600; text-shadow:0 1px 2px black;">Red/Black 50/50 Chance. Win 2x Bet.</p>
+            </div>
         </div>
-        <div id="slotResult" class="result-modal"><div class="res-win">JACKPOT!</div><button onclick="resetGameUI('slot')">AGAIN</button></div>
-        <div class="bet-controls"><button class="bet-btn-adjust" onclick="adjustBet(-10)">-</button><div class="bet-val" id="slotBetVal">10</div><button class="bet-btn-adjust" onclick="adjustBet(10)">+</button></div>
-        <button onclick="pullSlotLever()" style="margin-top:20px; padding:15px 40px; background:var(--gold); border:none; border-radius:12px; font-weight:900;">SPIN</button>
     </div>
 </div>
 
 <div id="game-highlow" class="game-overlay-fs">
-    <div class="go-header"><button onclick="closeGame()" style="background:none; border:none; color:white;">BACK</button><div class="game-balance-pill"><span id="hlBetVal_balance">0</span></div></div>
-    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-        <div class="playing-card" id="mainCard">7</div>
-        <div id="hlResult" class="result-modal"><div class="res-win">CORRECT</div><button onclick="resetGameUI('hl')">AGAIN</button></div>
-        <div class="bet-controls"><button class="bet-btn-adjust" onclick="adjustBet(-10)">-</button><div class="bet-val" id="hlBetVal">10</div><button class="bet-btn-adjust" onclick="adjustBet(10)">+</button></div>
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button onclick="guessHighLow('high')" style="padding:15px; background:var(--success); border:none; border-radius:12px; font-weight:900;">HIGH</button>
-            <button onclick="guessHighLow('low')" style="padding:15px; background:var(--danger); border:none; border-radius:12px; font-weight:900;">LOW</button>
+    <div class="go-header">
+        <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
+        <div class="go-title" style="color:#3b82f6;">High Low</div>
+        <div class="game-balance-pill"><i data-lucide="coins" style="width:14px"></i> <span id="hlBetVal_balance">0</span></div>
+    </div>
+
+    <div style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+        <div class="hl-table" style="width:100%; max-width:380px;">
+            <div class="card-scene">
+                <div class="playing-card" id="mainCard">
+                    <div class="card-face card-front">
+                        <div class="suit-top" style="color:red">♥</div>
+                        <span id="cardValDisplay">7</span>
+                        <div class="suit-bottom" style="color:red">♥</div>
+                    </div>
+                    <div class="card-face card-back">
+                        <div class="card-logo-mini">♠</div>
+                    </div>
+                </div>
+                 <div id="hlResult" class="result-modal" style="border-radius:18px;">
+                    <div class="res-title res-win" id="hlTitle">CORRECT</div>
+                    <div class="res-pts" id="hlSub">+50 RB Coins</div>
+                    <button class="btn-play-again" onclick="resetGameUI('hl')">PLAY AGAIN</button>
+                </div>
+            </div>
+
+            <div class="ad-container-global">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : '59f94c5cb7bcd84edb277947774c3b9d',
+                        'format' : 'iframe',
+                        'height' : 50,
+                        'width' : 320,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"></script>
+            </div>
+
+            <div class="bet-controls">
+                <button class="bet-btn-adjust" onclick="adjustBet(-10)">-</button>
+                <div class="bet-display">
+                    <span class="bet-label">BET RB COINS</span>
+                    <span class="bet-val"><i data-lucide="coins" style="width:14px; color:var(--gold);"></i> <span id="hlBetVal">10</span></span>
+                </div>
+                <button class="bet-btn-adjust" onclick="adjustBet(10)">+</button>
+            </div>
+
+            <div class="hl-controls-new">
+                <button class="btn-guess bg-hi" id="btnHi" onclick="guessHighLow('high')">HIGHER ▲</button>
+                <button class="btn-guess bg-lo" id="btnLo" onclick="guessHighLow('low')">LOWER ▼</button>
+            </div>
+            <p style="font-size:10px; margin-top:25px; opacity:0.8; font-weight:600; text-shadow:0 1px 2px black;">Guess the next number (1-100). Win 2x Bet.</p>
         </div>
     </div>
 </div>
 
-<div id="game-color" class="game-overlay-fs"><div class="go-header"><button onclick="closeGame()" style="color:white; background:none; border:none;">BACK</button></div><div style="text-align:center; margin-top:50px;">COLOR GAME (Coming Soon)</div></div>
-<div id="game-dice" class="game-overlay-fs"><div class="go-header"><button onclick="closeGame()" style="color:white; background:none; border:none;">BACK</button></div><div style="text-align:center; margin-top:50px;">DICE GAME (Coming Soon)</div></div>
-<div id="game-lucky9" class="game-overlay-fs"><div class="go-header"><button onclick="closeGame()" style="color:white; background:none; border:none;">BACK</button></div><div style="text-align:center; margin-top:50px;">LUCKY 9 (Coming Soon)</div></div>
+<div id="game-slots" class="game-overlay-fs">
+    <div class="go-header">
+        <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
+        <div class="go-title" style="color:#fbbf24;">Summer Slots</div>
+        <div class="game-balance-pill"><i data-lucide="coins" style="width:14px"></i> <span id="slotBetVal_balance">0</span></div>
+    </div>
 
-<div id="pmModal" class="modal"><div class="modal-content"><h3>Messages</h3><div id="pmList"></div><button onclick="document.getElementById('pmModal').style.display='none'">CLOSE</button></div></div>
-<div id="notifModal" class="modal"><div class="modal-content"><h3>Notifications</h3><div id="notifList"></div><button onclick="document.getElementById('notifModal').style.display='none'">CLOSE</button></div></div>
-<div id="storeModal" class="modal"><div class="modal-content">
-    <h3>Rewards</h3>
-    <button onclick="redeemItem('₱20 GCash', 2500)" style="width:100%; margin-bottom:10px; padding:10px;">Redeem ₱20 (2500 pts)</button>
-    <button onclick="document.getElementById('storeModal').style.display='none'">CLOSE</button>
-</div></div>
-<div id="menuModal" class="modal"><div class="modal-content">
-    <h3 id="profileNameDisplay">User</h3>
-    <input id="gcashInput" placeholder="GCash Number" style="width:100%; padding:10px; margin-bottom:10px;">
-    <button onclick="saveGcash()" style="width:100%; margin-bottom:10px;">Save GCash</button>
-    <div id="historyList"></div>
-    <button onclick="auth.signOut().then(()=>location.reload())" style="color:red; margin-top:20px;">Sign Out</button>
-    <button onclick="document.getElementById('menuModal').style.display='none'">CLOSE</button>
-</div></div>
+    <div style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+        <div class="slot-machine-frame">
+            <div class="slot-lights-top">
+                <div class="slot-bulb"></div><div class="slot-bulb"></div><div class="slot-bulb"></div>
+                <div class="slot-bulb"></div><div class="slot-bulb"></div><div class="slot-bulb"></div>
+            </div>
+            
+            <div class="slot-window">
+                <div class="reel-col" id="reel1"><span>🍒</span></div>
+                <div class="reel-col" id="reel2"><span>🍋</span></div>
+                <div class="reel-col" id="reel3"><span>🔔</span></div>
+                
+                 <div id="slotResult" class="result-modal">
+                    <div class="res-title res-win" id="slotTitle">JACKPOT!</div>
+                    <div class="res-pts" id="slotSub">+100 RB Coins</div>
+                    <button class="btn-play-again" onclick="resetGameUI('slot')">PLAY AGAIN</button>
+                </div>
+            </div>
 
-<div id="pwaInstallBanner"><span>Install App</span><button onclick="triggerInstall()">INSTALL</button></div>
+             <div class="ad-container-global">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : '59f94c5cb7bcd84edb277947774c3b9d',
+                        'format' : 'iframe',
+                        'height' : 50,
+                        'width' : 320,
+                        'params' : {}
+                    };
+                </script>
+                <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"></script>
+            </div>
+
+            <div class="bet-controls">
+                <button class="bet-btn-adjust" onclick="adjustBet(-10)">-</button>
+                <div class="bet-display">
+                    <span class="bet-label">BET RB COINS</span>
+                    <span class="bet-val"><i data-lucide="coins" style="width:14px; color:var(--gold);"></i> <span id="slotBetVal">10</span></span>
+                </div>
+                <button class="bet-btn-adjust" onclick="adjustBet(10)">+</button>
+            </div>
+
+            <button class="slot-lever-btn" id="btnPullLever" onclick="pullSlotLever()">
+                SPIN
+            </button>
+             <p style="font-size:10px; margin-top:15px; opacity:0.8; font-weight:600; text-shadow:0 1px 2px black; text-align:center;">Match 3 symbols. Win 10x Bet.</p>
+        </div>
+    </div>
+</div>
+
+<div id="game-color" class="game-overlay-fs">
+    <div class="go-header">
+        <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
+        <div class="go-title" style="color:#a78bfa;">Color Game</div>
+        <div class="game-balance-pill"><i data-lucide="coins" style="width:14px"></i> <span id="colorBetVal_balance">0</span></div>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <div class="color-table">
+            <div class="color-dice-container" id="colorDiceContainer">
+                <div class="color-dice" style="background:white;"></div>
+                <div class="color-dice" style="background:white;"></div>
+                <div class="color-dice" style="background:white;"></div>
+            </div>
+            
+            <div id="colorResult" class="result-modal">
+                <div class="res-title res-win" id="colorTitle">WIN!</div>
+                <div class="res-pts" id="colorSub">+10 RB Coins</div>
+                <button class="btn-play-again" onclick="resetGameUI('color')">PLAY AGAIN</button>
+            </div>
+
+            <div class="color-grid">
+                <button class="color-btn" style="background:#facc15;" onclick="playColor('yellow')"></button>
+                <button class="color-btn" style="background:#f8fafc;" onclick="playColor('white')"></button>
+                <button class="color-btn" style="background:#ec4899;" onclick="playColor('pink')"></button>
+                <button class="color-btn" style="background:#3b82f6;" onclick="playColor('blue')"></button>
+                <button class="color-btn" style="background:#ef4444;" onclick="playColor('red')"></button>
+                <button class="color-btn" style="background:#22c55e;" onclick="playColor('green')"></button>
+            </div>
+
+            <div class="bet-controls" style="margin-top:20px; width:100%;">
+                <button class="bet-btn-adjust" onclick="adjustBet(-10)">-</button>
+                <div class="bet-display">
+                    <span class="bet-label">BET RB COINS</span>
+                    <span class="bet-val" id="colorBetVal">10</span>
+                </div>
+                <button class="bet-btn-adjust" onclick="adjustBet(10)">+</button>
+            </div>
+            <p style="font-size:10px; margin-top:10px; color:rgba(255,255,255,0.5);">Pick a color. Win up to 3x!</p>
+        </div>
+    </div>
+</div>
+
+<div id="game-lucky9" class="game-overlay-fs">
+    <div class="go-header">
+        <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
+        <div class="go-title" style="color:#34d399;">Lucky 9</div>
+        <div class="game-balance-pill"><i data-lucide="coins" style="width:14px"></i> <span id="l9BetVal_balance">0</span></div>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        
+        <div class="l9-table">
+            <div style="display:flex; justify-content:space-around; margin-bottom:20px; position:relative; z-index:2;">
+                <div style="text-align:center;">
+                    <div style="font-size:12px; margin-bottom:5px; font-weight:800; color:#93c5fd;">PLAYER</div>
+                    <div class="l9-spot">
+                        <div class="playing-card" style="width:100%; height:100%; font-size:24px;" id="l9-player">
+                            <div class="card-face card-front" style="border-radius:10px;">?</div>
+                        </div>
+                    </div>
+                    <div id="l9-p-score" style="font-weight:900; margin-top:5px; font-size:20px; color:white;">0</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:12px; margin-bottom:5px; font-weight:800; color:#fca5a5;">BANKER</div>
+                    <div class="l9-spot">
+                        <div class="playing-card" style="width:100%; height:100%; font-size:24px;" id="l9-banker">
+                            <div class="card-face card-front" style="border-radius:10px;">?</div>
+                        </div>
+                    </div>
+                    <div id="l9-b-score" style="font-weight:900; margin-top:5px; font-size:20px; color:white;">0</div>
+                </div>
+            </div>
+
+            <div id="l9Result" class="result-modal">
+                <div class="res-title res-win" id="l9Title">WIN!</div>
+                <div class="res-pts" id="l9Sub">+10 RB Coins</div>
+                <button class="btn-play-again" onclick="resetGameUI('lucky9')">PLAY AGAIN</button>
+            </div>
+
+            <div class="bet-controls">
+                <button class="bet-btn-adjust" onclick="adjustBet(-10)">-</button>
+                <div class="bet-display">
+                    <span class="bet-label">BET RB COINS</span>
+                    <span class="bet-val" id="l9BetVal">10</span>
+                </div>
+                <button class="bet-btn-adjust" onclick="adjustBet(10)">+</button>
+            </div>
+            <button class="slot-lever-btn" id="btnDealL9" onclick="playLucky9()" style="background:#10b981; box-shadow:0 6px 0 #047857; margin-top:10px;">DEAL CARDS</button>
+        </div>
+    </div>
+</div>
+
+<div id="game-dice" class="game-overlay-fs">
+    <div class="go-header">
+        <button class="go-back-btn" onclick="closeGame()"><i data-lucide="arrow-left"></i> LOBBY</button>
+        <div class="go-title" style="color:#fb7185;">Dice Roll</div>
+        <div class="game-balance-pill"><i data-lucide="coins" style="width:14px"></i> <span id="diceBetVal_balance">0</span></div>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        
+        <div class="dice-table">
+            <div class="dice-display">
+                <div class="dice-cube" id="dice1">1</div>
+                <div class="dice-cube" id="dice2">6</div>
+            </div>
+            <div style="font-size:24px; font-weight:900; margin-bottom:20px; text-transform:uppercase;">TOTAL: <span id="diceTotal" style="color:var(--gold);">7</span></div>
+            
+            <div id="diceResult" class="result-modal">
+                <div class="res-title res-win" id="diceTitle">WIN!</div>
+                <div class="res-pts" id="diceSub">+10 RB Coins</div>
+                <button class="btn-play-again" onclick="resetGameUI('dice')">PLAY AGAIN</button>
+            </div>
+
+            <div class="bet-controls">
+                <button class="bet-btn-adjust" onclick="adjustBet(-10)">-</button>
+                <div class="bet-display">
+                    <span class="bet-label">BET RB COINS</span>
+                    <span class="bet-val" id="diceBetVal">10</span>
+                </div>
+                <button class="bet-btn-adjust" onclick="adjustBet(10)">+</button>
+            </div>
+            
+            <div style="display:flex; gap:10px; width:100%;">
+                <button class="btn-guess bg-lo" onclick="playDice('under')">UNDER 7</button>
+                <button class="btn-guess" style="background:#fbbf24; color:black;" onclick="playDice('seven')">LUCKY 7</button>
+                <button class="btn-guess bg-hi" onclick="playDice('over')">OVER 7</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="pmModal" class="pm-modal">
+    <div class="pm-container">
+        <div id="pmInboxView" style="display:flex; flex-direction:column; height:100%;">
+            <div class="pm-header">
+                <h3 style="margin:0; font-size:16px; font-weight:800; display:flex; gap:8px; align-items:center;"><i data-lucide="message-circle"></i> Messages</h3>
+                <button onclick="document.getElementById('pmModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+            </div>
+            <div id="pmList" class="pm-inbox-list"></div>
+        </div>
+
+        <div id="pmChatView" class="pm-chat-view">
+            <div class="pm-header">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button onclick="backToInbox()" style="background:none; border:none; color:white;"><i data-lucide="arrow-left"></i></button>
+                    <img id="chatTargetImg" style="width:30px; height:30px; border-radius:10px;">
+                    <span id="chatTargetName" style="font-weight:800; font-size:14px;">User</span>
+                </div>
+                <button onclick="document.getElementById('pmModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+            </div>
+            <div id="pmMessages" class="pm-messages"></div>
+            <form class="pm-input-area" onsubmit="event.preventDefault(); sendPrivateMessage();">
+                <input type="text" id="pmInput" class="styled-input" placeholder="Type a message..." autocomplete="off">
+                <button type="submit" class="send-btn"><i data-lucide="send" style="width:16px"></i></button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="notifModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="background:rgba(255,255,255,0.1); padding:8px; border-radius:10px;"><i data-lucide="inbox" style="width:20px;"></i></div>
+                <h3 style="margin:0; font-size:18px;">Inbox</h3>
+            </div>
+            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+        </div>
+        <div id="notifList"></div>
+    </div>
+</div>
+
+<div id="installGuideModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; font-size:18px; font-weight:900;">INSTALL GUIDE</h3>
+            <button onclick="document.getElementById('installGuideModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+        </div>
+
+        <div class="install-tabs">
+            <button class="install-tab-btn active" id="tabAndroid" onclick="showGuide('android')">ANDROID</button>
+            <button class="install-tab-btn" id="tabIOS" onclick="showGuide('ios')">iOS</button>
+        </div>
+
+        <div id="guideAndroidContent">
+            <div class="guide-step">
+                <div class="step-num">1</div>
+                <div class="step-text">Pindutin ang <b>Three Dots (⋮)</b> sa upper right corner ng Google Chrome browser.</div>
+            </div>
+            <div class="guide-step">
+                <div class="step-num">2</div>
+                <div class="step-text">Hanapin at pindutin ang <b>"Install App"</b> o <b>"Add to Home Screen"</b>.</div>
+            </div>
+            <div class="guide-step">
+                <div class="step-num">3</div>
+                <div class="step-text">Click <b>Install</b> para mapunta ito sa iyong home screen.</div>
+            </div>
+        </div>
+
+        <div id="guideIOSContent" style="display:none;">
+            <div class="guide-step">
+                <div class="step-num">1</div>
+                <div class="step-text">Gamitin ang <b>Safari Browser</b> at pindutin ang <b>Share Icon</b> <i data-lucide="share" style="width:12px"></i> sa ibaba.</div>
+            </div>
+            <div class="guide-step">
+                <div class="step-num">2</div>
+                <div class="step-text">Mag-scroll pababa at hanapin ang <b>"Add to Home Screen"</b> <i data-lucide="plus-square" style="width:12px"></i>.</div>
+            </div>
+            <div class="guide-step">
+                <div class="step-num">3</div>
+                <div class="step-text">Click <b>Add</b> sa upper right corner.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="menuModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="profile-header">
+            <img id="profileImgLarge" class="profile-img-large" src="">
+            <div class="profile-name-info">
+                <h2 class="profile-name" id="profileNameDisplay">User Name</h2>
+                <span class="profile-uid" id="profileUidDisplay">UID: ---</span>
+            </div>
+            <button onclick="document.getElementById('menuModal').style.display='none'" style="background:none; border:none; color:white; opacity:0.5;"><i data-lucide="x"></i></button>
+        </div>
+        
+        <button id="pwaInstallBtnProfile" style="width:100%; padding:15px; background:linear-gradient(90deg, #0ea5e9, #2563eb); color:white; border:none; border-radius:16px; font-weight:900; margin-bottom:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 8px 20px rgba(14, 165, 233, 0.4); border:1px solid rgba(255,255,255,0.2);">
+            <i data-lucide="download-cloud" style="width:24px; height:24px;"></i>
+            <div style="text-align:left;">
+                <span style="display:block; font-size:14px;">INSTALL APP</span>
+                <span style="display:block; font-size:10px; opacity:0.8; font-weight:500;">Click here to install now</span>
+            </div>
+        </button>
+
+        <div class="gcash-section">
+            <span style="font-size:10px; font-weight:800; color:var(--accent-glow); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="smartphone" style="width:12px"></i> GCash Number</span>
+            <div style="display:flex; gap:10px;">
+                <input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx">
+                <button onclick="saveGcash(); playSound('click');" style="background:var(--accent); border:none; color:white; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer; box-shadow:0 4px 10px rgba(59, 130, 246, 0.3);">SAVE</button>
+            </div>
+        </div>
+        <div class="ref-container">
+            <span style="font-size:10px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="share-2" style="width:12px"></i> Invite & Earn</span>
+            <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom:10px;" onclick="this.select(); document.execCommand('copy'); showToast('Copied Link!'); playSound('click');">
+            <div id="referralInputSection">
+                <span style="font-size:10px; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px; margin-top:15px;"><i data-lucide="ticket" style="width:12px"></i> Claim Referral Code</span>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="referralInput" class="styled-input" placeholder="ENTER CODE">
+                    <button onclick="claimReferral(); playSound('click');" style="background:var(--gold); border:none; color:black; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer; box-shadow:0 4px 10px rgba(251, 191, 36, 0.3);">CLAIM</button>
+                </div>
+            </div>
+        </div>
+        <div class="history-box">
+            <span style="font-size:10px; font-weight:800; color:white; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="history" style="width:12px"></i> Transaction History</span>
+            <div id="historyList" class="history-list"></div>
+        </div>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); border-radius:14px; font-weight:800; margin-top:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i data-lucide="log-out" style="width:18px"></i> Sign Out
+        </button>
+    </div>
+</div>
+
+<div id="storeModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+            <div>
+                <h3 style="margin:0; font-size: 20px; font-weight: 900;">REWARDS SHOP</h3>
+                <p style="margin: 5px 0 0 0; font-size: 11px; opacity: 0.8; font-weight: 600;">Exchange your RB Coins for GCash credits</p>
+            </div>
+            <div class="points-badge" style="height:35px; border-radius: 10px;"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
+        </div>
+
+        <div class="glass-panel" style="padding: 15px; border-radius: 18px; margin-bottom: 20px; border: 1px dashed var(--gold); text-align: center; position: relative; overflow: hidden;">
+            <h4 style="margin: 0 0 10px 0; color: var(--gold); font-size: 14px; text-transform: uppercase;">⚡ FREE RB COINS ⚡</h4>
+            
+            <div id="adTimerOverlay" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 50; align-items: center; justify-content: center; flex-direction: column;">
+                <div id="adStatusIcon" style="font-size: 30px; margin-bottom: 10px;">📺</div>
+                <div style="font-size: 18px; font-weight: 900; color: white;" id="adCountdown">15s</div>
+                <div style="font-size: 11px; color: #cbd5e1; padding: 0 20px; margin-top: 5px;" id="adStatusText">Do not close the ad tab!</div>
+            </div>
+
+            <div id="adCaptchaOverlay" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 51; align-items: center; justify-content: center; flex-direction: column;">
+                <div style="font-size: 14px; font-weight: 700; color: var(--accent-glow); margin-bottom: 10px;">HUMAN VERIFICATION</div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 12px; margin-bottom: 10px;">
+                    <span id="mathQ" style="font-size: 20px; font-weight: 900; color: white;">5 + 3 = ?</span>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <input type="number" id="mathAns" style="width: 60px; padding: 8px; border-radius: 8px; border: 1px solid var(--accent); background: #0f172a; color: white; text-align: center; font-weight: 800;">
+                    <button onclick="verifyAdMath()" style="background: var(--success); border: none; padding: 8px 12px; border-radius: 8px; color: white; font-weight: 900;">OK</button>
+                </div>
+            </div>
+
+            <button id="btnWatchAd" onclick="startStrictWatch()" style="background: linear-gradient(135deg, #f59e0b, #b45309); width: 100%; border: none; padding: 15px; border-radius: 12px; font-weight: 900; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4); text-shadow: 0 1px 2px black;">
+                <i data-lucide="play-circle" style="width: 20px;"></i> WATCH AD (+150 Coins)
+            </button>
+            <p style="font-size: 10px; opacity: 0.6; margin-top: 8px;">*Timer pauses if you stay on this page.</p>
+        </div>
+        <div class="reward-grid">
+            <div class="reward-item">
+                <div class="reward-main">
+                    <div class="reward-icon-box"><i data-lucide="wallet" style="width:22px"></i></div>
+                    <div class="reward-info"><b>₱20 GCash</b><small><i data-lucide="database" style="width:10px"></i> 2,500 Coins</small></div>
+                </div>
+                <button class="btn-redeem" onclick="redeemItem('₱20 GCash', 2500)">Redeem</button>
+            </div>
+            <div class="reward-item">
+                <div class="reward-main">
+                    <div class="reward-icon-box" style="color:var(--gold); background:rgba(251, 191, 36, 0.1); border-color:rgba(251, 191, 36, 0.3);"><i data-lucide="gift" style="width:22px"></i></div>
+                    <div class="reward-info"><b>₱50 GCash</b><small><i data-lucide="database" style="width:10px"></i> 6,000 Coins</small></div>
+                </div>
+                <button class="btn-redeem" onclick="redeemItem('₱50 GCash', 6000)">Redeem</button>
+            </div>
+            <div class="reward-item">
+                <div class="reward-main">
+                    <div class="reward-icon-box" style="color:var(--success); background:rgba(16, 185, 129, 0.1); border-color:rgba(16, 185, 129, 0.3);"><i data-lucide="trophy" style="width:22px"></i></div>
+                    <div class="reward-info"><b>₱100 GCash</b><small><i data-lucide="database" style="width:10px"></i> 11,500 Coins</small></div>
+                </div>
+                <button class="btn-redeem" onclick="redeemItem('₱100 GCash', 11500)">Redeem</button>
+            </div>
+        </div>
+        <p style="text-align: center; font-size: 10px; opacity: 0.6; margin-top: 25px; line-height: 1.5; text-shadow:0 1px 2px black;">*Processing of GCash may take 24-48 hours.<br>Make sure your GCash number is correct.</p>
+    </div>
+</div>
+
+<div id="pwaInstallBanner">
+    <div>
+        <span class="pwa-text">INSTALL APP</span>
+        <span class="pwa-sub">Download for better experience!</span>
+    </div>
+    <button id="pwaBottomBtn" class="pwa-btn">INSTALL</button>
+</div>
+
 <script>
-    // --- PWA & NOTIF LOGIC ---
-    let deferredPrompt;
-    window.addEventListener('load', () => { setTimeout(()=>document.getElementById('splash-screen').style.display='none', 2000); checkNotifGate(); checkInstallGate(); });
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; document.getElementById('pwaInstallBanner').style.display = 'flex'; });
-    function triggerInstall() { if(deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => { document.getElementById('pwaInstallBanner').style.display='none'; deferredPrompt=null; }); } }
-    function checkInstallGate() { if(!window.matchMedia('(display-mode: standalone)').matches) document.getElementById('installGate').style.display='flex'; else document.getElementById('installGate').style.display='none'; }
-    function checkNotifGate() { if(Notification.permission !== "granted") document.getElementById('notifBlocker').style.display='flex'; else document.getElementById('notifBlocker').style.display='none'; }
-    function requestGatePermission() { Notification.requestPermission().then(p => { if(p==="granted") { checkNotifGate(); requestNotifyPermission(); } }); }
-    function showToast(msg) { const t = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); }
-    lucide.createIcons();
+    // === NOTIFICATION BLOCKER LOGIC ===
+    window.addEventListener('load', () => { 
+        setTimeout(hideSplash, 2000); 
+        checkNotifGate(); 
+        checkInstallGate(); // CHECK IF INSTALLED
+    });
+    setTimeout(hideSplash, 5000);
+    function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
+    
+    // Function to check permission state
+    function checkNotifGate() {
+        const blocker = document.getElementById('notifBlocker');
+        const help = document.getElementById('blockedHelp');
+        
+        if (!("Notification" in window)) {
+            // Not supported, let them pass but warn
+            showToast("Notifications not supported on this device.");
+            blocker.style.display = 'none';
+            return;
+        }
 
-    // --- FIREBASE SETUP ---
+        if (Notification.permission === "granted") {
+            blocker.style.display = 'none';
+        } else if (Notification.permission === "denied") {
+            blocker.style.display = 'flex';
+            help.style.display = 'block';
+        } else {
+            // Default (Prompt needed)
+            blocker.style.display = 'flex';
+            help.style.display = 'none';
+        }
+    }
+
+    function requestGatePermission() {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                checkNotifGate();
+                requestNotifyPermission(); // Proceed with token gen
+            } else {
+                checkNotifGate(); // Show blocked UI
+            }
+        });
+    }
+
+    function showToast(msg) { const toast = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; toast.classList.add('show'); playSound('click'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
+
+    let confirmCallback = null;
+    function showCustomConfirm(title, msg, onYes) { document.getElementById('confTitle').innerText = title; document.getElementById('confMsg').innerText = msg; document.getElementById('customConfirmModal').style.display = 'flex'; confirmCallback = onYes; playSound('click'); }
+    function closeCustomConfirm() { document.getElementById('customConfirmModal').style.display = 'none'; confirmCallback = null; }
+    document.getElementById('confYesBtn').addEventListener('click', () => { if(confirmCallback) confirmCallback(); closeCustomConfirm(); });
+
+    let notifiedFiveMins = false; let lastCheckedSchedule = null;
+    function checkFiveMinuteNotification(timeInput) { if(notifiedFiveMins && lastCheckedSchedule === timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 5) { if(Notification.permission === "granted") { new Notification("RB LIVE BINGO", { body: "Dali! 5 minutes na lang bola na! Buksan na ang app." }); } showToast("⚠️ 5 minutes na lang, bola na!"); notifiedFiveMins = true; lastCheckedSchedule = timeInput; } if(mins > 5) notifiedFiveMins = false; } }
+
+    let deferredPrompt;
+    const installBtnProfile = document.getElementById('pwaInstallBtnProfile');
+    const bottomBanner = document.getElementById('pwaInstallBanner');
+    const bottomBtn = document.getElementById('pwaBottomBtn');
+    
+    // === NEW INSTALL GATE LOGIC ===
+    function checkInstallGate() {
+        const gate = document.getElementById('installGate');
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        
+        if (isStandalone) {
+            // App is installed and running
+            gate.style.display = 'none';
+        } else {
+            // Browser Mode -> Show Gate
+            gate.style.display = 'flex';
+            
+            // Check if iOS
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if(isIOS) {
+                document.getElementById('gateInstallBtn').style.display = 'none';
+                document.getElementById('gateIosNote').style.display = 'block';
+            }
+        }
+        checkInstallState(); // Run old logic too
+    }
+    
+    function checkInstallState() { if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) { if(installBtnProfile) installBtnProfile.style.display = 'none'; if(bottomBanner) bottomBanner.style.display = 'none'; } else { if(installBtnProfile) installBtnProfile.style.display = 'flex'; } }
+    
+    checkInstallState();
+    
+    window.addEventListener('beforeinstallprompt', (e) => { 
+        e.preventDefault(); 
+        deferredPrompt = e; 
+        // We don't show bottomBanner if Gate is active, but we keep logic just in case
+        if(bottomBanner && document.getElementById('installGate').style.display === 'none') {
+             bottomBanner.style.display = 'flex'; 
+        }
+    });
+
+    function triggerInstall() { 
+        if (deferredPrompt) { 
+            deferredPrompt.prompt(); 
+            deferredPrompt.userChoice.then((choiceResult) => { 
+                if (choiceResult.outcome === 'accepted') { 
+                    if(installBtnProfile) installBtnProfile.style.display = 'none'; 
+                    if(bottomBanner) bottomBanner.style.display = 'none'; 
+                } 
+                deferredPrompt = null; 
+            }); 
+        } else { 
+            document.getElementById('installGuideModal').style.display = 'flex'; 
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; 
+            if (isIOS) { showGuide('ios'); } else { showGuide('android'); } 
+        } 
+        if(bottomBanner) bottomBanner.style.display = 'none'; 
+    }
+    
+    function showGuide(os) { document.querySelectorAll('.install-tab-btn').forEach(b => b.classList.remove('active')); if(os === 'android') { document.getElementById('tabAndroid').classList.add('active'); document.getElementById('guideAndroidContent').style.display = 'block'; document.getElementById('guideIOSContent').style.display = 'none'; } else { document.getElementById('tabIOS').classList.add('active'); document.getElementById('guideAndroidContent').style.display = 'none'; document.getElementById('guideIOSContent').style.display = 'block'; } }
+    if(installBtnProfile) installBtnProfile.addEventListener('click', triggerInstall);
+    if(bottomBtn) bottomBtn.addEventListener('click', triggerInstall);
+
+    lucide.createIcons();
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
-    let messaging; try { messaging = firebase.messaging(); } catch(e){}
+    let messaging; try { messaging = firebase.messaging(); } catch(e) { console.log("Messaging failed to init", e); }
+    let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; let lastNotifiedDraw = ""; let selectedReplyId = null;
+    let globalWinRate = 0.40; let scatterChance = 0.03; let currentJackpotAmount = 500; let isJackpotActive = false;
+    db.ref('gameState/settings').on('value', s => { const val = s.val(); if(val) { if(val.minigameWinRate) globalWinRate = val.minigameWinRate / 100; if(val.scatterChance) scatterChance = val.scatterChance / 100; } });
 
-    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
-    function requestNotifyPermission() { if(messaging) messaging.getToken().then(t => { if(t && auth.currentUser) db.ref('users/'+auth.currentUser.uid).update({fcmToken:t}); }); }
+    const sounds = {
+        click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3'),
+        newBall: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3'),
+        pop: new Audio('https://cdn.freesound.org/previews/536/536108_1415754-lq.mp3'),
+        win: new Audio('https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3'),
+        lose: new Audio('https://cdn.freesound.org/previews/76/76376_877451-lq.mp3'),
+        spin: new Audio('https://cdn.freesound.org/previews/413/413203_5121236-lq.mp3'),
+        cardFlip: new Audio('https://cdn.freesound.org/previews/240/240776_4107740-lq.mp3'),
+        stop: new Audio('https://cdn.freesound.org/previews/256/256113_3263906-lq.mp3'),
+        tumble: new Audio('https://cdn.freesound.org/previews/256/256113_3263906-lq.mp3'),
+        drop: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3') 
+    };
+    function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; if(type === 'drop') sounds[type].volume = 0.3; else sounds[type].volume = 1.0; sounds[type].play().catch(e => console.log("Audio play error", e)); } }
 
-    // --- MAIN APP LOGIC ---
-    let userData = {}; let cardNumbers = []; let drawnNumbers = [];
-    
-    function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+    if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').then(reg => { }).catch(err => console.log('SW Failed:', err)); }); }
+    function requestNotifyPermission() { if ("Notification" in window) { Notification.requestPermission().then(permission => { if (permission === "granted" && messaging) { messaging.getToken().then((currentToken) => { if (currentToken && auth.currentUser) db.ref('users/' + auth.currentUser.uid).update({ fcmToken: currentToken }); }).catch((err) => console.log('Err token', err)); } }); } }
+
+    function switchTab(tab) { const btns = document.querySelectorAll('.tab-btn'); btns.forEach(b => b.classList.remove('active')); document.getElementById('bingoTab').style.display = 'none'; document.getElementById('minigamesTab').style.display = 'none'; if(tab === 'bingo') { document.getElementById('bingoTab').style.display = 'block'; btns[0].classList.add('active'); } else if(tab === 'minigames') { document.getElementById('minigamesTab').style.display = 'block'; btns[1].classList.add('active'); } }
+
+    // === NEW FILTER FUNCTION FOR MINI GAMES ===
+    function filterGames(cat) {
+        // Highlight correct chip
+        const chips = document.querySelectorAll('.cat-chip');
+        chips.forEach(c => c.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+
+        const games = document.querySelectorAll('.game-poster');
+        games.forEach(g => {
+            if(cat === 'all') {
+                g.style.display = 'flex';
+            } else {
+                if(g.getAttribute('data-cat') === cat) {
+                    g.style.display = 'flex';
+                } else {
+                    g.style.display = 'none';
+                }
+            }
+        });
+        playSound('click');
+    }
+
+    // REMOVED BRING ME & AI FUNCTIONS
+
+    function fixDate(timestamp) { if(!timestamp) return "No Date"; const d = new Date(parseInt(timestamp)); return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) + " " + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }); }
+    function login() { playSound('click'); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(() => { requestNotifyPermission(); checkNotifGate(); }); }
+
     auth.onAuthStateChanged(u => {
         if(u) {
-            document.getElementById('loginOverlay').style.display='none'; document.getElementById('userPanel').style.display='flex';
-            document.getElementById('userImg').src = u.photoURL;
-            db.ref('users/'+u.uid).on('value', s => { 
-                if(!s.exists()) { db.ref('users/'+u.uid).set({name:u.displayName, photo:u.photoURL, points:100}); }
-                else { userData = s.val(); userData.uid = u.uid; document.getElementById('userPoints').innerText = userData.points || 0; 
-                       if(userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else generateNewCard(); 
-                       updatePresence(u.uid, userData.name); }
-            });
-            initBingo(); listenVideo(); listenJackpot(); listenNotifs(u.uid);
-            if(messaging) messaging.onMessage(p => showToast(p.notification.title));
-        } else document.getElementById('loginOverlay').style.display='flex';
+            if(messaging) { messaging.getToken().then((token) => { if(token) db.ref('users/' + u.uid).update({ fcmToken: token }); }).catch((err)=>console.log(err)); messaging.onMessage((payload) => { const title = payload.notification ? payload.notification.title : "Notification"; const body = payload.notification ? payload.notification.body : "New message"; showToast(title + ": " + body); playSound('pop'); }); }
+            document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('userPanel').style.display = 'flex';
+            document.getElementById('userImg').src = u.photoURL; document.getElementById('profileImgLarge').src = u.photoURL;
+            document.getElementById('profileNameDisplay').innerText = u.displayName; document.getElementById('profileUidDisplay').innerText = "ID: " + u.uid.substring(0,8);
+            const userRef = db.ref('users/'+u.uid);
+            userRef.once('value', snapshot => { if (!snapshot.exists()) { const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase(); const urlParams = new URLSearchParams(window.location.search); const referredBy = urlParams.get('ref'); userRef.set({ name: u.displayName, photo: u.photoURL, points: 100, refCode: newRefCode, referredBy: referredBy || null, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false }); if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 500); } }); } } else { const data = snapshot.val(); const updates = { last_seen: Date.now(), name: u.displayName, photo: u.photoURL }; const today = new Date().toDateString(); if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 50; updates.lastLoginDate = today; showToast("🎁 Daily Bonus! +50 RB Coins."); playSound('win'); } if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase(); userRef.update(updates); } });
+            userRef.on('value', s => { if(s.exists()){ userData = s.val(); userData.uid = u.uid; document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString(); document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString(); document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || ""); if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none'; if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash; if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); } updateBetDisplays(); updatePresenceData(u.uid, userData.name, userData.points, userData.photo); checkLateJoiner(); } });
+            initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid);
+            listenVideoUpdate(); // LISTENER ADDED FOR VIDEO FEED
+        } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
-    function updatePresence(uid, name) { 
-        db.ref('.info/connected').on('value', s => { if(s.val()){ db.ref('status/'+uid).onDisconnect().remove(); db.ref('status/'+uid).set({name:name, state:'online'}); } });
-        db.ref('status').on('value', s => document.getElementById('onlineCount').innerText = s.numChildren());
-    }
+    function setupPresence(uid) { const onlineRef = db.ref('.info/connected'); const userStatusRef = db.ref('status/' + uid); onlineRef.on('value', (snapshot) => { if (snapshot.val() === false) return; userStatusRef.onDisconnect().remove().then(() => { userStatusRef.set({ state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP }); }); }); db.ref('status').on('value', (s) => { document.getElementById('onlineCount').innerText = s.numChildren() || 0; }); }
+    function updatePresenceData(uid, name, points, photo) { db.ref('status/' + uid).update({ name: name, points: points, photo: photo }); }
+    function listenNotifications(uid) { db.ref('notifications/' + uid).on('value', s => { const count = s.numChildren(); const dot = document.getElementById('notifDot'); if(count > 0) { dot.style.display = 'block'; playSound('pop'); showToast("You have a new notification!"); } else { dot.style.display = 'none'; } }); }
+    function openNotifs() { document.getElementById('notifModal').style.display='flex'; playSound('click'); renderNotifs(); }
+    function renderNotifs() { const list = document.getElementById('notifList'); db.ref('notifications/' + auth.currentUser.uid).once('value', s => { list.innerHTML = ""; if(!s.exists()) { list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:40px;'>No new messages</div>"; return; } s.forEach(n => { const val = n.val(); const key = n.key; const div = document.createElement('div'); div.className = 'notif-card-new'; div.innerHTML = `<div class="notif-header-new"><div class="notif-title"><i data-lucide="info" style="width:14px"></i> SYSTEM MSG</div><button class="btn-del-notif" onclick="deleteNotif('${key}')"><i data-lucide="trash-2" style="width:14px"></i></button></div><div class="notif-body">${val.msg}</div><div style="font-size:9px; opacity:0.4; margin-top:8px; text-align:right;">${fixDate(val.time)}</div>`; list.prepend(div); }); lucide.createIcons(); }); }
+    function deleteNotif(key) { showCustomConfirm("DELETE?", "Remove message?", () => { db.ref('notifications/' + auth.currentUser.uid + '/' + key).remove(); renderNotifs(); showToast("Message Deleted"); }); }
+    function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { const data = s.val(); const banner = document.getElementById('jackpotBanner'); if(data && data.active) { banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = data.amount + " RB COINS"; isJackpotActive = true; const rawAmount = parseInt(data.amount.replace(/[^0-9]/g, '')); currentJackpotAmount = isNaN(rawAmount) ? 500 : rawAmount; } else { banner.style.display = 'none'; isJackpotActive = false; currentJackpotAmount = 500; } }); }
 
-    // --- BINGO LOGIC ---
-    function initBingo() {
-        db.ref('drawnNumbers').on('value', s => { 
-            drawnNumbers = s.val() ? Object.values(s.val()) : [];
-            const row = document.getElementById('ballRow'); row.innerHTML = "";
-            drawnNumbers.forEach(n => { row.innerHTML += `<div style="min-width:30px; height:30px; background:#334155; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px;">${n}</div>`; });
-            if(drawnNumbers.length > 0) document.getElementById('currentBall').innerText = drawnNumbers[drawnNumbers.length-1];
-            renderCard();
-        });
-    }
-
-    function generateNewCard() {
-        let cols = [[],[],[],[],[]];
-        for(let i=0; i<5; i++) {
-            let min = (i*15)+1; let max = min+14;
-            while(cols[i].length < 5) { let n = Math.floor(Math.random()*(max-min+1))+min; if(!cols[i].includes(n)) cols[i].push(n); }
-        }
-        cols[2][2] = "FREE";
-        cardNumbers = [
-            cols[0][0], cols[1][0], cols[2][0], cols[3][0], cols[4][0],
-            cols[0][1], cols[1][1], cols[2][1], cols[3][1], cols[4][1],
-            cols[0][2], cols[1][2], "FREE",   cols[3][2], cols[4][2],
-            cols[0][3], cols[1][3], cols[2][3], cols[3][3], cols[4][3],
-            cols[0][4], cols[1][4], cols[2][4], cols[3][4], cols[4][4]
-        ];
-        if(userData.uid) db.ref('users/'+userData.uid).update({currentCard: cardNumbers});
-        renderCard();
-    }
-
-    function renderCard() {
-        const grid = document.getElementById('bingoGrid'); grid.innerHTML = "";
-        cardNumbers.forEach(n => {
-            const hit = drawnNumbers.includes(n) || n === "FREE";
-            const div = document.createElement('div');
-            div.className = `cell ${hit ? 'hit' : ''}`;
-            div.innerText = n === "FREE" ? "★" : n;
-            grid.appendChild(div);
-        });
-    }
-
-    function switchTab(t) { 
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        if(t==='bingo') { document.getElementById('bingoTab').style.display='block'; document.getElementById('minigamesTab').style.display='none'; }
-        else { document.getElementById('bingoTab').style.display='none'; document.getElementById('minigamesTab').style.display='block'; }
-    }
-
-    // --- GAME UI ---
-    function openGame(g) { document.getElementById('game-'+g).style.display='flex'; }
-    function closeGame() { document.querySelectorAll('.game-overlay-fs').forEach(e=>e.style.display='none'); }
-    function adjustBet(amt) { 
-        // Implement bet logic variable update 
-        showToast("Bet adjusted: " + amt);
-    }
-    
-    // --- MINI GAMES (Simplified Logic) ---
-    function spinRoulette() {
-        const w = document.getElementById('rouletteWheel'); w.style.animation = "spin 1s infinite linear";
-        setTimeout(() => { w.style.animation = "none"; document.getElementById('rouletteResult').style.display = "flex"; }, 2000);
-    }
-    function pullSlotLever() {
-        const r1=document.getElementById('reel1'), r2=document.getElementById('reel2'), r3=document.getElementById('reel3');
-        r1.innerText="?"; r2.innerText="?"; r3.innerText="?";
-        setTimeout(() => { r1.innerText="7"; r2.innerText="7"; r3.innerText="7"; document.getElementById('slotResult').style.display="flex"; }, 1500);
-    }
-    function guessHighLow(pick) {
-        document.getElementById('mainCard').innerText = Math.floor(Math.random()*10)+1;
-        document.getElementById('hlResult').style.display="flex";
-    }
-    function resetGameUI(g) {
-        document.querySelectorAll('.result-modal').forEach(e=>e.style.display='none');
-    }
-
-    // --- CHAT & VIDEO ---
-    function setupChat() {
-        db.ref('chat').limitToLast(20).on('child_added', s => {
-            const d = s.val(); const div = document.createElement('div'); div.className='bubble';
-            div.innerHTML = `<b style="color:var(--accent-glow)">${d.name}:</b> ${d.msg}`;
-            document.getElementById('chatList').prepend(div);
-        });
-    }
-    setupChat();
-    function sendChat() {
-        const i = document.getElementById('chatIn'); if(!i.value) return;
-        db.ref('chat').push({name:userData.name, msg:i.value, time:Date.now()}); i.value="";
-    }
-    function listenVideo() {
+    // === NEW FUNCTION: SMART VIDEO STREAM HANDLER WITH OFFLINE SUPPORT ===
+    function listenVideoUpdate() {
         db.ref('gameState/videoSettings').on('value', s => {
             const v = s.val();
-            if(v && v.type === 'offline') { document.getElementById('videoOfflineState').style.display='flex'; }
-            else { document.getElementById('videoOfflineState').style.display='none'; if(v && v.url) document.getElementById('liveVideoFrame').src = v.url; }
+            const iframe = document.getElementById('liveVideoFrame');
+            const offline = document.getElementById('videoOfflineState');
+
+            // Handle Offline State
+            if (v && v.type === 'offline') {
+                iframe.style.display = 'none';
+                iframe.src = ""; // Stop audio/video
+                offline.style.display = 'flex';
+            } 
+            else if(v && v.url) {
+                // Online State
+                offline.style.display = 'none';
+                iframe.style.display = 'block';
+
+                // SMART PARSER: Extracts ID from any Youtube URL (youtu.be, watch?v=, embed, etc.)
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+                const match = v.url.match(regExp);
+                let videoId = (match && match[2].length === 11) ? match[2] : null;
+
+                // Fallback: If no match, maybe they pasted JUST the ID?
+                if(!videoId && v.url.length === 11) videoId = v.url;
+
+                if (videoId) {
+                    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1`;
+                    // Only update src if it changed to prevent reload
+                    if(iframe.src !== embedUrl) {
+                        iframe.src = embedUrl;
+                    }
+                }
+            }
         });
     }
 
-    // --- UTILS ---
-    function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { if(s.val()?.active) { document.getElementById('jackpotBanner').style.display='block'; document.getElementById('jackpotDisplayVal').innerText = s.val().amount; } }); }
-    function listenNotifs(uid) { db.ref('notifications/'+uid).on('child_added', s => { const d=s.val(); document.getElementById('notifList').innerHTML+=`<div>${d.msg}</div>`; document.getElementById('notifDot').style.display='block'; }); }
-    function openNotifs() { document.getElementById('notifModal').style.display='flex'; document.getElementById('notifDot').style.display='none'; }
-    function openMenuModal() { document.getElementById('menuModal').style.display='flex'; document.getElementById('profileNameDisplay').innerText=userData.name; loadHistory(); }
-    function openMessenger() { document.getElementById('pmModal').style.display='flex'; }
+    function listenForNextDraw() { db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); }); db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); }); }
     
-    function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length === 11) { db.ref('users/'+auth.currentUser.uid).update({ gcash: num }); showToast("GCash Saved!"); } else showToast("Invalid GCash Number"); }
-    function redeemItem(name, cost) { 
-        if((userData.points||0) >= cost) { 
-            if(confirm("Redeem " + name + "?")) {
-                db.ref('users/'+userData.uid+'/points').transaction(p => (p||0) - cost);
-                db.ref('redemptions').push({ uid: userData.uid, name: userData.name, item: name, cost: cost, status: 'pending', timestamp: Date.now() }); 
-                showToast("Request Sent!"); loadHistory(); 
+    // === UPDATED NEXT DRAW DISPLAY LOGIC (WITH ONGOING STATE) ===
+    function updateNextDrawDisplay() { 
+        db.ref('gameState').on('value', s => { 
+            const gameData = s.val() || {}; 
+            const now = Date.now(); 
+
+            // === 1. CHECK IF GAME IS ONGOING FIRST ===
+            // If drawnNumbers exists and has items, the game is ONGOING.
+            if(gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0) {
+                 const banner = document.getElementById('nextDrawBanner'); 
+                 const timeEl = document.getElementById('nextDrawTime'); 
+                 const labelEl = document.querySelector('.next-draw-label'); 
+                 const ndIcon = document.querySelector('.nd-icon');
+
+                 // Set Gray Style for Ongoing
+                 banner.style.display = 'flex';
+                 banner.style.background = 'rgba(71, 85, 105, 0.9)'; // Slate Gray
+                 banner.style.borderColor = '#94a3b8'; // Lighter Gray Border
+                 banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+                 
+                 labelEl.innerText = "GAME STATUS";
+                 labelEl.style.color = "#e2e8f0"; // Light gray text
+
+                 timeEl.innerText = "GAME ONGOING";
+                 timeEl.style.fontSize = "20px";
+                 timeEl.style.color = "#ffffff";
+                 timeEl.style.fontWeight = "900";
+                 
+                 // Update icon style slightly
+                 if(ndIcon) {
+                    ndIcon.style.background = 'rgba(255,255,255,0.1)';
+                    ndIcon.style.color = 'white';
+                    ndIcon.style.borderColor = 'rgba(255,255,255,0.2)';
+                 }
+                 return; // Stop here so we don't overwrite with schedule
             }
-        } else { showToast("Insufficient Points"); } 
-    }
-    function loadHistory() { 
-        const list = document.getElementById('historyList'); 
-        db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { 
-            list.innerHTML = ""; 
-            s.forEach(r => { const d = r.val(); list.innerHTML += `<div style="border-bottom:1px solid #333; padding:5px; font-size:12px;">${d.item} - ${d.status}</div>`; });
+
+            // === 2. IF NOT ONGOING, CHECK SCHEDULES ===
+            let displayTime = null; 
+
+            // Check Schedules list first (Highest Priority)
+            if(gameData.schedules) { 
+                const rawScheds = Object.values(gameData.schedules); 
+                const times = rawScheds.map(val => (typeof val === 'object' && val.time) ? val.time : val); 
+                // Filter only FUTURE times
+                const futureTimes = times.filter(t => t > now);
+                const sorted = futureTimes.sort((a,b) => a - b); 
+                
+                if(sorted.length > 0) {
+                    displayTime = sorted[0]; // Get the nearest future time
+                }
+            } 
+            
+            // Fallback to single nextDraw value IF it is in the future
+            if(!displayTime && gameData.nextDraw) {
+                if(gameData.nextDraw > now) {
+                    displayTime = gameData.nextDraw;
+                }
+            }
+            
+            const banner = document.getElementById('nextDrawBanner'); 
+            const timeEl = document.getElementById('nextDrawTime'); 
+            const labelEl = document.querySelector('.next-draw-label'); 
+            const lateSched = document.getElementById('lateNextSched'); 
+            const ndIcon = document.querySelector('.nd-icon');
+
+            // Reset Icon Styles from Ongoing State
+            if(ndIcon) {
+                ndIcon.style.background = ''; 
+                ndIcon.style.color = '';
+                ndIcon.style.borderColor = '';
+            }
+            
+            // STRICT CHECK: Display Time must exist AND be in the future
+            if(displayTime && displayTime > now) { 
+                // === ACTIVE SCHEDULE MODE (GOLD) ===
+                banner.style.display = 'flex'; 
+                banner.style.background = 'rgba(15, 23, 42, 0.8)'; // Original Dark
+                banner.style.borderColor = 'rgba(251, 191, 36, 0.4)'; // Gold Border
+                banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+
+                const formatted = fixDate(displayTime); 
+                timeEl.innerText = formatted; 
+                timeEl.style.fontSize = "18px"; 
+                timeEl.style.color = "white"; 
+                
+                labelEl.innerText = "SUSUNOD NA BOLA"; 
+                labelEl.style.color = "var(--gold)";
+
+                lateSched.innerText = formatted; 
+                checkNotificationTime(displayTime); 
+                checkFiveMinuteNotification(displayTime); 
+            } else { 
+                // === WAITING MODE (BLUE) ===
+                // Ito ang lalabas kapag walang schedule o TAPOS NA ang schedule
+                banner.style.display = 'flex'; 
+                banner.style.background = 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))';
+                banner.style.borderColor = '#3b82f6'; // Blue border
+                banner.style.boxShadow = '0 10px 30px rgba(59, 130, 246, 0.2)';
+
+                labelEl.innerText = "WAITING FOR DRAW"; 
+                labelEl.style.color = "#93c5fd"; // Light blue label
+
+                timeEl.innerText = "MAGHINTAY SA SUSUNOD NA DRAW AT MAG LARO MUNA NG MINI GAMES"; 
+                timeEl.style.fontSize = "11px"; // Adjusted font size to fit
+                timeEl.style.fontWeight = "700";
+                timeEl.style.lineHeight = "1.4";
+                
+                lateSched.innerText = "--:--"; 
+            } 
         }); 
     }
+    
+    function checkNotificationTime(timeInput) { if(lastNotifiedDraw == timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 10) { if(Notification.permission === "granted") new Notification("Radio Bingo", { body: "10 mins na lang, bola na!" }); lastNotifiedDraw = timeInput; } } }
+
+    function initBingo() {
+        db.ref('gameState/latestWinner').on('value', s => { const win = s.val(); const banner = document.getElementById('winnerBanner'); const cardCont = document.getElementById('bingoCardContainer'); const gameOverlay = document.getElementById('gameOverOverlay'); cardCont.classList.remove('card-puro'); document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting')); if(win && win.name) { banner.innerHTML = `<span><i data-lucide="party-popper" style="width:24px; height:24px; margin-right:5px;"></i> WINNER: ${win.name.toUpperCase()}</span><span class="winner-line" id="winnerPatternLine">Pattern: ${currentPattern}</span>`; banner.style.display = 'block'; playSound('win'); lucide.createIcons(); if(win.uid === auth.currentUser.uid) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; } else { cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; const nextTime = document.getElementById('nextDrawTime').innerText; document.getElementById('gameOverMsg').innerHTML = `Sayang! Si <b>${win.name.toUpperCase()}</b> ang nanalo.<br><br>Bawi tayo sa next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ${nextTime}</span>`; } } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); gameOverlay.style.display = 'none'; document.querySelectorAll('.cell').forEach(c => { c.classList.remove('win-glow', 'win-line-h', 'win-line-v', 'win-line-d1', 'win-line-d2'); }); } });
+        db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternName').innerText = currentPattern; checkWin(); });
+        
+        // === FIXED DRAWN NOTIFICATION LOGIC (LATEST BALL) ===
+        db.ref('drawnNumbers').on('value', s => { 
+            const val = s.val(); 
+            const newGameDrawn = val ? Object.values(val).map(n => n.toString()) : []; 
+            
+            // Logic Fix: Always grab the LAST ELEMENT (Most recently added ball)
+            if(newGameDrawn.length > 0 && gameDrawn.length > 0) {
+                 if(newGameDrawn.length > gameDrawn.length) {
+                    const newBall = newGameDrawn[newGameDrawn.length - 1]; 
+                    playSound('newBall'); 
+                    showToast("BOLA: " + newBall); 
+                 }
+            }
+            
+            gameDrawn = newGameDrawn; 
+            const btn = document.getElementById('newCardBtn'); 
+            if(gameDrawn.length > 0) { 
+                btn.disabled = true; 
+                btn.innerHTML = `<i data-lucide="lock" style="width:14px"></i> IN GAME`; 
+            } else { 
+                btn.disabled = false; 
+                btn.innerHTML = `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`; 
+            } 
+            lucide.createIcons(); 
+            checkLateJoiner(); 
+            updateGridHits(); 
+            renderPrevBalls(); 
+            checkWin(); 
+            checkPuroStatus(); 
+        });
+
+        db.ref('gameState/lastCalled').on('value', s => { if(s.exists()) { const num = s.val(); document.getElementById('currentBall').innerText = num; if (num !== lastSpokenNumber) { speakNumber(num); lastSpokenNumber = num; } } else { document.getElementById('currentBall').innerText = "--"; lastSpokenNumber = null; } });
+    }
+    let lastSpokenNumber = null;
+    function speakNumber(num) { if ('speechSynthesis' in window) { let letter = "B"; if (num > 15) letter = "I"; if (num > 30) letter = "N"; if (num > 45) letter = "G"; if (num > 60) letter = "O"; const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 0.9; window.speechSynthesis.speak(msg); } }
+
+    function checkWin() { if(userData.hasWonCurrent || gameDrawn.length === 0) return; db.ref('gameState/latestWinner').once('value', snap => { if(snap.exists()) return; let winningWays = []; if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; } else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; } else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; } else { winningWays = [ [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], [0,6,12,18,24], [4,8,12,16,20] ]; } for(let i = 0; i < winningWays.length; i++) { let w = winningWays[i]; if(w.every(idx => marks.includes(idx))) { highlightWinningPattern(w, i); triggerWin(); break; } } }); }
+    function checkPuroStatus() { if(userData.hasWonCurrent || gameDrawn.length === 0) return; document.getElementById('bingoCardContainer').classList.remove('card-puro'); document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting')); let winningWays = []; if (currentPattern === "Blackout") winningWays = [Array.from({length: 25}, (_, i) => i)]; else if (currentPattern === "Letter X") winningWays = [[0,4,6,8,12,16,18,20,24]]; else if (currentPattern === "Four Corners") winningWays = [[0,4,20,24]]; else winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; for (let i = 0; i < winningWays.length; i++) { let w = winningWays[i]; let missing = w.filter(idx => !marks.includes(idx)); if (missing.length === 1) { document.getElementById('bingoCardContainer').classList.add('card-puro'); const missingIdx = missing[0]; const cells = document.querySelectorAll('.cell'); if(cells[missingIdx]) cells[missingIdx].classList.add('cell-waiting'); break; } } }
+    function highlightWinningPattern(indices, patternType) { const cells = document.querySelectorAll('.cell'); indices.forEach(idx => { const cell = cells[idx]; cell.classList.add('win-glow'); if (currentPattern === 'Normal Bingo') { if (patternType < 5) cell.classList.add('win-line-h'); else if (patternType < 10) cell.classList.add('win-line-v'); else if (patternType === 10) cell.classList.add('win-line-d1'); else cell.classList.add('win-line-d2'); } }); }
+
+    function triggerWin() { const uid = auth.currentUser.uid; let winPrize = 500; if (isJackpotActive) winPrize = currentJackpotAmount; db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize }); db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize); db.ref('users/' + uid).update({ hasWonCurrent: true }); userData.hasWonCurrent = true; if (isJackpotActive) { const jpModal = document.getElementById('grandJackpotModal'); document.getElementById('grandPrizeAmount').innerText = winPrize.toLocaleString() + " RB COINS"; document.getElementById('jpWinnerName').innerText = userData.name; jpModal.style.display = 'flex'; confetti({ particleCount: 500, spread: 120, startVelocity: 60 }); } }
+    function generateNewCard() { if(gameDrawn.length > 0) return showToast("Bawal magpalit habang may laro!"); let card = []; let cols = [[1,15],[16,30],[31,45],[46,60],[61,75]]; cols.forEach(r => { let nums = []; while(nums.length < 5) { let n = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0]; if(!nums.includes(n)) nums.push(n); } card.push(...nums); }); let finalCard = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) { finalCard.push(card[c*5 + r]); } } finalCard[12] = "FREE"; db.ref('users/' + auth.currentUser.uid).update({ currentCard: finalCard, cardTimestamp: Date.now(), hasWonCurrent: false }); cardNumbers = finalCard; renderCard(); playSound('cardFlip'); }
+    function renderCard() { const grid = document.getElementById('bingoGrid'); grid.innerHTML = ""; cardNumbers.forEach((n, i) => { const div = document.createElement('div'); div.className = 'cell'; div.innerText = n === "FREE" ? "★" : n; if(n === "FREE") { div.classList.add('hit'); if(!marks.includes(12)) marks.push(12); } grid.appendChild(div); }); updateGridHits(); }
+    function updateGridHits() { marks = [12]; const cells = document.querySelectorAll('.cell'); cells.forEach((c, i) => { const val = c.innerText; if(gameDrawn.includes(val) || val === "★") { c.classList.add('hit'); if(!marks.includes(i)) marks.push(i); } }); }
+    function renderPrevBalls() { const row = document.getElementById('ballRow'); row.innerHTML = ""; const last5 = gameDrawn.slice(-5).reverse(); last5.forEach(n => { let d = document.createElement('div'); d.className = 'ball-small'; d.innerText = n; row.appendChild(d); }); }
+    function checkLateJoiner() { const overlay = document.getElementById('lateOverlay'); if(gameDrawn.length > 0 && !userData.currentCard) { overlay.style.display = 'flex'; } else if (gameDrawn.length > 0 && userData.cardTimestamp > db.ref('gameState/gameStartTime')) { overlay.style.display = 'none'; } else { overlay.style.display = 'none'; } }
+
+    function setupChat() { const list = document.getElementById('chatList'); db.ref('chats').limitToLast(50).on('child_added', s => { const d = s.val(); const key = s.key; if(isUserMuted(d.uid)) return; const isMe = d.uid === auth.currentUser.uid; const div = document.createElement('div'); div.className = 'chat-row'; div.style.flexDirection = isMe ? 'row-reverse' : 'row'; let replyHtml = ''; if(d.replyTo && d.replyMsg) { replyHtml = `<div style="font-size:10px; opacity:0.7; border-left:2px solid var(--accent); padding-left:5px; margin-bottom:5px; background:rgba(0,0,0,0.2); padding:4px; border-radius:4px;">Replying to: ${d.replyMsg.substring(0, 30)}...</div>`; } const heartColor = d.hearts && d.hearts[auth.currentUser.uid] ? 'var(--minigame)' : 'inherit'; const heartCount = d.heartCount || 0; div.innerHTML = `<img class="chat-pfp" src="${d.pfp}" onclick="openPrivateChat('${d.uid}', '${d.name.replace(/'/g, "\\'")}', '${d.pfp}')"><div class="chat-content"><div class="bubble" style="${isMe ? 'background:var(--accent); border:none;' : ''}">${!isMe ? `<div class="chat-name" onclick="replyTo('${key}', '${d.msg.replace(/'/g, "\\'")}')">${d.name}</div>` : ''}${replyHtml}<div class="chat-text">${d.msg}</div></div><div class="chat-actions" style="justify-content: ${isMe ? 'flex-end' : 'flex-start'}"><button class="action-btn" style="color:${heartColor}" onclick="heartChat('${key}')"><i data-lucide="heart" style="width:12px"></i> ${heartCount > 0 ? heartCount : ''}</button><button class="action-btn" onclick="replyTo('${key}', '${d.msg.replace(/'/g, "\\'")}')"><i data-lucide="reply" style="width:12px"></i></button></div></div>`; list.appendChild(div); list.scrollTop = list.scrollHeight; lucide.createIcons(); }); }
+    function isUserMuted(uid) { const muted = localStorage.getItem('muted_users'); if(!muted) return false; return JSON.parse(muted).includes(uid); }
+    function muteUser(uid) { let muted = JSON.parse(localStorage.getItem('muted_users') || "[]"); if(!muted.includes(uid)) { muted.push(uid); localStorage.setItem('muted_users', JSON.stringify(muted)); showToast("User muted locally."); } }
+    function sendChat() { const inp = document.getElementById('chatIn'); const msg = inp.value.trim(); if(!msg) return; const payload = { name: userData.name, msg: msg, pfp: userData.photo, uid: userData.uid, time: Date.now() }; if(selectedReplyId) { payload.replyTo = selectedReplyId; payload.replyMsg = document.getElementById('replyText').innerText.replace("Replying to: ", ""); cancelReply(); } db.ref('chats').push(payload); inp.value = ""; }
+    function heartChat(key) { const uid = auth.currentUser.uid; const ref = db.ref(`chats/${key}/hearts/${uid}`); ref.once('value', s => { if(s.exists()) { ref.remove(); db.ref(`chats/${key}/heartCount`).transaction(c => (c || 1) - 1); } else { ref.set(true); db.ref(`chats/${key}/heartCount`).transaction(c => (c || 0) + 1); } }); }
+    function replyTo(key, msg) { selectedReplyId = key; document.getElementById('replyText').innerText = "Replying to: " + msg.substring(0, 20) + "..."; document.getElementById('replyIndicator').style.display = 'flex'; document.getElementById('chatIn').focus(); }
+    function cancelReply() { selectedReplyId = null; document.getElementById('replyIndicator').style.display = 'none'; }
+
+    let currentChatPartner = null;
+    function openMessenger() { document.getElementById('pmModal').style.display = 'flex'; document.getElementById('pmInboxView').style.display = 'flex'; document.getElementById('pmChatView').style.display = 'none'; loadInbox(); }
+    function loadInbox() { const uid = auth.currentUser.uid; const list = document.getElementById('pmList'); list.innerHTML = "<div style='text-align:center; padding:20px; opacity:0.5;'>Loading...</div>"; db.ref('messages').once('value', s => { const conversations = {}; s.forEach(msgSnap => { const m = msgSnap.val(); if(m.from === uid || m.to === uid) { const partner = m.from === uid ? m.to : m.from; conversations[partner] = m; } }); list.innerHTML = ""; if(Object.keys(conversations).length === 0) { list.innerHTML = "<div style='text-align:center; padding:20px;'>No messages yet.</div>"; return; } Object.keys(conversations).forEach(partnerId => { db.ref('users/' + partnerId).once('value', uSnap => { const u = uSnap.val(); const lastMsg = conversations[partnerId]; const div = document.createElement('div'); div.className = 'pm-item'; div.onclick = () => openPrivateChat(partnerId, u.name, u.photo); div.innerHTML = `<img class="pm-avatar" src="${u.photo || 'https://via.placeholder.com/40'}"><div class="pm-info"><span class="pm-name">${u.name}</span><span class="pm-preview">${lastMsg.from === uid ? 'You: ' : ''}${lastMsg.text}</span></div>`; list.appendChild(div); }); }); }); }
+    function openPrivateChat(uid, name, photo) { if(uid === auth.currentUser.uid) return showToast("Cant msg self"); currentChatPartner = uid; document.getElementById('pmModal').style.display = 'flex'; document.getElementById('pmInboxView').style.display = 'none'; document.getElementById('pmChatView').style.display = 'flex'; document.getElementById('chatTargetName').innerText = name; document.getElementById('chatTargetImg').src = photo || 'https://via.placeholder.com/30'; listenPrivateMessages(auth.currentUser.uid); }
+    function backToInbox() { currentChatPartner = null; document.getElementById('pmChatView').style.display = 'none'; document.getElementById('pmInboxView').style.display = 'flex'; loadInbox(); }
+    function sendPrivateMessage() { const inp = document.getElementById('pmInput'); const text = inp.value.trim(); if(!text || !currentChatPartner) return; const myUid = auth.currentUser.uid; const msgData = { from: myUid, to: currentChatPartner, text: text, timestamp: Date.now() }; db.ref('messages').push(msgData); db.ref('notifications/' + currentChatPartner).push({ msg: `New PM from ${userData.name}`, time: Date.now(), type: 'pm', from: myUid }); inp.value = ""; }
+    function listenPrivateMessages(myUid) { const chatDiv = document.getElementById('pmMessages'); db.ref('messages').limitToLast(100).on('child_added', s => { const m = s.val(); if(!currentChatPartner) return; if( (m.from === myUid && m.to === currentChatPartner) || (m.from === currentChatPartner && m.to === myUid) ) { const div = document.createElement('div'); div.className = `msg-bubble ${m.from === myUid ? 'msg-me' : 'msg-them'}`; div.innerText = m.text; chatDiv.appendChild(div); chatDiv.scrollTop = chatDiv.scrollHeight; } }); }
+
+    let currentBet = 10;
+    function adjustBet(amt) { const newBet = currentBet + amt; if(newBet < 10) return; currentBet = newBet; updateBetDisplays(); }
+    function updateBetDisplays() { const els = ['betDisplayVal', 'rouletteBetVal', 'hlBetVal', 'slotBetVal', 'colorBetVal', 'l9BetVal', 'diceBetVal']; els.forEach(id => { const el = document.getElementById(id); if(el) el.innerText = currentBet; }); const balEls = ['bCreditDisplay', 'rouletteBetVal_balance', 'hlBetVal_balance', 'slotBetVal_balance', 'colorBetVal_balance', 'l9BetVal_balance', 'diceBetVal_balance']; balEls.forEach(id => { const el = document.getElementById(id); if(el) el.innerText = (userData.points || 0).toLocaleString(); }); }
+    function openGame(game) { document.querySelectorAll('.game-overlay-fs').forEach(e => e.style.display='none'); document.getElementById('game-'+game).style.display = 'flex'; updateBetDisplays(); }
+    function closeGame() { document.querySelectorAll('.game-overlay-fs').forEach(e => e.style.display='none'); }
+    function resetGameUI(game) { document.querySelectorAll('.result-modal').forEach(m => m.style.display = 'none'); if(game === 'hl') { document.getElementById('mainCard').classList.remove('is-flipped'); setTimeout(() => generateHLCard(), 300); } if(game === 'roulette') { document.getElementById('wheelInner').style.transform = 'rotate(0deg)'; } }
+    function deductPoints(amt) { db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) - amt); }
+    function addPoints(amt) { db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) + amt); }
+
+    // REMOVED BONANZA GAME LOGIC
+
+    function spinRoulette() { if(userData.points < currentBet) return showToast("Insufficient RB Coins"); deductPoints(currentBet); const wheel = document.getElementById('wheelInner'); const ball = document.querySelector('.roulette-ball'); const deg = 1000 + Math.random() * 2000; wheel.style.transition = "transform 3s cubic-bezier(0.15, 0.85, 0.15, 1)"; wheel.style.transform = `rotate(${deg}deg)`; ball.style.animation = "spinBall 3s ease-out forwards"; playSound('spin'); setTimeout(() => { const isWin = Math.random() < globalWinRate; const modal = document.getElementById('rouletteResult'); const title = document.getElementById('rouletteTitle'); const sub = document.getElementById('rouletteSub'); modal.style.display = 'flex'; if(isWin) { const win = currentBet * 2; addPoints(win); title.innerText = "YOU WON!"; title.className = "res-title res-win"; sub.innerText = "+" + win + " RB Coins"; playSound('win'); } else { title.innerText = "YOU LOST"; title.className = "res-title res-loss"; sub.innerText = "Better luck next time"; playSound('lose'); } ball.style.animation = "none"; }, 3000); }
+    let currentCardVal = 7; function generateHLCard() { currentCardVal = Math.floor(Math.random() * 13) + 1; document.getElementById('cardValDisplay').innerText = currentCardVal; }
+    function guessHighLow(choice) { if(userData.points < currentBet) return showToast("Low Balance"); deductPoints(currentBet); const card = document.getElementById('mainCard'); card.classList.add('is-flipped'); playSound('cardFlip'); setTimeout(() => { const nextVal = Math.floor(Math.random() * 13) + 1; const win = (choice === 'high' && nextVal > currentCardVal) || (choice === 'low' && nextVal < currentCardVal); document.getElementById('cardValDisplay').innerText = nextVal; card.classList.remove('is-flipped'); currentCardVal = nextVal; const modal = document.getElementById('hlResult'); const title = document.getElementById('hlTitle'); const sub = document.getElementById('hlSub'); modal.style.display = 'flex'; if(win) { const prize = currentBet * 2; addPoints(prize); title.innerText = "CORRECT!"; title.className = "res-title res-win"; sub.innerText = "+" + prize + " RB Coins"; playSound('win'); } else { title.innerText = "WRONG!"; title.className = "res-title res-loss"; sub.innerText = "Next card was " + nextVal; playSound('lose'); } }, 600); }
+    function pullSlotLever() { if(userData.points < currentBet) return showToast("No RB Coins"); deductPoints(currentBet); const reels = [document.getElementById('reel1'), document.getElementById('reel2'), document.getElementById('reel3')]; reels.forEach(r => r.classList.add('reel-spinning')); playSound('spin'); setTimeout(() => { const syms = ['🍒','🍋','🔔','💎','7️⃣']; const isWin = Math.random() < (globalWinRate / 2); let res = [syms[Math.floor(Math.random()*syms.length)], syms[Math.floor(Math.random()*syms.length)], syms[Math.floor(Math.random()*syms.length)]]; if(isWin) { const winSym = syms[Math.floor(Math.random()*syms.length)]; res = [winSym, winSym, winSym]; } reels.forEach((r, i) => { r.classList.remove('reel-spinning'); r.classList.add('reel-bounce'); r.querySelector('span').innerText = res[i]; setTimeout(()=>r.classList.remove('reel-bounce'), 400); }); const won = (res[0] === res[1] && res[1] === res[2]); const modal = document.getElementById('slotResult'); modal.style.display = 'flex'; if(won) { const winAmt = currentBet * 10; document.getElementById('slotTitle').innerText = "JACKPOT!"; document.getElementById('slotTitle').className = "res-title res-win"; document.getElementById('slotSub').innerText = "+" + winAmt + " RB Coins"; addPoints(winAmt); playSound('win'); } else { document.getElementById('slotTitle').innerText = "LOSE"; document.getElementById('slotTitle').className = "res-title res-loss"; document.getElementById('slotSub').innerText = "Try again!"; playSound('lose'); } }, 2000); }
+    function playColor(color) { if(userData.points < currentBet) return showToast("No RB Coins"); deductPoints(currentBet); const dices = document.querySelectorAll('.color-dice'); dices.forEach(d => d.style.background = "#333"); playSound('tumble'); setTimeout(() => { const colors = ['yellow','white','pink','blue','red','green']; const res = [colors[Math.floor(Math.random()*6)], colors[Math.floor(Math.random()*6)], colors[Math.floor(Math.random()*6)]]; const colorMap = { 'yellow':'#facc15', 'white':'#f8fafc', 'pink':'#ec4899', 'blue':'#3b82f6', 'red':'#ef4444', 'green':'#22c55e' }; dices.forEach((d, i) => d.style.background = colorMap[res[i]]); const matches = res.filter(c => c === color).length; const modal = document.getElementById('colorResult'); modal.style.display = 'flex'; if(matches > 0) { const win = currentBet * (matches + 1); addPoints(win); document.getElementById('colorTitle').innerText = "WIN x" + matches; document.getElementById('colorTitle').className = "res-title res-win"; document.getElementById('colorSub').innerText = "+" + win; playSound('win'); } else { document.getElementById('colorTitle').innerText = "LOSE"; document.getElementById('colorTitle').className = "res-title res-loss"; document.getElementById('colorSub').innerText = "No matches"; playSound('lose'); } }, 1500); }
+    function playDice(choice) { if(userData.points < currentBet) return showToast("No RB Coins"); deductPoints(currentBet); document.getElementById('dice1').innerText = "?"; document.getElementById('dice2').innerText = "?"; playSound('tumble'); setTimeout(() => { const d1 = Math.floor(Math.random()*6)+1; const d2 = Math.floor(Math.random()*6)+1; const total = d1 + d2; document.getElementById('dice1').innerText = d1; document.getElementById('dice2').innerText = d2; document.getElementById('diceTotal').innerText = total; let win = false; let mult = 2; if(choice === 'under' && total < 7) win = true; if(choice === 'over' && total > 7) win = true; if(choice === 'seven' && total === 7) { win = true; mult = 5; } const modal = document.getElementById('diceResult'); modal.style.display = 'flex'; if(win) { const p = currentBet * mult; addPoints(p); document.getElementById('diceTitle').innerText = "WIN!"; document.getElementById('diceTitle').className = "res-title res-win"; document.getElementById('diceSub').innerText = "+" + p; playSound('win'); } else { document.getElementById('diceTitle').innerText = "LOSE"; document.getElementById('diceTitle').className = "res-title res-loss"; document.getElementById('diceSub').innerText = "Result: " + total; playSound('lose'); } }, 1000); }
+    function playLucky9() { if(userData.points < currentBet) return showToast("No RB Coins"); deductPoints(currentBet); playSound('cardFlip'); const p1 = Math.floor(Math.random()*10); const p2 = Math.floor(Math.random()*10); const b1 = Math.floor(Math.random()*10); const b2 = Math.floor(Math.random()*10); const pScore = (p1+p2)%10; const bScore = (b1+b2)%10; document.getElementById('l9-player').innerHTML = `<div class="card-face card-front" style="color:${Math.random()>.5?'red':'black'}">${pScore}</div>`; document.getElementById('l9-banker').innerHTML = `<div class="card-face card-front" style="color:${Math.random()>.5?'red':'black'}">${bScore}</div>`; document.getElementById('l9-p-score').innerText = pScore; document.getElementById('l9-b-score').innerText = bScore; setTimeout(() => { const modal = document.getElementById('l9Result'); modal.style.display = 'flex'; if(pScore > bScore) { const win = currentBet * 2; addPoints(win); document.getElementById('l9Title').innerText = "WINNER!"; document.getElementById('l9Title').className = "res-title res-win"; document.getElementById('l9Sub').innerText = "+" + win; playSound('win'); } else { document.getElementById('l9Title').innerText = "LOSE"; document.getElementById('l9Title').className = "res-title res-loss"; document.getElementById('l9Sub').innerText = "Banker Wins"; playSound('lose'); } }, 800); }
+
+    function openMenuModal() { document.getElementById('menuModal').style.display='flex'; }
+    function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length === 11) { db.ref('users/'+auth.currentUser.uid).update({ gcash: num }); showToast("GCash Saved!"); } else showToast("Invalid GCash Number"); }
+    function redeemItem(name, cost) { if(userData.points >= cost) { if(!userData.gcash) return showToast("Save GCash number first!"); showCustomConfirm("REDEEM REWARD?", "Exchange " + cost + " pts for " + name + "?", () => { deductPoints(cost); db.ref('redemptions').push({ uid: userData.uid, name: userData.name, gcash: userData.gcash, item: name, cost: cost, status: 'pending', timestamp: Date.now() }); showToast("Request Sent!"); loadHistory(); }); } else { showToast("Insufficient RB Coins"); } }
+    function loadHistory() { const list = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { list.innerHTML = ""; s.forEach(r => { const d = r.val(); let color = '#fbbf24'; if(d.status === 'sent') color = '#10b981'; if(d.status === 'denied') color = '#ef4444'; list.innerHTML += `<div class="history-item"><div><div style="font-weight:700; font-size:12px;">${d.item}</div><div style="font-size:10px; opacity:0.6;">${fixDate(d.timestamp)}</div></div><div style="font-size:10px; font-weight:800; color:${color}; text-transform:uppercase; border:1px solid ${color}; padding:2px 6px; border-radius:4px;">${d.status}</div></div>`; }); }); }
+
 </script>
 </body>
 </html>
