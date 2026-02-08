@@ -294,7 +294,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     
-    // --- SERVICE ACCOUNT LOGIC ---
+    // --- SERVICE ACCOUNT LOGIC (REQUIRED FOR HTTP V1) ---
     let serviceAccount = null;
     const savedSA = localStorage.getItem('rb_service_account');
     if(savedSA) { try { serviceAccount = JSON.parse(savedSA); document.getElementById('serviceAccountJson').value = savedSA; } catch(e) {} }
@@ -302,7 +302,7 @@
         const val = document.getElementById('serviceAccountJson').value.trim();
         try { const json = JSON.parse(val); if(!json.private_key || !json.client_email) throw new Error("Invalid JSON"); serviceAccount = json; localStorage.setItem('rb_service_account', val); alert("Service Account Saved! Push notifications enabled."); } catch(e) { alert("Error: Invalid Service Account JSON. Please copy the whole file."); }
     }
-    // (JWT Generation)
+    // (JWT Generation using jsrsasign)
     function getAccessToken() {
         return new Promise((resolve, reject) => {
             if(!serviceAccount) return reject("No Service Account Loaded");
@@ -541,10 +541,37 @@
         try {
             const accessToken = await getAccessToken();
             const projectId = serviceAccount.project_id;
-            const response = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, { method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: { token: token, notification: { title: title, body: body }, webpush: { notification: { icon: 'https://cdn-icons-png.flaticon.com/512/566/566295.png' } } } }) });
+            const response = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, { 
+                method: 'POST', 
+                headers: { 
+                    'Authorization': `Bearer ${accessToken}`, 
+                    'Content-Type': 'application/json' 
+                }, 
+                body: JSON.stringify({ 
+                    message: { 
+                        token: token, 
+                        notification: { 
+                            title: title, 
+                            body: body 
+                        }, 
+                        webpush: { 
+                            notification: { 
+                                icon: 'https://i.imgur.com/7D8u8h6.png'
+                            },
+                            fcm_options: {
+                                link: window.location.origin
+                            }
+                        },
+                        data: {
+                            url: window.location.origin
+                        }
+                    } 
+                }) 
+            });
             if(!response.ok) { const err = await response.json(); console.error("FCM Error:", err); return false; } return true;
         } catch(e) { console.error("Push Token Gen Error:", e); return false; }
     }
+    
     async function sendPushToAll(title, body) { const statusEl = document.getElementById('sendStatus'); statusEl.innerText = "Sending..."; db.ref('users').once('value', async s => { const promises = []; s.forEach(u => { const user = u.val(); if(user.fcmToken) { promises.push(sendPushNotification(user.fcmToken, title, body)); } }); await Promise.all(promises); statusEl.innerText = `Sent push to devices (if available).`; }); }
     
     function sendAdminNotification() { 
