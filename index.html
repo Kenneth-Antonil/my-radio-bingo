@@ -1531,21 +1531,23 @@
     function deleteNotif(key) { showCustomConfirm("DELETE?", "Remove message?", () => { db.ref('notifications/' + auth.currentUser.uid + '/' + key).remove(); renderNotifs(); showToast("Message Deleted"); }); }
     function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { const data = s.val(); const banner = document.getElementById('jackpotBanner'); if(data && data.active) { banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = data.amount; isJackpotActive = true; const rawAmount = parseInt(data.amount.replace(/[^0-9]/g, '')); currentJackpotAmount = isNaN(rawAmount) ? 500 : rawAmount; } else { banner.style.display = 'none'; isJackpotActive = false; currentJackpotAmount = 500; } }); }
 
-    // === NEW FUNCTION: LISTEN FOR VIDEO FEED UPDATES ===
+    // === NEW FUNCTION: SMART VIDEO STREAM HANDLER ===
     function listenVideoUpdate() {
         db.ref('gameState/videoSettings').on('value', s => {
             const v = s.val();
             if(v && v.url) {
-                let embedUrl = v.url;
-                // Auto-convert standard YouTube watch links to embed links
-                if(v.url.includes('watch?v=')) {
-                    embedUrl = v.url.replace('watch?v=', 'embed/');
-                    if(embedUrl.includes('&')) embedUrl = embedUrl.split('&')[0]; // Clean params
-                } else if(!v.url.includes('embed') && !v.url.includes('http')) {
-                    // Assuming it's just an ID
-                    embedUrl = "https://www.youtube.com/embed/" + v.url;
+                // SMART PARSER: Extracts ID from any Youtube URL (youtu.be, watch?v=, embed, etc.)
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+                const match = v.url.match(regExp);
+                let videoId = (match && match[2].length === 11) ? match[2] : null;
+
+                // Fallback: If no match, maybe they pasted JUST the ID?
+                if(!videoId && v.url.length === 11) videoId = v.url;
+
+                if (videoId) {
+                    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1`;
+                    document.getElementById('liveVideoFrame').src = embedUrl;
                 }
-                document.getElementById('liveVideoFrame').src = embedUrl + "?autoplay=1&mute=1";
             }
         });
     }
