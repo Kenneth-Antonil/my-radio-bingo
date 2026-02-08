@@ -54,6 +54,47 @@
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
         }
 
+        /* === INSTALL GATE LANDING PAGE STYLES (NEW) === */
+        #installGate {
+            position: fixed; inset: 0; z-index: 2147483647; /* Highest possible Z-index */
+            background: #0f172a;
+            background-image: radial-gradient(circle at top right, rgba(14, 165, 233, 0.2), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(251, 191, 36, 0.1), transparent 40%);
+            display: none; /* Controlled by JS */
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 30px;
+        }
+        .gate-logo {
+            font-size: 64px; font-weight: 900; letter-spacing: -3px; color: white;
+            margin-bottom: 10px; text-shadow: 0 0 40px rgba(14, 165, 233, 0.6);
+            animation: floatLogo 3s ease-in-out infinite;
+        }
+        .gate-logo span { color: var(--accent-glow); }
+        @keyframes floatLogo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        
+        .gate-title { font-size: 24px; font-weight: 800; color: white; margin-bottom: 15px; line-height: 1.3; }
+        .gate-desc { font-size: 14px; color: #cbd5e1; max-width: 320px; margin-bottom: 40px; line-height: 1.6; opacity: 0.8; }
+        
+        .gate-btn-install {
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            color: white; border: none; padding: 18px 40px; border-radius: 50px;
+            font-weight: 900; font-size: 16px; cursor: pointer;
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+            transition: transform 0.2s; display: flex; align-items: center; gap: 10px;
+            border: 2px solid rgba(255,255,255,0.2);
+            animation: pulseBtn 2s infinite;
+        }
+        .gate-btn-install:active { transform: scale(0.95); }
+        @keyframes pulseBtn { 0% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(14, 165, 233, 0); } 100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); } }
+
+        .gate-ios-note {
+            margin-top: 30px; background: rgba(255,255,255,0.05); padding: 20px;
+            border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); max-width: 320px;
+            text-align: left; display: none; /* Shown by JS for iOS */
+        }
+        .ios-step { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; font-size: 13px; color: #e2e8f0; }
+        .ios-icon { color: var(--accent-glow); }
+
         /* === NOTIFICATION BLOCKER GATE === */
         #notifBlocker {
             position: fixed; inset: 0; z-index: 9999999;
@@ -645,6 +686,23 @@
     </style>
 </head>
 <body>
+
+<div id="installGate">
+    <div class="gate-logo">RB<span>LIVE</span></div>
+    <div class="gate-title">Install to Play</div>
+    <p class="gate-desc">To access the full Radio Bingo & Casino experience, you must install the official App.</p>
+    
+    <button id="gateInstallBtn" class="gate-btn-install" onclick="triggerInstall()">
+        <i data-lucide="download-cloud" style="width:20px; height:20px;"></i> INSTALL APP
+    </button>
+
+    <div id="gateIosNote" class="gate-ios-note">
+        <div style="font-weight:800; color:white; margin-bottom:10px; text-transform:uppercase;">iOS Instructions:</div>
+        <div class="ios-step"><i data-lucide="share" class="ios-icon" style="width:16px;"></i> 1. Tap the Share button below.</div>
+        <div class="ios-step"><i data-lucide="plus-square" class="ios-icon" style="width:16px;"></i> 2. Scroll down & tap 'Add to Home Screen'.</div>
+        <div class="ios-step"><i data-lucide="check" class="ios-icon" style="width:16px;"></i> 3. Launch App from Home Screen.</div>
+    </div>
+</div>
 
 <div id="notifBlocker">
     <div class="notif-gate-icon">
@@ -1509,6 +1567,7 @@
     window.addEventListener('load', () => { 
         setTimeout(hideSplash, 2000); 
         checkNotifGate(); 
+        checkInstallGate(); // CHECK IF INSTALLED
     });
     setTimeout(hideSplash, 5000);
     function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
@@ -1562,10 +1621,60 @@
     const installBtnProfile = document.getElementById('pwaInstallBtnProfile');
     const bottomBanner = document.getElementById('pwaInstallBanner');
     const bottomBtn = document.getElementById('pwaBottomBtn');
+    
+    // === NEW INSTALL GATE LOGIC ===
+    function checkInstallGate() {
+        const gate = document.getElementById('installGate');
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        
+        if (isStandalone) {
+            // App is installed and running
+            gate.style.display = 'none';
+        } else {
+            // Browser Mode -> Show Gate
+            gate.style.display = 'flex';
+            
+            // Check if iOS
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if(isIOS) {
+                document.getElementById('gateInstallBtn').style.display = 'none';
+                document.getElementById('gateIosNote').style.display = 'block';
+            }
+        }
+        checkInstallState(); // Run old logic too
+    }
+    
     function checkInstallState() { if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) { if(installBtnProfile) installBtnProfile.style.display = 'none'; if(bottomBanner) bottomBanner.style.display = 'none'; } else { if(installBtnProfile) installBtnProfile.style.display = 'flex'; } }
+    
     checkInstallState();
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; if(bottomBanner) bottomBanner.style.display = 'flex'; });
-    function triggerInstall() { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then((choiceResult) => { if (choiceResult.outcome === 'accepted') { if(installBtnProfile) installBtnProfile.style.display = 'none'; if(bottomBanner) bottomBanner.style.display = 'none'; } deferredPrompt = null; }); } else { document.getElementById('installGuideModal').style.display = 'flex'; const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; if (isIOS) { showGuide('ios'); } else { showGuide('android'); } } if(bottomBanner) bottomBanner.style.display = 'none'; }
+    
+    window.addEventListener('beforeinstallprompt', (e) => { 
+        e.preventDefault(); 
+        deferredPrompt = e; 
+        // We don't show bottomBanner if Gate is active, but we keep logic just in case
+        if(bottomBanner && document.getElementById('installGate').style.display === 'none') {
+             bottomBanner.style.display = 'flex'; 
+        }
+    });
+
+    function triggerInstall() { 
+        if (deferredPrompt) { 
+            deferredPrompt.prompt(); 
+            deferredPrompt.userChoice.then((choiceResult) => { 
+                if (choiceResult.outcome === 'accepted') { 
+                    if(installBtnProfile) installBtnProfile.style.display = 'none'; 
+                    if(bottomBanner) bottomBanner.style.display = 'none'; 
+                } 
+                deferredPrompt = null; 
+            }); 
+        } else { 
+            document.getElementById('installGuideModal').style.display = 'flex'; 
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; 
+            if (isIOS) { showGuide('ios'); } else { showGuide('android'); } 
+        } 
+        if(bottomBanner) bottomBanner.style.display = 'none'; 
+    }
+    
     function showGuide(os) { document.querySelectorAll('.install-tab-btn').forEach(b => b.classList.remove('active')); if(os === 'android') { document.getElementById('tabAndroid').classList.add('active'); document.getElementById('guideAndroidContent').style.display = 'block'; document.getElementById('guideIOSContent').style.display = 'none'; } else { document.getElementById('tabIOS').classList.add('active'); document.getElementById('guideAndroidContent').style.display = 'none'; document.getElementById('guideIOSContent').style.display = 'block'; } }
     if(installBtnProfile) installBtnProfile.addEventListener('click', triggerInstall);
     if(bottomBtn) bottomBtn.addEventListener('click', triggerInstall);
