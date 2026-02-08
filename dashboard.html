@@ -423,7 +423,7 @@
         
         db.ref('pointLogs/' + uid).orderByChild('timestamp').limitToLast(50).once('value', s => {
             if(!s.exists()) {
-                list.innerHTML = "<div style='opacity:0.5; text-align:center; padding:20px; font-size:12px;'>No history found for this user.</div>";
+                list.innerHTML = "<div style='opacity:0.5; text-align:center; padding:20px; font-size:12px;'>No history found for this user. (Note: Only new transactions are saved)</div>";
                 return;
             }
             list.innerHTML = "";
@@ -579,12 +579,32 @@
             list.prepend(div);
         });
     });
+
+    // --- UPDATED CASHOUT STATUS LOGIC ---
     function updateStatus(key, status, data) {
         if(confirm(`${status} this?`)) {
             db.ref('redemptions/' + key).update({ status: status });
             const statusMsg = status === 'sent' ? `Ang iyong ${data.item} ay na-ipadala na! 頂` : `Ang iyong ${data.item} ay na-deny. 笶形`;
             db.ref('notifications/' + data.uid).push({ msg: statusMsg, time: Date.now() });
-            if(status === 'denied') db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost);
+            
+            // If denied, refund points AND LOG IT
+            if(status === 'denied') {
+                db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost, (err, committed) => {
+                     if(committed) {
+                         // LOG THE REFUND
+                         db.ref(`pointLogs/${data.uid}`).push({
+                             amount: data.cost,
+                             reason: `Refund: ${data.item}`,
+                             timestamp: firebase.database.ServerValue.TIMESTAMP,
+                             by: "System/Admin"
+                         });
+                         // If user is currently selected in UI, refresh
+                         if(document.getElementById('selectedUserForPoints').value === data.uid) {
+                             renderUserHistory(data.uid);
+                         }
+                     }
+                 });
+            }
         }
     }
 </script>
