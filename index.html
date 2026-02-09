@@ -4,21 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0f172a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Radio Bingo Rewards | Play Free & Earn</title>
-    
     <script>
         if (window.location.pathname.endsWith("index.html")) {
             var newPath = window.location.pathname.replace(/index\.html$/, "");
             window.history.replaceState({}, document.title, newPath);
         }
     </script>
-
     <link rel="icon" type="image/png" href="https://i.imgur.com/7D8u8h6.png">
-    <link rel="apple-touch-icon" href="https://i.imgur.com/7D8u8h6.png">
-    <link rel="manifest" href="manifest.json">
-    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -26,1293 +19,462 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
     <script src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
     <script src="https://pl28660496.effectivegatecpm.com/a6/64/bf/a664bf7e7084386b4f4b428590030df3.js"></script>
 
     <style>
-        /* === ORIGINAL VARIABLES === */
         :root { 
-            --bg-overlay: rgba(15, 23, 42, 0.95); 
-            --glass-surface: rgba(30, 41, 59, 0.75);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            
-            --accent: #0ea5e9; /* Ocean Blue */
-            --accent-glow: #38bdf8;
-            --text: #ffffff; 
-            --gold: #fbbf24; 
-            --gold-shine: #fcd34d;
-            --success: #10b981; 
-            --danger: #ef4444; 
-            --minigame: #f472b6;
-            
-            /* Messenger Colors */
-            --messenger-blue: #0084ff;
-            --messenger-grey: #3e4042;
-            --messenger-bg: #000000;
+            --bg-overlay: rgba(15, 23, 42, 0.95); --glass-surface: rgba(30, 41, 59, 0.75); --glass-border: rgba(255, 255, 255, 0.1);
+            --accent: #0ea5e9; --accent-glow: #38bdf8; --text: #ffffff; --gold: #fbbf24; --success: #10b981; --danger: #ef4444;
+            --messenger-blue: #0084ff; --messenger-grey: #3e4042;
         }
-        
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: radial-gradient(circle at top center, #1e293b 0%, #0f172a 60%, #020617 100%);
-            background-attachment: fixed;
-            color: var(--text); 
-            margin: 0; 
-            padding-bottom: 30px; 
-            overflow-x: hidden; 
-            min-height: 100vh;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-        }
+        body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at top center, #1e293b 0%, #0f172a 60%, #020617 100%); background-attachment: fixed; color: var(--text); margin: 0; padding-bottom: 30px; overflow-x: hidden; min-height: 100vh; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
-        /* === CUSTOM POP-UP BANNER STYLES (Retained) === */
-        #customPopupBanner {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 9999999;
-            background: rgba(0,0,0,0.85);
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            padding: 20px;
-            backdrop-filter: blur(5px);
-        }
-
-        /* === EXISTING SKINS (Retained) === */
-        .card-skin-neon { border: 2px solid #06b6d4 !important; box-shadow: 0 0 20px #06b6d4, inset 0 0 20px rgba(6, 182, 212, 0.2) !important; background: rgba(8, 51, 68, 0.9) !important; }
+        /* === SKINS === */
+        .card-skin-neon { border: 2px solid #06b6d4 !important; background: rgba(8, 51, 68, 0.9) !important; box-shadow: 0 0 20px #06b6d4; }
         .card-skin-neon .cell { border-color: #06b6d4 !important; color: #67e8f9 !important; text-shadow: 0 0 5px #06b6d4 !important; }
-        
-        .card-skin-gold { border: 2px solid #f59e0b !important; box-shadow: 0 0 25px #f59e0b, inset 0 0 10px #f59e0b !important; background: linear-gradient(135deg, #451a03, #000) !important; }
+        .card-skin-gold { border: 2px solid #f59e0b !important; background: linear-gradient(135deg, #451a03, #000) !important; }
         .card-skin-gold .cell { border-color: #fbbf24 !important; color: #fcd34d !important; font-family: 'Times New Roman', serif; }
         
-        .card-skin-pink { border: 2px solid #ec4899 !important; box-shadow: 0 0 20px #ec4899 !important; background: rgba(80, 7, 36, 0.9) !important; }
-        .card-skin-pink .cell { border-color: #f472b6 !important; color: #fbcfe8 !important; border-radius: 50% !important; }
-        
-        .card-skin-matrix { border: 2px solid #22c55e !important; box-shadow: 0 0 15px #22c55e !important; background: black !important; font-family: 'Courier New', monospace; }
-        .card-skin-matrix .cell { border-color: #22c55e !important; color: #4ade80 !important; border-radius: 0 !important; }
-
-        /* === NEW CHARACTER SKINS (Added as requested) === */
-        
-        /* Hello Kitty Skin */
-        .card-skin-kitty { 
-            border: 4px solid #ff69b4 !important; 
-            box-shadow: 0 0 20px #ff69b4, inset 0 0 20px rgba(255, 105, 180, 0.2) !important; 
-            background: radial-gradient(circle, #fff0f5, #ffc0cb) !important; 
-        }
-        .card-skin-kitty .cell { 
-            border-color: #ff1493 !important; 
-            color: #d10056 !important; 
-            border-radius: 12px !important;
-            background: rgba(255,255,255,0.6) !important;
-            text-shadow: none !important;
-            font-weight: 900 !important;
-        }
+        /* NEW SKINS */
+        .card-skin-kitty { border: 4px solid #ff69b4 !important; box-shadow: 0 0 20px #ff69b4, inset 0 0 20px rgba(255, 105, 180, 0.2) !important; background: radial-gradient(circle, #fff0f5, #ffc0cb) !important; }
+        .card-skin-kitty .cell { border-color: #ff1493 !important; color: #d10056 !important; border-radius: 12px !important; background: rgba(255,255,255,0.6) !important; font-weight: 900 !important; text-shadow:none !important; }
         .card-skin-kitty .cell.hit { background: #ff1493 !important; color: white !important; }
 
-        /* Stitch Skin */
-        .card-skin-stitch { 
-            border: 4px solid #1e90ff !important; 
-            box-shadow: 0 0 20px #1e90ff !important; 
-            background: linear-gradient(135deg, #00008b, #4169e1) !important; 
-        }
-        .card-skin-stitch .cell { 
-            border-color: #87cefa !important; 
-            color: #e0ffff !important; 
-            font-family: sans-serif;
-            background: rgba(255,255,255,0.1) !important;
-        }
+        .card-skin-stitch { border: 4px solid #1e90ff !important; box-shadow: 0 0 20px #1e90ff !important; background: linear-gradient(135deg, #00008b, #4169e1) !important; }
+        .card-skin-stitch .cell { border-color: #87cefa !important; color: #e0ffff !important; background: rgba(255,255,255,0.1) !important; font-family: sans-serif; }
         .card-skin-stitch .cell.hit { background: #1e90ff !important; color: white !important; box-shadow: 0 0 10px #87cefa; }
 
-        /* Doraemon Skin */
-        .card-skin-doraemon { 
-            border: 4px solid #00bfff !important; 
-            background: linear-gradient(180deg, #0096FF, #ffffff 80%) !important; 
-            box-shadow: 0 0 25px #00bfff !important;
-        }
-        .card-skin-doraemon .cell { 
-            border: 2px solid #ff0000 !important; /* Red collar */
-            border-radius: 50% !important;
-            background: white !important; 
-            color: #0096FF !important;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
-            text-shadow: none !important;
-        }
-        .card-skin-doraemon .cell.hit { background: #ffdd00 !important; color: black !important; border-color: black !important; } /* Bell color */
+        .card-skin-doraemon { border: 4px solid #00bfff !important; background: linear-gradient(180deg, #0096FF, #ffffff 80%) !important; box-shadow: 0 0 25px #00bfff !important; }
+        .card-skin-doraemon .cell { border: 2px solid #ff0000 !important; border-radius: 50% !important; background: white !important; color: #0096FF !important; text-shadow:none !important; }
+        .card-skin-doraemon .cell.hit { background: #ffdd00 !important; color: black !important; border-color: black !important; }
 
-        /* Mickey Mouse Skin */
-        .card-skin-mickey { 
-            border: 4px solid #ff0000 !important; 
-            background: black !important; 
-            box-shadow: 0 0 20px #ff0000 !important;
-        }
-        .card-skin-mickey .cell { 
-            border-color: #ffff00 !important; /* Yellow Shoes */
-            color: white !important; 
-            border-radius: 50% !important;
-            background: #ff0000 !important; /* Red Shorts */
-        }
+        .card-skin-mickey { border: 4px solid #ff0000 !important; background: black !important; box-shadow: 0 0 20px #ff0000 !important; }
+        .card-skin-mickey .cell { border-color: #ffff00 !important; color: white !important; border-radius: 50% !important; background: #ff0000 !important; }
         .card-skin-mickey .cell.hit { background: #ffff00 !important; color: black !important; transform: scale(1.1); }
 
-        /* Spongebob Skin */
-        .card-skin-spongebob {
-            border: 4px solid #8b4513 !important; /* Brown pants */
-            background: #ffff00 !important; /* Yellow */
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.2) !important;
-        }
-        .card-skin-spongebob .cell {
-            border: 2px dashed #a0522d !important;
-            background: rgba(255,255,255,0.8) !important;
-            color: #333 !important;
-            border-radius: 8px !important;
-            text-shadow: none !important;
-        }
+        .card-skin-spongebob { border: 4px solid #8b4513 !important; background: #ffff00 !important; box-shadow: inset 0 0 50px rgba(0,0,0,0.2) !important; }
+        .card-skin-spongebob .cell { border: 2px dashed #a0522d !important; background: rgba(255,255,255,0.8) !important; color: #333 !important; border-radius: 8px !important; text-shadow: none !important; }
         .card-skin-spongebob .cell.hit { background: #ffffff !important; color: #000 !important; border: 2px solid #000 !important; }
 
-        /* Store Navigation Tabs (Retained) */
-        .store-nav { display: flex; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 12px; }
-        .store-tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: #94a3b8; font-weight: 800; border-radius: 8px; cursor: pointer; font-size: 11px; text-transform: uppercase; }
-        .store-tab-btn.active { background: var(--accent); color: white; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3); }
+        /* UI COMPONENTS */
+        #loginOverlay { position: fixed; inset: 0; background: radial-gradient(circle at top right, #1e293b, #0f172a 70%); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .login-app-container { width: 100%; max-width: 400px; text-align: center; }
+        .app-logo-lg { font-size: 56px; font-weight: 900; color: white; margin-bottom: 10px; }
+        .btn-main-auth { background: white; color: black; border: none; width: 100%; padding: 18px; border-radius: 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; }
 
-        /* Skins Shop Grid (Retained) */
+        .nav { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .points-badge { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.4)); color: #fff; padding: 0 12px; height: 38px; border-radius: 12px; font-weight: 800; border: 1px solid rgba(251, 191, 36, 0.6); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        
+        .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 10px; }
+        .video-feed-wrapper { margin-bottom: 15px; border-radius: 24px; overflow: hidden; background: #000; border: 2px solid rgba(255,255,255,0.2); aspect-ratio: 16/9; position: relative; }
+        
+        .card { background: var(--glass-surface); backdrop-filter: blur(20px); border-radius: 24px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--glass-border); transition: all 0.3s ease; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .cell { aspect-ratio: 1; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.15); color: white; position: relative; }
+        .cell.hit { background: linear-gradient(135deg, var(--accent), #2563eb); transform: scale(1.05); border-color: rgba(255,255,255,0.6); box-shadow: 0 5px 15px rgba(59, 130, 246, 0.6); }
+        .cell.win-glow { background: #10b981 !important; color: white; border: 2px solid #fff; box-shadow: 0 0 25px var(--success); }
+        
+        .chat-box { height: 480px; display: flex; flex-direction: column; background: #111827; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; margin-top: 15px; }
+        .chat-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-end; }
+        .bubble { padding: 10px 14px; font-size: 13px; color: #e2e8f0; background: #374151; border-radius: 18px; word-break: break-word; }
+        
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(15px); }
+        .modal-content { background: rgba(30, 41, 59, 0.95); border-radius: 30px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.2); max-height: 90vh; overflow-y: auto; }
+        
+        .store-nav { display: flex; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 12px; }
+        .store-tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: #94a3b8; font-weight: 800; border-radius: 8px; cursor: pointer; }
+        .store-tab-btn.active { background: var(--accent); color: white; }
+        
         .skins-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .skin-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); text-align: center; position: relative; overflow: hidden; }
+        .skin-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
         .skin-preview { height: 60px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; }
-        .skin-name { font-size: 12px; font-weight: 800; color: white; margin-bottom: 4px; }
-        .skin-cost { font-size: 10px; color: var(--gold); margin-bottom: 8px; font-weight: 700; }
-        .btn-buy-skin { width: 100%; padding: 8px; border: none; border-radius: 8px; font-weight: 800; font-size: 10px; cursor: pointer; }
-        .btn-buy-skin.owned { background: rgba(255,255,255,0.1); color: #cbd5e1; cursor: default; }
+        .btn-buy-skin { width: 100%; padding: 8px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; }
         .btn-buy-skin.buy { background: var(--gold); color: black; }
         .btn-buy-skin.equip { background: var(--success); color: white; }
-
-        /* Task List Styles (Retained) */
-        .task-list { display: flex; flex-direction: column; gap: 10px; }
-        .task-item { background: linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden; }
-        .task-info h4 { margin: 0; font-size: 13px; font-weight: 900; color: white; letter-spacing: 0.5px; }
-        .task-info p { margin: 3px 0 0; font-size: 10px; color: #94a3b8; }
-        .task-reward { background: rgba(251, 191, 36, 0.15); color: var(--gold); padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; margin-top: 5px; display: inline-block; border: 1px solid rgba(251, 191, 36, 0.3); }
-        .btn-do-task { background: var(--accent); color: white; border: none; padding: 10px 18px; border-radius: 10px; font-weight: 800; font-size: 11px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3); min-width: 80px; z-index: 2; }
-        .btn-do-task:hover { transform: translateY(-2px); }
-        .btn-do-task:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
-
-        /* === OPTIMIZED GAME JUICE ANIMATIONS === */
-        .flying-coin {
-            position: fixed; width: 24px; height: 24px;
-            background-image: url('https://cdn-icons-png.flaticon.com/512/217/217853.png');
-            background-size: contain; background-repeat: no-repeat;
-            z-index: 99999; pointer-events: none; will-change: transform, opacity;
-        }
-
-        @keyframes shake-hard {
-            0% { transform: translate(0, 0); } 25% { transform: translate(-3px, 3px); }
-            50% { transform: translate(3px, -3px); } 75% { transform: translate(-3px, -3px); }
-            100% { transform: translate(0, 0); }
-        }
-        .shake-effect { animation: shake-hard 0.3s ease-in-out; will-change: transform; }
-
-        .float-loss {
-            /* Kept for code compatibility, but rarely used now that gambling is gone */
-            position: fixed; color: #ef4444; font-weight: 900; font-size: 18px;
-            z-index: 100000; pointer-events: none; animation: floatDownFade 1s ease-out forwards;
-            text-shadow: 0 1px 2px black;
-        }
-        @keyframes floatDownFade { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(40px) scale(0.8); opacity: 0; } }
-
-        /* ... [Kept all other Modal/Popup Styles - InstallGate, NotifBlocker, Splash, Toast] ... */
-        /* To save space, I assume the previous standard modal CSS is here (Login, Nav, etc.) 
-           I will explicitly include the modified parts below. */
+        .btn-buy-skin.owned { background: rgba(255,255,255,0.1); color: #cbd5e1; }
         
-        #installGate, #notifBlocker, #splash-screen, #customToast, #customConfirmModal, #grandJackpotModal, #loginOverlay, .nav, .disclaimer, .user-stats, .icon-btn, .points-badge, #userImg {
-            /* Existing styles are preserved */
-            position: fixed; /* or relative/absolute depending on original */
-        }
+        /* Utils */
+        #customToast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%); background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 16px 24px; border-radius: 16px; z-index: 100000; color: white; transition: transform 0.4s; }
+        #customToast.show { transform: translateX(-50%) translateY(0); }
+        .flying-coin { position: fixed; width: 24px; height: 24px; background-image: url('https://cdn-icons-png.flaticon.com/512/217/217853.png'); background-size: contain; z-index: 99999; pointer-events: none; }
         
-        /* Explicitly ensuring Modal Styles are safe */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(15px); }
-        .modal-content { background: rgba(30, 41, 59, 0.95); border-radius: 30px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.2); max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.8); }
-
-        /* === REMOVING GAMBLING / CASINO CSS STYLES === */
-        /* I will comment these out visually in the games section, but keep the classes defined 
-           if you ever want to revert, though we are hiding the HTML elements. */
-
-        /* === BINGO CARD & GAMEPLAY (Retained) === */
-        .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 10px; }
-        .card { background: var(--glass-surface); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--glass-border); position: relative; transition: all 0.3s ease; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
-        
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; position: relative; }
-        .cell { aspect-ratio: 1; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; border: 1px solid rgba(255,255,255,0.15); transition: all 0.3s; z-index: 2; position: relative; overflow: hidden; box-shadow: inset 0 2px 5px rgba(255,255,255,0.05); color: white; text-shadow: 0 2px 3px black; }
-        .cell.hit { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; transform: scale(1.05); border-color: rgba(255,255,255,0.6); box-shadow: 0 5px 15px rgba(59, 130, 246, 0.6); text-shadow: 0 2px 2px rgba(0,0,0,0.5); }
-        
-        /* Video Container */
-        .video-feed-wrapper { margin-bottom: 15px; border-radius: 24px; overflow: hidden; background: #000; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
-        .video-container { position: relative; width: 100%; aspect-ratio: 16 / 9; }
-        
-        /* Chat Box (Retained) */
-        .chat-box { height: 480px; display: flex; flex-direction: column; background: #111827; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; position: relative; }
-        .chat-row { display: flex; gap: 10px; max-width: 100%; animation: fadeIn 0.3s ease; align-items: flex-end; margin-bottom: 12px;}
-        .bubble { padding: 10px 14px; font-size: 13px; line-height: 1.4; color: #e2e8f0; word-break: break-word; font-weight: 500; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: relative; }
+        /* Notifications & Install Gates */
+        #notifBlocker, #installGate, #splash-screen { position: fixed; inset: 0; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0f172a; text-align: center; padding: 20px; }
+        #notifBlocker { background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(10px); display: none; }
+        #installGate { background-image: radial-gradient(circle at top right, rgba(14, 165, 233, 0.2), transparent 40%); display: none; }
+        #splash-screen { transition: opacity 0.8s; }
+        .gate-btn-install { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; border: none; padding: 15px 30px; border-radius: 50px; font-weight: 900; margin-top: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
-<div id="customPopupBanner">
-    <div style="position:relative; max-width:400px; width:100%; animation: popScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-        <button onclick="closeCustomBanner()" style="position:absolute; top:-15px; right:-10px; background:linear-gradient(135deg, #ef4444, #b91c1c); color:white; border:2px solid white; border-radius:50%; width:36px; height:36px; font-weight:bold; cursor:pointer; z-index:10; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,0.3);"><i data-lucide="x" style="width:20px"></i></button>
-        <img id="customBannerImg" src="" style="width:100%; border-radius:20px; border:2px solid rgba(255,255,255,0.2); box-shadow:0 20px 50px rgba(0,0,0,0.8); cursor:pointer; object-fit:cover;" onclick="clickCustomBanner()">
-    </div>
-</div>
+
+<div id="customToast"><span id="toastMsg">Notification!</span></div>
+
+<div id="splash-screen"><h1 style="font-size:40px; font-weight:900; color:white;">RB<span>LIVE</span></h1></div>
 
 <div id="installGate">
-    <div class="gate-logo">RB<span>REWARDS</span></div>
-    <div class="gate-title">Install to Play</div>
-    <p class="gate-desc">To access the full Radio Bingo experience, you must install the official App.</p>
-    <button id="gateInstallBtn" class="gate-btn-install" onclick="triggerInstall()">
-        <i data-lucide="download-cloud" style="width:20px; height:20px;"></i> INSTALL APP
-    </button>
-    <div id="gateIosNote" class="gate-ios-note">
-        <div style="font-weight:800; color:white; margin-bottom:10px; text-transform:uppercase;">iOS Instructions:</div>
-        <div class="ios-step"><i data-lucide="share" class="ios-icon" style="width:16px;"></i> 1. Tap the Share button below.</div>
-        <div class="ios-step"><i data-lucide="plus-square" class="ios-icon" style="width:16px;"></i> 2. Scroll down & tap 'Add to Home Screen'.</div>
-        <div class="ios-step"><i data-lucide="check" class="ios-icon" style="width:16px;"></i> 3. Launch App from Home Screen.</div>
-    </div>
+    <h1 style="font-size:32px; font-weight:900; color:white;">RB<span>REWARDS</span></h1>
+    <p style="color:#cbd5e1; margin-bottom:20px;">Install the app to play.</p>
+    <button class="gate-btn-install" onclick="triggerInstall()">INSTALL APP</button>
 </div>
 
 <div id="notifBlocker">
-    <div class="notif-gate-icon"><i data-lucide="bell-ring" style="width: 40px; height: 40px; color: #3b82f6;"></i></div>
-    <div class="notif-gate-title">ENABLE NOTIFICATIONS</div>
-    <p class="notif-gate-desc">To ensure fairness and real-time updates for Bingo Calls, this app requires push notifications to be enabled.</p>
-    <button onclick="requestGatePermission()" class="btn-allow-notif"><i data-lucide="check-circle" style="width:20px"></i> ALLOW NOTIFICATIONS</button>
-    <div id="blockedHelp" class="blocked-help">
-        <strong style="color:var(--danger); display:block; margin-bottom:5px;">⚠️ NOTIFICATIONS ARE BLOCKED!</strong>
-        1. Click the <b>Lock Icon 🔒</b> or <b>Settings Icon</b> beside the URL bar.<br>
-        2. Click <b>Permissions</b> or <b>Site Settings</b>.<br>
-        3. Find <b>Notifications</b> and set to <b>Allow</b>.<br>
-        4. Reload this page.
-    </div>
-</div>
-
-<div id="splash-screen">
-    <div class="splash-logo">RB<span>LIVE</span></div>
-    <div class="splash-loader"></div>
-</div>
-
-<div id="customToast">
-    <i data-lucide="info" class="toast-icon"></i>
-    <span class="toast-msg" id="toastMsg">Notification!</span>
-</div>
-
-<div id="customConfirmModal">
-    <div class="conf-content">
-        <i data-lucide="alert-circle" style="width: 40px; height: 40px; color: var(--gold); margin-bottom: 15px;"></i>
-        <h3 class="conf-title" id="confTitle">Confirm Action</h3>
-        <p class="conf-msg" id="confMsg">Are you sure you want to proceed?</p>
-        <div class="conf-actions">
-            <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
-            <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
-        </div>
-    </div>
+    <i data-lucide="bell-off" style="width:50px; height:50px; color:#ef4444; margin-bottom:15px;"></i>
+    <h2 style="color:white; margin:0;">ENABLE NOTIFICATIONS</h2>
+    <p style="color:#94a3b8; font-size:14px;">Required for game alerts.</p>
+    <button onclick="requestGatePermission()" style="margin-top:20px; padding:12px 24px; background:#3b82f6; color:white; border:none; border-radius:12px; font-weight:bold;">ALLOW</button>
 </div>
 
 <div id="loginOverlay">
-    <div class="login-bg-blob blob-1"></div>
-    <div class="login-bg-blob blob-2"></div>
     <div class="login-app-container">
         <div class="app-logo-lg">RB<span>LIVE</span></div>
-        <p class="app-tagline">The ultimate live bingo experience.<br>Play, Win, and Redeem Rewards.</p>
-        <div class="promo-badge">
-            <i data-lucide="gift" style="width:16px"></i> 
-            <span>Register now & Get 500 Free RB Coins</span>
-        </div>
-        <div class="auth-btn-group">
-            <button class="btn-main-auth" onclick="login()">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:20px">
-                Sign in with Google
-            </button>
-            <button class="btn-sec-auth" onclick="login()">Create Account</button>
-        </div>
+        <p style="color:#cbd5e1; margin-bottom:30px;">Play Bingo & Earn Rewards (No Betting)</p>
+        <button class="btn-main-auth" onclick="login()">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:20px"> Sign in with Google
+        </button>
     </div>
-    <div class="login-footer-legal">
-        <div class="legal-text">
-            <span>⚠️ DISCLAIMER: NOT A GAMBLING SITE</span>
-            <span style="opacity: 0.6; font-size: 9px;">For entertainment purposes only. No real money betting.</span>
+</div>
+
+<div id="customConfirmModal" class="modal">
+    <div class="modal-content" style="text-align:center;">
+        <h3 id="confTitle" style="margin-top:0;">Confirm</h3>
+        <p id="confMsg" style="color:#cbd5e1;">Are you sure?</p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="closeCustomConfirm()" style="background:rgba(255,255,255,0.1); border:none; padding:10px 20px; color:white; border-radius:8px;">Cancel</button>
+            <button id="confYesBtn" style="background:var(--accent); border:none; padding:10px 20px; color:white; border-radius:8px;">Confirm</button>
         </div>
     </div>
 </div>
 
 <div class="nav">
-    <div style="display:flex; align-items:center;"><span style="font-weight: 900; font-size: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.8);">RB <span style="color:var(--accent-glow)">LIVE</span></span></div>
-    <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
-        <div class="user-stats">
-            <div class="icon-btn" onclick="openMessenger()">
-                <i data-lucide="message-circle" style="width:20px"></i>
-                <span id="pmBadge" class="notif-badge"></span>
-            </div>
-            <div class="icon-btn" onclick="openNotifs()">
-                <i data-lucide="bell" style="width:20px"></i>
-                <span id="notifDot" class="notif-badge"></span>
-            </div>
-            <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'">
-                <i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span>
-            </div>
+    <div style="font-weight:900; font-size:20px;">RB <span style="color:var(--accent-glow)">LIVE</span></div>
+    <div id="userPanel" style="display:none; align-items:center; gap:10px;">
+        <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'">
+            <i data-lucide="coins" style="width:16px"></i> <span id="userPoints">0</span>
         </div>
-        <img id="userImg" onclick="openMenuModal()" src="">
+        <img id="userImg" src="" style="width:40px; height:40px; border-radius:50%; border:2px solid var(--accent);" onclick="document.getElementById('menuModal').style.display='flex'">
     </div>
 </div>
 
-<div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang. Earn rewards by playing Bingo!</div></div>
-
 <div class="container">
-    
-    <div class="ad-container-global">
-        <script type="text/javascript">
-            atOptions = { 'key' : '59f94c5cb7bcd84edb277947774c3b9d', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-        </script>
-        <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"></script>
-    </div>
-
     <div class="video-feed-wrapper">
-        <div class="video-container">
-            <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
-            
-            <div id="videoOfflineState" style="display:none; position:absolute; inset:0; background:#0f172a; flex-direction:column; align-items:center; justify-content:center; z-index:20;">
-                <div style="width:60px; height:60px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:15px; animation:pulse-ring 2s infinite;">
-                    <i data-lucide="radio" style="width:30px; height:30px; color:#94a3b8;"></i>
-                </div>
-                <h3 style="margin:0; font-size:16px; font-weight:900; color:white; letter-spacing:1px;">WAITING FOR LIVE</h3>
-                <p style="margin:5px 0 0; font-size:12px; color:#64748b;">Stand by for the next draw.</p>
-            </div>
-            
-            <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none;"></iframe>
+        <div id="videoOfflineState" style="display:none; position:absolute; inset:0; background:#0f172a; align-items:center; justify-content:center; flex-direction:column;">
+            <i data-lucide="radio" style="width:40px; height:40px; color:#475569;"></i>
+            <span style="color:white; font-weight:bold; margin-top:10px;">WAITING FOR LIVE</span>
         </div>
+        <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" frameborder="0" allowfullscreen style="border:none;"></iframe>
     </div>
 
-    <div id="jackpotBanner">
-        <div class="jp-label-new">
-            <i data-lucide="crown" style="width: 16px;"></i> GRAND PRIZE <i data-lucide="crown" style="width: 16px;"></i>
-        </div>
-        <span class="jackpot-amount" id="jackpotDisplayVal">5,000</span>
-        <div style="font-size: 10px; opacity: 0.7; margin-top: 5px; color: #fbbf24;">RB COINS WINNER</div>
+    <div id="jackpotBanner" style="display:none; background:linear-gradient(135deg, #451a03, #000); border:1px solid var(--gold); padding:15px; border-radius:16px; margin-bottom:15px; text-align:center;">
+        <div style="color:var(--gold); font-size:12px; font-weight:bold;">GRAND PRIZE</div>
+        <div style="font-size:32px; font-weight:900; color:white;" id="jackpotDisplayVal">0</div>
     </div>
 
-    <div id="nextDrawBanner" class="next-draw-container">
-        <div class="nd-icon"><i data-lucide="calendar-days"></i></div>
-        <div class="nd-info">
-            <div class="next-draw-label">Susunod na Bola</div>
-            <div id="nextDrawTime" class="next-draw-time">--:-- --</div>
-        </div>
-    </div>
-
-    <div id="winnerBanner">
-        <span><i data-lucide="party-popper" style="width:24px; height:24px;"></i> BINGO WINNER!</span>
-        <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
-    </div>
+    <div id="winnerBanner" style="display:none; background:#10b981; color:white; padding:10px; border-radius:12px; text-align:center; margin-bottom:15px; font-weight:bold;"></div>
 
     <div id="bingoTab">
-        <div class="draw-panel">
-            <div class="prev-balls" id="ballRow"></div>
-            <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">NOW DRAWN</span><span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.5);">--</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:10px; border-radius:12px;">
+            <div id="ballRow" style="display:flex; gap:5px; overflow-x:auto;"></div>
+            <div id="currentBall" style="font-size:36px; font-weight:900; color:white; min-width:60px; text-align:center;">--</div>
         </div>
 
         <div class="card" id="bingoCardContainer">
-            <div id="lateOverlay" class="late-overlay">
-                <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom:15px; filter: drop-shadow(0 0 10px var(--danger));"></i>
-                <div class="late-text">GAME ONGOING</div>
-                <div class="late-subtext">Sorry, ongoing na ang bola. Bawal na sumali ang late.</div>
-                <div style="margin-top:20px; background:rgba(255,255,255,0.1); padding:10px 20px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
-                    <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
-                    <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
-                </div>
-            </div>
-            <div id="gameOverOverlay" class="game-over-overlay">
-                <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom:15px; filter: drop-shadow(0 0 15px var(--gold));"></i>
-                <div class="late-text">Game Finished</div>
-                <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
-            </div>
-            <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
-                <div class="pattern-box">
-                    <div class="pattern-dot"></div>
-                    <span class="pattern-text" id="patternName">Normal Bingo</span>
-                </div>
-                <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <span id="patternName" style="color:var(--gold); font-weight:bold;">Normal Bingo</span>
+                <button id="newCardBtn" onclick="generateNewCard()" style="background:var(--accent); border:none; color:white; padding:5px 10px; border-radius:6px; font-weight:bold; cursor:pointer;">NEW CARD</button>
             </div>
             <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
             <div class="grid" id="bingoGrid"></div>
         </div>
     </div>
-    
-    <div class="chat-box" style="margin-top:15px;">
-        <div class="chat-header">
-            <i data-lucide="message-square" style="width:18px; color:var(--accent-glow)"></i>
-            <h3>LIVE STREAM CHAT</h3>
-        </div>
-        <div id="chatList"></div>
-        <div id="replyIndicator" class="reply-indicator" style="display:none; padding: 5px 15px; background: #374151; color: #d1d5db; font-size: 11px;">
-            <span id="replyText">Replying to...</span>
-            <button onclick="cancelReply()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" style="width:14px"></i></button>
-        </div>
-        <div class="chat-input-area">
-            <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
-                <input type="text" id="chatIn" placeholder="Say something..." autocomplete="off">
-                <button type="submit" class="send-btn">
-                    <i data-lucide="send" style="width:16px"></i>
-                </button>
-            </form>
-        </div>
-    </div>
-</div>
 
-<div id="grandJackpotModal" onclick="this.style.display='none'">
-    <div class="jackpot-rays"></div>
-    <div class="jackpot-content">
-        <div class="icon-glow">
-            <i data-lucide="crown" style="width: 80px; height: 80px;"></i>
+    <div class="chat-box">
+        <div style="padding:10px; background:rgba(255,255,255,0.05); font-weight:bold; border-bottom:1px solid rgba(255,255,255,0.1);">LIVE CHAT</div>
+        <div id="chatList" style="flex:1; overflow-y:auto; padding:10px;"></div>
+        <div style="padding:10px; display:flex; gap:10px;">
+            <input type="text" id="chatIn" placeholder="Chat here..." style="flex:1; padding:10px; border-radius:20px; border:none; background:#374151; color:white;">
+            <button onclick="sendChat()" style="background:var(--accent); border:none; width:40px; height:40px; border-radius:50%; color:white;"><i data-lucide="send" style="width:16px"></i></button>
         </div>
-        <h1 class="jp-title">BINGO WINNER!</h1>
-        <h2 class="jp-amount" id="grandPrizeAmount">10,000 RB COINS</h2>
-        <div class="jp-name" id="jpWinnerName">WINNER NAME</div>
-        <p style="font-size: 11px; color: white; opacity: 0.7; margin-top: 20px;">Tap anywhere to close</p>
     </div>
 </div>
 
 <div id="storeModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-            <div>
-                <h3 style="margin:0; font-size: 20px; font-weight: 900;">MARKETPLACE</h3>
-                <p style="margin: 5px 0 0 0; font-size: 11px; opacity: 0.8; font-weight: 600;">Redeem, Shop Skins, or Earn</p>
-            </div>
-            <div class="points-badge" style="height:35px; border-radius: 10px;"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
-        </div>
-
+        <h3>MARKETPLACE</h3>
         <div class="store-nav">
-            <button class="store-tab-btn active" onclick="switchStoreTab('cashout')" id="tabBtnCash">Cash Out</button>
+            <button class="store-tab-btn active" onclick="switchStoreTab('cashout')" id="tabBtnCash">Redeem</button>
             <button class="store-tab-btn" onclick="switchStoreTab('skins')" id="tabBtnSkins">Skins</button>
-            <button class="store-tab-btn" onclick="switchStoreTab('earn')" id="tabBtnEarn" style="color:var(--gold);">Tasks</button>
+            <button class="store-tab-btn" onclick="switchStoreTab('earn')" id="tabBtnEarn">Tasks</button>
         </div>
 
-        <div class="glass-panel" style="padding: 15px; border-radius: 18px; margin-bottom: 20px; border: 1px dashed var(--gold); text-align: center; position: relative; overflow: hidden;">
-            <h4 style="margin: 0 0 10px 0; color: var(--gold); font-size: 14px; text-transform: uppercase;">⚡ FREE RB COINS ⚡</h4>
-            
-            <div id="adTimerOverlay" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 50; align-items: center; justify-content: center; flex-direction: column;">
-                <div id="adStatusIcon" style="font-size: 30px; margin-bottom: 10px;">📺</div>
-                <div style="font-size: 18px; font-weight: 900; color: white;" id="adCountdown">15s</div>
-                <div style="font-size: 11px; color: #cbd5e1; padding: 0 20px; margin-top: 5px;" id="adStatusText">Do not close the ad tab!</div>
+        <div id="storeSection-cashout">
+            <div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div><b>₱20 GCash</b><br><small>50,000 Coins</small></div>
+                <button class="btn-buy-skin equip" onclick="redeemItem('₱20 GCash', 50000)">REDEEM</button>
             </div>
-
-            <div id="adCaptchaOverlay" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 51; align-items: center; justify-content: center; flex-direction: column;">
-                <div style="font-size: 14px; font-weight: 700; color: var(--accent-glow); margin-bottom: 10px;">HUMAN VERIFICATION</div>
-                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 12px; margin-bottom: 10px;">
-                    <span id="mathQ" style="font-size: 20px; font-weight: 900; color: white;">5 + 3 = ?</span>
-                </div>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" id="mathAns" style="width: 60px; padding: 8px; border-radius: 8px; border: 1px solid var(--accent); background: #0f172a; color: white; text-align: center; font-weight: 800;">
-                    <button onclick="verifyAdMath()" style="background: var(--success); border: none; padding: 8px 12px; border-radius: 8px; color: white; font-weight: 900;">OK</button>
-                </div>
+            <div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+                <div><b>₱50 GCash</b><br><small>125,000 Coins</small></div>
+                <button class="btn-buy-skin equip" onclick="redeemItem('₱50 GCash', 125000)">REDEEM</button>
             </div>
-
-            <button id="btnWatchAd" onclick="startStrictWatch()" style="background: linear-gradient(135deg, #f59e0b, #b45309); width: 100%; border: none; padding: 15px; border-radius: 12px; font-weight: 900; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4); text-shadow: 0 1px 2px black;">
-                <i data-lucide="play-circle" style="width: 20px;"></i> WATCH AD (+50 Coins)
-            </button>
-            <p style="font-size: 10px; opacity: 0.6; margin-top: 8px;">*Timer pauses if you stay on this page.</p>
-        </div>
-
-        <div id="storeSection-cashout" style="display:block;">
-            <div class="reward-grid">
-                <div class="reward-item">
-                    <div class="reward-main">
-                        <div class="reward-icon-box"><i data-lucide="wallet" style="width:22px"></i></div>
-                        <div class="reward-info"><b>₱20 GCash</b><small><i data-lucide="database" style="width:10px"></i> 50,000 Coins</small></div>
-                    </div>
-                    <button class="btn-redeem" onclick="redeemItem('₱20 GCash', 50000)">Redeem</button>
-                </div>
-                <div class="reward-item">
-                    <div class="reward-main">
-                        <div class="reward-icon-box" style="color:var(--gold); background:rgba(251, 191, 36, 0.1); border-color:rgba(251, 191, 36, 0.3);"><i data-lucide="gift" style="width:22px"></i></div>
-                        <div class="reward-info"><b>₱50 GCash</b><small><i data-lucide="database" style="width:10px"></i> 125,000 Coins</small></div>
-                    </div>
-                    <button class="btn-redeem" onclick="redeemItem('₱50 GCash', 125000)">Redeem</button>
-                </div>
-            </div>
-             <p style="text-align: center; font-size: 10px; opacity: 0.6; margin-top: 25px; line-height: 1.5; text-shadow:0 1px 2px black;">*Processing of GCash may take 24-48 hours.<br>Make sure your GCash number is correct.</p>
         </div>
 
         <div id="storeSection-skins" style="display:none;">
-            <p style="font-size:11px; opacity:0.7; margin-bottom:15px; text-align:center;">Customize your Bingo Card. Look rich, play rich.</p>
             <div class="skins-grid">
+                <div class="skin-item">
+                    <div class="skin-preview" style="background:radial-gradient(circle, #fff0f5, #ffc0cb); border:2px solid #ff69b4; color:#d10056;">HK</div>
+                    <div class="skin-name">Hello Kitty</div>
+                    <div class="skin-cost">75k</div>
+                    <button class="btn-buy-skin buy" id="btn-skin-kitty" onclick="buyOrEquipSkin('kitty', 75000)">BUY</button>
+                </div>
+                <div class="skin-item">
+                    <div class="skin-preview" style="background:linear-gradient(135deg, #00008b, #4169e1); border:2px solid #1e90ff; color:#e0ffff;">ST</div>
+                    <div class="skin-name">Stitch</div>
+                    <div class="skin-cost">75k</div>
+                    <button class="btn-buy-skin buy" id="btn-skin-stitch" onclick="buyOrEquipSkin('stitch', 75000)">BUY</button>
+                </div>
+                <div class="skin-item">
+                    <div class="skin-preview" style="background:#0096FF; border:2px solid #00bfff; color:white; border-radius:50%;">DM</div>
+                    <div class="skin-name">Doraemon</div>
+                    <div class="skin-cost">60k</div>
+                    <button class="btn-buy-skin buy" id="btn-skin-doraemon" onclick="buyOrEquipSkin('doraemon', 60000)">BUY</button>
+                </div>
+                <div class="skin-item">
+                    <div class="skin-preview" style="background:black; border:2px solid #ff0000; color:yellow;">MM</div>
+                    <div class="skin-name">Mickey</div>
+                    <div class="skin-cost">60k</div>
+                    <button class="btn-buy-skin buy" id="btn-skin-mickey" onclick="buyOrEquipSkin('mickey', 60000)">BUY</button>
+                </div>
+                <div class="skin-item">
+                    <div class="skin-preview" style="background:#ffff00; border:2px solid #8b4513; color:#333;">SB</div>
+                    <div class="skin-name">Spongebob</div>
+                    <div class="skin-cost">50k</div>
+                    <button class="btn-buy-skin buy" id="btn-skin-spongebob" onclick="buyOrEquipSkin('spongebob', 50000)">BUY</button>
+                </div>
                 <div class="skin-item">
                     <div class="skin-preview" style="background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.1);">B</div>
                     <div class="skin-name">Classic</div>
                     <div class="skin-cost">Free</div>
                     <button class="btn-buy-skin equip" id="btn-skin-default" onclick="equipSkin('default')">EQUIP</button>
                 </div>
-                <div class="skin-item">
-                    <div class="skin-preview" style="background:rgba(8,51,68,1); border:2px solid #06b6d4; color:#67e8f9; text-shadow:0 0 5px #06b6d4;">B</div>
-                    <div class="skin-name">Neon City</div>
-                    <div class="skin-cost">50,000 Coins</div>
-                    <button class="btn-buy-skin buy" id="btn-skin-neon" onclick="buyOrEquipSkin('neon', 50000)">BUY</button>
-                </div>
-
-                <div class="skin-item">
-                    <div class="skin-preview" style="background:radial-gradient(circle, #fff0f5, #ffc0cb); border:2px solid #ff69b4; color:#d10056;">HK</div>
-                    <div class="skin-name">Hello Kitty</div>
-                    <div class="skin-cost">75,000 Coins</div>
-                    <button class="btn-buy-skin buy" id="btn-skin-kitty" onclick="buyOrEquipSkin('kitty', 75000)">BUY</button>
-                </div>
-
-                <div class="skin-item">
-                    <div class="skin-preview" style="background:linear-gradient(135deg, #00008b, #4169e1); border:2px solid #1e90ff; color:#e0ffff;">ST</div>
-                    <div class="skin-name">Stitch</div>
-                    <div class="skin-cost">75,000 Coins</div>
-                    <button class="btn-buy-skin buy" id="btn-skin-stitch" onclick="buyOrEquipSkin('stitch', 75000)">BUY</button>
-                </div>
-
-                <div class="skin-item">
-                    <div class="skin-preview" style="background:#0096FF; border:2px solid #00bfff; color:white; border-radius:50%;">DM</div>
-                    <div class="skin-name">Doraemon</div>
-                    <div class="skin-cost">60,000 Coins</div>
-                    <button class="btn-buy-skin buy" id="btn-skin-doraemon" onclick="buyOrEquipSkin('doraemon', 60000)">BUY</button>
-                </div>
-
-                <div class="skin-item">
-                    <div class="skin-preview" style="background:black; border:2px solid #ff0000; color:yellow;">MM</div>
-                    <div class="skin-name">Mickey</div>
-                    <div class="skin-cost">60,000 Coins</div>
-                    <button class="btn-buy-skin buy" id="btn-skin-mickey" onclick="buyOrEquipSkin('mickey', 60000)">BUY</button>
-                </div>
-
-                 <div class="skin-item">
-                    <div class="skin-preview" style="background:#ffff00; border:2px solid #8b4513; color:#333;">SB</div>
-                    <div class="skin-name">Spongebob</div>
-                    <div class="skin-cost">50,000 Coins</div>
-                    <button class="btn-buy-skin buy" id="btn-skin-spongebob" onclick="buyOrEquipSkin('spongebob', 50000)">BUY</button>
-                </div>
-
             </div>
         </div>
 
         <div id="storeSection-earn" style="display:none;">
-            <p style="font-size:11px; opacity:0.7; margin-bottom:15px; text-align:center;">Complete tasks to earn huge coins instantly.</p>
-            <div class="task-list">
-                <div class="task-item" style="border-color: #ef4444; background: linear-gradient(90deg, rgba(69,10,10,0.8), rgba(15,23,42,0.8));">
-                    <div class="task-info">
-                        <h4 style="color:#fca5a5;">Watch Video Task</h4>
-                        <p>Watch full video to unlock reward</p>
-                        <span class="task-reward" style="background: rgba(239,68,68,0.2); border-color:#ef4444; color:#fca5a5;">+2,000 Coins</span>
-                    </div>
-                    <button class="btn-do-task" style="background:#ef4444;" id="btn-task-video" onclick="openVideoLocker('video')">WATCH</button>
-                </div>
+            <div id="adTimerOverlay" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.95); z-index:50; flex-direction:column; align-items:center; justify-content:center;">
+                <h1 id="adCountdown" style="color:white; font-size:40px;">15s</h1>
+                <p style="color:#cbd5e1;">Watching Ad...</p>
             </div>
-        </div>
-    </div>
-</div>
-<div id="pmModal" class="pm-modal">
-    <div class="pm-container">
-        <div id="pmInboxView" style="display:flex; flex-direction:column; height:100%;">
-            <div class="pm-header">
-                <h3>Chats</h3>
-                <button onclick="document.getElementById('pmModal').style.display='none'" style="background:rgba(255,255,255,0.1); border:none; width:30px; height:30px; border-radius:50%; color:white; display:flex; align-items:center; justify-content:center;"><i data-lucide="x" style="width:16px;"></i></button>
-            </div>
-            <div id="pmList" class="pm-inbox-list"></div>
-        </div>
-
-        <div id="pmChatView" class="pm-chat-view">
-            <div class="pm-chat-header">
-                <button onclick="backToInbox()" style="background:none; border:none; color:var(--messenger-blue);"><i data-lucide="arrow-left"></i></button>
-                <img id="chatTargetImg" style="width:36px; height:36px; border-radius:50%; margin-left:5px;">
-                <div style="display:flex; flex-direction:column; margin-left:10px;">
-                    <span id="chatTargetName" style="font-weight:700; font-size:15px; color:white;">User</span>
-                    <span style="font-size:11px; color:#b0b3b8;">Active now</span>
-                </div>
-            </div>
-            <div id="pmMessages" class="pm-messages"></div>
-            <form class="pm-input-area" onsubmit="event.preventDefault(); sendPrivateMessage();">
-                <input type="text" id="pmInput" class="pm-styled-input" placeholder="Type a message..." autocomplete="off">
-                <button type="submit" style="background:none; border:none; color:var(--messenger-blue); cursor:pointer;"><i data-lucide="send" style="width:20px"></i></button>
-            </form>
-        </div>
-    </div>
-</div>
-
-<div id="notifModal" class="modal" onclick="this.style.display='none'">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <div style="background:rgba(255,255,255,0.1); padding:8px; border-radius:10px;"><i data-lucide="inbox" style="width:20px;"></i></div>
-                <h3 style="margin:0; font-size:18px;">Inbox</h3>
-            </div>
-            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
-        </div>
-        <div id="notifList"></div>
-    </div>
-</div>
-
-<div id="installGuideModal" class="modal" onclick="this.style.display='none'">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; font-size:18px; font-weight:900;">INSTALL GUIDE</h3>
-            <button onclick="document.getElementById('installGuideModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
-        </div>
-        <div class="install-tabs">
-            <button class="install-tab-btn active" id="tabAndroid" onclick="showGuide('android')">ANDROID</button>
-            <button class="install-tab-btn" id="tabIOS" onclick="showGuide('ios')">iOS</button>
-        </div>
-        <div id="guideAndroidContent">
-            <div class="guide-step"><div class="step-num">1</div><div class="step-text">Pindutin ang <b>Three Dots (⋮)</b> sa upper right corner ng Google Chrome browser.</div></div>
-            <div class="guide-step"><div class="step-num">2</div><div class="step-text">Hanapin at pindutin ang <b>"Install App"</b> o <b>"Add to Home Screen"</b>.</div></div>
-            <div class="guide-step"><div class="step-num">3</div><div class="step-text">Click <b>Install</b> para mapunta ito sa iyong home screen.</div></div>
-        </div>
-        <div id="guideIOSContent" style="display:none;">
-            <div class="guide-step"><div class="step-num">1</div><div class="step-text">Gamitin ang <b>Safari Browser</b> at pindutin ang <b>Share Icon</b> <i data-lucide="share" style="width:12px"></i> sa ibaba.</div></div>
-            <div class="guide-step"><div class="step-num">2</div><div class="step-text">Mag-scroll pababa at hanapin ang <b>"Add to Home Screen"</b> <i data-lucide="plus-square" style="width:12px"></i>.</div></div>
-            <div class="guide-step"><div class="step-num">3</div><div class="step-text">Click <b>Add</b> sa upper right corner.</div></div>
+            <button onclick="startStrictWatch()" style="background:linear-gradient(135deg, #f59e0b, #b45309); width:100%; border:none; padding:15px; border-radius:12px; font-weight:900; color:white;">📺 WATCH AD (+50 Coins)</button>
         </div>
     </div>
 </div>
 
 <div id="menuModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <div class="profile-header">
-            <img id="profileImgLarge" class="profile-img-large" src="">
-            <div class="profile-name-info">
-                <h2 class="profile-name" id="profileNameDisplay">User Name</h2>
-                <span class="profile-uid" id="profileUidDisplay">UID: ---</span>
-            </div>
-            <button onclick="document.getElementById('menuModal').style.display='none'" style="background:none; border:none; color:white; opacity:0.5;"><i data-lucide="x"></i></button>
-        </div>
-        
-        <button id="pwaInstallBtnProfile" style="width:100%; padding:15px; background:linear-gradient(90deg, #0ea5e9, #2563eb); color:white; border:none; border-radius:16px; font-weight:900; margin-bottom:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 8px 20px rgba(14, 165, 233, 0.4); border:1px solid rgba(255,255,255,0.2);">
-            <i data-lucide="download-cloud" style="width:24px; height:24px;"></i>
-            <div style="text-align:left;">
-                <span style="display:block; font-size:14px;">INSTALL APP</span>
-                <span style="display:block; font-size:10px; opacity:0.8; font-weight:500;">Click here to install now</span>
-            </div>
-        </button>
-
-        <div class="gcash-section">
-            <span style="font-size:10px; font-weight:800; color:var(--accent-glow); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="smartphone" style="width:12px"></i> GCash Number</span>
-            <div style="display:flex; gap:10px;">
-                <input type="number" id="gcashInput" class="styled-input" placeholder="09xxxxxxxxx">
-                <button onclick="saveGcash(); playSound('click');" style="background:var(--accent); border:none; color:white; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer; box-shadow:0 4px 10px rgba(59, 130, 246, 0.3);">SAVE</button>
+        <h3>PROFILE</h3>
+        <h2 id="profileNameDisplay">User</h2>
+        <div style="margin-bottom:15px;">
+            <label style="font-size:10px;">GCASH NUMBER</label>
+            <div style="display:flex; gap:5px;">
+                <input type="number" id="gcashInput" style="flex:1; padding:10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.2); color:white; border-radius:8px;">
+                <button onclick="saveGcash()" style="background:var(--accent); color:white; border:none; padding:0 15px; border-radius:8px;">SAVE</button>
             </div>
         </div>
-        <div class="ref-container">
-            <span style="font-size:10px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="share-2" style="width:12px"></i> Invite & Earn</span>
-            <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom:10px;" onclick="this.select(); document.execCommand('copy'); showToast('Copied Link!'); playSound('click');">
-            <div id="referralInputSection">
-                <span style="font-size:10px; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px; margin-top:15px;"><i data-lucide="ticket" style="width:12px"></i> Claim Referral Code</span>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="referralInput" class="styled-input" placeholder="ENTER CODE">
-                    <button onclick="claimReferral(); playSound('click');" style="background:var(--gold); border:none; color:black; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer; box-shadow:0 4px 10px rgba(251, 191, 36, 0.3);">CLAIM</button>
-                </div>
-            </div>
-        </div>
-        <div class="history-box">
-            <span style="font-size:10px; font-weight:800; color:white; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="history" style="width:12px"></i> Transaction History</span>
-            <div id="historyList" class="history-list"></div>
-        </div>
-        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); border-radius:14px; font-weight:800; margin-top:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-            <i data-lucide="log-out" style="width:18px"></i> Sign Out
-        </button>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:10px; background:var(--danger); color:white; border:none; border-radius:8px;">Sign Out</button>
     </div>
-</div>
-
-<div id="pwaInstallBanner">
-    <div>
-        <span class="pwa-text">INSTALL APP</span>
-        <span class="pwa-sub">Download for better experience!</span>
-    </div>
-    <button id="pwaBottomBtn" class="pwa-btn">INSTALL</button>
 </div>
 
 <script>
-    // === NOTIFICATION & INSTALL LOGIC ===
-    window.addEventListener('load', () => { 
-        setTimeout(hideSplash, 2000); 
-        checkNotifGate(); 
-        checkInstallGate(); 
-        initBannerListener(); 
-    });
-    setTimeout(hideSplash, 5000);
-    function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
-    
-    // Check Notification Gate
-    function checkNotifGate() {
-        const blocker = document.getElementById('notifBlocker');
-        const help = document.getElementById('blockedHelp');
-        if (!("Notification" in window)) { showToast("Notifications not supported."); blocker.style.display = 'none'; return; }
-        if (Notification.permission === "granted") { blocker.style.display = 'none'; } 
-        else if (Notification.permission === "denied") { blocker.style.display = 'flex'; help.style.display = 'block'; } 
-        else { blocker.style.display = 'flex'; help.style.display = 'none'; }
-    }
-
-    function requestGatePermission() {
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") { checkNotifGate(); requestNotifyPermission(); } 
-            else { checkNotifGate(); }
-        });
-    }
-
-    // Install Gate Logic
-    let deferredPrompt;
-    const installBtnProfile = document.getElementById('pwaInstallBtnProfile');
-    const bottomBanner = document.getElementById('pwaInstallBanner');
-    const bottomBtn = document.getElementById('pwaBottomBtn');
-    
-    function checkInstallGate() {
-        const gate = document.getElementById('installGate');
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-        if (isStandalone) { gate.style.display = 'none'; } 
-        else { 
-            gate.style.display = 'flex'; 
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            if(isIOS) { document.getElementById('gateInstallBtn').style.display = 'none'; document.getElementById('gateIosNote').style.display = 'block'; }
-        }
-        checkInstallState();
-    }
-    
-    function checkInstallState() { if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) { if(installBtnProfile) installBtnProfile.style.display = 'none'; if(bottomBanner) bottomBanner.style.display = 'none'; } else { if(installBtnProfile) installBtnProfile.style.display = 'flex'; } }
-    
-    window.addEventListener('beforeinstallprompt', (e) => { 
-        e.preventDefault(); deferredPrompt = e; 
-        if(bottomBanner && document.getElementById('installGate').style.display === 'none') { bottomBanner.style.display = 'flex'; }
-    });
-
-    function triggerInstall() { 
-        if (deferredPrompt) { 
-            deferredPrompt.prompt(); 
-            deferredPrompt.userChoice.then((choiceResult) => { 
-                if (choiceResult.outcome === 'accepted') { if(installBtnProfile) installBtnProfile.style.display = 'none'; if(bottomBanner) bottomBanner.style.display = 'none'; } 
-                deferredPrompt = null; 
-            }); 
-        } else { 
-            document.getElementById('installGuideModal').style.display = 'flex'; 
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; 
-            if (isIOS) { showGuide('ios'); } else { showGuide('android'); } 
-        } 
-        if(bottomBanner) bottomBanner.style.display = 'none'; 
-    }
-    
-    function showGuide(os) { document.querySelectorAll('.install-tab-btn').forEach(b => b.classList.remove('active')); if(os === 'android') { document.getElementById('tabAndroid').classList.add('active'); document.getElementById('guideAndroidContent').style.display = 'block'; document.getElementById('guideIOSContent').style.display = 'none'; } else { document.getElementById('tabIOS').classList.add('active'); document.getElementById('guideAndroidContent').style.display = 'none'; document.getElementById('guideIOSContent').style.display = 'block'; } }
-    if(installBtnProfile) installBtnProfile.addEventListener('click', triggerInstall);
-    if(bottomBtn) bottomBtn.addEventListener('click', triggerInstall);
-
-    // === UTILS ===
-    function showToast(msg) { const toast = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; toast.classList.add('show'); playSound('click'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
-    let confirmCallback = null;
-    function showCustomConfirm(title, msg, onYes) { document.getElementById('confTitle').innerText = title; document.getElementById('confMsg').innerText = msg; document.getElementById('customConfirmModal').style.display = 'flex'; confirmCallback = onYes; playSound('click'); }
-    function closeCustomConfirm() { document.getElementById('customConfirmModal').style.display = 'none'; confirmCallback = null; }
-    document.getElementById('confYesBtn').addEventListener('click', () => { if(confirmCallback) confirmCallback(); closeCustomConfirm(); });
-
-    lucide.createIcons();
-    // FIREBASE CONFIG (Kept)
+    // INIT
+    window.addEventListener('load', () => { setTimeout(()=>document.getElementById('splash-screen').style.opacity=0, 2000); setTimeout(()=>document.getElementById('splash-screen').style.display='none', 2800); checkNotifGate(); checkInstallGate(); });
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
-    let messaging; try { messaging = firebase.messaging(); } catch(e) { console.log("Messaging failed to init", e); }
-    
-    let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; let lastNotifiedDraw = ""; let selectedReplyId = null;
-    let globalWinRate = 0.40; let currentJackpotAmount = 500; let isJackpotActive = false;
+    let messaging; try { messaging = firebase.messaging(); } catch(e){}
 
-    // === AUDIO ===
-    const sounds = {
-        click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3'),
-        newBall: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3'),
-        pop: new Audio('https://cdn.freesound.org/previews/536/536108_1415754-lq.mp3'),
-        win: new Audio('https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3'),
-        lose: new Audio('https://cdn.freesound.org/previews/76/76376_877451-lq.mp3'),
-        cardFlip: new Audio('https://cdn.freesound.org/previews/240/240776_4107740-lq.mp3')
-    };
-    function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; sounds[type].play().catch(e => {}); } }
+    let userData={}, cardNumbers=[], marks=[12], gameDrawn=[];
 
-    function login() { playSound('click'); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(() => { requestNotifyPermission(); checkNotifGate(); }); }
-    function requestNotifyPermission() { if ("Notification" in window) { Notification.requestPermission().then(permission => { if (permission === "granted" && messaging) { messaging.getToken().then((currentToken) => { if (currentToken && auth.currentUser) db.ref('users/' + auth.currentUser.uid).update({ fcmToken: currentToken }); }).catch((err) => console.log('Err token', err)); } }); } }
-
-    // === AUTH STATE ===
+    // AUTH
+    function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
     auth.onAuthStateChanged(u => {
         if(u) {
-            if(messaging) { messaging.getToken().then((token) => { if(token) db.ref('users/' + u.uid).update({ fcmToken: token }); }); }
             document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('userPanel').style.display = 'flex';
-            document.getElementById('userImg').src = u.photoURL; document.getElementById('profileImgLarge').src = u.photoURL;
-            document.getElementById('profileNameDisplay').innerText = u.displayName; document.getElementById('profileUidDisplay').innerText = "ID: " + u.uid.substring(0,8);
+            document.getElementById('userImg').src = u.photoURL; document.getElementById('profileNameDisplay').innerText = u.displayName;
+            if(messaging) messaging.getToken().then(t => db.ref('users/'+u.uid).update({fcmToken:t}));
             
-            const userRef = db.ref('users/'+u.uid);
-            userRef.on('value', s => { 
+            db.ref('users/'+u.uid).on('value', s => {
                 if(s.exists()){ 
                     userData = s.val(); userData.uid = u.uid; 
-                    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString(); 
-                    document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString(); 
-                    document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || ""); 
-                    if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none'; 
-                    if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash; 
-                    if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); } 
-                    
-                    // NEW SKIN LOGIC APPLIED HERE
+                    document.getElementById('userPoints').innerText = (userData.points||0).toLocaleString();
+                    if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
+                    if(userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
                     applySkin(userData.equippedSkin || 'default');
                     updateSkinButtons();
-                } 
+                } else {
+                    db.ref('users/'+u.uid).set({ name: u.displayName, photo: u.photoURL, points: 500, ownedSkins:['default'], equippedSkin:'default' });
+                }
             });
-            initBingo(); setupChat(); listenForNextDraw(); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate();
+            setupGame();
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
 
-    // === NEW SKIN LOGIC WITH NEW CHARACTERS ===
-    function applySkin(skinId) {
-        const card = document.getElementById('bingoCardContainer');
-        // Clear all skin classes
-        card.className = 'card'; 
-
-        // Apply specific skin class
-        if(skinId === 'neon') card.classList.add('card-skin-neon');
-        if(skinId === 'gold') card.classList.add('card-skin-gold');
-        if(skinId === 'pink') card.classList.add('card-skin-pink');
-        if(skinId === 'matrix') card.classList.add('card-skin-matrix');
-        // New Skins
-        if(skinId === 'kitty') card.classList.add('card-skin-kitty');
-        if(skinId === 'stitch') card.classList.add('card-skin-stitch');
-        if(skinId === 'doraemon') card.classList.add('card-skin-doraemon');
-        if(skinId === 'mickey') card.classList.add('card-skin-mickey');
-        if(skinId === 'spongebob') card.classList.add('card-skin-spongebob');
-    }
-    
-    function updateSkinButtons() {
-        if(!userData.ownedSkins) return;
-        const skinIds = ['default', 'neon', 'gold', 'kitty', 'stitch', 'doraemon', 'mickey', 'spongebob'];
-        
-        skinIds.forEach(skin => {
-            const btn = document.getElementById('btn-skin-' + skin);
-            if(!btn) return;
-            if(userData.equippedSkin === skin) {
-                btn.innerText = "EQUIPPED"; btn.className = "btn-buy-skin owned"; btn.onclick = null;
-            } else if(userData.ownedSkins.includes(skin)) {
-                btn.innerText = "EQUIP"; btn.className = "btn-buy-skin equip"; btn.onclick = () => equipSkin(skin);
+    // GAME
+    function setupGame() {
+        db.ref('drawnNumbers').on('value', s => {
+            const val = s.val();
+            const newDrawn = val ? Object.values(val).map(n=>n.toString()) : [];
+            if(newDrawn.length > gameDrawn.length && newDrawn.length > 0) {
+                 const ball = newDrawn[newDrawn.length-1];
+                 showToast("BOLA: "+ball);
+                 speakNumber(ball);
             }
-        });
-    }
-    // === SKIN SHOP LOGIC ===
-    function buyOrEquipSkin(skinId, cost) {
-        if(!userData.ownedSkins) userData.ownedSkins = ['default'];
-        
-        if(userData.ownedSkins.includes(skinId)) {
-            equipSkin(skinId);
-        } else {
-            if(userData.points >= cost) {
-                showCustomConfirm("BUY SKIN?", "Purchase for " + cost + " Coins?", () => {
-                     // Deduct Points (Only for purchases now, not betting)
-                     db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) - cost);
-                     
-                     let newOwned = [...userData.ownedSkins, skinId];
-                     db.ref('users/' + userData.uid).update({
-                         ownedSkins: newOwned,
-                         equippedSkin: skinId
-                     });
-                     showToast("Skin Purchased!");
-                     playSound('win');
-                });
-            } else {
-                showToast("Insufficient Coins");
-            }
-        }
-    }
-    
-    function equipSkin(skinId) {
-        db.ref('users/' + userData.uid).update({ equippedSkin: skinId });
-        showToast("Skin Equipped");
-        playSound('click');
-        applySkin(skinId); // Apply immediately visually
-        updateSkinButtons();
-    }
-
-    // === STORE TABS ===
-    function switchStoreTab(tab) {
-        document.querySelectorAll('.store-tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('storeSection-cashout').style.display = 'none';
-        document.getElementById('storeSection-skins').style.display = 'none';
-        document.getElementById('storeSection-earn').style.display = 'none';
-        
-        if(tab === 'cashout') {
-            document.getElementById('tabBtnCash').classList.add('active');
-            document.getElementById('storeSection-cashout').style.display = 'block';
-        } else if(tab === 'skins') {
-            document.getElementById('tabBtnSkins').classList.add('active');
-            document.getElementById('storeSection-skins').style.display = 'block';
-            updateSkinButtons();
-        } else if(tab === 'earn') {
-            document.getElementById('tabBtnEarn').classList.add('active');
-            document.getElementById('storeSection-earn').style.display = 'block';
-        }
-        playSound('click');
-    }
-
-    // === EARNING LOGIC (ADS & TASKS) ===
-    function startStrictWatch() {
-        // REPLACE WITH YOUR ADSTERRA DIRECT LINK
-        const adsterraLink = "https://directoryeditorweep.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"; 
-        
-        window.open(adsterraLink, "_blank");
-        
-        const overlay = document.getElementById('adTimerOverlay'); 
-        overlay.style.display = 'flex'; 
-        let timeLeft = 15; 
-        const cd = document.getElementById('adCountdown'); 
-        const status = document.getElementById('adStatusText'); 
-        const cap = document.getElementById('adCaptchaOverlay'); 
-        
-        let timer = setInterval(() => { 
-            if(document.hidden) { 
-                status.innerText = "Paused! Keep tab open."; 
-                return; 
-            } 
-            timeLeft--; 
-            cd.innerText = timeLeft + "s"; 
-            status.innerText = "Watching Ad..."; 
+            gameDrawn = newDrawn;
+            const row = document.getElementById('ballRow'); row.innerHTML = "";
+            gameDrawn.slice(-5).reverse().forEach(n => {
+                let d = document.createElement('div'); d.innerText = n; d.style.background="#334155"; d.style.width="30px"; d.style.height="30px"; d.style.borderRadius="50%"; d.style.display="flex"; d.style.alignItems="center"; d.style.justifyContent="center"; row.appendChild(d);
+            });
+            if(gameDrawn.length>0) document.getElementById('currentBall').innerText = gameDrawn[gameDrawn.length-1];
             
-            if(timeLeft <= 0) { 
-                clearInterval(timer); 
-                overlay.style.display = 'none'; 
-                cap.style.display = 'flex'; 
-                const n1 = Math.floor(Math.random()*10); 
-                const n2 = Math.floor(Math.random()*10); 
-                document.getElementById('mathQ').innerText = `${n1} + ${n2} = ?`; 
-                document.getElementById('mathQ').dataset.ans = n1+n2; 
-            } 
-        }, 1000); 
-    }
-    
-    function verifyAdMath() { 
-        const ans = document.getElementById('mathAns').value; 
-        const corr = document.getElementById('mathQ').dataset.ans; 
-        if(ans === corr) { 
-            document.getElementById('adCaptchaOverlay').style.display = 'none'; 
-            // Add Points (Reward)
-            db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) + 50);
-            showToast("Reward: +50 Coins Added!"); 
-            playSound('win');
-        } else { 
-            showToast("Wrong Answer!"); 
-        } 
-    }
-
-    function openVideoLocker(taskKey) {
-        // Simple Cooldown to prevent spam
-        const lastRun = localStorage.getItem('task_cooldown_video');
-        if(lastRun && (Date.now() - parseInt(lastRun)) < 300000) { // 5 mins
-             showToast("⏳ Wait before watching again.");
-             return;
-        }
-
-        showCustomConfirm("WATCH VIDEO", "Complete video task to earn 2,000 Coins.", () => {
-            localStorage.setItem('task_cooldown_video', Date.now());
-            // DOCTOREDITS SCRIPT (Kept as is)
-            const win = window.open("", "_blank");
-            if(win) {
-                win.document.write(`<html><head><title>Video Task</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="background:black;color:white;text-align:center;display:flex;flex-direction:column;justify-content:center;height:100vh;"><h2>Loading...</h2><script>var lck=false;</script><script src="https://doctoredits.com/script_include.php?id=1874676"></script><script>if(!lck){top.location='https://doctoredits.com/help/ablk.php?lkt=2';}</script></body></html>`);
-            }
-        });
-    }
-
-    // === BINGO GAME LOGIC ===
-    function initBingo() {
-        // Winner Listener
-        db.ref('gameState/latestWinner').on('value', s => { 
-            const win = s.val(); 
-            const banner = document.getElementById('winnerBanner'); 
-            const cardCont = document.getElementById('bingoCardContainer'); 
-            const gameOverlay = document.getElementById('gameOverOverlay'); 
+            const btn = document.getElementById('newCardBtn');
+            if(gameDrawn.length>0) { btn.disabled=true; btn.innerText="LOCKED"; } else { btn.disabled=false; btn.innerText="NEW CARD"; }
             
-            // Reset styles
-            cardCont.classList.remove('card-win', 'card-lost'); 
-            document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow')); 
-
-            if(win && win.name) { 
-                banner.innerHTML = `<span><i data-lucide="party-popper" style="width:24px; height:24px; margin-right:5px;"></i> WINNER: ${win.name.toUpperCase()}</span>`; 
-                banner.style.display = 'block'; 
-                playSound('win'); 
-                
-                if(win.uid === auth.currentUser.uid) { 
-                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); 
-                    cardCont.classList.add('card-win'); 
-                    gameOverlay.style.display = 'none'; 
-                } else { 
-                    cardCont.classList.add('card-lost'); 
-                    gameOverlay.style.display = 'flex'; 
-                    const nextTime = document.getElementById('nextDrawTime').innerText; 
-                    document.getElementById('gameOverMsg').innerHTML = `Winner: <b>${win.name.toUpperCase()}</b><br><span style="color:var(--gold); font-size:14px;">Next Draw: ${nextTime}</span>`; 
-                } 
-            } else { 
-                banner.style.display = 'none'; 
-                gameOverlay.style.display = 'none'; 
-            } 
-            lucide.createIcons();
+            renderCard(); checkWin();
         });
 
-        // Current Pattern Listener
-        db.ref('gameState/currentPattern').on('value', s => { 
-            currentPattern = s.val() || "Normal Bingo"; 
-            document.getElementById('patternName').innerText = currentPattern; 
-            checkWin(); 
-        });
-        
-        // Balls Drawn Listener
-        db.ref('drawnNumbers').on('value', s => { 
-            const val = s.val(); 
-            const newGameDrawn = val ? Object.values(val).map(n => n.toString()) : []; 
-            
-            // New Ball Alert
-            if(newGameDrawn.length > gameDrawn.length && newGameDrawn.length > 0) {
-                 const latestBall = newGameDrawn[newGameDrawn.length - 1];
-                 playSound('newBall'); 
-                 showToast("BOLA: " + latestBall); 
-                 speakNumber(latestBall);
-            }
-            
-            gameDrawn = newGameDrawn; 
-            const btn = document.getElementById('newCardBtn'); 
-            if(gameDrawn.length > 0) { 
-                btn.disabled = true; 
-                btn.innerHTML = `<i data-lucide="lock" style="width:14px"></i> IN GAME`; 
-                document.getElementById('lateOverlay').style.display = !userData.currentCard ? 'flex' : 'none';
-            } else { 
-                btn.disabled = false; 
-                btn.innerHTML = `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`; 
-                document.getElementById('lateOverlay').style.display = 'none';
-            } 
-            
-            updateGridHits(); 
-            renderPrevBalls(); 
-            checkWin(); 
+        db.ref('chats').limitToLast(20).on('child_added', s => {
+            const d = s.val();
+            const list = document.getElementById('chatList');
+            const div = document.createElement('div'); div.style.marginBottom="5px"; div.style.fontSize="13px";
+            div.innerHTML = `<b style="color:#cbd5e1">${d.name}:</b> <span style="color:white">${d.msg}</span>`;
+            list.appendChild(div); list.scrollTop = list.scrollHeight;
         });
 
-        // Last Called Display
-        db.ref('gameState/lastCalled').on('value', s => { 
-            if(s.exists()) { 
-                document.getElementById('currentBall').innerText = s.val(); 
-            } else { 
-                document.getElementById('currentBall').innerText = "--"; 
-            } 
-        });
-    }
-
-    function speakNumber(num) { 
-        if ('speechSynthesis' in window) { 
-            let letter = "B"; 
-            if (num > 15) letter = "I"; 
-            if (num > 30) letter = "N"; 
-            if (num > 45) letter = "G"; 
-            if (num > 60) letter = "O"; 
-            const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); 
-            msg.rate = 0.9; 
-            window.speechSynthesis.speak(msg); 
-        } 
-    }
-
-    function checkWin() { 
-        if(userData.hasWonCurrent || gameDrawn.length === 0) return; 
-        
-        // Simple Client Side Check (Server should verify in production)
-        let winningWays = []; 
-        if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; } 
-        else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; } 
-        else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; } 
-        else { 
-            // Normal Bingo (Horizontal, Vertical, Diagonal)
-            winningWays = [ 
-                [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], 
-                [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], 
-                [0,6,12,18,24], [4,8,12,16,20] 
-            ]; 
-        } 
-        
-        for(let i = 0; i < winningWays.length; i++) { 
-            let w = winningWays[i]; 
-            if(w.every(idx => marks.includes(idx))) { 
-                highlightWinningPattern(w); 
-                triggerWin(); 
-                break; 
-            } 
-        } 
-    }
-    
-    function highlightWinningPattern(indices) { 
-        const cells = document.querySelectorAll('.cell'); 
-        indices.forEach(idx => { cells[idx].classList.add('win-glow'); }); 
-    }
-
-    function triggerWin() { 
-        const uid = auth.currentUser.uid; 
-        let winPrize = 500; 
-        
-        db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize }); 
-        db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize); 
-        db.ref('users/' + uid).update({ hasWonCurrent: true }); 
-        userData.hasWonCurrent = true; 
-        
-        showToast("BINGO! You won " + winPrize + " Coins!");
-    }
-
-    function generateNewCard() { 
-        if(gameDrawn.length > 0) return showToast("Game in progress!"); 
-        let card = []; 
-        let cols = [[1,15],[16,30],[31,45],[46,60],[61,75]]; 
-        cols.forEach(r => { 
-            let nums = []; 
-            while(nums.length < 5) { 
-                let n = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0]; 
-                if(!nums.includes(n)) nums.push(n); 
-            } 
-            card.push(...nums); 
-        }); 
-        let finalCard = []; 
-        for(let r=0; r<5; r++) { for(let c=0; c<5; c++) { finalCard.push(card[c*5 + r]); } } 
-        finalCard[12] = "FREE"; 
-        
-        db.ref('users/' + auth.currentUser.uid).update({ 
-            currentCard: finalCard, 
-            cardTimestamp: Date.now(), 
-            hasWonCurrent: false 
-        }); 
-        cardNumbers = finalCard; 
-        renderCard(); 
-        playSound('cardFlip'); 
-    }
-
-    function renderCard() { 
-        const grid = document.getElementById('bingoGrid'); 
-        grid.innerHTML = ""; 
-        cardNumbers.forEach((n, i) => { 
-            const div = document.createElement('div'); 
-            div.className = 'cell'; 
-            div.innerText = n === "FREE" ? "★" : n; 
-            if(n === "FREE") { div.classList.add('hit'); if(!marks.includes(12)) marks.push(12); } 
-            grid.appendChild(div); 
-        }); 
-        updateGridHits(); 
-        // Re-apply skin after rendering
-        applySkin(userData.equippedSkin || 'default');
-    }
-
-    function updateGridHits() { 
-        marks = [12]; 
-        const cells = document.querySelectorAll('.cell'); 
-        cells.forEach((c, i) => { 
-            const val = c.innerText; 
-            if(gameDrawn.includes(val) || val === "★") { 
-                c.classList.add('hit'); 
-                if(!marks.includes(i)) marks.push(i); 
-            } 
-        }); 
-    }
-
-    function renderPrevBalls() { 
-        const row = document.getElementById('ballRow'); 
-        row.innerHTML = ""; 
-        const last5 = gameDrawn.slice(-5).reverse(); 
-        last5.forEach(n => { 
-            let d = document.createElement('div'); 
-            d.className = 'ball-small'; 
-            d.innerText = n; 
-            row.appendChild(d); 
-        }); 
-    }
-
-    // === CHAT & VIDEO ===
-    function setupChat() { 
-        const list = document.getElementById('chatList'); 
-        db.ref('chats').limitToLast(50).on('child_added', s => { 
-            const d = s.val(); 
-            const isMe = d.uid === auth.currentUser.uid; 
-            const div = document.createElement('div'); 
-            div.className = 'chat-row'; 
-            div.style.flexDirection = isMe ? 'row-reverse' : 'row'; 
-            div.innerHTML = `<img class="chat-pfp" src="${d.pfp}"><div class="chat-content"><div class="bubble"><div class="chat-name">${d.name}</div><div class="chat-text">${d.msg}</div></div></div>`; 
-            list.appendChild(div); 
-            list.scrollTop = list.scrollHeight; 
-        }); 
-    }
-
-    function sendChat() { 
-        const inp = document.getElementById('chatIn'); 
-        const msg = inp.value.trim(); 
-        if(!msg) return; 
-        db.ref('chats').push({ name: userData.name, msg: msg, pfp: userData.photo, uid: userData.uid, time: Date.now() }); 
-        inp.value = ""; 
-    }
-
-    function listenVideoUpdate() {
         db.ref('gameState/videoSettings').on('value', s => {
             const v = s.val();
             const iframe = document.getElementById('liveVideoFrame');
             const offline = document.getElementById('videoOfflineState');
-
-            if (v && v.type === 'offline') {
-                iframe.style.display = 'none'; offline.style.display = 'flex';
-            } else if(v && v.url) {
-                offline.style.display = 'none'; iframe.style.display = 'block';
-                // Simple YouTube ID extraction
-                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-                const match = v.url.match(regExp);
-                let videoId = (match && match[2].length === 11) ? match[2] : v.url;
-                const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1`;
-                if(iframe.src !== embedUrl) iframe.src = embedUrl;
+            if (v && v.type === 'offline') { iframe.style.display='none'; offline.style.display='flex'; } 
+            else if(v && v.url) { 
+                offline.style.display='none'; iframe.style.display='block';
+                const match = v.url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
+                const vid = (match&&match[2].length===11)?match[2]:v.url;
+                if(iframe.src !== `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1`) iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1`;
             }
+        });
+
+        db.ref('gameState/jackpot').on('value', s=>{ if(s.val() && s.val().active) { document.getElementById('jackpotBanner').style.display='block'; document.getElementById('jackpotDisplayVal').innerText = s.val().amount; } else { document.getElementById('jackpotBanner').style.display='none'; } });
+        
+        db.ref('gameState/latestWinner').on('value', s=>{
+            const win = s.val(); const ban = document.getElementById('winnerBanner');
+            if(win && win.name) {
+                ban.style.display='block'; ban.innerHTML = `WINNER: ${win.name}`;
+                if(win.uid === auth.currentUser.uid) { confetti(); showToast("YOU WON!"); }
+            } else { ban.style.display='none'; }
         });
     }
 
-    // === UTILITIES ===
-    function listenForNextDraw() { 
-        db.ref('gameState/nextDraw').on('value', s => { 
-            const time = s.val();
-            if(time && time > Date.now()) {
-                const d = new Date(time);
-                document.getElementById('nextDrawTime').innerText = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                document.getElementById('lateNextSched').innerText = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                document.getElementById('nextDrawBanner').style.display = 'flex';
-            } else {
-                document.getElementById('nextDrawTime').innerText = "WAITING...";
-            }
-        }); 
+    function generateNewCard() {
+        if(gameDrawn.length > 0) return showToast("Game ongoing!");
+        let card = []; 
+        [[1,15],[16,30],[31,45],[46,60],[61,75]].forEach(r => {
+            let nums = []; while(nums.length < 5) { let n = Math.floor(Math.random()*(r[1]-r[0]+1))+r[0]; if(!nums.includes(n)) nums.push(n); }
+            card.push(...nums);
+        });
+        let final = []; for(let r=0;r<5;r++) for(let c=0;c<5;c++) final.push(card[c*5+r]); final[12] = "FREE";
+        db.ref('users/'+auth.currentUser.uid).update({ currentCard: final });
     }
 
-    function listenJackpot() { 
-        db.ref('gameState/jackpot').on('value', s => { 
-            const data = s.val(); 
-            if(data && data.active) { 
-                document.getElementById('jackpotBanner').style.display = 'block'; 
-                document.getElementById('jackpotDisplayVal').innerText = data.amount + " RB COINS"; 
-            } else { 
-                document.getElementById('jackpotBanner').style.display = 'none'; 
-            } 
-        }); 
+    function renderCard() {
+        const grid = document.getElementById('bingoGrid'); grid.innerHTML = "";
+        cardNumbers.forEach((n,i) => {
+            const div = document.createElement('div'); div.className = 'cell'; div.innerText = n==="FREE"?"★":n;
+            if(gameDrawn.includes(n.toString()) || n==="FREE") { div.classList.add('hit'); if(!marks.includes(i)) marks.push(i); }
+            grid.appendChild(div);
+        });
+        applySkin(userData.equippedSkin || 'default');
     }
-    
-    // === REDEMPTION ===
-    function saveGcash() { 
-        const num = document.getElementById('gcashInput').value; 
-        if(num.length >= 10) { 
-            db.ref('users/'+auth.currentUser.uid).update({ gcash: num }); 
-            showToast("GCash Saved!"); 
-        } 
-    }
-    
-    function redeemItem(name, cost) { 
-        if(userData.points >= cost) { 
-            if(!userData.gcash) return showToast("Save GCash first!"); 
-            showCustomConfirm("REDEEM?", "Spend " + cost + " Coins?", () => { 
-                db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) - cost);
-                db.ref('redemptions').push({ 
-                    uid: userData.uid, name: userData.name, gcash: userData.gcash, 
-                    item: name, cost: cost, status: 'pending', timestamp: Date.now() 
-                }); 
-                showToast("Request Sent!"); 
-            }); 
-        } else { 
-            showToast("Insufficient Coins"); 
-        } 
-    }
-    
-    // Notifications & PM Listeners kept from Part 3 logic...
-    function listenNotifications(uid) { db.ref('notifications/' + uid).on('value', s => { if(s.numChildren() > 0) document.getElementById('notifDot').style.display = 'block'; }); }
-    function listenPrivateMessages(myUid) { /* Logic handled in Part 3 */ }
 
+    function checkWin() {
+        // Simple logic: If Server declares winner, we just show it.
+        // Add specific pattern checks here if needed for client-side highlights.
+    }
+
+    function sendChat() {
+        const inp = document.getElementById('chatIn');
+        if(inp.value.trim()) { db.ref('chats').push({ name: userData.name, msg: inp.value, uid: userData.uid }); inp.value=""; }
+    }
+
+    // SKINS & STORE
+    function switchStoreTab(tab) {
+        document.getElementById('storeSection-cashout').style.display = tab==='cashout'?'block':'none';
+        document.getElementById('storeSection-skins').style.display = tab==='skins'?'block':'none';
+        document.getElementById('storeSection-earn').style.display = tab==='earn'?'block':'none';
+        document.querySelectorAll('.store-tab-btn').forEach(b=>b.classList.remove('active'));
+    }
+
+    function applySkin(skinId) {
+        const card = document.getElementById('bingoCardContainer'); card.className = 'card';
+        if(skinId !== 'default') card.classList.add('card-skin-'+skinId);
+    }
+
+    function buyOrEquipSkin(skinId, cost) {
+        if(userData.ownedSkins.includes(skinId)) {
+            db.ref('users/'+userData.uid).update({ equippedSkin: skinId }); showToast("Equipped!");
+        } else if(userData.points >= cost) {
+            showCustomConfirm("Buy Skin?", cost+" Coins", () => {
+                db.ref('users/'+userData.uid+'/points').transaction(p=>(p||0)-cost);
+                let newOwned = [...userData.ownedSkins, skinId];
+                db.ref('users/'+userData.uid).update({ ownedSkins: newOwned, equippedSkin: skinId });
+                showToast("Purchased!");
+            });
+        } else { showToast("Insufficient Coins"); }
+    }
+
+    function updateSkinButtons() {
+        ['kitty','stitch','doraemon','mickey','spongebob'].forEach(s => {
+            const btn = document.getElementById('btn-skin-'+s);
+            if(userData.ownedSkins && userData.ownedSkins.includes(s)) { btn.innerText = "EQUIP"; btn.className="btn-buy-skin equip"; }
+        });
+    }
+
+    function startStrictWatch() {
+        window.open("https://directoryeditorweep.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js", "_blank");
+        const overlay = document.getElementById('adTimerOverlay'); overlay.style.display='flex';
+        let t=15; const cd = document.getElementById('adCountdown');
+        const timer = setInterval(()=>{ 
+            t--; cd.innerText=t+"s"; 
+            if(t<=0) { clearInterval(timer); overlay.style.display='none'; db.ref('users/'+userData.uid+'/points').transaction(p=>(p||0)+50); showToast("+50 Coins"); }
+        },1000);
+    }
+
+    function saveGcash() { const v = document.getElementById('gcashInput').value; if(v.length>=10) { db.ref('users/'+auth.currentUser.uid).update({ gcash: v }); showToast("Saved"); } }
+    function redeemItem(item, cost) {
+        if(userData.points >= cost) {
+            showCustomConfirm("Redeem?", item, () => {
+                db.ref('users/'+userData.uid+'/points').transaction(p=>(p||0)-cost);
+                db.ref('redemptions').push({ uid: userData.uid, name: userData.name, item: item, cost: cost, status: 'pending', timestamp: Date.now() });
+                showToast("Request Sent!");
+            });
+        } else showToast("Insufficient Coins");
+    }
+
+    // UTILS
+    function showToast(msg) { document.getElementById('toastMsg').innerText = msg; document.getElementById('customToast').classList.add('show'); setTimeout(()=>document.getElementById('customToast').classList.remove('show'),3000); }
+    let confirmCallback;
+    function showCustomConfirm(t,m,cb) { document.getElementById('confTitle').innerText=t; document.getElementById('confMsg').innerText=m; document.getElementById('customConfirmModal').style.display='flex'; confirmCallback=cb; }
+    function closeCustomConfirm() { document.getElementById('customConfirmModal').style.display='none'; confirmCallback=null; }
+    document.getElementById('confYesBtn').addEventListener('click', ()=>{ if(confirmCallback) confirmCallback(); closeCustomConfirm(); });
+    
+    function speakNumber(num) { if ('speechSynthesis' in window) { const msg = new SpeechSynthesisUtterance(num); window.speechSynthesis.speak(msg); } }
+    function checkNotifGate() { if(!("Notification" in window))return; if(Notification.permission==="denied") document.getElementById('notifBlocker').style.display='flex'; }
+    function requestGatePermission() { Notification.requestPermission().then(p=>{ if(p==="granted") document.getElementById('notifBlocker').style.display='none'; }); }
+    function checkInstallGate() { if(!window.matchMedia('(display-mode: standalone)').matches) document.getElementById('installGate').style.display='flex'; }
+    let prompt; window.addEventListener('beforeinstallprompt', e=>{e.preventDefault(); prompt=e;});
+    function triggerInstall() { if(prompt) prompt.prompt(); else alert("Use browser menu to install."); }
+
+    lucide.createIcons();
 </script>
 </body>
 </html>
