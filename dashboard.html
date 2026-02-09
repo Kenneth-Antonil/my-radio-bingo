@@ -159,6 +159,24 @@
 
     <div id="settings-tab" class="tab-content">
         <div class="card">
+            <h2><i data-lucide="image"></i> Custom Pop-up Banner Manager</h2>
+            <div class="card-settings" style="background: rgba(59, 130, 246, 0.05); border-color: var(--accent);">
+                <p style="font-size:11px; opacity:0.7; margin:0 0 10px 0;">This banner will pop up when users open the app. They can click it to visit a link.</p>
+                
+                <label>Banner Image URL (Required)</label>
+                <input type="text" id="bannerImgInput" placeholder="e.g. https://imgur.com/example.png" style="margin-bottom:10px;">
+                
+                <label>Target Link (Where to go when clicked)</label>
+                <input type="text" id="bannerLinkInput" placeholder="e.g. https://facebook.com/mypage" style="margin-bottom:10px;">
+                
+                <div style="display:flex; gap:10px; margin-top:10px; align-items:center;">
+                    <button class="btn btn-primary" onclick="saveBannerSettings(true)" style="margin-top:0;"><i data-lucide="save"></i> SAVE & ACTIVATE</button>
+                    <button class="btn btn-danger" onclick="saveBannerSettings(false)" style="margin-top:0; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); box-shadow:none;">DISABLE BANNER</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
             <h2><i data-lucide="shield"></i> Service Account (Push Notifications)</h2>
             <div class="card-settings" style="background:rgba(239, 68, 68, 0.1); border-color:var(--danger);">
                 <p style="font-size:11px; color:#fca5a5; margin:0 0 10px 0;"><i data-lucide="alert-triangle" style="width:12px"></i> <b>IMPORTANT:</b> The Legacy API is disabled. Paste your Firebase Service Account JSON here to enable push notifications (HTTP v1).</p>
@@ -323,6 +341,32 @@
     function updateSettingsUI() { document.getElementById('winRateDisplay').innerText = document.getElementById('winRateSlider').value + "%"; document.getElementById('scatterDisplay').innerText = document.getElementById('scatterSlider').value + "%"; }
     function saveGameSettings() { const wr = parseInt(document.getElementById('winRateSlider').value); const sc = parseInt(document.getElementById('scatterSlider').value); db.ref('gameState/settings').update({ minigameWinRate: wr, scatterChance: sc }).then(() => { alert("Settings Updated! All clients will now use these probabilities."); }); }
     db.ref('gameState/settings').once('value', s => { const val = s.val(); if(val) { document.getElementById('winRateSlider').value = val.minigameWinRate || 40; document.getElementById('scatterSlider').value = val.scatterChance || 3; updateSettingsUI(); } });
+
+    // --- BANNER SETTINGS LOGIC ---
+    function saveBannerSettings(isActive) {
+        const imgUrl = document.getElementById('bannerImgInput').value.trim();
+        const linkUrl = document.getElementById('bannerLinkInput').value.trim();
+        
+        if(isActive && !imgUrl) return alert("Please enter an Image URL if activating the banner.");
+
+        db.ref('gameState/bannerSettings').set({
+            imageUrl: imgUrl,
+            targetUrl: linkUrl,
+            active: isActive,
+            updatedAt: Date.now()
+        }).then(() => {
+            alert(isActive ? "Banner Activated and Saved!" : "Banner Disabled.");
+        });
+    }
+
+    // Load Banner Settings
+    db.ref('gameState/bannerSettings').once('value', s => {
+        const d = s.val();
+        if(d) {
+            document.getElementById('bannerImgInput').value = d.imageUrl || "";
+            document.getElementById('bannerLinkInput').value = d.targetUrl || "";
+        }
+    });
 
     // --- VIDEO & SCHEDULE ---
     function updateVideoFeed() {
