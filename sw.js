@@ -39,8 +39,10 @@ self.addEventListener('notificationclick', function(event) {
             // Kung bukas na, i-focus lang
             for (var i = 0; i < clientList.length; i++) {
                 var client = clientList[i];
-                if (client.url === '/' && 'focus' in client) {
-                    return client.focus();
+                // Check kung ang base URL ay match, kahit walang index.html
+                var url = new URL(client.url, self.location.origin);
+                if (url.pathname === '/' || url.pathname === '/index.html') {
+                    if ('focus' in client) return client.focus();
                 }
             }
             // Kung hindi bukas, magbukas ng bago
@@ -50,3 +52,4 @@ self.addEventListener('notificationclick', function(event) {
         })
     );
 });
+
