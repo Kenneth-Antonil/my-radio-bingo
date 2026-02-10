@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#1da1f2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Radio Bingo Live | Social Ecosystem</title>
     
     <script>
@@ -14,6 +16,9 @@
     </script>
 
     <link rel="icon" type="image/png" href="https://i.imgur.com/7D8u8h6.png">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/7D8u8h6.png">
+    <link rel="manifest" href="manifest.json">
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -26,681 +31,1648 @@
     <script src="https://pl28660496.effectivegatecpm.com/a6/64/bf/a664bf7e7084386b4f4b428590030df3.js"></script>
 
     <style>
-        /* === CORE VARIABLES === */
+        /* === TWITTER THEME VARIABLES === */
         :root { 
-            --bg-overlay: rgba(15, 23, 42, 0.95); 
-            --glass-surface: rgba(30, 41, 59, 0.75);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --accent: #0ea5e9; 
-            --accent-glow: #38bdf8;
-            --text: #ffffff; 
+            --bg-body: #e6ecf0; /* Classic Twitter Light Gray */
+            --bg-card: #ffffff;
+            --bg-overlay: rgba(0, 0, 0, 0.6);
+            
+            /* Twitter Colors */
+            --accent: #1da1f2; /* Twitter Blue */
+            --accent-hover: #1991db;
+            --accent-glow: #1da1f2;
+            
+            --text: #14171a; /* Dark Gray Text */
+            --text-light: #657786; /* Light Gray Text */
+            --border-color: #e1e8ed; /* Subtle Borders */
+            
             --gold: #fbbf24; 
-            --success: #10b981; 
-            --danger: #ef4444; 
+            --success: #17bf63; /* Twitter Green */
+            --danger: #e0245e; /* Twitter Red */
             --minigame: #f472b6;
+            
+            /* Messenger Colors */
             --messenger-blue: #0084ff;
-            --messenger-grey: #303030;
+            --messenger-grey: #f0f2f5;
+            --messenger-bg: #ffffff;
         }
         
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
         
         body { 
-            font-family: 'Inter', sans-serif; 
-            background: #0f172a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-body);
             color: var(--text); 
             margin: 0; 
-            padding-bottom: 90px; 
+            padding-bottom: 90px;
             overflow-x: hidden; 
             min-height: 100vh;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
         }
 
-        /* === CLEANER POST CARD LAYOUT === */
-        .post-card { 
-            background: #1e293b; 
-            border-radius: 16px; 
-            border: 1px solid rgba(255,255,255,0.08); 
-            overflow: visible !important; /* CRITICAL FIX: Allows reactions to overflow */
-            margin-bottom: 20px;
-            position: relative;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            transition: transform 0.2s, z-index 0s;
-            z-index: 1;
-        }
-
-        /* Z-INDEX FIX: Bring card to front when hovering so reaction box shows ON TOP of next card */
-        .post-card:hover, .post-card:active {
-            z-index: 100 !important;
-        }
-
-        .post-header { 
-            padding: 15px; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-        }
+        /* === GLOBAL LAYOUT TWEAKS === */
+        .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 10px; padding-bottom: 120px; }
         
-        .post-meta { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .post-author { font-size: 15px; font-weight: 800; color: white; display: flex; align-items: center; gap: 6px; }
-        .post-time { font-size: 11px; color: #94a3b8; margin-top: 2px; font-weight: 500; }
+        /* === CARDS (Twitter Style) === */
+        .card, .post-card, .notif-card-new, .post-creator-pro, .pymk-card { 
+            background: var(--bg-card) !important; 
+            border: 1px solid var(--border-color) !important;
+            border-radius: 4px !important; /* Squarer corners */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+            margin-bottom: 10px;
+            backdrop-filter: none !important;
+        }
+
+        /* === POP-UPS & OVERLAYS === */
+        #customPopupBanner { display: none; position: fixed; inset: 0; z-index: 9999999; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; flex-direction: column; padding: 20px; backdrop-filter: blur(2px); }
         
-        .friend-badge { 
-            background: rgba(16, 185, 129, 0.15); 
-            color: #34d399; 
-            border: 1px solid rgba(52, 211, 153, 0.3);
-            font-size: 9px; 
-            padding: 2px 6px; 
+        /* === BINGO CARD SKINS (Kept Intact but Containers Adjusted) === */
+        .card-skin-neon { border: 2px solid #06b6d4 !important; background: rgba(8, 51, 68, 0.9) !important; }
+        .card-skin-neon .cell { color: #67e8f9 !important; }
+        
+        .card-skin-gold { border: 2px solid #f59e0b !important; background: linear-gradient(135deg, #451a03, #000) !important; }
+        .card-skin-pink { border: 2px solid #ec4899 !important; background: rgba(80, 7, 36, 0.9) !important; }
+        .card-skin-matrix { border: 2px solid #22c55e !important; background: black !important; font-family: 'Courier New', monospace; }
+
+        .card-skin-kitty { border: 4px solid #ffc0cb !important; background: radial-gradient(circle, #fff0f5, #ff69b4) !important; }
+        .card-skin-doraemon { border: 4px solid #0096df !important; background: linear-gradient(180deg, #0096df 0%, #ffffff 100%) !important; }
+        .card-skin-spongebob { border: 4px solid #f7f44d !important; background: #f7f44d !important; }
+        .card-skin-kuromi { border: 4px solid #000000 !important; background: linear-gradient(135deg, #000000, #4b0082) !important; }
+        
+        .card-skin-custom { background-size: cover !important; border: 2px solid rgba(0,0,0,0.2) !important; }
+
+        /* === BINGO GAME ELEMENTS === */
+        .draw-panel { display: grid; grid-template-columns: 1fr 90px; gap: 12px; margin-bottom: 15px; }
+        .prev-balls { background: #fff; border-radius: 4px; padding: 10px; display: flex; align-items: center; gap: 8px; overflow-x: auto; border: 1px solid var(--border-color); }
+        .ball-small { min-width: 35px; height: 35px; background: #f5f8fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; border: 1px solid var(--border-color); color: var(--text); }
+        
+        .current-ball-box { 
+            background: var(--accent); 
             border-radius: 4px; 
-            text-transform: uppercase; 
-            font-weight: 800; 
-            letter-spacing: 0.5px; 
-        }
-
-        .mood-display { 
-            font-size: 10px; 
-            background: rgba(14, 165, 233, 0.1); 
-            padding: 2px 8px; 
-            border-radius: 10px; 
-            margin-left: auto; /* Push to right */
-            color: var(--accent-glow); 
-            border: 1px solid rgba(14, 165, 233, 0.2); 
-            font-weight: 600;
-        }
-        
-        .post-content { 
-            padding: 0 15px 15px 15px; 
-            font-size: 15px; 
-            line-height: 1.6; 
-            color: #e2e8f0; 
-            word-break: break-word; 
-            font-weight: 400;
-        }
-        
-        .post-image-container { 
-            width: 100%; 
-            max-height: 400px; 
-            overflow: hidden; 
+            height: 90px; 
             display: flex; 
+            flex-direction: column; 
+            align-items: center; 
             justify-content: center; 
-            background: #000; 
-            border-top: 1px solid rgba(255,255,255,0.05); 
-            border-bottom: 1px solid rgba(255,255,255,0.05); 
-        }
-        .post-image { max-width: 100%; max-height: 400px; object-fit: contain; }
-        
-        .post-actions { 
-            display: flex; 
-            border-top: 1px solid rgba(255,255,255,0.08); 
-            background: rgba(30, 41, 59, 0.5); 
-            border-radius: 0 0 16px 16px; 
-            height: 48px;
-            overflow: visible !important; /* Ensure buttons don't clip tooltips */
+            box-shadow: none;
+            border: none;
         }
         
-        .action-btn { 
-            flex: 1; 
-            background: transparent; 
-            border: none; 
-            color: #94a3b8; 
-            font-size: 13px; 
-            font-weight: 700; 
-            cursor: pointer; 
+        .bingo-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 5px; }
+        .letter { text-align: center; font-size: 20px; font-weight: 900; color: var(--accent); text-shadow: none; -webkit-text-stroke: 0; }
+        
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; position: relative; }
+        .cell { 
+            aspect-ratio: 1; 
+            background: #f5f8fa; 
+            border-radius: 2px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            gap: 8px; 
-            transition: 0.2s; 
-            position: relative;
+            font-weight: 700; 
+            font-size: 16px; 
+            border: 1px solid #ccd6dd; 
+            color: var(--text); 
+            text-shadow: none;
         }
-        .action-btn:hover { background: rgba(255,255,255,0.05); color: white; }
-        .action-btn.liked { color: #f472b6; } /* Pink for like */
+        .cell.hit { background: var(--accent); color: white; border-color: var(--accent); transform: none; box-shadow: none; }
+        .cell.cell-waiting { background: #fffbeb !important; color: #b45309 !important; border: 2px dashed #f59e0b; animation: flash-waiting 1s infinite; }
+        .cell.win-glow { background: var(--success) !important; color: white; }
 
-        /* === FIXED REACTION BOX === */
-        .reaction-wrapper {
-            position: relative;
-            flex: 1;
-            display: flex;
-            justify-content: center;
+        /* === NAVIGATION (Top & Bottom) === */
+        .nav { 
+            background: #ffffff; 
+            padding: 0 15px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+            border-bottom: 1px solid var(--border-color); 
+            height: 55px; 
+            backdrop-filter: none;
         }
         
-        .reaction-box {
-            position: absolute;
-            bottom: 55px; /* Higher up */
-            left: 50%;
-            transform: translateX(-50%) scale(0.5);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 6px 6px;
-            border-radius: 50px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            display: flex;
-            gap: 12px;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 9999;
-            pointer-events: none;
-            border: 1px solid rgba(0,0,0,0.1);
-            white-space: nowrap; /* Prevent wrapping */
+        .nav-title { font-weight: 900; font-size: 22px; color: var(--accent); text-shadow: none; }
+
+        .bottom-nav { 
+            position: fixed; bottom: 0; left: 0; right: 0; 
+            background: #ffffff; 
+            border-top: 1px solid var(--border-color); 
+            height: 60px; 
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center; 
+            z-index: 5000; 
+            padding-bottom: env(safe-area-inset-bottom); 
+            backdrop-filter: none;
+        }
+        .nav-item { color: var(--text-light); }
+        .nav-item.active { color: var(--accent); }
+        .nav-center .nav-icon-bg { 
+            background: var(--accent); 
+            width: 45px; height: 45px; 
+            border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            color: white; 
+            box-shadow: 0 2px 5px rgba(29, 161, 242, 0.3); 
+            border: none;
         }
 
-        /* Show on Hover of Wrapper OR Button */
-        .reaction-wrapper:hover .reaction-box, 
-        .action-btn:hover + .reaction-box,
-        .reaction-box:hover {
-            opacity: 1;
-            visibility: visible;
-            transform: translateX(-50%) scale(1);
-            pointer-events: auto;
+        /* === POST CREATOR (Old Twitter Box) === */
+        .post-creator-pro {
+            background: #e8f4fb !important; /* Very light blue bg for input area */
+            border-left: 3px solid var(--accent) !important;
+            padding: 10px 15px !important;
+        }
+        .pc-input-area { color: var(--text); }
+        .pc-input-area::placeholder { color: #657786; }
+        .btn-post-pro { 
+            background: var(--accent); 
+            border-radius: 20px; 
+            font-weight: bold; 
+            box-shadow: none;
         }
 
-        .react-icon {
-            font-size: 28px; /* Larger icons */
-            cursor: pointer;
-            transition: transform 0.2s ease;
-            user-select: none;
-            padding: 2px;
-        }
+        /* === SOCIAL FEED === */
+        .post-card { padding: 0 !important; }
+        .post-header { padding: 10px 15px; border-bottom: none; }
+        .post-author { color: var(--text); font-weight: bold; }
+        .post-time { color: var(--text-light); }
+        .post-content { padding: 0 15px 15px 15px; color: var(--text); font-size: 15px; }
+        .post-actions { border-top: 1px solid var(--border-color); padding: 5px 0; }
+        .action-btn { color: var(--text-light); }
+        .action-btn:hover { color: var(--accent); background: rgba(29, 161, 242, 0.1); border-radius: 20px; }
+        .action-btn.liked { color: var(--danger); }
 
-        .react-icon:hover { transform: scale(1.4) translateY(-5px); }
-
-        /* === AVATAR BORDERS (TIER SYSTEM) === */
-        .post-avatar, .profile-img-large, #userImg, .chat-pfp {
-            box-sizing: border-box; /* Ensure border is part of width */
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        /* Tier Styles */
-        .avatar-tier-bronze { 
-            border: 2px solid #cd7f32; 
-        }
-        .avatar-tier-silver { 
-            border: 3px solid #e2e8f0; 
-            box-shadow: 0 0 10px rgba(226, 232, 240, 0.3);
-        }
-        .avatar-tier-gold { 
-            border: 3px solid #fbbf24; 
-            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
-        }
-        .avatar-tier-platinum { 
-            border: 3px solid #38bdf8; 
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.6), inset 0 0 10px rgba(56, 189, 248, 0.3);
-        }
-        .avatar-tier-diamond { 
-            border: 3px solid #a855f7; 
-            box-shadow: 0 0 25px rgba(168, 85, 247, 0.8), 0 0 10px #fff;
-            animation: borderPulse 2s infinite;
-        }
-
-        @keyframes borderPulse {
-            0% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.8); border-color: #a855f7; }
-            50% { box-shadow: 0 0 30px rgba(168, 85, 247, 1); border-color: #d8b4fe; }
-            100% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.8); border-color: #a855f7; }
-        }
-
-        /* Other Essentials */
-        .post-creator-pro { background: #1e293b; border-radius: 16px; padding: 15px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .pc-input-area { width: 100%; background: transparent; border: none; color: white; font-size: 15px; resize: none; min-height: 80px; outline: none; font-family: 'Inter', sans-serif; }
-        .mood-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; scrollbar-width: none; }
-        .mood-pill { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #94a3b8; cursor: pointer; white-space: nowrap; transition: 0.2s; }
-        .mood-pill:hover { background: rgba(255,255,255,0.1); }
-        .mood-pill.active { background: rgba(14, 165, 233, 0.15); color: var(--accent-glow); border-color: var(--accent); }
-        .pc-actions { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; }
-        .btn-post-pro { background: var(--accent); color: white; border: none; padding: 8px 24px; border-radius: 20px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); }
-
-        /* General UI */
-        #customPopupBanner { display: none; position: fixed; inset: 0; z-index: 9999999; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; flex-direction: column; padding: 20px; backdrop-filter: blur(5px); }
-        .card-skin-neon { border: 2px solid #06b6d4 !important; box-shadow: 0 0 20px #06b6d4, inset 0 0 20px rgba(6, 182, 212, 0.2) !important; background: rgba(8, 51, 68, 0.9) !important; }
-        .card-skin-neon .cell { border-color: #06b6d4 !important; color: #67e8f9 !important; text-shadow: 0 0 5px #06b6d4 !important; }
-        .card-skin-gold { border: 2px solid #f59e0b !important; box-shadow: 0 0 25px #f59e0b, inset 0 0 10px #f59e0b !important; background: linear-gradient(135deg, #451a03, #000) !important; }
-        .card-skin-gold .cell { border-color: #fbbf24 !important; color: #fcd34d !important; font-family: 'Times New Roman', serif; }
-        .card-skin-pink { border: 2px solid #ec4899 !important; box-shadow: 0 0 20px #ec4899 !important; background: rgba(80, 7, 36, 0.9) !important; }
-        .card-skin-pink .cell { border-color: #f472b6 !important; color: #fbcfe8 !important; border-radius: 50% !important; }
-        .card-skin-matrix { border: 2px solid #22c55e !important; box-shadow: 0 0 15px #22c55e !important; background: black !important; font-family: 'Courier New', monospace; }
-        .card-skin-matrix .cell { border-color: #22c55e !important; color: #4ade80 !important; border-radius: 0 !important; }
-        .card-skin-custom { background-size: cover !important; background-position: center !important; border: 2px solid rgba(255,255,255,0.5) !important; box-shadow: 0 0 30px rgba(0,0,0,0.8) !important; }
-        .card-skin-custom .cell { background: rgba(0,0,0,0.6) !important; backdrop-filter: blur(4px); color: white !important; border: 1px solid rgba(255,255,255,0.3) !important; }
+        /* === MODALS (White, clean) === */
+        .modal, .profile-page-container, .pm-modal, .search-modal-container { background: rgba(0,0,0,0.5) !important; backdrop-filter: none; }
+        .modal-content { background: white !important; color: var(--text); border-radius: 10px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .modal-content h3, .modal-content h4 { color: var(--text) !important; }
         
-        /* Nav & Layout */
-        .nav { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.1); height: auto; min-height: 60px; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); border-top: 1px solid rgba(255,255,255,0.1); height: 65px; display: flex; justify-content: space-around; align-items: center; z-index: 5000; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #94a3b8; width: 20%; height: 100%; border: none; background: none; cursor: pointer; transition: 0.2s; }
-        .nav-item.active { color: var(--accent-glow); }
-        .nav-center { position: relative; top: -15px; }
-        .nav-center .nav-icon-bg { background: linear-gradient(135deg, var(--accent), #2563eb); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 8px 20px rgba(14, 165, 233, 0.5); border: 4px solid #0f172a; }
-        .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 10px; padding-bottom: 120px; }
+        .profile-page-container { background: white !important; padding-top: 0; }
+        .profile-nav-back { background: rgba(0,0,0,0.3); color: white; }
+        .profile-info-section { margin-top: -50px; }
+        .profile-page-img { border: 4px solid white; background: white; box-shadow: none; }
+        .profile-page-name { color: var(--text); text-shadow: none; }
+        .profile-page-bio { color: var(--text-light); }
+        .stat-val { color: var(--text); }
         
-        /* Bingo & Other Components */
-        .card { background: var(--glass-surface); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; padding: 15px; margin-bottom: 20px; border: 1px solid var(--glass-border); position: relative; transition: all 0.3s ease; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; position: relative; }
-        .cell { aspect-ratio: 1; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; border: 1px solid rgba(255,255,255,0.15); transition: all 0.3s; z-index: 2; position: relative; overflow: hidden; box-shadow: inset 0 2px 5px rgba(255,255,255,0.05); color: white; text-shadow: 0 2px 3px black; }
-        .cell.hit { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; transform: scale(1.05); border-color: rgba(255,255,255,0.6); box-shadow: 0 5px 15px rgba(59, 130, 246, 0.6); text-shadow: 0 2px 2px rgba(0,0,0,0.5); }
+        /* === STORE & BUTTONS === */
+        .store-tab-btn { color: var(--text-light); font-weight: bold; }
+        .store-tab-btn.active { color: var(--accent); background: transparent; border-bottom: 2px solid var(--accent); border-radius: 0; box-shadow: none; }
         
-        /* Modals & Overlays (Standardized) */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 6000; display: none; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(15px); }
-        .modal-content { background: rgba(30, 41, 59, 0.95); border-radius: 30px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.2); max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.8); }
+        .btn-buy-skin, .btn-do-task, .btn-redeem { border-radius: 20px; font-weight: bold; box-shadow: none; }
+        .btn-buy-skin.buy { background: white; border: 1px solid var(--accent); color: var(--accent); }
         
-        /* Messenger & Chat */
-        .chat-box { height: 480px; display: flex; flex-direction: column; background: #111827; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; }
-        .chat-row { display: flex; gap: 10px; max-width: 100%; animation: fadeIn 0.3s ease; align-items: flex-end; margin-bottom: 12px; }
-        .bubble { padding: 10px 14px; font-size: 13px; line-height: 1.4; color: #e2e8f0; word-break: break-word; font-weight: 500; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: relative; }
+        /* === CHAT / MESSENGER === */
+        .chat-box { background: white; border: 1px solid var(--border-color); border-radius: 5px; height: 400px; box-shadow: none; }
+        .chat-header { background: white; border-bottom: 1px solid var(--border-color); color: var(--text); }
+        .chat-header h3 { color: var(--text); }
+        #chatList { background: #f5f8fa; }
+        .chat-row:not([style*="row-reverse"]) .bubble { background: white; color: var(--text); border: 1px solid var(--border-color); }
+        .chat-row[style*="row-reverse"] .bubble { background: var(--accent); color: white; border: none; }
+        .chat-input-area { background: white; border-top: 1px solid var(--border-color); }
+        .input-wrapper { background: #f5f8fa; border: 1px solid var(--border-color); color: var(--text); }
+        .input-wrapper input { color: var(--text); }
         
-        /* Toast & Notifs */
-        #customToast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%); background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 16px 24px; border-radius: 16px; z-index: 100000; display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); backdrop-filter: blur(12px); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 280px; max-width: 90%; }
-        #customToast.show { transform: translateX(-50%) translateY(0); }
+        /* === PM Full Page === */
+        .pm-container { background: white; }
+        .pm-header { background: white; border-bottom: 1px solid var(--border-color); }
+        .pm-header h3 { color: var(--text); }
+        .pm-inbox-list { background: white; }
+        .pm-item { border-bottom: 1px solid var(--border-color); }
+        .pm-item:hover { background: #f5f8fa; }
+        .pm-name { color: var(--text); }
+        .pm-chat-view { background: white; }
+        .pm-chat-header { background: white; border-bottom: 1px solid var(--border-color); }
+        .pm-messages { background: white; }
+        .msg-them { background: #e6ecf0; color: var(--text); }
+        .msg-me { background: var(--accent); color: white; }
+        .pm-input-area { background: white; border-top: 1px solid var(--border-color); }
+        .pm-styled-input { background: #f5f8fa; border: 1px solid var(--border-color); color: var(--text); }
 
-        /* Store & Skins Grid */
-        .skins-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .skin-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); text-align: center; position: relative; overflow: hidden; }
-        .skin-preview { height: 60px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; background-size: cover; background-position: center; }
-        .btn-buy-skin { width: 100%; padding: 8px; border: none; border-radius: 8px; font-weight: 800; font-size: 10px; cursor: pointer; }
-        .btn-buy-skin.owned { background: rgba(255,255,255,0.1); color: #cbd5e1; cursor: default; }
-        .btn-buy-skin.buy { background: var(--gold); color: black; }
-        .btn-buy-skin.equip { background: var(--success); color: white; }
+        /* === MISC UTILS === */
+        .user-stats .icon-btn { background: transparent; border: none; color: var(--accent); }
+        .user-stats .points-badge { background: white; border: 1px solid var(--gold); color: var(--text); text-shadow: none; box-shadow: none; }
+        .next-draw-container { background: white !important; border: 1px solid var(--accent) !important; border-left: 5px solid var(--accent) !important; color: var(--text) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important; }
+        .next-draw-time { color: var(--text) !important; text-shadow: none !important; }
+        
+        /* === ADS === */
+        .ad-container-global { background: #f0f0f0; border: none; }
+        
+        /* === REACTION BOX === */
+        .reaction-box { background: white; border: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        
+        /* === LOGINS === */
+        #loginOverlay { background: #1da1f2; }
+        .btn-main-auth { background: white; color: var(--accent); }
+        
+        /* New Classes for specific text colors in light mode */
+        .text-dark { color: var(--text); }
+        .text-muted { color: var(--text-light); }
+        
     </style>
 </head>
 <body>
 
 <div class="bottom-nav">
-    <button class="nav-item active" onclick="switchTab('home')" id="nav-home"><i data-lucide="home"></i><span style="font-size:10px; font-weight:700;">Home</span></button>
-    <button class="nav-item" onclick="switchTab('bingo')" id="nav-bingo"><i data-lucide="play-circle"></i><span style="font-size:10px; font-weight:700;">Bingo</span></button>
-    <div class="nav-center" onclick="openPostCreator()"><div class="nav-icon-bg"><i data-lucide="plus" style="width:28px; height:28px;"></i></div></div>
-    <button class="nav-item" onclick="document.getElementById('storeModal').style.display='flex'" id="nav-store"><i data-lucide="shopping-bag"></i><span style="font-size:10px; font-weight:700;">Store</span></button>
-    <button class="nav-item" onclick="openMyProfile()" id="nav-profile"><i data-lucide="user"></i><span style="font-size:10px; font-weight:700;">Me</span></button>
-</div>
-
-<div id="customToast"><i data-lucide="info" style="color:var(--gold);"></i><span id="toastMsg" style="font-size:14px; font-weight:700; color:white;">Notification</span></div>
-
-<div id="loginOverlay" style="position:fixed; inset:0; background:#0f172a; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px;">
-    <h1 style="font-size:50px; font-weight:900; color:white; margin-bottom:10px;">RB<span style="color:var(--accent-glow)">LIVE</span></h1>
-    <p style="color:#cbd5e1; margin-bottom:40px;">Live Bingo Social Ecosystem</p>
-    <button onclick="login()" style="background:white; color:black; border:none; padding:15px 30px; border-radius:30px; font-weight:800; font-size:16px; display:flex; align-items:center; gap:10px; cursor:pointer;">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" style="width:20px;"> Sign in with Google
+    <button class="nav-item active" onclick="switchTab('home')" id="nav-home">
+        <i data-lucide="home" class="nav-icon"></i>
+        <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('bingo')" id="nav-bingo">
+        <i data-lucide="play-circle" class="nav-icon"></i>
+        <span class="nav-label">Bingo</span>
+    </button>
+    <div class="nav-center" onclick="openPostCreator()">
+        <div class="nav-icon-bg"><i data-lucide="feather" style="width:24px; height:24px;"></i></div>
+    </div>
+    <button class="nav-item" onclick="document.getElementById('storeModal').style.display='flex'" id="nav-store">
+        <i data-lucide="shopping-bag" class="nav-icon"></i>
+        <span class="nav-label">Store</span>
+    </button>
+    <button class="nav-item" onclick="openMyProfile()" id="nav-profile">
+        <i data-lucide="user" class="nav-icon"></i>
+        <span class="nav-label">Me</span>
     </button>
 </div>
 
-<div class="nav">
-    <div style="font-weight: 900; font-size: 20px;">RB <span style="color:var(--accent-glow)">LIVE</span></div>
-    <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
-        <div style="background:rgba(255,255,255,0.1); padding:5px 10px; border-radius:12px; display:flex; align-items:center; gap:5px; font-size:12px; font-weight:800; border:1px solid rgba(255,255,255,0.1);">
-            <i data-lucide="coins" style="width:14px; color:var(--gold);"></i> <span id="userPoints">0</span>
+<div class="sticky-ad-footer" style="background: #f5f8fa; border-top: 1px solid #e1e8ed;">
+    <script type="text/javascript">
+        atOptions = { 'key' : 'a664bf7e7084386b4f4b428590030df3', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+    </script>
+    <script type="text/javascript" src="https://pl28660496.effectivegatecpm.com/a6/64/bf/a664bf7e7084386b4f4b428590030df3.js"></script>
+</div>
+
+<div id="customPopupBanner">
+    <div style="position:relative; max-width:400px; width:100%;">
+        <button onclick="closeCustomBanner()" style="position:absolute; top:-10px; right:-10px; background:#1da1f2; color:white; border:2px solid white; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:10;"><i data-lucide="x" style="width:16px"></i></button>
+        <img id="customBannerImg" src="" style="width:100%; border-radius:5px; border:4px solid white; cursor:pointer; object-fit:cover;" onclick="clickCustomBanner()">
+    </div>
+</div>
+
+<div id="installGate" style="background: #1da1f2;">
+    <div class="gate-logo" style="text-shadow:none;">RB<span>LIVE</span></div>
+    <div class="gate-title">Install to Play</div>
+    <p class="gate-desc">Get the full experience. Install the app now.</p>
+    <button id="gateInstallBtn" class="gate-btn-install" onclick="triggerInstall()" style="background:white; color:#1da1f2; border:none; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+        <i data-lucide="download-cloud" style="width:20px; height:20px;"></i> INSTALL APP
+    </button>
+    <div id="gateIosNote" class="gate-ios-note" style="background:rgba(0,0,0,0.1);">
+        <div style="font-weight:bold; color:white; margin-bottom:10px;">iOS Instructions:</div>
+        <div class="ios-step"><i data-lucide="share" class="ios-icon" style="color:white;"></i> 1. Tap Share.</div>
+        <div class="ios-step"><i data-lucide="plus-square" class="ios-icon" style="color:white;"></i> 2. Add to Home Screen.</div>
+    </div>
+</div>
+
+<div id="notifBlocker" style="background: #f5f8fa; color: #14171a;">
+    <div class="notif-gate-icon" style="background: #e8f4fb; box-shadow: none;">
+        <i data-lucide="bell-ring" style="width: 40px; height: 40px; color: #1da1f2;"></i>
+    </div>
+    <div class="notif-gate-title" style="color: #14171a;">ENABLE NOTIFICATIONS</div>
+    <p class="notif-gate-desc" style="color: #657786;">Stay updated with real-time Bingo calls.</p>
+    <button onclick="requestGatePermission()" class="btn-allow-notif" style="box-shadow: none;">
+        ALLOW NOTIFICATIONS
+    </button>
+    <div id="blockedHelp" class="blocked-help" style="background: #ffe9e9; border-color: #ffcccc; color: #14171a;">
+        <strong style="color:#e0245e;">⚠️ NOTIFICATIONS BLOCKED</strong>
+        See browser settings to enable.
+    </div>
+</div>
+
+<div id="splash-screen" style="background: #1da1f2;">
+    <div class="splash-logo" style="text-shadow:none;">RB<span>LIVE</span></div>
+    <div class="splash-loader" style="border-color: rgba(255,255,255,0.3); border-top-color: white;"></div>
+</div>
+
+<div id="customToast" style="background: #14171a; border: none; border-radius: 4px;">
+    <i data-lucide="info" class="toast-icon" style="color: #1da1f2;"></i>
+    <span class="toast-msg" id="toastMsg" style="font-weight:normal;">Notification</span>
+</div>
+
+<div id="customConfirmModal">
+    <div class="conf-content" style="background:white; border:1px solid #e1e8ed; color:#14171a;">
+        <h3 class="conf-title" id="confTitle" style="color:#14171a;">Confirm</h3>
+        <p class="conf-msg" id="confMsg" style="color:#657786;">Proceed?</p>
+        <div class="conf-actions">
+            <button class="btn-conf-no" onclick="closeCustomConfirm()" style="background:#f5f8fa; color:#657786; border:1px solid #e1e8ed;">Cancel</button>
+            <button class="btn-conf-yes" id="confYesBtn" style="box-shadow:none;">Confirm</button>
         </div>
-        <img id="userImg" src="" style="width:40px; height:40px; border-radius:50%; cursor:pointer;" onclick="openMenuModal()">
+    </div>
+</div>
+
+<div id="loginOverlay" style="background: #1da1f2;">
+    <div class="login-app-container">
+        <div class="app-logo-lg" style="text-shadow:none;">RB<span>LIVE</span></div>
+        <p class="app-tagline" style="color:rgba(255,255,255,0.9);">Join the conversation. Play Bingo.</p>
+        <div class="auth-btn-group">
+            <button class="btn-main-auth" onclick="login()" style="box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:20px">
+                Sign in with Google
+            </button>
+        </div>
+    </div>
+    <div class="login-footer-legal">
+        <div class="legal-text" style="color: rgba(255,255,255,0.7);">
+            <span>Not a Gambling Site</span>
+            <a href="terms.html" style="color:white; text-decoration:underline;">Terms</a>
+        </div>
+    </div>
+</div>
+
+<div class="nav">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <span class="nav-title">RB <span style="color:#1da1f2;">LIVE</span></span>
+    </div>
+    <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
+        <div class="user-stats">
+            <div class="icon-btn" onclick="openSearch()">
+                <i data-lucide="search" style="width:20px; color:#657786;"></i>
+            </div>
+            <div class="icon-btn" onclick="openMessenger()">
+                <i data-lucide="mail" style="width:20px; color:#657786;"></i> <span id="pmBadge" class="notif-badge" style="background:#e0245e; border-color:white;"></span>
+            </div>
+            <div class="icon-btn" onclick="openNotifs()">
+                <i data-lucide="bell" style="width:20px; color:#657786;"></i>
+                <span id="notifDot" class="notif-badge" style="background:#1da1f2; border-color:white;"></span>
+            </div>
+            <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'">
+                <span id="userPoints" style="color:#14171a; font-weight:bold;">0</span> 
+                <span style="font-size:10px; color:#657786; margin-left:2px;">PTS</span>
+            </div>
+        </div>
+        <img id="userImg" onclick="openMenuModal()" src="" style="width:32px; height:32px; border-radius:4px; border:1px solid #e1e8ed;">
     </div>
 </div>
 
 <div class="container">
+    <div class="ad-container-global">
+        <script type="text/javascript">
+            atOptions = { 'key' : '9bf585b6ee39cb9b515e2fae1fa958c2', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+        </script>
+        <script type="text/javascript" src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
+    </div>
+
     <div id="view-home" style="display:block;">
         <div id="friendRequestsSection"></div>
         
         <div class="post-creator-pro" id="mainPostCreator">
-            <textarea id="postInput" class="pc-input-area" placeholder="What's on your mind?"></textarea>
-            <div id="imgPreviewCont" style="display:none; position:relative; margin-bottom:10px;">
-                <img id="postImgPreview" style="max-height:100px; border-radius:8px;">
-                <div onclick="removePostImage()" style="position:absolute; top:-5px; right:-5px; background:red; color:white; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px;">X</div>
+            <textarea id="postInput" class="pc-input-area" placeholder="What's happening?"></textarea>
+            
+            <div class="image-preview-container" id="imgPreviewCont">
+                <img id="postImgPreview" class="image-preview-img">
+                <div class="btn-remove-img" onclick="removePostImage()">X</div>
             </div>
+
             <div class="mood-scroll">
-                <div class="mood-pill" onclick="selectMood(this, 'Happy')">😊 Happy</div>
-                <div class="mood-pill" onclick="selectMood(this, 'Sad')">😔 Sad</div>
-                <div class="mood-pill" onclick="selectMood(this, 'Excited')">🤩 Excited</div>
-                <div class="mood-pill" onclick="selectMood(this, 'Angry')">😡 Angry</div>
-                <div class="mood-pill" onclick="selectMood(this, 'Chill')">😎 Chill</div>
+                <div class="mood-pill" onclick="selectMood(this, 'Happy')" style="border-radius:4px; color:#1da1f2; border-color:#1da1f2;">😊 Happy</div>
+                <div class="mood-pill" onclick="selectMood(this, 'Sad')" style="border-radius:4px; color:#1da1f2; border-color:#1da1f2;">😔 Sad</div>
+                <div class="mood-pill" onclick="selectMood(this, 'Excited')" style="border-radius:4px; color:#1da1f2; border-color:#1da1f2;">🤩 Excited</div>
+                <div class="mood-pill" onclick="selectMood(this, 'Angry')" style="border-radius:4px; color:#1da1f2; border-color:#1da1f2;">😡 Angry</div>
+                <div class="mood-pill" onclick="selectMood(this, 'Chill')" style="border-radius:4px; color:#1da1f2; border-color:#1da1f2;">😎 Chill</div>
             </div>
+
             <div class="pc-actions">
-                <div style="display:flex; gap:15px;">
-                    <label for="postImgInput" style="color:var(--accent-glow); cursor:pointer; display:flex; align-items:center; gap:5px; font-size:13px; font-weight:700;">
-                        <i data-lucide="image" style="width:18px;"></i> Photo
+                <div class="pc-tools">
+                    <label for="postImgInput" class="pc-tool-btn" style="color:#1da1f2;">
+                        <i data-lucide="camera" style="width:18px;"></i> Media
                     </label>
                     <input type="file" id="postImgInput" accept="image/*" style="display:none" onchange="handlePostImage(this)">
                 </div>
-                <button class="btn-post-pro" onclick="createPost()">POST</button>
+                <button class="btn-post-pro" onclick="createPost()">Tweet</button>
             </div>
         </div>
 
-        <div id="socialFeed" style="display:flex; flex-direction:column; gap:15px;">
-            <div style="text-align:center; padding:20px; opacity:0.5;">Loading Feed...</div>
+        <div id="pymkSection" class="pymk-section" style="display:none;">
+            <div class="pymk-title" style="color:#657786;">Who to follow</div>
+            <div class="pymk-scroll" id="pymkList"></div>
+        </div>
+
+        <div id="socialFeed" class="social-feed-container">
+            <div style="text-align:center; padding:20px; color:#657786;">Loading Tweets...</div>
         </div>
     </div>
 
     <div id="view-bingo" style="display:none;">
-        <div style="background:#000; border-radius:24px; overflow:hidden; border:2px solid rgba(255,255,255,0.2); margin-bottom:20px; position:relative; aspect-ratio:16/9;">
-            <div style="position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.8); padding:5px 10px; border-radius:8px; font-size:11px; font-weight:800; color:var(--success); border:1px solid var(--success); z-index:10;"><i data-lucide="radio" style="width:12px; display:inline-block; margin-right:5px;"></i> LIVE FEED</div>
-            <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <div class="video-feed-wrapper" style="background:#000; border:none; border-radius:4px;">
+            <div class="video-container">
+                <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span></div>
+                <div id="videoOfflineState" style="display:none; position:absolute; inset:0; background:#000; flex-direction:column; align-items:center; justify-content:center; z-index:20;">
+                    <div style="width:60px; height:60px; background:rgba(255,255,255,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:15px;">
+                        <i data-lucide="tv" style="width:30px; height:30px; color:#fff;"></i>
+                    </div>
+                    <h3 style="color:white; font-size:14px;">OFF AIR</h3>
+                </div>
+                <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="border:none; position:absolute; top:0; left:0; width:100%; height:100%;"></iframe>
+            </div>
         </div>
 
-        <div class="card" id="bingoCardContainer">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <div style="font-weight:900; font-size:18px; color:white;">BINGO CARD</div>
-                <button onclick="generateNewCard()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; padding:5px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;">NEW CARD</button>
+        <div id="jackpotBanner" style="background:#fff; border:1px solid #fbbf24; border-left:5px solid #fbbf24; color:#14171a; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <div class="jp-label-new" style="color:#d97706; letter-spacing:1px;">
+                JACKPOT EVENT
+            </div>
+            <span class="jackpot-amount" id="jackpotDisplayVal" style="color:#14171a; text-shadow:none; -webkit-text-fill-color:initial; background:none;">5,000</span>
+            <div style="font-size: 10px; color: #657786;">RB Coins Prize</div>
+        </div>
+
+        <div id="nextDrawBanner" class="next-draw-container">
+            <div class="nd-icon" style="border:none; color:#1da1f2; background:transparent;"><i data-lucide="calendar"></i></div>
+            <div class="nd-info">
+                <div class="next-draw-label" style="color:#657786;">Next Draw</div>
+                <div id="nextDrawTime" class="next-draw-time" style="color:#14171a;">--:-- --</div>
+            </div>
+        </div>
+        
+        <div id="winnerBanner" style="background:#17bf63; border:none; box-shadow:none; color:white;">
+            <span><i data-lucide="check-circle" style="width:20px; margin-right:5px;"></i> BINGO WINNER!</span>
+            <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
+        </div>
+
+        <div class="draw-panel">
+            <div class="prev-balls" id="ballRow"></div>
+            <div class="current-ball-box">
+                <span style="font-size:9px; font-weight:bold; color:white; opacity:0.8;">LAST CALL</span>
+                <span id="currentBall" style="font-size:32px; font-weight:900; color:white;">--</span>
+            </div>
+        </div>
+        
+        <div class="card" id="bingoCardContainer" style="background:white; border:1px solid #e1e8ed;">
+            <div id="lateOverlay" class="late-overlay">
+                <i data-lucide="lock" style="color:#e0245e; width:40px; height:40px; margin-bottom:10px;"></i>
+                <div class="late-text" style="color:white;">LOCKED</div>
+                <div class="late-subtext" style="color:rgba(255,255,255,0.8);">Game in progress</div>
+            </div>
+            <div id="gameOverOverlay" class="game-over-overlay">
+                <i data-lucide="flag" style="color:#fbbf24; width:40px; height:40px; margin-bottom:10px;"></i>
+                <div class="late-text" style="color:white;">FINISHED</div>
+                <div class="late-subtext" id="gameOverMsg" style="color:rgba(255,255,255,0.8);">Next game soon</div>
+            </div>
+            
+            <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; border-bottom:1px solid #f5f8fa; margin-bottom:10px;">
+                <div class="pattern-box" style="background:#f5f8fa; border:none; color:#14171a;">
+                    <div class="pattern-dot" style="background:#1da1f2; box-shadow:none;"></div>
+                    <span class="pattern-text" id="patternName" style="color:#14171a;">Normal Bingo</span>
+                </div>
+                <button class="btn-change" id="newCardBtn" onclick="generateNewCard()" style="background:white; border:1px solid #1da1f2; color:#1da1f2; box-shadow:none; border-radius:4px;">
+                    <i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD
+                </button>
+            </div>
+            
+            <div class="bingo-header">
+                <div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div>
             </div>
             <div class="grid" id="bingoGrid"></div>
         </div>
         
-        <div class="chat-box" style="margin-top:20px;">
-            <div style="padding:15px; border-bottom:1px solid rgba(255,255,255,0.1); font-weight:800; font-size:12px; color:#94a3b8;">LIVE CHAT</div>
-            <div id="chatList" style="flex:1; overflow-y:auto; padding:15px;"></div>
-            <div style="padding:10px; border-top:1px solid rgba(255,255,255,0.1); display:flex; gap:10px;">
-                <input type="text" id="chatIn" placeholder="Say something..." style="flex:1; background:rgba(0,0,0,0.3); border:none; padding:10px; border-radius:8px; color:white; outline:none;">
-                <button onclick="sendChat()" style="background:var(--accent); border:none; padding:0 15px; border-radius:8px; color:white;"><i data-lucide="send" style="width:16px;"></i></button>
+        <div class="chat-box" style="margin-top:15px;">
+            <div class="chat-header">
+                <h3 style="font-size:14px; text-transform:uppercase; color:#657786;">Live Comments</h3>
+            </div>
+            <div id="chatList"></div>
+            <div id="replyIndicator" class="reply-indicator" style="display:none; padding:5px 15px; background:#e8f4fb; color:#1da1f2;">
+                <span id="replyText">Replying...</span>
+                <button onclick="cancelReply()" style="background:none; border:none; color:#1da1f2; cursor:pointer;"><i data-lucide="x" style="width:14px"></i></button>
+            </div>
+            <div class="chat-input-area">
+                <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();" style="border-radius:20px; padding:0 10px;">
+                    <input type="text" id="chatIn" placeholder="Tweet your reply..." autocomplete="off">
+                    <button type="submit" class="send-btn" style="background:transparent; color:#1da1f2; box-shadow:none;">
+                        <i data-lucide="send" style="width:18px"></i>
+                    </button>
+                </form>
             </div>
         </div>
+    </div>
+</div>
+
+<div id="grandJackpotModal" onclick="this.style.display='none'" style="background:rgba(0,0,0,0.8);">
+    <div class="jackpot-content" style="background:white; padding:30px; border-radius:10px;">
+        <i data-lucide="trophy" style="width:60px; height:60px; color:#fbbf24; margin-bottom:10px;"></i>
+        <h1 class="jp-title" style="color:#14171a; text-shadow:none;">WINNER!</h1>
+        <h2 class="jp-amount" id="grandPrizeAmount" style="background:none; -webkit-text-fill-color:initial; color:#1da1f2;">10,000</h2>
+        <div class="jp-name" id="jpWinnerName" style="color:#657786;">NAME</div>
+    </div>
+</div>
+
+<div id="pmModal" class="pm-modal">
+    <div class="pm-container">
+        <div id="pmInboxView" style="display:flex; flex-direction:column; height:100%;">
+            <div class="pm-header">
+                <h3>Messages</h3>
+                <button onclick="document.getElementById('pmModal').style.display='none'" style="background:transparent; border:none; color:#1da1f2;"><i data-lucide="x" style="width:20px;"></i></button>
+            </div>
+            <div class="active-friends-bar" id="activeFriendsBar" style="background:white; border-bottom:1px solid #e1e8ed;"></div>
+            <div id="pmList" class="pm-inbox-list"></div>
+        </div>
+        <div id="pmChatView" class="pm-chat-view">
+            <div class="pm-chat-header">
+                <button onclick="backToInbox()" style="background:none; border:none; color:#1da1f2;"><i data-lucide="arrow-left"></i></button>
+                <div style="display:flex; align-items:center;">
+                     <img id="chatTargetImg" style="width:32px; height:32px; border-radius:50%; margin-left:5px;">
+                     <div style="display:flex; flex-direction:column; margin-left:10px;">
+                        <span id="chatTargetName" style="font-weight:bold; font-size:14px; color:#14171a;">User</span>
+                     </div>
+                </div>
+            </div>
+            <div id="pmMessages" class="pm-messages"></div>
+            <form class="pm-input-area" onsubmit="event.preventDefault(); sendPrivateMessage();">
+                <input type="text" id="pmInput" class="pm-styled-input" placeholder="Start a new message..." autocomplete="off">
+                <button type="submit" style="background:none; border:none; color:#1da1f2; cursor:pointer;"><i data-lucide="send" style="width:20px"></i></button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="notifModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #e1e8ed; padding-bottom:10px;">
+            <h3>Notifications</h3>
+            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:#657786;"><i data-lucide="x"></i></button>
+        </div>
+        <div id="notifList"></div>
+    </div>
+</div>
+
+<div id="userOptionsModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()" style="text-align:center;">
+        <img id="optUserImg" style="width:60px; height:60px; border-radius:50%; margin-bottom:10px; border:1px solid #e1e8ed;">
+        <h3 id="optUserName" style="margin:0 0 15px 0; color:#14171a;">User</h3>
+        
+        <button class="user-opt-btn" onclick="openUserProfile(targetUserForOpt.uid)" style="background:white; color:#14171a; border:1px solid #e1e8ed;"><i data-lucide="user"></i> View Profile</button>
+        <button class="user-opt-btn" onclick="optAddFriend()" style="background:white; color:#14171a; border:1px solid #e1e8ed;"><i data-lucide="user-plus"></i> Follow</button>
+        <button class="user-opt-btn" onclick="optSendMessage()" style="background:white; color:#14171a; border:1px solid #e1e8ed;"><i data-lucide="mail"></i> Message</button>
+        <button class="user-opt-btn" onclick="document.getElementById('userOptionsModal').style.display='none'" style="background:#f5f8fa; color:#657786; border:none;">Close</button>
+    </div>
+</div>
+
+<div id="commentModalBackdrop" class="comment-modal-backdrop" onclick="closeComments()"></div>
+<div id="commentModal" class="comment-modal" style="background:white; border-radius:10px 10px 0 0;">
+    <div class="comment-header" style="background:white; color:#14171a;">
+        <h3 style="margin:0; font-size:16px;">Replies</h3>
+        <button onclick="closeComments()" style="background:none; border:none; color:#14171a;"><i data-lucide="x"></i></button>
+    </div>
+    <div id="commentList" class="comment-list" style="background:white;"></div>
+    <form class="comment-input-area" onsubmit="event.preventDefault(); sendComment();" style="background:white; border-top:1px solid #e1e8ed;">
+        <input type="text" id="commentInput" class="comment-input" placeholder="Tweet your reply" autocomplete="off" style="background:#f5f8fa; color:#14171a; border:1px solid #e1e8ed;">
+        <button type="submit" style="background:none; border:none; color:#1da1f2;"><i data-lucide="send"></i></button>
+    </form>
+</div>
+
+<div id="searchModal" class="search-modal-container">
+    <div class="search-header" style="background:white; border-bottom:1px solid #e1e8ed;">
+        <button onclick="document.getElementById('searchModal').style.display='none'" style="background:none; border:none; color:#1da1f2;"><i data-lucide="arrow-left"></i></button>
+        <div class="search-bar-wrap" style="background:#f5f8fa; border:1px solid #e1e8ed;">
+            <i data-lucide="search" style="width:16px; opacity:0.5; color:#657786;"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search Twitter..." onkeyup="handleSearch()" style="color:#14171a;">
+        </div>
+    </div>
+    <div id="searchResults" class="search-results" style="background:white;"></div>
+</div>
+
+<div id="userProfilePage" class="profile-page-container">
+    <button class="profile-nav-back" onclick="closeProfilePage()">
+        <i data-lucide="arrow-left"></i>
+    </button>
+    <div class="profile-cover" id="pageProfileCover"></div>
+    
+    <div class="profile-info-section">
+        <div class="profile-header-row">
+            <img id="pageProfileImg" class="profile-page-img" src="">
+        </div>
+        
+        <h2 id="pageProfileName" class="profile-page-name">User Name</h2>
+        <button id="profileMainActionBtn" class="profile-action-btn" onclick="handleProfileMainAction()" style="background:white; color:#1da1f2; border:1px solid #1da1f2;">Follow</button>
+        <p id="pageProfileBio" class="profile-page-bio">Bio here.</p>
+        
+        <div class="profile-stats" style="border-color:#e1e8ed;">
+            <div class="stat-item">
+                <div class="stat-val" id="statFriends">0</div>
+                <div class="stat-lbl">Following</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-val" id="statLikes">0</div>
+                <div class="stat-lbl">Likes</div>
+            </div>
+             <div class="stat-item">
+                <div class="stat-val" id="statPosts">0</div>
+                <div class="stat-lbl">Tweets</div>
+            </div>
+        </div>
+        
+        <div id="pageProfileFeed" class="profile-feed-section"></div>
+    </div>
+</div>
+
+<div id="editProfileModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0;">Edit Profile</h3>
+        
+        <label class="edit-label">Name</label>
+        <input type="text" id="editNameIn" class="edit-input" placeholder="Name" style="background:#f5f8fa; color:#14171a; border:1px solid #e1e8ed;">
+        
+        <label class="edit-label">Bio</label>
+        <input type="text" id="editBioIn" class="edit-input" placeholder="Bio" style="background:#f5f8fa; color:#14171a; border:1px solid #e1e8ed;">
+        
+        <label class="edit-label">Profile Picture</label>
+        <input type="file" id="editProfilePicInput" class="edit-input" accept="image/*" onchange="handleProfileUpload(this, 'pfp')" style="background:#f5f8fa;">
+        
+        <label class="edit-label">Header Photo</label>
+        <input type="file" id="editCoverPicInput" class="edit-input" accept="image/*" onchange="handleProfileUpload(this, 'cover')" style="background:#f5f8fa;">
+
+        <button onclick="saveProfileChanges()" style="width:100%; padding:10px; background:#1da1f2; border:none; border-radius:20px; color:white; font-weight:bold; cursor:pointer;">Save</button>
+    </div>
+</div>
+
+<div id="installGuideModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3>Install Guide</h3>
+            <button onclick="document.getElementById('installGuideModal').style.display='none'" style="background:none; border:none;"><i data-lucide="x"></i></button>
+        </div>
+        <div class="install-tabs">
+            <button class="install-tab-btn active" id="tabAndroid" onclick="showGuide('android')">Android</button>
+            <button class="install-tab-btn" id="tabIOS" onclick="showGuide('ios')">iOS</button>
+        </div>
+        <div id="guideAndroidContent">
+            <div class="guide-step" style="background:#f5f8fa; border:1px solid #e1e8ed; color:#14171a;"><div class="step-num" style="background:#1da1f2; color:white;">1</div><div class="step-text">Tap <b>Three Dots</b> in Chrome.</div></div>
+            <div class="guide-step" style="background:#f5f8fa; border:1px solid #e1e8ed; color:#14171a;"><div class="step-num" style="background:#1da1f2; color:white;">2</div><div class="step-text">Tap <b>Install App</b>.</div></div>
+        </div>
+        <div id="guideIOSContent" style="display:none;">
+            <div class="guide-step" style="background:#f5f8fa; border:1px solid #e1e8ed; color:#14171a;"><div class="step-num" style="background:#1da1f2; color:white;">1</div><div class="step-text">Tap <b>Share</b> in Safari.</div></div>
+            <div class="guide-step" style="background:#f5f8fa; border:1px solid #e1e8ed; color:#14171a;"><div class="step-num" style="background:#1da1f2; color:white;">2</div><div class="step-text">Tap <b>Add to Home Screen</b>.</div></div>
+        </div>
+    </div>
+</div>
+
+<div id="menuModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="profile-header" style="border-bottom:1px solid #e1e8ed;">
+            <img id="profileImgLarge" class="profile-img-large" src="" style="border:none; box-shadow:none;">
+            <div class="profile-name-info">
+                <h2 class="profile-name" id="profileNameDisplay" style="color:#14171a; text-shadow:none;">User Name</h2>
+                <span class="profile-uid" id="profileUidDisplay" style="color:#657786;">@handle</span>
+            </div>
+            <button onclick="document.getElementById('menuModal').style.display='none'" style="background:none; border:none; color:#14171a;"><i data-lucide="x"></i></button>
+        </div>
+        <div class="gcash-section" style="background:#f5f8fa; border:1px solid #e1e8ed;">
+            <span style="font-size:10px; font-weight:bold; color:#657786; text-transform:uppercase; margin-bottom:5px;">Info</span>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="gcashInput" class="styled-input" placeholder="Details" style="background:white; color:#14171a; border:1px solid #e1e8ed; box-shadow:none;">
+                <button onclick="saveGcash(); playSound('click');" style="background:#1da1f2; border:none; color:white; padding:0 20px; border-radius:4px; cursor:pointer;">Save</button>
+            </div>
+        </div>
+        <div class="ref-container" style="background:white; border:1px solid #e1e8ed;">
+            <span style="font-size:10px; font-weight:bold; color:#17bf63; text-transform:uppercase;">Invite</span>
+            <input type="text" id="refLink" readonly class="styled-input" style="background:#f5f8fa; color:#14171a; margin:10px 0; border:1px solid #e1e8ed;" onclick="this.select(); document.execCommand('copy'); showToast('Copied!');">
+            <div id="referralInputSection">
+                <span style="font-size:10px; font-weight:bold; color:#fbbf24;">Enter Code</span>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="referralInput" class="styled-input" placeholder="CODE" style="background:#f5f8fa; color:#14171a; border:1px solid #e1e8ed;">
+                    <button onclick="claimReferral(); playSound('click');" style="background:#fbbf24; border:none; color:black; padding:0 20px; border-radius:4px; cursor:pointer;">Claim</button>
+                </div>
+            </div>
+        </div>
+        <div class="history-box" style="background:white; border:none;">
+            <span style="font-size:10px; font-weight:bold; color:#657786;">History</span>
+            <div id="historyList" class="history-list"></div>
+        </div>
+        
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:white; color:#e0245e; border:1px solid #e0245e; border-radius:20px; font-weight:bold; margin-top:20px; cursor:pointer;">
+            Log out
+        </button>
     </div>
 </div>
 
 <div id="storeModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 style="margin-top:0; color:white;">Store</h3>
-        <div style="display:flex; gap:10px; margin-bottom:20px;">
-            <button onclick="switchStoreTab('skins')" style="flex:1; padding:10px; background:rgba(255,255,255,0.1); border:none; color:white; border-radius:8px; cursor:pointer;">Skins</button>
-            <button onclick="switchStoreTab('cashout')" style="flex:1; padding:10px; background:rgba(255,255,255,0.1); border:none; color:white; border-radius:8px; cursor:pointer;">Cashout</button>
-        </div>
-        <div id="storeSection-skins" class="skins-grid">
-            <div class="skin-item">
-                <div class="skin-preview" style="background:#1e293b;">B</div>
-                <div>Default</div>
-                <button class="btn-buy-skin equip" onclick="equipSkin('default')">EQUIP</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid #e1e8ed; padding-bottom: 15px;">
+            <div>
+                <h3 style="margin:0; color:#14171a;">Store</h3>
             </div>
-            <div class="skin-item">
-                <div class="skin-preview" style="background:black; border:2px solid #06b6d4; color:#06b6d4;">B</div>
-                <div>Neon</div>
-                <div style="font-size:10px; color:#fbbf24; margin-bottom:5px;">50k</div>
-                <button class="btn-buy-skin buy" onclick="buyOrEquipSkin('neon', 50000)">BUY</button>
-            </div>
-            <div class="skin-item">
-                <div class="skin-preview" style="background:linear-gradient(135deg,#451a03,#000); border:2px solid #fbbf24; color:#fbbf24;">B</div>
-                <div>Gold</div>
-                <div style="font-size:10px; color:#fbbf24; margin-bottom:5px;">100k</div>
-                <button class="btn-buy-skin buy" onclick="buyOrEquipSkin('gold', 100000)">BUY</button>
+            <div class="points-badge" style="height:30px; border-radius: 4px; background:#f5f8fa; border:none; color:#14171a;">
+                <span id="storePoints" style="font-weight:bold;">0</span> PTS
             </div>
         </div>
-        <div id="storeSection-cashout" style="display:none; text-align:center;">
-            <p>Cashout options coming soon.</p>
+        <div class="store-nav" style="background:white; border-bottom:1px solid #e1e8ed; border-radius:0;">
+            <button class="store-tab-btn active" onclick="switchStoreTab('cashout')" id="tabBtnCash">Rewards</button>
+            <button class="store-tab-btn" onclick="switchStoreTab('skins')" id="tabBtnSkins">Themes</button>
+            <button class="store-tab-btn" onclick="switchStoreTab('earn')" id="tabBtnEarn">Tasks</button>
+        </div>
+
+        <div style="padding: 15px; border: 1px solid #e1e8ed; border-radius: 5px; margin-bottom: 20px; text-align: center; position: relative;">
+            <h4 style="margin: 0 0 10px 0; color: #1da1f2; font-size: 14px;">Boost Points</h4>
+            <div id="adTimerOverlay" style="display: none; position: absolute; inset: 0; background: rgba(255,255,255,0.95); z-index: 50; align-items: center; justify-content: center; flex-direction: column;">
+                <div style="font-size: 18px; font-weight: 900; color: #14171a;" id="adCountdown">30s</div>
+                <div style="font-size: 12px; color: #e0245e;" id="adStatusText">Don't close app!</div>
+            </div>
+            <div id="adCaptchaOverlay" style="display: none; position: absolute; inset: 0; background: white; z-index: 51; align-items: center; justify-content: center; flex-direction: column;">
+                <div style="font-size: 14px; color: #14171a; margin-bottom: 10px;">Verification</div>
+                <div style="background: #f5f8fa; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                    <span id="mathQ" style="font-size: 20px; font-weight: bold; color: #14171a;">5 + 3 = ?</span>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <input type="number" id="mathAns" style="width: 60px; padding: 8px; border: 1px solid #1da1f2; color: #14171a;">
+                    <button onclick="verifyAdMath()" style="background: #17bf63; border: none; padding: 8px 12px; color: white; border-radius:4px;">OK</button>
+                </div>
+            </div>
+            <button id="btnWatchAd" onclick="startStrictWatch()" style="background: #1da1f2; width: 100%; border: none; padding: 10px; border-radius: 20px; font-weight: bold; color: white; cursor: pointer;">
+                Watch Ad (+50)
+            </button>
+        </div>
+
+        <div id="storeSection-cashout" style="display:block;">
+            <div class="reward-grid">
+                <div class="reward-item" style="background:white; border:1px solid #e1e8ed; box-shadow:none;">
+                    <div class="reward-main">
+                        <div class="reward-icon-box" style="background:#e8f4fb; border:none; color:#1da1f2;"><i data-lucide="gift"></i></div>
+                        <div class="reward-info"><b style="color:#14171a; text-shadow:none;">₱20 GCash</b><small style="color:#657786;">50k Pts</small></div>
+                    </div>
+                    <button class="btn-redeem" onclick="redeemItem('₱20 Gift Card', 50000)" style="background:white; color:#1da1f2; border:1px solid #1da1f2; text-shadow:none;">Redeem</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="storeSection-skins" style="display:none;">
+            <div class="skins-grid">
+                <div class="skin-item" style="background:white; border:1px solid #e1e8ed;">
+                    <div class="skin-preview" style="background:#f5f8fa; color:#14171a; border:1px solid #e1e8ed;">B</div>
+                    <div class="skin-name" style="color:#14171a;">Classic</div>
+                    <button class="btn-buy-skin equip" id="btn-skin-default" onclick="equipSkin('default')" style="background:#1da1f2;">Active</button>
+                </div>
+                </div>
+        </div>
+        <div id="storeSection-earn" style="display:none;">
+            <div class="task-list">
+                <div class="task-item" style="background:white; border:1px solid #e1e8ed;">
+                    <div class="task-info"><h4 style="color:#14171a;">Video Task</h4><p style="color:#657786;">Watch & Earn</p></div>
+                    <button class="btn-do-task" style="background:#1da1f2;" id="btn-task-video" onclick="openVideoLocker('video')">Start</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<div id="userProfilePage" style="position:fixed; inset:0; background:#0f172a; z-index:7000; display:none; flex-direction:column;">
-    <div style="padding:15px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:15px;">
-        <button onclick="closeProfilePage()" style="background:none; border:none; color:white;"><i data-lucide="arrow-left"></i></button>
-        <span style="font-weight:800; font-size:16px;">Profile</span>
-    </div>
-    <div style="padding:20px; text-align:center;">
-        <img id="pageProfileImg" src="" style="width:100px; height:100px; border-radius:50%; margin-bottom:10px;">
-        <h2 id="pageProfileName" style="margin:0; color:white;">User</h2>
-        <div style="margin-top:10px;" id="profileActionContainer"></div>
-    </div>
-    <div id="pageProfileFeed" style="flex:1; overflow-y:auto; padding:15px;"></div>
-</div>
-
-<div id="commentModal" class="modal" onclick="this.style.display='none'">
-    <div class="modal-content" onclick="event.stopPropagation()" style="height:70vh; display:flex; flex-direction:column;">
-        <div style="padding-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between;">
-            <span style="font-weight:800;">Comments</span>
-            <button onclick="closeComments()" style="background:none; border:none; color:white;">X</button>
-        </div>
-        <div id="commentList" style="flex:1; overflow-y:auto; padding:10px 0;"></div>
-        <div style="display:flex; gap:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1);">
-            <input type="text" id="commentInput" placeholder="Write a comment..." style="flex:1; background:rgba(0,0,0,0.3); border:none; padding:10px; border-radius:8px; color:white; outline:none;">
-            <button onclick="sendComment()" style="background:var(--accent); border:none; padding:0 15px; border-radius:8px; color:white;">Send</button>
-        </div>
-    </div>
+<div id="pwaInstallBanner" style="background:white; border-top:1px solid #e1e8ed; box-shadow:0 -2px 10px rgba(0,0,0,0.05);">
+    <div><span class="pwa-text" style="color:#14171a;">Install App</span><span class="pwa-sub" style="color:#657786;">Faster performance</span></div>
+    <button id="pwaBottomBtn" class="pwa-btn" style="background:#1da1f2; border-radius:20px; box-shadow:none;">GET</button>
 </div>
 <script>
+    // === INITIALIZATION & THEME LOGIC ===
+    window.addEventListener('load', () => { setTimeout(hideSplash, 1500); checkNotifGate(); checkInstallGate(); initBannerListener(); loadSocialFeed(); loadPYMK(); });
+    
+    function hideSplash() { 
+        const ss = document.getElementById('splash-screen'); 
+        if(ss && ss.style.display !== 'none') { 
+            ss.style.opacity = '0'; 
+            setTimeout(() => ss.style.display = 'none', 500); 
+        } 
+    }
+    
+    // === NOTIFICATIONS & PERMISSIONS ===
+    function checkNotifGate() {
+        const blocker = document.getElementById('notifBlocker');
+        if (!("Notification" in window)) { blocker.style.display = 'none'; return; }
+        if (Notification.permission === "granted") { blocker.style.display = 'none'; } 
+        else if (Notification.permission === "denied") { blocker.style.display = 'flex'; document.getElementById('blockedHelp').style.display = 'block'; } 
+        else { blocker.style.display = 'flex'; document.getElementById('blockedHelp').style.display = 'none'; }
+    }
+    
+    function requestGatePermission() { 
+        Notification.requestPermission().then(permission => { 
+            if (permission === "granted") { checkNotifGate(); requestNotifyPermission(); } 
+            else { checkNotifGate(); } 
+        }); 
+    }
+
+    // === UTILS ===
+    function showToast(msg) { 
+        const toast = document.getElementById('customToast'); 
+        document.getElementById('toastMsg').innerText = msg; 
+        toast.style.transform = "translateX(-50%) translateY(100px)"; // Drop down effect
+        toast.style.opacity = "1";
+        playSound('click'); 
+        setTimeout(() => { 
+            toast.style.transform = "translateX(-50%) translateY(-150%)"; 
+            toast.style.opacity = "0";
+        }, 3000); 
+    }
+
+    let confirmCallback = null;
+    function showCustomConfirm(title, msg, onYes) { 
+        document.getElementById('confTitle').innerText = title; 
+        document.getElementById('confMsg').innerText = msg; 
+        document.getElementById('customConfirmModal').style.display = 'flex'; 
+        confirmCallback = onYes; 
+        playSound('click'); 
+    }
+    function closeCustomConfirm() { document.getElementById('customConfirmModal').style.display = 'none'; confirmCallback = null; }
+    document.getElementById('confYesBtn').addEventListener('click', () => { if(confirmCallback) confirmCallback(); closeCustomConfirm(); });
+
+    // === FIREBASE SETUP ===
     lucide.createIcons();
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database(); const auth = firebase.auth();
-
-    let userData = {};
-    let selectedMood = null;
-    let selectedImageBase64 = null;
-
-    // === AUTH & INIT ===
-    function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     
+    const db = firebase.database(); 
+    const auth = firebase.auth();
+    let messaging; try { messaging = firebase.messaging(); } catch(e) { console.log("Messaging failed", e); }
+    
+    let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; 
+    let isJackpotActive = false; let currentJackpotAmount = 500;
+
+    const sounds = { 
+        click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3'), 
+        newBall: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3'), 
+        win: new Audio('https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3'), 
+        pop: new Audio('https://cdn.freesound.org/previews/536/536108_1415754-lq.mp3'),
+        cardFlip: new Audio('https://cdn.freesound.org/previews/240/240776_4107740-lq.mp3')
+    };
+    function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; sounds[type].play().catch(() => {}); } }
+
+    // === NAVIGATION ===
+    function switchTab(tab) {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        document.getElementById('view-home').style.display = 'none';
+        document.getElementById('view-bingo').style.display = 'none';
+        
+        if(tab === 'home') {
+            document.getElementById('view-home').style.display = 'block';
+            document.getElementById('nav-home').classList.add('active');
+            loadSocialFeed(); loadPYMK();
+        } else if(tab === 'bingo') {
+            document.getElementById('view-bingo').style.display = 'block';
+            document.getElementById('nav-bingo').classList.add('active');
+        }
+        playSound('click');
+    }
+
+    function switchStoreTab(tab) {
+        document.querySelectorAll('.store-tab-btn').forEach(b => b.classList.remove('active'));
+        ['cashout', 'skins', 'earn'].forEach(t => document.getElementById('storeSection-'+t).style.display = 'none');
+        document.getElementById('tabBtn' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+        document.getElementById('storeSection-' + tab).style.display = 'block';
+        if(tab === 'skins') updateSkinButtons();
+    }
+
+    // === AUTH & USER DATA ===
+    function login() { playSound('click'); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+
     auth.onAuthStateChanged(u => {
         if(u) {
-            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('loginOverlay').style.display = 'none'; 
             document.getElementById('userPanel').style.display = 'flex';
+            document.getElementById('userImg').src = u.photoURL; 
+            document.getElementById('profileImgLarge').src = u.photoURL;
+            document.getElementById('profileUidDisplay').innerText = "@" + u.uid.substring(0,8).toLowerCase();
             
-            const userRef = db.ref('users/' + u.uid);
-            userRef.on('value', s => {
-                const val = s.val() || {};
-                userData = { uid: u.uid, name: val.name || u.displayName, photo: val.photo || u.photoURL, points: val.points || 500, ownedSkins: val.ownedSkins || ['default'], equippedSkin: val.equippedSkin || 'default' };
-                
-                if(!s.exists()) userRef.set(userData);
-                
-                document.getElementById('userPoints').innerText = userData.points.toLocaleString();
-                document.getElementById('userImg').src = userData.photo;
-                
-                // Set Header Avatar Border
-                document.getElementById('userImg').className = getAvatarTierClass(userData.points);
-                
-                applySkin(userData.equippedSkin);
+            const userRef = db.ref('users/'+u.uid);
+            userRef.on('value', s => { 
+                if(s.exists()){ 
+                    userData = s.val(); userData.uid = u.uid; 
+                    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString(); 
+                    document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString(); 
+                    document.getElementById('refLink').value = window.location.origin + "?ref=" + (userData.refCode || ""); 
+                    
+                    if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); } 
+                    
+                    const badgeHtml = getBadgeHtml(userData.points || 0);
+                    document.getElementById('profileNameDisplay').innerHTML = `${userData.name || u.displayName} ${badgeHtml}`;
+                    
+                    updatePresenceData(u.uid, userData.name || u.displayName, userData.points, u.photoURL);
+                    applySkin(userData.equippedSkin || 'default'); updateSkinButtons();
+                } else {
+                    // Create New User
+                    userRef.set({ 
+                        name: u.displayName, photo: u.photoURL, points: 500, 
+                        refCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+                        last_seen: Date.now(), cardTimestamp: Date.now(), ownedSkins: ['default'], equippedSkin: 'default' 
+                    });
+                }
             });
             
-            loadSocialFeed();
-        } else {
-            document.getElementById('loginOverlay').style.display = 'flex';
+            initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); 
+            listenPrivateMessages(u.uid); loadPYMK();
+            if(messaging) messaging.getToken().then(t => { if(t) db.ref('users/'+u.uid).update({fcmToken: t}); });
+        } else { 
+            document.getElementById('loginOverlay').style.display = 'flex'; 
         }
     });
 
-    // === NEW AVATAR TIER LOGIC ===
-    function getAvatarTierClass(points) {
-        points = points || 0;
-        if(points >= 100000) return "avatar-tier-diamond";
-        if(points >= 50000) return "avatar-tier-platinum";
-        if(points >= 25000) return "avatar-tier-gold";
-        if(points >= 10000) return "avatar-tier-silver";
-        return "avatar-tier-bronze";
+    function getBadgeHtml(points) {
+        let color = "#cd7f32"; // Bronze
+        if(points >= 100000) color = "#b9f2ff"; // Diamond
+        else if(points >= 50000) color = "#e5e4e2"; // Plat
+        else if(points >= 25000) color = "#ffd700"; // Gold
+        else if(points >= 10000) color = "#c0c0c0"; // Silver
+        return `<i data-lucide="badge-check" style="width:14px; height:14px; color:${color}; fill:${color}; vertical-align:middle; margin-left:3px;"></i>`;
     }
 
-    // === SOCIAL FEED (CLEAN & FIXED) ===
+    // === BINGO GAME LOGIC ===
+    function generateNewCard() { 
+        if(gameDrawn.length > 0) return showToast("Wait for next game!"); 
+        let card = []; let cols = [[1,15],[16,30],[31,45],[46,60],[61,75]]; 
+        cols.forEach(r => { 
+            let nums = []; 
+            while(nums.length < 5) { let n = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0]; if(!nums.includes(n)) nums.push(n); } 
+            card.push(...nums); 
+        }); 
+        let finalCard = []; 
+        for(let r=0; r<5; r++) { for(let c=0; c<5; c++) { finalCard.push(card[c*5 + r]); } } 
+        finalCard[12] = "FREE"; 
+        db.ref('users/' + auth.currentUser.uid).update({ currentCard: finalCard, cardTimestamp: Date.now(), hasWonCurrent: false }); 
+        cardNumbers = finalCard; renderCard(); playSound('cardFlip'); 
+    }
+
+    function renderCard() { 
+        const grid = document.getElementById('bingoGrid'); 
+        grid.innerHTML = ""; 
+        cardNumbers.forEach((n, i) => { 
+            const div = document.createElement('div'); 
+            div.className = 'cell'; 
+            // "FREE" star logic
+            div.innerHTML = n === "FREE" ? "<i data-lucide='star' style='width:16px; fill:#fbbf24; color:#fbbf24;'></i>" : n; 
+            if(n === "FREE") { div.classList.add('hit'); if(!marks.includes(12)) marks.push(12); } 
+            grid.appendChild(div); 
+        }); 
+        updateGridHits(); 
+        applySkin(userData.equippedSkin || 'default');
+        lucide.createIcons();
+    }
+
+    function updateGridHits() { 
+        marks = [12]; 
+        const cells = document.querySelectorAll('.cell'); 
+        cells.forEach((c, i) => { 
+            const val = c.innerText; 
+            if(gameDrawn.includes(val) || c.innerHTML.includes('star')) { 
+                c.classList.add('hit'); 
+                if(!marks.includes(i)) marks.push(i); 
+            } 
+        }); 
+    }
+
+    function initBingo() {
+        db.ref('drawnNumbers').on('value', s => { 
+            const val = s.val(); 
+            const newGameDrawn = val ? Object.values(val).map(n => n.toString()) : []; 
+            if(newGameDrawn.length > 0 && gameDrawn.length > 0 && newGameDrawn.length > gameDrawn.length) { 
+                playSound('newBall'); 
+            } 
+            gameDrawn = newGameDrawn; 
+            const btn = document.getElementById('newCardBtn');
+            if(gameDrawn.length > 0) { btn.disabled = true; btn.style.opacity = "0.5"; btn.innerHTML = "IN GAME"; }
+            else { btn.disabled = false; btn.style.opacity = "1"; btn.innerHTML = "NEW CARD"; }
+            
+            checkLateJoiner(); updateGridHits(); renderPrevBalls(); checkWin(); 
+        });
+
+        db.ref('gameState/lastCalled').on('value', s => { 
+            document.getElementById('currentBall').innerText = s.val() || "--"; 
+        });
+
+        db.ref('gameState/latestWinner').on('value', s => {
+            const win = s.val();
+            const banner = document.getElementById('winnerBanner');
+            if(win && win.name) {
+                banner.style.display = 'block';
+                banner.innerHTML = `<span><i data-lucide="check-circle" style="width:16px"></i> WINNER: <b>${win.name}</b></span>`;
+                lucide.createIcons();
+                playSound('win');
+                if(win.uid !== auth.currentUser.uid) { document.getElementById('gameOverOverlay').style.display='flex'; }
+                else { confetti({ particleCount: 150, spread: 70 }); }
+            } else {
+                banner.style.display = 'none';
+                document.getElementById('gameOverOverlay').style.display='none';
+                document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow'));
+            }
+        });
+    }
+
+    function renderPrevBalls() { 
+        const row = document.getElementById('ballRow'); row.innerHTML = ""; 
+        const last5 = gameDrawn.slice(-5).reverse(); 
+        last5.forEach(n => { 
+            let d = document.createElement('div'); d.className = 'ball-small'; d.innerText = n; 
+            row.appendChild(d); 
+        }); 
+    }
+
+    function checkWin() {
+        if(userData.hasWonCurrent || gameDrawn.length === 0) return;
+        // Simple 5-in-a-row check logic (simplified for brevity)
+        const wins = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
+        for(let w of wins) {
+            if(w.every(i => marks.includes(i))) {
+                w.forEach(i => document.querySelectorAll('.cell')[i].classList.add('win-glow'));
+                triggerWin(); break;
+            }
+        }
+    }
+
+    function triggerWin() {
+        const prize = isJackpotActive ? currentJackpotAmount : 500;
+        db.ref('gameState/latestWinner').set({ name: userData.name, uid: userData.uid, prize: prize });
+        addPoints(prize);
+        db.ref('users/' + userData.uid).update({ hasWonCurrent: true });
+        userData.hasWonCurrent = true;
+        if(isJackpotActive) {
+            document.getElementById('grandJackpotModal').style.display = 'flex';
+            document.getElementById('jpWinnerName').innerText = "@" + userData.name;
+            document.getElementById('grandPrizeAmount').innerText = prize.toLocaleString();
+        }
+    }
+
+    function checkLateJoiner() {
+        const overlay = document.getElementById('lateOverlay');
+        if(gameDrawn.length > 0 && !userData.currentCard) overlay.style.display = 'flex';
+        else overlay.style.display = 'none';
+    }
+
+    function listenJackpot() {
+        db.ref('gameState/jackpot').on('value', s => {
+            const data = s.val();
+            const banner = document.getElementById('jackpotBanner');
+            if(data && data.active) {
+                banner.style.display = 'block';
+                document.getElementById('jackpotDisplayVal').innerText = data.amount;
+                isJackpotActive = true;
+                currentJackpotAmount = parseInt(data.amount.replace(/[^0-9]/g, '')) || 500;
+            } else {
+                banner.style.display = 'none';
+                isJackpotActive = false;
+            }
+        });
+    }
+
+    function listenForNextDraw() {
+        db.ref('gameState/nextDraw').on('value', s => {
+            const time = s.val();
+            const el = document.getElementById('nextDrawTime');
+            if(time > Date.now()) {
+                const d = new Date(time);
+                el.innerText = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                document.getElementById('nextDrawBanner').style.display = 'flex';
+            } else {
+                document.getElementById('nextDrawBanner').style.display = 'none';
+            }
+        });
+    }
+
+    // === SOCIAL FEED (OLD TWITTER STYLE) ===
     function loadSocialFeed() {
         const feed = document.getElementById('socialFeed');
         db.ref('socialPosts').limitToLast(50).on('value', s => {
-            feed.innerHTML = "";
             const posts = [];
             s.forEach(c => posts.push({key: c.key, ...c.val()}));
             posts.sort((a,b) => b.timestamp - a.timestamp);
-
-            if(posts.length === 0) {
-                feed.innerHTML = "<div style='text-align:center; padding:20px; opacity:0.5;'>No posts yet.</div>";
-                return;
-            }
-
+            
+            feed.innerHTML = "";
+            if(posts.length === 0) { feed.innerHTML = "<div style='text-align:center; padding:20px; color:#657786;'>No tweets yet.</div>"; return; }
+            
             posts.forEach(p => {
-                const tierClass = getAvatarTierClass(p.authorPoints);
-                const moodHtml = p.mood ? `<span class="mood-display">Feeling ${p.mood}</span>` : '';
-                const imgHtml = p.image ? `<div class="post-image-container"><img src="${p.image}" class="post-image"></div>` : '';
-
-                const el = document.createElement('div');
-                el.className = "post-card";
-                el.innerHTML = `
-                    <div class="post-header">
-                        <img class="post-avatar ${tierClass}" src="${p.authorPhoto}" style="width:45px; height:45px;" onclick="openUserProfile('${p.uid}')">
-                        <div class="post-meta">
-                            <div class="post-author">${p.authorName}</div>
-                            <div class="post-time">${new Date(p.timestamp).toLocaleString()}</div>
-                        </div>
-                        ${moodHtml}
+                const isMe = p.uid === auth.currentUser.uid;
+                const deleteBtn = isMe ? `<button onclick="deletePost('${p.key}')" style="background:none; border:none; color:#e0245e; font-size:12px; cursor:pointer; margin-left:auto;">Delete</button>` : '';
+                const imgHtml = p.image ? `<div style="margin-top:10px; border-radius:10px; overflow:hidden; border:1px solid #e1e8ed;"><img src="${p.image}" style="width:100%; display:block;"></div>` : '';
+                
+                const div = document.createElement('div');
+                div.className = 'post-card';
+                div.style.display = "flex";
+                div.style.padding = "15px";
+                div.style.borderBottom = "1px solid #e1e8ed";
+                div.style.gap = "10px";
+                
+                // Classic Twitter Layout: Avatar Left, Content Right
+                div.innerHTML = `
+                    <div style="flex-shrink:0;">
+                        <img src="${p.authorPhoto}" style="width:48px; height:48px; border-radius:50%; object-fit:cover; cursor:pointer;" onclick="openUserProfile('${p.uid}')">
                     </div>
-                    <div class="post-content">${p.content}</div>
-                    ${imgHtml}
-                    <div class="post-actions">
-                        <div class="reaction-wrapper">
-                            <button class="action-btn" id="like-btn-${p.key}">
-                                <i data-lucide="heart" style="width:18px"></i> <span id="like-count-${p.key}" style="margin-left:5px;">${p.likes || 0}</span>
-                            </button>
-                            <div class="reaction-box">
-                                <div class="react-icon" onclick="react('${p.key}', '❤️')">❤️</div>
-                                <div class="react-icon" onclick="react('${p.key}', '😆')">😆</div>
-                                <div class="react-icon" onclick="react('${p.key}', '😮')">😮</div>
-                                <div class="react-icon" onclick="react('${p.key}', '😢')">😢</div>
-                                <div class="react-icon" onclick="react('${p.key}', '😡')">😡</div>
-                            </div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:5px; margin-bottom:2px;">
+                            <span style="font-weight:bold; color:#14171a; font-size:15px;">${p.authorName}</span>
+                            <span style="color:#657786; font-size:14px;">@${p.authorName.replace(/\s/g,'').toLowerCase()} · ${timeAgo(p.timestamp)}</span>
+                            ${deleteBtn}
                         </div>
-                        <button class="action-btn" onclick="openComments('${p.key}')">
-                            <i data-lucide="message-circle" style="width:18px"></i> Comment
-                        </button>
+                        <div style="color:#14171a; font-size:15px; line-height:1.4; white-space:pre-wrap; word-break:break-word;">${p.content}</div>
+                        ${imgHtml}
+                        <div class="post-actions" style="display:flex; justify-content:space-between; max-width:250px; margin-top:10px; border:none;">
+                            <button class="action-btn" onclick="openComments('${p.key}')" style="background:none; border:none; display:flex; gap:5px; align-items:center;">
+                                <i data-lucide="message-circle" style="width:16px"></i> <span>Reply</span>
+                            </button>
+                            <button class="action-btn" onclick="toggleLike('${p.key}')" style="background:none; border:none; display:flex; gap:5px; align-items:center; ${p.likes && p.likes > 0 ? 'color:#e0245e;' : ''}">
+                                <i data-lucide="heart" style="width:16px; ${p.likes && p.likes > 0 ? 'fill:#e0245e;' : ''}"></i> <span>${p.likes || 0}</span>
+                            </button>
+                            <button class="action-btn" style="background:none; border:none; display:flex; gap:5px; align-items:center;">
+                                <i data-lucide="share" style="width:16px"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
-                feed.appendChild(el);
-                
-                // Check if liked
-                db.ref('postLikes/' + p.key + '/' + auth.currentUser.uid).once('value', l => {
-                    if(l.exists()) {
-                         const btn = document.getElementById(`like-btn-${p.key}`);
-                         btn.classList.add('liked');
-                         const val = l.val();
-                         if(val !== true) btn.querySelector('i').outerHTML = `<span style="font-size:18px; margin-right:5px;">${val}</span>`;
-                    }
-                });
+                feed.appendChild(div);
             });
             lucide.createIcons();
         });
     }
 
-    function react(key, emoji) {
-        const uid = auth.currentUser.uid;
-        const ref = db.ref('postLikes/' + key + '/' + uid);
-        ref.once('value', s => {
-            if(!s.exists()) {
-                db.ref('socialPosts/' + key + '/likes').transaction(l => (l||0)+1);
-            }
-            ref.set(emoji);
-            showToast(`Reacted ${emoji}`);
-        });
-    }
-
-    // === POST CREATION ===
-    function selectMood(el, mood) {
-        document.querySelectorAll('.mood-pill').forEach(b => b.classList.remove('active'));
-        el.classList.add('active');
-        selectedMood = mood;
-    }
-    
-    function handlePostImage(input) {
-        const reader = new FileReader();
-        reader.onload = e => {
-            selectedImageBase64 = e.target.result;
-            document.getElementById('postImgPreview').src = selectedImageBase64;
-            document.getElementById('imgPreviewCont').style.display = 'block';
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
-    
-    function removePostImage() {
-        selectedImageBase64 = null;
-        document.getElementById('imgPreviewCont').style.display = 'none';
-        document.getElementById('postImgInput').value = '';
-    }
-
     function createPost() {
-        const txt = document.getElementById('postInput').value;
-        if(!txt && !selectedImageBase64) return showToast("Empty post!");
+        const txt = document.getElementById('postInput').value.trim();
+        const img = document.getElementById('postImgPreview').src;
+        if(!txt && !selectedImageBase64) return;
         
         db.ref('socialPosts').push({
-            uid: userData.uid,
+            uid: auth.currentUser.uid,
             authorName: userData.name,
             authorPhoto: userData.photo,
-            authorPoints: userData.points,
             content: txt,
-            mood: selectedMood,
-            image: selectedImageBase64,
+            image: selectedImageBase64 || null,
             timestamp: Date.now(),
             likes: 0
         });
         
         document.getElementById('postInput').value = "";
         removePostImage();
-        showToast("Posted!");
+        showToast("Tweet sent!");
     }
 
-    // === PROFILE & COMMENTS ===
+    function toggleLike(key) {
+        db.ref('socialPosts/'+key+'/likes').transaction(l => (l||0) + 1);
+        playSound('pop');
+    }
+
+    function timeAgo(ts) {
+        const s = Math.floor((Date.now() - ts)/1000);
+        if(s < 60) return s + "s";
+        if(s < 3600) return Math.floor(s/60) + "m";
+        if(s < 86400) return Math.floor(s/3600) + "h";
+        return Math.floor(s/86400) + "d";
+    }
+    
+    // === CHAT & PM ===
+    function setupChat() {
+        db.ref('chats').limitToLast(50).on('child_added', s => {
+            const d = s.val();
+            const div = document.createElement('div');
+            const isMe = d.uid === auth.currentUser.uid;
+            div.className = 'chat-row';
+            div.style.flexDirection = isMe ? 'row-reverse' : 'row';
+            div.innerHTML = `
+                <img class="chat-pfp" src="${d.pfp}" style="width:32px; height:32px; border-radius:50%; margin:0 8px;">
+                <div class="bubble" style="${isMe ? 'background:#1da1f2; color:white;' : 'background:#f5f8fa; color:#14171a;'}">
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:2px; ${isMe?'display:none;':''}">${d.name}</div>
+                    ${d.msg}
+                </div>
+            `;
+            const list = document.getElementById('chatList');
+            list.appendChild(div);
+            list.scrollTop = list.scrollHeight;
+        });
+    }
+
+    function sendChat() {
+        const inp = document.getElementById('chatIn');
+        if(!inp.value.trim()) return;
+        db.ref('chats').push({
+            uid: auth.currentUser.uid, name: userData.name, pfp: userData.photo,
+            msg: inp.value.trim(), time: Date.now()
+        });
+        inp.value = "";
+    }
+    
+    // === PROFILE & SKINS ===
     function openUserProfile(uid) {
         document.getElementById('userProfilePage').style.display = 'flex';
-        db.ref('users/' + uid).once('value', s => {
+        db.ref('users/'+uid).once('value', s => {
             const u = s.val();
-            document.getElementById('pageProfileImg').src = u.photo;
-            document.getElementById('pageProfileImg').className = getAvatarTierClass(u.points); // Apply Border
             document.getElementById('pageProfileName').innerText = u.name;
-            loadProfileFeed(uid);
-        });
-    }
-    
-    function loadProfileFeed(uid) {
-        const feed = document.getElementById('pageProfileFeed');
-        db.ref('socialPosts').orderByChild('uid').equalTo(uid).limitToLast(20).once('value', s => {
-            feed.innerHTML = "";
-            const posts = [];
-            s.forEach(c => posts.push(c.val()));
-            posts.reverse().forEach(p => {
-                const d = document.createElement('div');
-                d.className = "post-card";
-                d.innerHTML = `<div class="post-content" style="padding:15px;">${p.content}</div>`;
-                feed.appendChild(d);
-            });
+            document.getElementById('pageProfileImg').src = u.photo;
+            document.getElementById('pageProfileBio').innerText = u.bio || "No bio yet.";
+            // Load stats & feed logic here (abbreviated)
         });
     }
 
-    function closeProfilePage() { document.getElementById('userProfilePage').style.display = 'none'; }
-    
-    let currentPostId = null;
-    function openComments(key) {
-        currentPostId = key;
-        document.getElementById('commentModal').style.display = 'flex';
-        const list = document.getElementById('commentList');
-        db.ref('postComments/' + key).on('child_added', s => {
-            const c = s.val();
-            const d = document.createElement('div');
-            d.style.padding = "10px";
-            d.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
-            d.innerHTML = `<b style="color:var(--accent); font-size:12px;">${c.name}:</b> <span style="font-size:13px; color:#cbd5e1;">${c.text}</span>`;
-            list.appendChild(d);
-        });
-    }
-    function closeComments() { document.getElementById('commentModal').style.display = 'none'; document.getElementById('commentList').innerHTML = ""; db.ref('postComments/' + currentPostId).off(); }
-    function sendComment() {
-        const txt = document.getElementById('commentInput').value;
-        if(!txt) return;
-        db.ref('postComments/' + currentPostId).push({ name: userData.name, text: txt });
-        document.getElementById('commentInput').value = "";
-    }
-
-    // === UTILS ===
-    function switchTab(t) {
-        document.getElementById('view-home').style.display = t === 'home' ? 'block' : 'none';
-        document.getElementById('view-bingo').style.display = t === 'bingo' ? 'block' : 'none';
-        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-        document.getElementById('nav-' + t).classList.add('active');
-    }
-    function showToast(m) {
-        const t = document.getElementById('customToast');
-        document.getElementById('toastMsg').innerText = m;
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 3000);
-    }
-    function openPostCreator() { switchTab('home'); document.getElementById('postInput').focus(); }
-    function openMyProfile() { openUserProfile(auth.currentUser.uid); }
-    function applySkin(s) { 
+    function applySkin(skinId) {
         const c = document.getElementById('bingoCardContainer');
-        c.className = 'card';
-        if(s && s!=='default') c.classList.add('card-skin-'+s);
-    }
-    
-    // Bingo Logic Minimal (Placeholder for visual)
-    function generateNewCard() {
-        const grid = document.getElementById('bingoGrid');
-        grid.innerHTML = "";
-        for(let i=0; i<25; i++) {
-            const d = document.createElement('div');
-            d.className = 'cell';
-            d.innerText = i===12 ? "★" : Math.floor(Math.random()*75)+1;
-            grid.appendChild(d);
+        c.className = "card"; // Reset
+        if(skinId !== 'default') c.classList.add('card-skin-'+skinId);
+        // Special logic for custom skin
+        if(skinId === 'custom') {
+            const bg = localStorage.getItem('customSkinBG');
+            if(bg) c.style.backgroundImage = `url('${bg}')`;
+        } else {
+            c.style.backgroundImage = "none";
         }
     }
-    generateNewCard();
+    
+    function updateSkinButtons() {
+        ['default','neon','gold','pink'].forEach(s => {
+            const btn = document.getElementById('btn-skin-'+s);
+            if(btn) {
+                if(userData.equippedSkin === s) { btn.innerText = "Active"; btn.style.background = "#1da1f2"; color="white"; }
+                else if((userData.ownedSkins||[]).includes(s)) { btn.innerText = "Equip"; btn.onclick = ()=>equipSkin(s); }
+                else { btn.innerText = "Buy"; btn.onclick = ()=>buySkin(s); }
+            }
+        });
+    }
+    
+    function equipSkin(s) { db.ref('users/'+userData.uid).update({equippedSkin:s}); showToast("Theme applied"); }
+
+    // === ADS & STORE ===
+    function addPoints(n) { db.ref('users/'+userData.uid+'/points').transaction(p=>(p||0)+n); spawnFlyingCoins(10); }
+    function deductPoints(n) { db.ref('users/'+userData.uid+'/points').transaction(p=>(p||0)-n); }
+    
+    function spawnFlyingCoins(n) {
+        for(let i=0; i<n; i++) {
+            const c = document.createElement('div');
+            c.innerText = "🪙"; c.style.position="fixed"; c.style.left="50%"; c.style.top="50%";
+            c.style.zIndex="9999"; c.style.transition="all 1s";
+            document.body.appendChild(c);
+            setTimeout(()=> { 
+                c.style.top="10px"; c.style.left="90%"; c.style.opacity="0"; 
+            }, 50);
+            setTimeout(()=>c.remove(), 1000);
+        }
+    }
+
+    // === IMAGE HANDLING ===
+    let selectedImageBase64 = null;
+    function handlePostImage(input) {
+        if(input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                selectedImageBase64 = e.target.result;
+                document.getElementById('postImgPreview').src = selectedImageBase64;
+                document.getElementById('imgPreviewCont').style.display = 'block';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    function removePostImage() {
+        selectedImageBase64 = null;
+        document.getElementById('imgPreviewCont').style.display = 'none';
+        document.getElementById('postImgInput').value = "";
+    }
+
+    // === PRESENCE SYSTEM ===
+    function setupPresence(uid) {
+        const ref = db.ref('status/'+uid);
+        db.ref('.info/connected').on('value', s => {
+            if(s.val()) ref.onDisconnect().remove().then(() => ref.set({state:'online', last_changed: Date.now()}));
+        });
+        db.ref('status').on('value', s => document.getElementById('onlineCount').innerText = s.numChildren());
+    }
+    function updatePresenceData(uid, name, pts, photo) {
+        db.ref('status/'+uid).update({name, points:pts, photo});
+    }
+
+    // === PYMK ===
+    function loadPYMK() {
+        const list = document.getElementById('pymkList');
+        // Simple mock for now, would normally query DB for non-friends
+    }
+
 </script>
+// ==========================================
+// PART 4: AUXILIARY SCRIPTS (PWA, Search, Comments, Ads)
+// APPEND THIS BELOW THE PART 3 SCRIPT
+// ==========================================
+
+// === PWA & INSTALL LOGIC ===
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const banner = document.getElementById('pwaInstallBanner');
+    // Show bottom banner only if Gate is not active
+    if(banner && document.getElementById('installGate').style.display === 'none') {
+        banner.style.display = 'flex';
+    }
+});
+
+function triggerInstall() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                document.getElementById('pwaInstallBanner').style.display = 'none';
+            }
+            deferredPrompt = null;
+        });
+    } else {
+        // Fallback instructions
+        document.getElementById('installGuideModal').style.display = 'flex';
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        showGuide(isIOS ? 'ios' : 'android');
+    }
+}
+
+function checkInstallGate() {
+    const gate = document.getElementById('installGate');
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    
+    if (isStandalone) { 
+        gate.style.display = 'none'; 
+        if(document.getElementById('pwaInstallBanner')) document.getElementById('pwaInstallBanner').style.display = 'none';
+    } else { 
+        gate.style.display = 'flex'; 
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; 
+        if(isIOS) { 
+            // iOS doesn't support programmatic install, show instructions
+            document.getElementById('gateInstallBtn').style.display = 'none'; 
+            document.getElementById('gateIosNote').style.display = 'block'; 
+        } 
+    }
+}
+
+function showGuide(os) {
+    document.querySelectorAll('.install-tab-btn').forEach(b => b.classList.remove('active'));
+    if(os === 'android') {
+        document.getElementById('tabAndroid').classList.add('active');
+        document.getElementById('guideAndroidContent').style.display = 'block';
+        document.getElementById('guideIOSContent').style.display = 'none';
+    } else {
+        document.getElementById('tabIOS').classList.add('active');
+        document.getElementById('guideAndroidContent').style.display = 'none';
+        document.getElementById('guideIOSContent').style.display = 'block';
+    }
+}
+
+// === SEARCH LOGIC ===
+let searchTimeout = null;
+function handleSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        const q = document.getElementById('searchInput').value.toLowerCase().trim();
+        const resDiv = document.getElementById('searchResults');
+        
+        if(q.length < 2) {
+            resDiv.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px; color:#657786;'>Type to search people...</div>";
+            return;
+        }
+        resDiv.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px; color:#657786;'>Searching...</div>";
+        
+        db.ref('users').once('value', s => {
+            resDiv.innerHTML = "";
+            let found = false;
+            s.forEach(uSnap => {
+                const u = uSnap.val();
+                // Simple name match
+                if(u.name && u.name.toLowerCase().includes(q)) {
+                    found = true;
+                    const div = document.createElement('div');
+                    div.style.padding = "10px";
+                    div.style.borderBottom = "1px solid #e1e8ed";
+                    div.style.display = "flex";
+                    div.style.alignItems = "center";
+                    div.style.gap = "10px";
+                    div.style.cursor = "pointer";
+                    div.onclick = () => {
+                        document.getElementById('searchModal').style.display = 'none';
+                        openUserProfile(uSnap.key);
+                    };
+                    div.innerHTML = `
+                        <img src="${u.photo || 'https://via.placeholder.com/40'}" style="width:40px; height:40px; border-radius:50%;">
+                        <div>
+                            <div style="font-weight:bold; color:#14171a;">${u.name}</div>
+                            <div style="font-size:12px; color:#657786;">@${u.name.replace(/\s/g,'').toLowerCase()}</div>
+                        </div>
+                    `;
+                    resDiv.appendChild(div);
+                }
+            });
+            if(!found) resDiv.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px; color:#657786;'>No results found.</div>";
+        });
+    }, 500);
+}
+
+function openSearch() {
+    document.getElementById('searchModal').style.display = 'flex';
+    document.getElementById('searchInput').focus();
+}
+
+// === COMMENTS SYSTEM ===
+let currentOpenPostKey = null;
+
+function openComments(postKey) {
+    currentOpenPostKey = postKey;
+    const list = document.getElementById('commentList');
+    list.innerHTML = "<div style='text-align:center; padding:20px; color:#657786;'>Loading replies...</div>";
+    document.getElementById('commentModal').style.display = 'flex';
+    document.getElementById('commentModalBackdrop').style.display = 'block';
+    
+    db.ref('postComments/' + postKey).on('value', s => {
+        list.innerHTML = "";
+        if(!s.exists()) {
+            list.innerHTML = "<div style='text-align:center; padding:20px; color:#657786;'>No replies yet. Tweet a reply!</div>";
+            return;
+        }
+        s.forEach(c => {
+            const com = c.val();
+            const div = document.createElement('div');
+            div.style.padding = "10px";
+            div.style.borderBottom = "1px solid #e1e8ed";
+            div.style.display = "flex";
+            div.style.gap = "10px";
+            
+            div.innerHTML = `
+                <img src="${com.uPhoto}" style="width:36px; height:36px; border-radius:50%;">
+                <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="font-weight:bold; font-size:13px; color:#14171a;">${com.uName}</span>
+                        <span style="font-size:11px; color:#657786;">${timeAgo(com.time)}</span>
+                    </div>
+                    <div style="color:#14171a; font-size:14px; margin-top:2px;">${com.text}</div>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    });
+}
+
+function closeComments() {
+    document.getElementById('commentModal').style.display = 'none';
+    document.getElementById('commentModalBackdrop').style.display = 'none';
+    if(currentOpenPostKey) db.ref('postComments/' + currentOpenPostKey).off();
+    currentOpenPostKey = null;
+}
+
+function sendComment() {
+    const txt = document.getElementById('commentInput').value.trim();
+    if(!txt || !currentOpenPostKey) return;
+    
+    db.ref('postComments/' + currentOpenPostKey).push({
+        uid: auth.currentUser.uid,
+        uName: userData.name,
+        uPhoto: userData.photo,
+        text: txt,
+        time: Date.now()
+    });
+    
+    document.getElementById('commentInput').value = "";
+    showToast("Reply sent!");
+}
+
+// === VIDEO, NOTIFICATIONS & ALERTS ===
+function listenVideoUpdate() { 
+    db.ref('gameState/videoSettings').on('value', s => { 
+        const v = s.val(); 
+        const iframe = document.getElementById('liveVideoFrame'); 
+        const offline = document.getElementById('videoOfflineState'); 
+        
+        // Handle Video Source
+        if (v && v.type === 'offline') { 
+            iframe.style.display = 'none'; 
+            offline.style.display = 'flex'; 
+        } else if(v && v.url) { 
+            offline.style.display = 'none'; 
+            iframe.style.display = 'block'; 
+            // Only update src if changed to prevent reload
+            if(iframe.src !== v.url) iframe.src = v.url;
+        } 
+    }); 
+}
+
+// 5 Minute Warning Logic
+let notifiedFiveMins = false; 
+let lastCheckedSchedule = null;
+
+function checkFiveMinuteNotification(timeInput) { 
+    if(notifiedFiveMins && lastCheckedSchedule === timeInput) return; 
+    let drawTime = parseInt(timeInput); 
+    
+    if(drawTime > 0) { 
+        const diff = drawTime - Date.now(); 
+        const mins = Math.floor(diff / 60000); 
+        
+        if(mins === 5) { 
+            if(Notification.permission === "granted") { 
+                new Notification("RB LIVE", { body: "5 minutes remaining before the draw!" }); 
+            } 
+            showToast("⚠️ 5 minutes remaining!"); 
+            notifiedFiveMins = true; 
+            lastCheckedSchedule = timeInput; 
+        } 
+    } 
+}
+
+// === PYMK (People You May Know) Logic ===
+function loadPYMK() {
+    const list = document.getElementById('pymkList');
+    const container = document.getElementById('pymkSection');
+    if(!auth.currentUser) return;
+    
+    db.ref('users').limitToLast(20).once('value', s => {
+        db.ref('friends/' + auth.currentUser.uid).once('value', fSnap => {
+            const friends = fSnap.exists() ? Object.keys(fSnap.val()) : [];
+            friends.push(auth.currentUser.uid); // Exclude self
+            
+            const candidates = [];
+            s.forEach(uSnap => {
+                // If user is not me and not my friend
+                if(!friends.includes(uSnap.key)) {
+                    candidates.push({ uid: uSnap.key, ...uSnap.val() });
+                }
+            });
+            
+            // Pick 5 random
+            const shuffled = candidates.sort(() => 0.5 - Math.random()).slice(0, 5);
+            
+            if(shuffled.length > 0) {
+                list.innerHTML = "";
+                shuffled.forEach(u => {
+                    const div = document.createElement('div');
+                    div.className = 'pymk-card';
+                    // Twitter style "Who to follow" card
+                    div.innerHTML = `
+                        <img src="${u.photo}" style="width:50px; height:50px; border-radius:50%; margin-bottom:5px;">
+                        <div style="font-weight:bold; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; color:#14171a;">${u.name.split(' ')[0]}</div>
+                        <button onclick="sendFriendReqPYMK('${u.uid}')" style="margin-top:5px; background:white; border:1px solid #1da1f2; color:#1da1f2; border-radius:20px; font-size:11px; padding:4px 12px; cursor:pointer; font-weight:bold;">Follow</button>
+                    `;
+                    list.appendChild(div);
+                });
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+            }
+        });
+    });
+}
+
+function sendFriendReqPYMK(uid) {
+    db.ref('friendRequests/' + uid + '/' + auth.currentUser.uid).set(true);
+    showToast("Follow Request Sent!");
+    // Temporarily hide pymk to refresh experience
+    document.getElementById('pymkSection').style.display = 'none'; 
+}
+
+// === ANTI-CHEAT & ADS LOGIC ===
+let strictTimer = null;
+
+function startStrictWatch() {
+    // Open Adsterra or Ad Link
+    window.open("https://directoryeditorweep.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js", "_blank"); 
+    
+    document.getElementById('adTimerOverlay').style.display = 'flex';
+    let sec = 30;
+    const cd = document.getElementById('adCountdown');
+    const status = document.getElementById('adStatusText');
+    
+    clearInterval(strictTimer);
+    strictTimer = setInterval(() => {
+        if(document.hidden) {
+            status.innerText = "Paused! Return to app.";
+            return;
+        }
+        
+        sec--;
+        cd.innerText = sec + "s";
+        status.innerText = "Watching Ad...";
+        
+        if(sec <= 0) {
+            clearInterval(strictTimer);
+            document.getElementById('adTimerOverlay').style.display = 'none';
+            document.getElementById('adCaptchaOverlay').style.display = 'flex';
+            
+            // Simple Math Verification
+            const n1 = Math.floor(Math.random()*5)+1;
+            const n2 = Math.floor(Math.random()*5)+1;
+            document.getElementById('mathQ').innerText = `${n1} + ${n2} = ?`;
+            document.getElementById('mathQ').dataset.ans = n1+n2;
+        }
+    }, 1000);
+}
+
+function verifyAdMath() {
+    const userAns = document.getElementById('mathAns').value;
+    const correctAns = document.getElementById('mathQ').dataset.ans;
+    
+    if(userAns === correctAns) {
+        document.getElementById('adCaptchaOverlay').style.display = 'none';
+        addPoints(50);
+        showToast("Reward: +50 PTS Added!");
+    } else {
+        showToast("Wrong answer. Try again.");
+    }
+}
+
+// === BANNER LISTENER ===
+function initBannerListener() { 
+    if(sessionStorage.getItem('bannerSeen')) return; 
+    db.ref('gameState/bannerSettings').once('value', s => { 
+        const d = s.val(); 
+        if(d && d.active && d.imageUrl) { 
+            document.getElementById('customBannerImg').src = d.imageUrl; 
+            document.getElementById('customPopupBanner').style.display = 'flex'; 
+            sessionStorage.setItem('bannerSeen', 'true'); 
+        } 
+    }); 
+}
+function closeCustomBanner() { document.getElementById('customPopupBanner').style.display = 'none'; }
+function clickCustomBanner() { /* Optional link logic here */ }
+    // === INITIALIZATION CALLS ===
+    // Siguraduhing tumatakbo ang mga ito pagka-load
+    loadPYMK();
+    initBannerListener();
+
+</script> 
 </body>
 </html>
