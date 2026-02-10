@@ -427,6 +427,54 @@
         /* === NEW SOCIAL ECOSYSTEM STYLES === */
         .social-feed-container { margin-top: 15px; display: flex; flex-direction: column; gap: 15px; }
         
+        /* === REACTION STYLES (DAGDAG) === */
+.reaction-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+/* Ang hidden box na may emojis */
+.reaction-box {
+    position: absolute;
+    bottom: 100%; /* Nasa taas ng button */
+    left: 50%;
+    transform: translateX(-50%) translateY(10px) scale(0.8);
+    background: white;
+    padding: 5px 10px;
+    border-radius: 50px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 100;
+    pointer-events: none;
+    margin-bottom: 10px;
+}
+
+/* Pag tinutok ang mouse, lalabas ang box */
+.reaction-wrapper:hover .reaction-box {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+/* Itsura ng Emojis */
+.react-icon {
+    font-size: 24px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    user-select: none;
+}
+
+/* Gumagalaw pag tinutok ang mouse sa emoji */
+.react-icon:hover {
+    transform: scale(1.5) translateY(-5px);
+}
+
+        
         /* Post Creator */
         .post-creator { background: var(--glass-surface); padding: 15px; border-radius: 18px; border: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
         .post-input { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; color: white; resize: none; min-height: 80px; font-family: 'Inter', sans-serif; }
@@ -2292,10 +2340,21 @@
                         <div class="post-content">${post.content}</div>
                         ${imgHtml}
                         <div class="post-actions">
-                            <button class="action-btn" id="like-btn-${post.key}" onclick="toggleLike('${post.key}', '${post.uid}')">
-                                <i data-lucide="heart" style="width:14px;"></i> 
-                                <span id="like-count-${post.key}">${post.likes || 0}</span>
-                            </button>
+                            <div class="reaction-wrapper">
+    <div class="reaction-box">
+        <div class="react-icon" onclick="triggerReaction('${post.key}', '❤️', '${post.uid}')">❤️</div>
+        <div class="react-icon" onclick="triggerReaction('${post.key}', '😆', '${post.uid}')">😆</div>
+        <div class="react-icon" onclick="triggerReaction('${post.key}', '😮', '${post.uid}')">😮</div>
+        <div class="react-icon" onclick="triggerReaction('${post.key}', '😢', '${post.uid}')">😢</div>
+        <div class="react-icon" onclick="triggerReaction('${post.key}', '😡', '${post.uid}')">😡</div>
+    </div>
+    
+    <button class="action-btn" id="like-btn-${post.key}" onclick="toggleLike('${post.key}', '${post.uid}')">
+        <i data-lucide="heart" style="width:14px;"></i> 
+        <span id="like-count-${post.key}" style="margin-left:5px;">${post.likes || 0}</span>
+    </button>
+</div>
+
                             <button class="action-btn" onclick="openComments('${post.key}')">
                                 <i data-lucide="message-circle" style="width:14px"></i> Comment
                             </button>
@@ -2336,6 +2395,35 @@
             });
         });
     }
+
+// Function para sa Reactions
+function triggerReaction(postKey, emoji, uid) {
+    showToast(`You reacted ${emoji}`);
+    
+    // Kunin ang button para palitan ang icon
+    const btn = document.getElementById('like-btn-' + postKey);
+    if(btn) {
+        // I-save sa database bilang "Like" (Pansamantala, para di masira DB mo)
+        toggleLike(postKey, uid);
+        
+        // Palitan ang Heart icon ng piniling Emoji
+        const icon = btn.querySelector('svg');
+        if(icon) icon.style.display = 'none'; // Tago muna heart
+        
+        // Check kung may emoji na nakalagay, kung wala, gawa tayo
+        let display = btn.querySelector('.react-display');
+        if(!display) {
+            display = document.createElement('span');
+            display.className = 'react-display';
+            display.style.marginRight = '5px';
+            display.style.fontSize = '16px';
+            btn.prepend(display);
+        }
+        display.innerText = emoji; // Update emoji display
+        btn.classList.add('liked'); // Gawing "Liked" ang kulay
+    }
+}
+
 
     function toggleLike(postKey, authorUid) {
         const myUid = auth.currentUser.uid;
