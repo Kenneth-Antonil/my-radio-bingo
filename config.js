@@ -1,4 +1,4 @@
-// config.js
+// === FIREBASE CONFIGURATION ===
 const firebaseConfig = { 
     apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", 
     authDomain: "radiobingo-9ac29.firebaseapp.com", 
@@ -10,8 +10,13 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-const db = firebase.database();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database(); 
 const auth = firebase.auth();
+let messaging; 
+
+try { 
+    messaging = firebase.messaging(); 
+} catch(e) { 
+    console.log("Messaging failed to init", e); 
+}
