@@ -1,62 +1,85 @@
-<!DOCTYPE html>
-<html lang="tl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Radio Bingo | Play</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-</head>
-<body>
+<div class="video-feed-wrapper">
+    <div class="video-container">
+        <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
+        <div id="videoOfflineState" style="display:none; position:absolute; inset:0; background:#0f172a; flex-direction:column; align-items:center; justify-content:center; z-index:20;">
+            <div style="width:60px; height:60px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:15px; animation:pulse-ring 2s infinite;">
+                <i data-lucide="radio" style="width:30px; height:30px; color:#94a3b8;"></i>
+            </div>
+            <h3 style="margin:0; font-size:16px; font-weight:900; color:white; letter-spacing:1px;">WAITING FOR LIVE</h3>
+            <p style="margin:5px 0 0; font-size:12px; color:#64748b;">Stand by for the next draw.</p>
+        </div>
+        <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none; position:absolute; top:0; left:0; width:100%; height:100%;"></iframe>
+    </div>
+</div>
 
-    <div class="nav">
-        <span>PLAY <span style="color:var(--accent-glow)">NOW</span></span>
-        <div class="user-stats">
-            <div class="points-badge"><span id="userPoints">0</span></div>
+<div id="jackpotBanner">
+    <div class="jp-label-new">
+        <i data-lucide="crown" style="width: 16px;"></i> JACKPOT ROUND <i data-lucide="crown" style="width: 16px;"></i>
+    </div>
+    <span class="jackpot-amount" id="jackpotDisplayVal">5,000</span>
+    <div style="font-size: 10px; opacity: 0.7; margin-top: 5px; color: #fbbf24;">RB COINS GRAND PRIZE</div>
+</div>
+
+<div id="nextDrawBanner" class="next-draw-container">
+    <div class="nd-icon"><i data-lucide="calendar-days"></i></div>
+    <div class="nd-info">
+        <div class="next-draw-label">Susunod na Bola</div>
+        <div id="nextDrawTime" class="next-draw-time">--:-- --</div>
+    </div>
+</div>
+
+<div id="winnerBanner">
+    <span><i data-lucide="party-popper" style="width:24px; height:24px;"></i> BINGO WINNER!</span>
+    <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
+</div>
+
+<div class="draw-panel">
+    <div class="prev-balls" id="ballRow"></div>
+    <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">NOW DRAWN</span><span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.5);">--</span></div>
+</div>
+
+<div class="card" id="bingoCardContainer">
+    <div id="lateOverlay" class="late-overlay">
+        <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom:15px; filter: drop-shadow(0 0 10px var(--danger));"></i>
+        <div class="late-text">GAME ONGOING</div>
+        <div class="late-subtext">Sorry, ongoing na ang bola. Bawal na sumali ang late.</div>
+        <div style="margin-top:20px; background:rgba(255,255,255,0.1); padding:10px 20px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+            <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
+            <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
         </div>
     </div>
-
-    <div class="container">
-        <div class="video-feed-wrapper">
-             <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" frameborder="0"></iframe>
-        </div>
-
-        <div style="text-align:center; margin-bottom:10px;">
-            <span style="font-size:12px; opacity:0.7;">CURRENT BALL</span><br>
-            <span id="currentBall" style="font-size:40px; font-weight:900; color:white;">--</span>
-        </div>
-
-        <div class="card" id="bingoCardContainer">
-            <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
-            <div class="grid" id="bingoGrid"></div>
-        </div>
+    <div id="gameOverOverlay" class="game-over-overlay">
+        <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom:15px; filter: drop-shadow(0 0 15px var(--gold));"></i>
+        <div class="late-text">Game Finished</div>
+        <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
     </div>
-
-    <div class="bottom-nav">
-        <a href="index.html" class="nav-item">
-            <i data-lucide="home" class="nav-icon"></i>
-            <span class="nav-label">Home</span>
-        </a>
-        <a href="bingo.html" class="nav-item active">
-            <i data-lucide="play-circle" class="nav-icon"></i>
-            <span class="nav-label">Bingo</span>
-        </a>
-        <div class="nav-center"><div class="nav-icon-bg"><i data-lucide="plus"></i></div></div>
-        <a href="store.html" class="nav-item">
-            <i data-lucide="shopping-bag" class="nav-icon"></i>
-            <span class="nav-label">Store</span>
-        </a>
-        <a href="messages.html" class="nav-item">
-            <i data-lucide="message-circle" class="nav-icon"></i>
-            <span class="nav-label">Chats</span>
-        </a>
+    <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
+        <div class="pattern-box">
+            <div class="pattern-dot"></div>
+            <span class="pattern-text" id="patternName">Normal Bingo</span>
+        </div>
+        <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
     </div>
+    <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
+    <div class="grid" id="bingoGrid"></div>
+</div>
 
-    <script src="config.js"></script>
-    <script src="main.js"></script>
-    <script>lucide.createIcons();</script>
-</body>
-</html>
+<div class="chat-box" style="margin-top:15px;">
+    <div class="chat-header">
+        <i data-lucide="message-square" style="width:18px; color:var(--accent-glow)"></i>
+        <h3>LIVE STREAM CHAT</h3>
+    </div>
+    <div id="chatList"></div>
+    <div id="replyIndicator" class="reply-indicator" style="display:none; padding: 5px 15px; background: #374151; color: #d1d5db; font-size: 11px;">
+        <span id="replyText">Replying to...</span>
+        <button onclick="cancelReply()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" style="width:14px"></i></button>
+    </div>
+    <div class="chat-input-area">
+        <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
+            <input type="text" id="chatIn" placeholder="Say something..." autocomplete="off">
+            <button type="submit" class="send-btn">
+                <i data-lucide="send" style="width:16px"></i>
+            </button>
+        </form>
+    </div>
+</div>
