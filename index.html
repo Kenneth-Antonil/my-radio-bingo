@@ -868,7 +868,6 @@
     function requestNotifyPermission() { if ("Notification" in window) { Notification.requestPermission().then(permission => { if (permission === "granted" && messaging) { messaging.getToken().then((currentToken) => { if (currentToken && auth.currentUser) db.ref('users/' + auth.currentUser.uid).update({ fcmToken: currentToken }); }).catch((err) => console.log('Err token', err)); } }); } }
 
     function switchTab(tab) { 
-        // Modified to handle Social Tab
         const btns = document.querySelectorAll('.tab-btn'); 
         btns.forEach(b => b.classList.remove('active')); 
         document.getElementById('bingoTab').style.display = 'none'; 
@@ -1023,7 +1022,6 @@
     let targetUserForOpt = null;
 
     function initSocialSystem(uid) {
-        // Load Pending Requests
         db.ref('friendRequests/' + uid).on('value', s => {
             const container = document.getElementById('friendRequestsSection');
             container.innerHTML = "";
@@ -1033,23 +1031,13 @@
                     const uData = u.val();
                     const div = document.createElement('div');
                     div.className = 'friend-req-card';
-                    div.innerHTML = `
-                        <div class="req-info">
-                            <img src="${uData.photo}" style="width:30px;height:30px;border-radius:50%;">
-                            <span style="font-weight:700; font-size:12px; color:white;">${uData.name} wants to be friends</span>
-                        </div>
-                        <div class="req-actions">
-                            <button class="btn-accept" onclick="acceptFriend('${requesterId}')">Accept</button>
-                            <button class="btn-decline" onclick="declineFriend('${requesterId}')">X</button>
-                        </div>
-                    `;
+                    div.innerHTML = `<div class="req-info"><img src="${uData.photo}" style="width:30px;height:30px;border-radius:50%;"><span style="font-weight:700; font-size:12px; color:white;">${uData.name} wants to be friends</span></div><div class="req-actions"><button class="btn-accept" onclick="acceptFriend('${requesterId}')">Accept</button><button class="btn-decline" onclick="declineFriend('${requesterId}')">X</button></div>`;
                     container.appendChild(div);
                 });
             });
         });
     }
 
-    // -- User Options Modal --
     function showUserOptions(uid, name, photo) {
         if(uid === auth.currentUser.uid) return;
         targetUserForOpt = { uid, name, photo };
@@ -1066,12 +1054,10 @@
     function optAddFriend() {
         if(!targetUserForOpt) return;
         const targetUid = targetUserForOpt.uid;
-        // Check if already friends
         db.ref('friends/' + auth.currentUser.uid + '/' + targetUid).once('value', s => {
             if(s.exists()) {
                 showToast("Already friends!");
             } else {
-                // Send Request
                 db.ref('friendRequests/' + targetUid + '/' + auth.currentUser.uid).set(true);
                 showToast("Friend Request Sent!");
             }
@@ -1081,10 +1067,8 @@
 
     function acceptFriend(requesterUid) {
         const myUid = auth.currentUser.uid;
-        // Add to both lists
         db.ref('friends/' + myUid + '/' + requesterUid).set(true);
         db.ref('friends/' + requesterUid + '/' + myUid).set(true);
-        // Remove Request
         db.ref('friendRequests/' + myUid + '/' + requesterUid).remove();
         showToast("You are now friends!");
         playSound('win');
@@ -1094,7 +1078,6 @@
         db.ref('friendRequests/' + auth.currentUser.uid + '/' + requesterUid).remove();
     }
 
-    // -- Post Logic --
     function selectMood(el, mood) {
         document.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('active'));
         el.classList.add('active');
@@ -1121,33 +1104,26 @@
         playSound('pop');
     }
 
-    // -- Feed Algorithm (Friends First) --
     function loadSocialFeed() {
         const feedContainer = document.getElementById('socialFeed');
         feedContainer.innerHTML = "<div style='text-align:center; padding:20px; opacity:0.5;'>Updating Feed...</div>";
         
-        // 1. Get My Friends
         db.ref('friends/' + auth.currentUser.uid).once('value', fSnap => {
             const myFriends = fSnap.exists() ? Object.keys(fSnap.val()) : [];
-            
-            // 2. Get Posts (Last 50)
             db.ref('socialPosts').limitToLast(50).once('value', pSnap => {
                 const allPosts = [];
                 pSnap.forEach(child => {
                     allPosts.push({ key: child.key, ...child.val() });
                 });
 
-                // 3. Algorithm: Sort Friends to Top, then by Date
                 allPosts.sort((a, b) => {
                     const aIsFriend = myFriends.includes(a.uid) || a.uid === auth.currentUser.uid;
                     const bIsFriend = myFriends.includes(b.uid) || b.uid === auth.currentUser.uid;
-                    
-                    if (aIsFriend && !bIsFriend) return -1; // a comes first
-                    if (!aIsFriend && bIsFriend) return 1;  // b comes first
-                    return b.timestamp - a.timestamp; // If same status, newest first
+                    if (aIsFriend && !bIsFriend) return -1; 
+                    if (!aIsFriend && bIsFriend) return 1;
+                    return b.timestamp - a.timestamp;
                 });
 
-                // 4. Render
                 feedContainer.innerHTML = "";
                 if(allPosts.length === 0) {
                     feedContainer.innerHTML = "<div style='text-align:center; padding:20px; opacity:0.5;'>No posts yet. Be the first!</div>";
@@ -1158,11 +1134,8 @@
                     const isFriend = myFriends.includes(post.uid);
                     const isMe = post.uid === auth.currentUser.uid;
                     const friendBadge = (isFriend || isMe) ? `<span class="friend-badge">${isMe ? 'YOU' : 'FRIEND'}</span>` : '';
-                    
-                    // Check if liked by me
                     db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
                         const isLiked = lSnap.exists();
-                        
                         const div = document.createElement('div');
                         div.className = 'post-card';
                         div.innerHTML = `
@@ -1193,26 +1166,39 @@
         });
     }
 
+    /* === UPDATED ANTI-CHEAT LIKE FUNCTION === */
     function toggleLike(postKey, authorUid) {
         const myUid = auth.currentUser.uid;
         const likeRef = db.ref('postLikes/' + postKey + '/' + myUid);
         
         likeRef.once('value', s => {
             if(s.exists()) {
-                // Unlike
+                // UNLIKE (Remove Like Record Only)
                 likeRef.remove();
                 db.ref('socialPosts/' + postKey + '/likes').transaction(l => (l || 1) - 1);
             } else {
-                // Like
+                // LIKE
                 likeRef.set(true);
                 db.ref('socialPosts/' + postKey + '/likes').transaction(l => (l || 0) + 1);
                 
-                // INCENTIVE: Give coins to Author (if not self)
-                if(authorUid !== myUid) {
-                    db.ref('users/' + authorUid + '/points').transaction(p => (p || 0) + 10);
-                    // Optional: Notify author
-                    // db.ref('notifications/' + authorUid).push({ msg: "Someone liked your post! +10 Coins", time: Date.now() });
-                }
+                // === ANTI-CHEAT: Check Reward History ===
+                // Only give coins if NOT rewarded before
+                const rewardHistoryRef = db.ref('rewardHistory/' + postKey + '/' + myUid);
+                
+                rewardHistoryRef.once('value', histSnap => {
+                    if(!histSnap.exists()) {
+                        // First time liking this post? Give reward.
+                        if(authorUid !== myUid) {
+                            db.ref('users/' + authorUid + '/points').transaction(p => (p || 0) + 10);
+                            showToast("Heart sent! (+10 pts to author)");
+                        }
+                        // Mark as rewarded so they can't farm it again
+                        rewardHistoryRef.set(true); 
+                    } else {
+                        // Already rewarded before
+                        showToast("Liked (No points added)");
+                    }
+                });
             }
             setTimeout(loadSocialFeed, 200); // Quick refresh
         });
