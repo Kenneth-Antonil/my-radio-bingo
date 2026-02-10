@@ -3,51 +3,515 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Radio Bingo | Home</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Radio Bingo Live | Social Ecosystem</title>
+    
+    <script>
+        if (window.location.pathname.endsWith("index.html")) {
+            var newPath = window.location.pathname.replace(/index\.html$/, "");
+            window.history.replaceState({}, document.title, newPath);
+        }
+    </script>
+
+    <link rel="icon" type="image/png" href="https://i.imgur.com/7D8u8h6.png">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/7D8u8h6.png">
+    <link rel="manifest" href="manifest.json">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
+    <script src="https://pl28660496.effectivegatecpm.com/a6/64/bf/a664bf7e7084386b4f4b428590030df3.js"></script>
+
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="nav">
-        <span>RB <span style="color:var(--accent-glow)">LIVE</span></span>
+<div class="bottom-nav">
+    <button class="nav-item active" onclick="switchTab('home')" id="nav-home">
+        <i data-lucide="home" class="nav-icon"></i>
+        <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('bingo')" id="nav-bingo">
+        <i data-lucide="play-circle" class="nav-icon"></i>
+        <span class="nav-label">Bingo</span>
+    </button>
+    <div class="nav-center" onclick="openPostCreator()">
+        <div class="nav-icon-bg"><i data-lucide="plus" style="width:28px; height:28px;"></i></div>
+    </div>
+    <button class="nav-item" onclick="document.getElementById('storeModal').style.display='flex'" id="nav-store">
+        <i data-lucide="shopping-bag" class="nav-icon"></i>
+        <span class="nav-label">Store</span>
+    </button>
+    <button class="nav-item" onclick="openMyProfile()" id="nav-profile">
+        <i data-lucide="user" class="nav-icon"></i>
+        <span class="nav-label">Me</span>
+    </button>
+</div>
+
+<div class="sticky-ad-footer">
+    <script type="text/javascript">
+        atOptions = { 'key' : 'a664bf7e7084386b4f4b428590030df3', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+    </script>
+    <script type="text/javascript" src="https://pl28660496.effectivegatecpm.com/a6/64/bf/a664bf7e7084386b4f4b428590030df3.js"></script>
+</div>
+
+<div id="customPopupBanner">
+    <div style="position:relative; max-width:400px; width:100%; animation: popScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        <button onclick="closeCustomBanner()" style="position:absolute; top:-15px; right:-10px; background:linear-gradient(135deg, #ef4444, #b91c1c); color:white; border:2px solid white; border-radius:50%; width:36px; height:36px; font-weight:bold; cursor:pointer; z-index:10; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,0.3);"><i data-lucide="x" style="width:20px"></i></button>
+        <img id="customBannerImg" src="" style="width:100%; border-radius:20px; border:2px solid rgba(255,255,255,0.2); box-shadow:0 20px 50px rgba(0,0,0,0.8); cursor:pointer; object-fit:cover;" onclick="clickCustomBanner()">
+    </div>
+</div>
+
+<div id="installGate">
+    <div class="gate-logo">RB<span>LIVE</span></div>
+    <div class="gate-title">Install to Play</div>
+    <p class="gate-desc">To access the full Radio Bingo experience, you must install the official App.</p>
+    <button id="gateInstallBtn" class="gate-btn-install" onclick="triggerInstall()">
+        <i data-lucide="download-cloud" style="width:20px; height:20px;"></i> INSTALL APP
+    </button>
+    <div id="gateIosNote" class="gate-ios-note">
+        <div style="font-weight:800; color:white; margin-bottom:10px; text-transform:uppercase;">iOS Instructions:</div>
+        <div class="ios-step"><i data-lucide="share" class="ios-icon" style="width:16px;"></i> 1. Tap the Share button below.</div>
+        <div class="ios-step"><i data-lucide="plus-square" class="ios-icon" style="width:16px;"></i> 2. Scroll down & tap 'Add to Home Screen'.</div>
+        <div class="ios-step"><i data-lucide="check" class="ios-icon" style="width:16px;"></i> 3. Launch App from Home Screen.</div>
+    </div>
+</div>
+
+<div id="notifBlocker">
+    <div class="notif-gate-icon">
+        <i data-lucide="bell-ring" style="width: 40px; height: 40px; color: #3b82f6;"></i>
+    </div>
+    <div class="notif-gate-title">ENABLE NOTIFICATIONS</div>
+    <p class="notif-gate-desc">To ensure fairness and real-time updates for Bingo Calls, this app requires push notifications to be enabled.</p>
+    <button onclick="requestGatePermission()" class="btn-allow-notif">
+        <i data-lucide="check-circle" style="width:20px"></i> ALLOW NOTIFICATIONS
+    </button>
+    <div id="blockedHelp" class="blocked-help">
+        <strong style="color:var(--danger); display:block; margin-bottom:5px;">⚠️ NOTIFICATIONS ARE BLOCKED!</strong>
+        1. Click the <b>Lock Icon 🔒</b> or <b>Settings Icon</b> beside the URL bar.<br>
+        2. Click <b>Permissions</b> or <b>Site Settings</b>.<br>
+        3. Find <b>Notifications</b> and set to <b>Allow</b>.<br>
+        4. Reload this page.
+    </div>
+</div>
+
+<div id="splash-screen">
+    <div class="splash-logo">RB<span>LIVE</span></div>
+    <div class="splash-loader"></div>
+</div>
+
+<div id="customToast">
+    <i data-lucide="info" class="toast-icon"></i>
+    <span class="toast-msg" id="toastMsg">Notification!</span>
+</div>
+
+<div id="customConfirmModal">
+    <div class="conf-content">
+        <i data-lucide="alert-circle" style="width: 40px; height: 40px; color: var(--gold); margin-bottom: 15px;"></i>
+        <h3 class="conf-title" id="confTitle">Confirm Action</h3>
+        <p class="conf-msg" id="confMsg">Are you sure you want to proceed?</p>
+        <div class="conf-actions">
+            <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
+            <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
+        </div>
+    </div>
+</div>
+
+<div id="loginOverlay">
+    <div class="login-bg-blob blob-1"></div>
+    <div class="login-bg-blob blob-2"></div>
+    <div class="login-app-container">
+        <div class="app-logo-lg">RB<span>LIVE</span></div>
+        <p class="app-tagline">The ultimate live bingo experience.<br>Play, Win, and Redeem Rewards.</p>
+        <div class="promo-badge">
+            <i data-lucide="gift" style="width:16px"></i> 
+            <span>Register now & Get 500 Free RB Coins</span>
+        </div>
+        <div class="auth-btn-group">
+            <button class="btn-main-auth" onclick="login()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:20px">
+                Sign in with Google
+            </button>
+        </div>
+    </div>
+    <div class="login-footer-legal">
+        <div class="legal-text">
+            <span>⚠️ DISCLAIMER: NOT A GAMBLING SITE</span>
+            <span style="opacity: 0.6; font-size: 9px;">For entertainment purposes only. No real money betting.</span>
+        </div>
+    </div>
+</div>
+
+<div class="nav">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-weight: 900; font-size: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.8);">RB <span style="color:var(--accent-glow)">LIVE</span></span>
+    </div>
+    <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
         <div class="user-stats">
-            <div class="points-badge"><i data-lucide="coins"></i> <span id="userPoints">0</span></div>
-            <img id="userImg" src="https://via.placeholder.com/40">
+            <div class="icon-btn" onclick="openSearch()">
+                <i data-lucide="search" style="width:20px"></i>
+            </div>
+            <div class="icon-btn" onclick="openMessenger()">
+                <i data-lucide="message-circle" style="width:20px"></i>
+                <span id="pmBadge" class="notif-badge"></span>
+            </div>
+            <div class="icon-btn" onclick="openNotifs()">
+                <i data-lucide="bell" style="width:20px"></i>
+                <span id="notifDot" class="notif-badge"></span>
+            </div>
+            <div class="points-badge" onclick="document.getElementById('storeModal').style.display='flex'"><i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span></div>
+        </div>
+        <img id="userImg" onclick="openMenuModal()" src="">
+    </div>
+</div>
+
+<div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang.</div></div>
+
+<div class="container">
+    <div class="ad-container-global">
+        <script type="text/javascript">
+            atOptions = { 'key' : '9bf585b6ee39cb9b515e2fae1fa958c2', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+        </script>
+        <script type="text/javascript" src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
+    </div>
+
+    <div id="view-home" style="display:block;">
+        <div id="friendRequestsSection"></div>
+        
+        <div class="post-creator" id="mainPostCreator">
+            <h4 style="margin:0 0 10px 0; color:white; font-size:14px;">Post Something</h4>
+            <textarea id="postInput" class="post-input" placeholder="What's on your mind?"></textarea>
+            
+            <div class="image-preview-container" id="imgPreviewCont">
+                <img id="postImgPreview" class="image-preview-img">
+                <div class="btn-remove-img" onclick="removePostImage()">X</div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                <label for="postImgInput" style="cursor:pointer; color:var(--accent-glow); font-size:12px; font-weight:700; display:flex; align-items:center; gap:5px;">
+                    <i data-lucide="image" style="width:16px;"></i> Photo
+                </label>
+                <input type="file" id="postImgInput" accept="image/*" style="display:none" onchange="handlePostImage(this)">
+            </div>
+            
+            <div class="mood-selector" style="margin-top:10px;">
+                <div class="mood-chip" onclick="selectMood(this, 'Happy')">😊 Happy</div>
+                <div class="mood-chip" onclick="selectMood(this, 'Sad')">😔 Sad</div>
+                <div class="mood-chip" onclick="selectMood(this, 'Excited')">🤩 Excited</div>
+                <div class="mood-chip" onclick="selectMood(this, 'Angry')">😡 Angry</div>
+                <div class="mood-chip" onclick="selectMood(this, 'Chill')">😎 Chill</div>
+            </div>
+            <button class="btn-post" onclick="createPost()">POST</button>
+        </div>
+
+        <div id="pymkSection" class="pymk-section" style="display:none;">
+            <div class="pymk-title">People You May Know</div>
+            <div class="pymk-scroll" id="pymkList"></div>
+        </div>
+
+        <div id="socialFeed" class="social-feed-container">
+            <div style="text-align:center; padding:20px; opacity:0.5;">Loading Feed...</div>
         </div>
     </div>
 
-    <div class="container">
-        <h3>News Feed</h3>
-        <div id="socialFeed" class="social-feed-container">
+    <div id="view-bingo" style="display:none;">
+        <h3 style="text-align:center; color:red;">PASTE CONTENT FROM bingo.html HERE</h3>
+    </div>
+</div>
+
+<div id="grandJackpotModal" onclick="this.style.display='none'">
+    <div class="jackpot-rays"></div>
+    <div class="jackpot-content">
+        <div class="icon-glow"><i data-lucide="crown" style="width: 80px; height: 80px;"></i></div>
+        <h1 class="jp-title">JACKPOT WIN!</h1>
+        <h2 class="jp-amount" id="grandPrizeAmount">10,000 RB COINS</h2>
+        <div class="jp-name" id="jpWinnerName">WINNER NAME</div>
+        <p style="font-size: 11px; color: white; opacity: 0.7; margin-top: 20px;">Tap anywhere to close</p>
+    </div>
+</div>
+
+<div id="pmModal" class="pm-modal">
+    <h3 style="text-align:center; color:red; margin-top:50px;">PASTE CONTENT FROM messages.html HERE</h3>
+</div>
+
+<div id="notifModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="background:rgba(255,255,255,0.1); padding:8px; border-radius:10px;"><i data-lucide="bell" style="width:20px;"></i></div>
+                <h3 style="margin:0; font-size:18px;">Notifications</h3>
             </div>
+            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+        </div>
+        <div id="notifList"></div>
     </div>
+</div>
 
-    <div class="bottom-nav">
-        <a href="index.html" class="nav-item active">
-            <i data-lucide="home" class="nav-icon"></i>
-            <span class="nav-label">Home</span>
-        </a>
-        <a href="bingo.html" class="nav-item">
-            <i data-lucide="play-circle" class="nav-icon"></i>
-            <span class="nav-label">Bingo</span>
-        </a>
-        <div class="nav-center"><div class="nav-icon-bg"><i data-lucide="plus"></i></div></div>
-        <a href="store.html" class="nav-item">
-            <i data-lucide="shopping-bag" class="nav-icon"></i>
-            <span class="nav-label">Store</span>
-        </a>
-        <a href="messages.html" class="nav-item">
-            <i data-lucide="message-circle" class="nav-icon"></i>
-            <span class="nav-label">Chats</span>
-        </a>
+<div id="userOptionsModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()" style="text-align:center;">
+        <img id="optUserImg" style="width:60px; height:60px; border-radius:50%; border:2px solid var(--accent); margin-bottom:10px;">
+        <h3 id="optUserName" style="margin:0 0 20px 0; color:white;">User</h3>
+        
+        <button class="user-opt-btn" onclick="openUserProfile(targetUserForOpt.uid)"><i data-lucide="user"></i> View Profile</button>
+        <button class="user-opt-btn" onclick="optAddFriend()"><i data-lucide="user-plus"></i> Add Friend</button>
+        <button class="user-opt-btn" onclick="optSendMessage()"><i data-lucide="message-circle"></i> Send Message</button>
+        <button class="user-opt-btn" onclick="document.getElementById('userOptionsModal').style.display='none'"><i data-lucide="x"></i> Close</button>
     </div>
+</div>
 
-    <script src="config.js"></script>
-    <script src="main.js"></script>
-    <script>lucide.createIcons();</script>
+<div id="commentModalBackdrop" class="comment-modal-backdrop" onclick="closeComments()"></div>
+<div id="commentModal" class="comment-modal">
+    <div class="comment-header">
+        <h3 style="margin:0; font-size:16px;">Comments</h3>
+        <button onclick="closeComments()" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+    </div>
+    <div id="commentList" class="comment-list"></div>
+    <form class="comment-input-area" onsubmit="event.preventDefault(); sendComment();">
+        <input type="text" id="commentInput" class="comment-input" placeholder="Write a comment..." autocomplete="off">
+        <button type="submit" style="background:none; border:none; color:var(--accent);"><i data-lucide="send"></i></button>
+    </form>
+</div>
+
+<div id="searchModal" class="search-modal-container">
+    <div class="search-header">
+        <button onclick="document.getElementById('searchModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="arrow-left"></i></button>
+        <div class="search-bar-wrap">
+            <i data-lucide="search" style="width:16px; opacity:0.5;"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search users or posts..." onkeyup="handleSearch()">
+        </div>
+    </div>
+    <div id="searchResults" class="search-results">
+        <div style="text-align:center; opacity:0.5; padding:20px;">Type to search...</div>
+    </div>
+</div>
+
+<div id="userProfilePage" class="profile-page-container">
+    <button class="profile-nav-back" onclick="closeProfilePage()">
+        <i data-lucide="arrow-left"></i>
+    </button>
+    <div class="profile-cover" id="pageProfileCover"></div>
+    
+    <div class="profile-info-section">
+        <div class="profile-header-row">
+            <img id="pageProfileImg" class="profile-page-img" src="">
+        </div>
+        
+        <h2 id="pageProfileName" class="profile-page-name">User Name <i data-lucide="badge-check" style="width:20px; color:var(--accent-glow);"></i></h2>
+        <button id="profileMainActionBtn" class="profile-action-btn" onclick="handleProfileMainAction()">Add Friend</button>
+        <p id="pageProfileBio" class="profile-page-bio">Radio Bingo Player</p>
+        
+        <div class="profile-stats">
+            <div class="stat-item">
+                <div class="stat-val" id="statFriends">0</div>
+                <div class="stat-lbl">Friends</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-val" id="statLikes">0</div>
+                <div class="stat-lbl">Likes</div>
+            </div>
+             <div class="stat-item">
+                <div class="stat-val" id="statPosts">0</div>
+                <div class="stat-lbl">Posts</div>
+            </div>
+        </div>
+        
+        <div id="pageProfileFeed" class="profile-feed-section"></div>
+    </div>
+</div>
+
+<div id="editProfileModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0; color:white;">Edit Profile</h3>
+        
+        <label class="edit-label">Display Name</label>
+        <input type="text" id="editNameIn" class="edit-input" placeholder="Your Name">
+        
+        <label class="edit-label">Bio</label>
+        <input type="text" id="editBioIn" class="edit-input" placeholder="Short bio...">
+        
+        <label class="edit-label">Change Profile Picture</label>
+        <input type="file" id="editProfilePicInput" class="edit-input" accept="image/*" onchange="handleProfileUpload(this, 'pfp')">
+        
+        <label class="edit-label">Change Cover Photo</label>
+        <input type="file" id="editCoverPicInput" class="edit-input" accept="image/*" onchange="handleProfileUpload(this, 'cover')">
+
+        <button onclick="saveProfileChanges()" style="width:100%; padding:15px; background:var(--accent); border:none; border-radius:12px; font-weight:900; color:white; cursor:pointer;">SAVE CHANGES</button>
+    </div>
+</div>
+
+<div id="installGuideModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; font-size:18px; font-weight:900;">INSTALL GUIDE</h3>
+            <button onclick="document.getElementById('installGuideModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+        </div>
+        <div class="install-tabs">
+            <button class="install-tab-btn active" id="tabAndroid" onclick="showGuide('android')">ANDROID</button>
+            <button class="install-tab-btn" id="tabIOS" onclick="showGuide('ios')">iOS</button>
+        </div>
+        <div id="guideAndroidContent">
+            <div class="guide-step"><div class="step-num">1</div><div class="step-text">Pindutin ang <b>Three Dots (⋮)</b> sa upper right corner ng Google Chrome browser.</div></div>
+            <div class="guide-step"><div class="step-num">2</div><div class="step-text">Hanapin at pindutin ang <b>"Install App"</b> o <b>"Add to Home Screen"</b>.</div></div>
+            <div class="guide-step"><div class="step-num">3</div><div class="step-text">Click <b>Install</b> para mapunta ito sa iyong home screen.</div></div>
+        </div>
+        <div id="guideIOSContent" style="display:none;">
+            <div class="guide-step"><div class="step-num">1</div><div class="step-text">Gamitin ang <b>Safari Browser</b> at pindutin ang <b>Share Icon</b> <i data-lucide="share" style="width:12px"></i> sa ibaba.</div></div>
+            <div class="guide-step"><div class="step-num">2</div><div class="step-text">Mag-scroll pababa at hanapin ang <b>"Add to Home Screen"</b> <i data-lucide="plus-square" style="width:12px"></i>.</div></div>
+            <div class="guide-step"><div class="step-num">3</div><div class="step-text">Click <b>Add</b> sa upper right corner.</div></div>
+        </div>
+    </div>
+</div>
+
+<div id="menuModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="profile-header">
+            <img id="profileImgLarge" class="profile-img-large" src="">
+            <div class="profile-name-info">
+                <h2 class="profile-name" id="profileNameDisplay">User Name</h2>
+                <span class="profile-uid" id="profileUidDisplay">UID: ---</span>
+            </div>
+            <button onclick="document.getElementById('menuModal').style.display='none'" style="background:none; border:none; color:white; opacity:0.5;"><i data-lucide="x"></i></button>
+        </div>
+        <div class="gcash-section">
+            <span style="font-size:10px; font-weight:800; color:var(--accent-glow); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="credit-card" style="width:12px"></i> Email / Redemption Info</span>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="gcashInput" class="styled-input" placeholder="Enter email or details">
+                <button onclick="saveGcash(); playSound('click');" style="background:var(--accent); border:none; color:white; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer; box-shadow:0 4px 10px rgba(59, 130, 246, 0.3);">SAVE</button>
+            </div>
+        </div>
+        <div class="ref-container">
+            <span style="font-size:10px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="share-2" style="width:12px"></i> Invite & Earn</span>
+            <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom:10px;" onclick="this.select(); document.execCommand('copy'); showToast('Copied Link!'); playSound('click');">
+            <div id="referralInputSection">
+                <span style="font-size:10px; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px; margin-top:15px;"><i data-lucide="ticket" style="width:12px"></i> Claim Referral Code</span>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="referralInput" class="styled-input" placeholder="ENTER CODE">
+                    <button onclick="claimReferral(); playSound('click');" style="background:var(--gold); border:none; color:black; padding:0 20px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer; box-shadow:0 4px 10px rgba(251, 191, 36, 0.3);">CLAIM</button>
+                </div>
+            </div>
+        </div>
+        <div class="history-box">
+            <span style="font-size:10px; font-weight:800; color:white; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="history" style="width:12px"></i> Transaction History</span>
+            <div id="historyList" class="history-list"></div>
+        </div>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); border-radius:14px; font-weight:800; margin-top:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i data-lucide="log-out" style="width:18px"></i> Sign Out
+        </button>
+    </div>
+</div>
+
+<div id="storeModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+            <div>
+                <h3 style="margin:0; font-size: 20px; font-weight: 900;">MARKETPLACE</h3>
+                <p style="margin: 5px 0 0 0; font-size: 11px; opacity: 0.8; font-weight: 600;">Redeem, Shop Skins, or Earn</p>
+            </div>
+            <div class="points-badge" style="height:35px; border-radius: 10px;"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
+        </div>
+        <div class="store-nav">
+            <button class="store-tab-btn active" onclick="switchStoreTab('cashout')" id="tabBtnCash">Cash Out</button>
+            <button class="store-tab-btn" onclick="switchStoreTab('skins')" id="tabBtnSkins">Skins</button>
+            <button class="store-tab-btn" onclick="switchStoreTab('earn')" id="tabBtnEarn" style="color:var(--gold);">Tasks</button>
+        </div>
+        <div class="glass-panel" style="padding: 15px; border-radius: 18px; margin-bottom: 20px; border: 1px dashed var(--gold); text-align: center; position: relative; overflow: hidden;">
+            <h4 style="margin: 0 0 10px 0; color: var(--gold); font-size: 14px; text-transform: uppercase;">⚡ FREE RB COINS ⚡</h4>
+            <div id="adTimerOverlay" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 50; align-items: center; justify-content: center; flex-direction: column;">
+                <div id="adStatusIcon" style="font-size: 30px; margin-bottom: 10px;">📺</div>
+                <div style="font-size: 18px; font-weight: 900; color: white;" id="adCountdown">30s</div>
+                <div style="font-size: 12px; color: #ef4444; padding: 0 20px; margin-top: 5px; font-weight:800;" id="adStatusText">Do not close app or switch tabs!</div>
+            </div>
+            <div id="adCaptchaOverlay" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 51; align-items: center; justify-content: center; flex-direction: column;">
+                <div style="font-size: 14px; font-weight: 700; color: var(--accent-glow); margin-bottom: 10px;">HUMAN VERIFICATION</div>
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 12px; margin-bottom: 10px;">
+                    <span id="mathQ" style="font-size: 20px; font-weight: 900; color: white;">5 + 3 = ?</span>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <input type="number" id="mathAns" style="width: 60px; padding: 8px; border-radius: 8px; border: 1px solid var(--accent); background: #0f172a; color: white; text-align: center; font-weight: 800;">
+                    <button onclick="verifyAdMath()" style="background: var(--success); border: none; padding: 8px 12px; border-radius: 8px; color: white; font-weight: 900;">OK</button>
+                </div>
+            </div>
+            <button id="btnWatchAd" onclick="startStrictWatch()" style="background: linear-gradient(135deg, #f59e0b, #b45309); width: 100%; border: none; padding: 15px; border-radius: 12px; font-weight: 900; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4); text-shadow: 0 1px 2px black;">
+                <i data-lucide="play-circle" style="width: 20px;"></i> WATCH AD (+50 Coins)
+            </button>
+            <p style="font-size: 10px; opacity: 0.6; margin-top: 8px; color:var(--danger);">*Timer pauses if you leave the app!</p>
+        </div>
+
+        <div id="storeSection-cashout" style="display:block;">
+            <div class="reward-grid">
+                <div class="reward-item">
+                    <div class="reward-main"><div class="reward-icon-box"><i data-lucide="gift" style="width:22px"></i></div><div class="reward-info"><b>₱20 Gift Card</b><small><i data-lucide="database" style="width:10px"></i> 50,000 Coins</small></div></div>
+                    <button class="btn-redeem" onclick="redeemItem('₱20 Gift Card', 50000)">Redeem</button>
+                </div>
+                <div class="reward-item">
+                    <div class="reward-main"><div class="reward-icon-box" style="color:var(--gold); background:rgba(251, 191, 36, 0.1); border-color:rgba(251, 191, 36, 0.3);"><i data-lucide="gift" style="width:22px"></i></div><div class="reward-info"><b>₱50 Gift Card</b><small><i data-lucide="database" style="width:10px"></i> 125,000 Coins</small></div></div>
+                    <button class="btn-redeem" onclick="redeemItem('₱50 Gift Card', 125000)">Redeem</button>
+                </div>
+                <div class="reward-item">
+                    <div class="reward-main"><div class="reward-icon-box" style="color:var(--success); background:rgba(16, 185, 129, 0.1); border-color:rgba(16, 185, 129, 0.3);"><i data-lucide="gift" style="width:22px"></i></div><div class="reward-info"><b>₱100 Gift Card</b><small><i data-lucide="database" style="width:10px"></i> 250,000 Coins</small></div></div>
+                    <button class="btn-redeem" onclick="redeemItem('₱100 Gift Card', 250000)">Redeem</button>
+                </div>
+            </div>
+            <p style="text-align: center; font-size: 10px; opacity: 0.6; margin-top: 25px; line-height: 1.5; text-shadow:0 1px 2px black;">*Processing may take 24-48 hours.<br>Make sure your redemption details are correct.</p>
+        </div>
+
+        <div id="storeSection-skins" style="display:none;">
+            <p style="font-size:11px; opacity:0.7; margin-bottom:15px; text-align:center;">Customize your Bingo Card. Look rich, play rich.</p>
+            
+            <div style="margin-bottom:20px; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px; text-align:center;">
+                <label style="font-size:12px; font-weight:700; display:block; margin-bottom:10px; color:var(--accent-glow);">UPLOAD CUSTOM BACKGROUND</label>
+                <input type="file" accept="image/*" id="customSkinInput" style="display:none" onchange="handleCustomSkinUpload(this)">
+                <button onclick="document.getElementById('customSkinInput').click()" style="background:var(--accent); color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:800; font-size:11px; cursor:pointer;">CHOOSE IMAGE</button>
+            </div>
+
+            <div class="skins-grid">
+                <div class="skin-item"><div class="skin-preview" style="background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.1);">B</div><div class="skin-name">Classic</div><div class="skin-cost">Free</div><button class="btn-buy-skin equip" id="btn-skin-default" onclick="equipSkin('default')">EQUIP</button></div>
+                
+                <div class="skin-item"><div class="skin-preview" style="background:pink; border:2px solid hotpink; color:deeppink; font-family:'Comic Neue',cursive;">B</div><div class="skin-name">Hello Kitty</div><div class="skin-cost">75,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-kitty" onclick="buyOrEquipSkin('kitty', 75000)">BUY</button></div>
+                
+                <div class="skin-item"><div class="skin-preview" style="background:#0096df; border:2px solid white; color:white; border-radius:50%;">B</div><div class="skin-name">Doraemon</div><div class="skin-cost">75,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-doraemon" onclick="buyOrEquipSkin('doraemon', 75000)">BUY</button></div>
+                
+                <div class="skin-item"><div class="skin-preview" style="background:#f7f44d; border:2px dashed brown; color:brown;">B</div><div class="skin-name">SpongeBob</div><div class="skin-cost">75,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-spongebob" onclick="buyOrEquipSkin('spongebob', 75000)">BUY</button></div>
+                
+                <div class="skin-item"><div class="skin-preview" style="background:black; border:2px solid purple; color:pink;">B</div><div class="skin-name">Kuromi</div><div class="skin-cost">75,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-kuromi" onclick="buyOrEquipSkin('kuromi', 75000)">BUY</button></div>
+
+                <div class="skin-item"><div class="skin-preview" style="background:rgba(8,51,68,1); border:2px solid #06b6d4; color:#67e8f9; text-shadow:0 0 5px #06b6d4;">B</div><div class="skin-name">Neon City</div><div class="skin-cost">50,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-neon" onclick="buyOrEquipSkin('neon', 50000)">BUY</button></div>
+                <div class="skin-item"><div class="skin-preview" style="background:linear-gradient(135deg, #451a03, #000); border:2px solid #f59e0b; color:#fcd34d; font-family:'Times New Roman',serif;">B</div><div class="skin-name">Luxury Gold</div><div class="skin-cost">100,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-gold" onclick="buyOrEquipSkin('gold', 100000)">BUY</button></div>
+                <div class="skin-item"><div class="skin-preview" style="background:rgba(80, 7, 36, 1); border:2px solid #ec4899; color:#fbcfe8; border-radius:50%;">B</div><div class="skin-name">Kawaii Pink</div><div class="skin-cost">25,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-pink" onclick="buyOrEquipSkin('pink', 25000)">BUY</button></div>
+                
+                <div class="skin-item" id="customSkinSlot" style="display:none;"><div class="skin-preview" id="customSkinPreview" style="background-size:cover;">B</div><div class="skin-name">My Custom</div><div class="skin-cost">Owned</div><button class="btn-buy-skin equip" id="btn-skin-custom" onclick="equipSkin('custom')">EQUIP</button></div>
+            </div>
+        </div>
+        <div id="storeSection-earn" style="display:none;">
+            <p style="font-size:11px; opacity:0.7; margin-bottom:15px; text-align:center;">Complete tasks to earn huge coins instantly.</p>
+            <div class="task-list">
+                <div class="task-item" style="border-color: #ef4444; background: linear-gradient(90deg, rgba(69,10,10,0.8), rgba(15,23,42,0.8));">
+                    <div class="task-info"><h4 style="color:#fca5a5;">Watch Video Task</h4><p>Watch full video to unlock reward</p><span class="task-reward" style="background: rgba(239,68,68,0.2); border-color:#ef4444; color:#fca5a5;">+2,000 Coins</span></div>
+                    <button class="btn-do-task" style="background:#ef4444;" id="btn-task-video" onclick="openVideoLocker('video')">WATCH</button>
+                </div>
+                <div class="task-item">
+                    <div class="task-info"><h4>Premium Offer</h4><p>Complete simple offer to verify</p><span class="task-reward">+5,000 Coins</span></div>
+                    <button class="btn-do-task" id="btn-task-premium" onclick="startTaskSafe('https://doctoredits.com/1874673', 5000, 'premium')">GO</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="pwaInstallBanner">
+    <div><span class="pwa-text">INSTALL APP</span><span class="pwa-sub">Download for better experience!</span></div>
+    <button id="pwaBottomBtn" class="pwa-btn">INSTALL</button>
+</div>
+
+<script src="config.js"></script>
+<script src="main.js"></script>
 </body>
 </html>
