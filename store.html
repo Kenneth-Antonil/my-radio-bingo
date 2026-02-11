@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Radio Bingo Live | Store</title>
     <link href="style.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -13,255 +13,140 @@
 </head>
 <body>
 
-<div id="splash-screen">
-    <div class="splash-logo">RB<span>LIVE</span></div>
-    <div class="splash-loader"></div>
-</div>
+    <div id="customToast"><i data-lucide="info" class="toast-icon"></i><span class="toast-msg" id="toastMsg">Notification</span></div>
 
-<div id="customToast"><i data-lucide="info" class="toast-icon"></i><span class="toast-msg" id="toastMsg">Notification</span></div>
-<div id="customConfirmModal">
-    <div class="conf-content">
-        <h3 class="conf-title" id="confTitle">Confirm</h3>
-        <p class="conf-msg" id="confMsg">Proceed?</p>
-        <div class="conf-actions">
-            <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
-            <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
-        </div>
-    </div>
-</div>
-
-<div class="nav">
-    <div style="display:flex; align-items:center; gap:10px;">
+    <div class="nav">
         <span style="font-weight: 900; font-size: 20px;">MARKET<span style="color:var(--gold)">PLACE</span></span>
-    </div>
-    <div class="points-badge">
-        <i data-lucide="coins" style="width:18px"></i> <span id="storePoints">0</span>
-    </div>
-</div>
-
-<div class="container">
-    
-    <div class="store-nav">
-        <button class="store-tab-btn active" onclick="switchStoreTab('cashout')" id="tabBtnCash">Cash Out</button>
-        <button class="store-tab-btn" onclick="switchStoreTab('skins')" id="tabBtnSkins">Skins</button>
-        <button class="store-tab-btn" onclick="switchStoreTab('earn')" id="tabBtnEarn" style="color:var(--gold);">Tasks</button>
+        <div class="points-badge">
+            <i data-lucide="coins" style="width:18px"></i> <span id="storePoints">0</span>
+        </div>
     </div>
 
-    <div class="glass-panel" style="padding: 15px; border-radius: 18px; margin-bottom: 20px; border: 1px dashed var(--gold); text-align: center; position: relative; overflow: hidden;">
-        <h4 style="margin: 0 0 10px 0; color: var(--gold); font-size: 14px; text-transform: uppercase;">⚡ FREE RB COINS ⚡</h4>
+    <div class="container">
         
-        <div id="adTimerOverlay" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 50; align-items: center; justify-content: center; flex-direction: column;">
-            <div id="adStatusIcon" style="font-size: 30px; margin-bottom: 10px;">📺</div>
-            <div style="font-size: 18px; font-weight: 900; color: white;" id="adCountdown">30s</div>
-            <div style="font-size: 12px; color: #ef4444; padding: 0 20px; margin-top: 5px; font-weight:800;" id="adStatusText">Do not close app or switch tabs!</div>
+        <div class="store-nav">
+            <button class="store-tab-btn active" onclick="switchStoreTab('cashout')" id="tabBtnCash">Redeem</button>
+            <button class="store-tab-btn" onclick="switchStoreTab('skins')" id="tabBtnSkins">Skins</button>
+            <button class="store-tab-btn" onclick="switchStoreTab('earn')" id="tabBtnEarn">Tasks</button>
         </div>
-        
-        <div id="adCaptchaOverlay" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 51; align-items: center; justify-content: center; flex-direction: column;">
-            <div style="font-size: 14px; font-weight: 700; color: var(--accent-glow); margin-bottom: 10px;">HUMAN VERIFICATION</div>
-            <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 12px; margin-bottom: 10px;">
-                <span id="mathQ" style="font-size: 20px; font-weight: 900; color: white;">5 + 3 = ?</span>
+
+        <div id="storeSection-cashout">
+            
+            <div style="background:rgba(251, 191, 36, 0.1); padding:15px; border-radius:12px; border:1px solid rgba(251, 191, 36, 0.3); margin-bottom:20px;">
+                <h4 style="margin:0 0 10px 0; color:var(--gold); font-size:12px;">STEP 1: PAYMENT DETAILS</h4>
+                <input type="text" id="gcashInput" style="width:100%; padding:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.2); color:white; border-radius:8px; margin-bottom:10px;" placeholder="GCash Name / Number">
+                <button onclick="saveGcash()" style="width:100%; background:var(--gold); color:black; border:none; padding:10px; border-radius:8px; font-weight:800; cursor:pointer;">SAVE INFO</button>
             </div>
-            <div style="display: flex; gap: 5px;">
-                <input type="number" id="mathAns" style="width: 60px; padding: 8px; border-radius: 8px; border: 1px solid var(--accent); background: #0f172a; color: white; text-align: center; font-weight: 800;">
-                <button onclick="verifyAdMath()" style="background: var(--success); border: none; padding: 8px 12px; border-radius: 8px; color: white; font-weight: 900;">OK</button>
+
+            <h4 style="margin:0 0 10px 0; color:#94a3b8; font-size:12px;">STEP 2: CHOOSE REWARD</h4>
+            <div class="reward-grid">
+                <div class="reward-item">
+                    <div class="reward-main"><div class="reward-icon-box"><i data-lucide="gift"></i></div><div class="reward-info"><b>₱20 GCash</b><small>50,000 Coins</small></div></div>
+                    <button class="btn-redeem" onclick="redeemItem('₱20 GCash', 50000)">Redeem</button>
+                </div>
+                <div class="reward-item">
+                    <div class="reward-main"><div class="reward-icon-box"><i data-lucide="gift"></i></div><div class="reward-info"><b>₱50 GCash</b><small>125,000 Coins</small></div></div>
+                    <button class="btn-redeem" onclick="redeemItem('₱50 GCash', 125000)">Redeem</button>
+                </div>
+            </div>
+
+            <div class="history-box" style="margin-top:25px; background:rgba(0,0,0,0.2); padding:15px; border-radius:12px;">
+                <h4 style="margin:0 0 15px 0; color:#94a3b8; font-size:12px;">TRANSACTION HISTORY</h4>
+                <div id="historyList" class="history-list">
+                    <div style="text-align:center; padding:10px; opacity:0.5; font-size:12px;">Loading history...</div>
+                </div>
             </div>
         </div>
 
-        <button id="btnWatchAd" onclick="startStrictWatch()" style="background: linear-gradient(135deg, #f59e0b, #b45309); width: 100%; border: none; padding: 15px; border-radius: 12px; font-weight: 900; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4); text-shadow: 0 1px 2px black;">
-            <i data-lucide="play-circle" style="width: 20px;"></i> WATCH AD (+50 Coins)
-        </button>
-        <p style="font-size: 10px; opacity: 0.6; margin-top: 8px; color:var(--danger);">*Timer pauses if you leave the app!</p>
+        <div id="storeSection-skins" style="display:none;">
+            <div class="skins-grid">
+                <div class="skin-item"><div class="skin-preview" style="background:rgba(30,41,59,0.8);">B</div><div class="skin-name">Classic</div><button class="btn-buy-skin equip" id="btn-skin-default" onclick="equipSkin('default')">EQUIP</button></div>
+                <div class="skin-item"><div class="skin-preview" style="background:#083344; border:1px solid cyan; color:cyan;">B</div><div class="skin-name">Neon</div><div class="skin-cost">50k</div><button class="btn-buy-skin buy" id="btn-skin-neon" onclick="buyOrEquipSkin('neon', 50000)">BUY</button></div>
+            </div>
+        </div>
+
+        <div id="storeSection-earn" style="display:none;">
+            <div class="task-list">
+                <div class="task-item">
+                    <div class="task-info"><h4>Watch Ad</h4><span class="task-reward">+50 Coins</span></div>
+                    <button class="btn-do-task" onclick="watchAd()">WATCH</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <div id="storeSection-cashout" style="display:block;">
-        <div class="reward-grid">
-            <div class="reward-item">
-                <div class="reward-main"><div class="reward-icon-box"><i data-lucide="gift" style="width:22px"></i></div><div class="reward-info"><b>₱20 Gift Card</b><small><i data-lucide="database" style="width:10px"></i> 50,000 Coins</small></div></div>
-                <button class="btn-redeem" onclick="redeemItem('₱20 Gift Card', 50000)">Redeem</button>
-            </div>
-            <div class="reward-item">
-                <div class="reward-main"><div class="reward-icon-box" style="color:var(--gold); background:rgba(251, 191, 36, 0.1); border-color:rgba(251, 191, 36, 0.3);"><i data-lucide="gift" style="width:22px"></i></div><div class="reward-info"><b>₱50 Gift Card</b><small><i data-lucide="database" style="width:10px"></i> 125,000 Coins</small></div></div>
-                <button class="btn-redeem" onclick="redeemItem('₱50 Gift Card', 125000)">Redeem</button>
-            </div>
-            <div class="reward-item">
-                <div class="reward-main"><div class="reward-icon-box" style="color:var(--success); background:rgba(16, 185, 129, 0.1); border-color:rgba(16, 185, 129, 0.3);"><i data-lucide="gift" style="width:22px"></i></div><div class="reward-info"><b>₱100 Gift Card</b><small><i data-lucide="database" style="width:10px"></i> 250,000 Coins</small></div></div>
-                <button class="btn-redeem" onclick="redeemItem('₱100 Gift Card', 250000)">Redeem</button>
-            </div>
-        </div>
-        <p style="text-align: center; font-size: 10px; opacity: 0.6; margin-top: 25px; line-height: 1.5;">*Processing may take 24-48 hours.<br>Make sure your redemption details (in 'Me' tab) are correct.</p>
+    <div class="bottom-nav">
+        <button class="nav-item" onclick="window.location.href='index.html'"><i data-lucide="home" class="nav-icon"></i><span class="nav-label">Home</span></button>
+        <button class="nav-item" onclick="window.location.href='bingo.html'"><i data-lucide="play-circle" class="nav-icon"></i><span class="nav-label">Bingo</span></button>
+        <div class="nav-center"><div class="nav-icon-bg"><i data-lucide="plus"></i></div></div>
+        <button class="nav-item active" onclick="window.location.href='store.html'"><i data-lucide="shopping-bag" class="nav-icon"></i><span class="nav-label">Store</span></button>
+        <button class="nav-item" onclick="window.location.href='me.html'"><i data-lucide="user" class="nav-icon"></i><span class="nav-label">Me</span></button>
     </div>
 
-    <div id="storeSection-skins" style="display:none;">
-        <p style="font-size:11px; opacity:0.7; margin-bottom:15px; text-align:center;">Customize your Bingo Card. Look rich, play rich.</p>
-        
-        <div style="margin-bottom:20px; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px; text-align:center;">
-            <label style="font-size:12px; font-weight:700; display:block; margin-bottom:10px; color:var(--accent-glow);">UPLOAD CUSTOM BACKGROUND</label>
-            <input type="file" accept="image/*" id="customSkinInput" style="display:none" onchange="handleCustomSkinUpload(this)">
-            <button onclick="document.getElementById('customSkinInput').click()" style="background:var(--accent); color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:800; font-size:11px; cursor:pointer;">CHOOSE IMAGE</button>
-        </div>
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+        lucide.createIcons();
 
-        <div class="skins-grid">
-            <div class="skin-item"><div class="skin-preview" style="background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.1);">B</div><div class="skin-name">Classic</div><div class="skin-cost">Free</div><button class="btn-buy-skin equip" id="btn-skin-default" onclick="equipSkin('default')">EQUIP</button></div>
-            <div class="skin-item"><div class="skin-preview" style="background:pink; border:2px solid hotpink; color:deeppink; font-family:'Comic Neue',cursive;">B</div><div class="skin-name">Hello Kitty</div><div class="skin-cost">75,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-kitty" onclick="buyOrEquipSkin('kitty', 75000)">BUY</button></div>
-            <div class="skin-item"><div class="skin-preview" style="background:#0096df; border:2px solid white; color:white; border-radius:50%;">B</div><div class="skin-name">Doraemon</div><div class="skin-cost">75,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-doraemon" onclick="buyOrEquipSkin('doraemon', 75000)">BUY</button></div>
-            <div class="skin-item"><div class="skin-preview" style="background:#f7f44d; border:2px dashed brown; color:brown;">B</div><div class="skin-name">SpongeBob</div><div class="skin-cost">75,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-spongebob" onclick="buyOrEquipSkin('spongebob', 75000)">BUY</button></div>
-            <div class="skin-item"><div class="skin-preview" style="background:black; border:2px solid purple; color:pink;">B</div><div class="skin-name">Kuromi</div><div class="skin-cost">75,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-kuromi" onclick="buyOrEquipSkin('kuromi', 75000)">BUY</button></div>
-            <div class="skin-item"><div class="skin-preview" style="background:rgba(8,51,68,1); border:2px solid #06b6d4; color:#67e8f9; text-shadow:0 0 5px #06b6d4;">B</div><div class="skin-name">Neon City</div><div class="skin-cost">50,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-neon" onclick="buyOrEquipSkin('neon', 50000)">BUY</button></div>
-            <div class="skin-item"><div class="skin-preview" style="background:linear-gradient(135deg, #451a03, #000); border:2px solid #f59e0b; color:#fcd34d; font-family:'Times New Roman',serif;">B</div><div class="skin-name">Luxury Gold</div><div class="skin-cost">100,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-gold" onclick="buyOrEquipSkin('gold', 100000)">BUY</button></div>
-            <div class="skin-item"><div class="skin-preview" style="background:rgba(80, 7, 36, 1); border:2px solid #ec4899; color:#fbcfe8; border-radius:50%;">B</div><div class="skin-name">Kawaii Pink</div><div class="skin-cost">25,000 Coins</div><button class="btn-buy-skin buy" id="btn-skin-pink" onclick="buyOrEquipSkin('pink', 25000)">BUY</button></div>
-            <div class="skin-item" id="customSkinSlot" style="display:none;"><div class="skin-preview" id="customSkinPreview" style="background-size:cover;">B</div><div class="skin-name">My Custom</div><div class="skin-cost">Owned</div><button class="btn-buy-skin equip" id="btn-skin-custom" onclick="equipSkin('custom')">EQUIP</button></div>
-        </div>
-    </div>
+        let userData = {};
 
-    <div id="storeSection-earn" style="display:none;">
-        <p style="font-size:11px; opacity:0.7; margin-bottom:15px; text-align:center;">Complete tasks to earn huge coins instantly.</p>
-        <div class="task-list">
-            <div class="task-item" style="border-color: #ef4444; background: linear-gradient(90deg, rgba(69,10,10,0.8), rgba(15,23,42,0.8));">
-                <div class="task-info"><h4 style="color:#fca5a5;">Watch Video Task</h4><p>Watch full video to unlock reward</p><span class="task-reward" style="background: rgba(239,68,68,0.2); border-color:#ef4444; color:#fca5a5;">+2,000 Coins</span></div>
-                <button class="btn-do-task" style="background:#ef4444;" id="btn-task-video" onclick="openVideoLocker('video')">WATCH</button>
-            </div>
-            <div class="task-item">
-                <div class="task-info"><h4>Premium Offer</h4><p>Complete simple offer to verify</p><span class="task-reward">+5,000 Coins</span></div>
-                <button class="btn-do-task" id="btn-task-premium" onclick="startTaskSafe('https://doctoredits.com/1874673', 5000, 'premium')">GO</button>
-            </div>
-        </div>
-    </div>
-</div>
+        function showToast(m) { const t=document.getElementById('customToast'); document.getElementById('toastMsg').innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
 
-<div class="bottom-nav">
-    <button class="nav-item" onclick="window.location.href='index.html'">
-        <i data-lucide="home" class="nav-icon"></i><span class="nav-label">Home</span>
-    </button>
-    <button class="nav-item" onclick="window.location.href='bingo.html'">
-        <i data-lucide="play-circle" class="nav-icon"></i><span class="nav-label">Bingo</span>
-    </button>
-    <div class="nav-center" onclick="window.location.href='index.html'">
-        <div class="nav-icon-bg"><i data-lucide="plus" style="width:28px; height:28px;"></i></div>
-    </div>
-    <button class="nav-item active" onclick="window.location.href='store.html'">
-        <i data-lucide="shopping-bag" class="nav-icon"></i><span class="nav-label">Store</span>
-    </button>
-    <button class="nav-item" onclick="window.location.href='me.html'">
-        <i data-lucide="user" class="nav-icon"></i><span class="nav-label">Me</span>
-    </button>
-</div>
-
-<script>
-    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); });
-    function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss) { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
-    
-    // UTILS
-    const sounds = { click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3'), win: new Audio('https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3') };
-    function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; sounds[type].play().catch(e=>{}); } }
-    function showToast(msg) { const toast = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; toast.classList.add('show'); playSound('click'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
-    function compressImage(file, w, q) { return new Promise(r => { const rd = new FileReader(); rd.readAsDataURL(file); rd.onload=e=>{ const i=new Image(); i.src=e.target.result; i.onload=()=>{ const c=document.createElement('canvas'); let wt=i.width, ht=i.height; if(wt>w){ht*=w/wt; wt=w;} c.width=wt; c.height=ht; c.getContext('2d').drawImage(i,0,0,wt,ht); r(c.toDataURL('image/jpeg',q)); }}; }); }
-    
-    // CONFIRM MODAL
-    let confirmCallback = null;
-    function showCustomConfirm(title, msg, onYes) { document.getElementById('confTitle').innerText = title; document.getElementById('confMsg').innerText = msg; document.getElementById('customConfirmModal').style.display = 'flex'; confirmCallback = onYes; playSound('click'); }
-    function closeCustomConfirm() { document.getElementById('customConfirmModal').style.display = 'none'; confirmCallback = null; }
-    document.getElementById('confYesBtn').addEventListener('click', () => { if(confirmCallback) confirmCallback(); closeCustomConfirm(); });
-
-    // FIREBASE INIT
-    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
-    lucide.createIcons();
-
-    let userData = {};
-
-    auth.onAuthStateChanged(u => {
-        if(u) {
-            db.ref('users/'+u.uid).on('value', s => {
-                userData = s.val(); userData.uid = u.uid;
-                document.getElementById('storePoints').innerText = (userData.points||0).toLocaleString();
-                updateSkinButtons();
-            });
-        } else {
-            window.location.href = "index.html";
-        }
-    });
-
-    // --- NAVIGATION ---
-    function switchStoreTab(tab) {
-        document.querySelectorAll('.store-tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('[id^="storeSection-"]').forEach(s => s.style.display = 'none');
-        if(tab === 'cashout') { document.getElementById('tabBtnCash').classList.add('active'); document.getElementById('storeSection-cashout').style.display = 'block'; } 
-        else if(tab === 'skins') { document.getElementById('tabBtnSkins').classList.add('active'); document.getElementById('storeSection-skins').style.display = 'block'; updateSkinButtons(); } 
-        else if(tab === 'earn') { document.getElementById('tabBtnEarn').classList.add('active'); document.getElementById('storeSection-earn').style.display = 'block'; }
-        playSound('click');
-    }
-
-    // --- SKINS LOGIC ---
-    function updateSkinButtons() {
-        if(!userData.ownedSkins) return;
-        ['default', 'neon', 'gold', 'pink', 'kitty', 'doraemon', 'spongebob', 'kuromi', 'custom'].forEach(skin => {
-            const btn = document.getElementById('btn-skin-' + skin); if(!btn) return;
-            if(userData.equippedSkin === skin) { btn.innerText = "EQUIPPED"; btn.className = "btn-buy-skin owned"; btn.onclick = null; }
-            else if(userData.ownedSkins.includes(skin)) { btn.innerText = "EQUIP"; btn.className = "btn-buy-skin equip"; btn.onclick = () => equipSkin(skin); }
-        });
-        if(localStorage.getItem('customSkinBG')) { document.getElementById('customSkinSlot').style.display = 'block'; document.getElementById('customSkinPreview').style.backgroundImage = `url('${localStorage.getItem('customSkinBG')}')`; }
-    }
-    function buyOrEquipSkin(skinId, cost) {
-        if(!userData.ownedSkins) userData.ownedSkins=['default'];
-        if(userData.ownedSkins.includes(skinId)) { equipSkin(skinId); }
-        else {
-            if(userData.points >= cost) {
-                showCustomConfirm("BUY SKIN?", "Purchase for "+cost+" Coins?", () => {
-                    db.ref('users/'+userData.uid+'/points').transaction(p=>(p||0)-cost);
-                    let newOwned = [...userData.ownedSkins, skinId];
-                    db.ref('users/'+userData.uid).update({ ownedSkins: newOwned, equippedSkin: skinId });
-                    showToast("Skin Purchased!"); playSound('win');
+        auth.onAuthStateChanged(u => {
+            if(u) {
+                db.ref('users/'+u.uid).on('value', s => {
+                    userData = s.val(); userData.uid = u.uid;
+                    document.getElementById('storePoints').innerText = (userData.points||0).toLocaleString();
+                    if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
+                    updateSkinButtons();
+                    loadHistory(); // Load history here
                 });
-            } else { showToast("Insufficient Coins"); }
+            } else { window.location.href="index.html"; }
+        });
+
+        function switchStoreTab(tab) {
+            document.querySelectorAll('[id^="storeSection-"]').forEach(s=>s.style.display='none');
+            document.querySelectorAll('.store-tab-btn').forEach(b=>b.classList.remove('active'));
+            document.getElementById('storeSection-'+tab).style.display='block';
+            if(tab==='cashout') document.getElementById('tabBtnCash').classList.add('active');
+            if(tab==='skins') document.getElementById('tabBtnSkins').classList.add('active');
+            if(tab==='earn') document.getElementById('tabBtnEarn').classList.add('active');
         }
-    }
-    function equipSkin(skinId) { db.ref('users/'+userData.uid).update({ equippedSkin: skinId }); showToast("Skin Equipped"); playSound('click'); }
-    function handleCustomSkinUpload(input) {
-        if(input.files[0]) compressImage(input.files[0], 800, 0.7).then(b64 => {
-            localStorage.setItem('customSkinBG', b64);
-            if(!userData.ownedSkins.includes('custom')) { let n=[...userData.ownedSkins, 'custom']; db.ref('users/'+userData.uid).update({ ownedSkins:n }); }
-            db.ref('users/'+userData.uid).update({ equippedSkin:'custom' }); showToast("Custom Set!"); updateSkinButtons();
-        });
-    }
 
-    // --- REDEMPTION ---
-    function redeemItem(name, cost) {
-        if(userData.points >= cost) {
-            if(!userData.gcash) return showToast("Go to 'Me' & Save Info first!");
-            showCustomConfirm("REDEEM REWARD?", "Exchange "+cost+" pts for "+name+"?", () => {
-                db.ref('users/'+userData.uid+'/points').transaction(p=>(p||0)-cost);
-                db.ref('redemptions').push({ uid:userData.uid, name:userData.name, gcash:userData.gcash, item:name, cost:cost, status:'pending', timestamp:Date.now() });
-                showToast("Request Sent!");
+        function saveGcash() {
+            const v = document.getElementById('gcashInput').value;
+            if(v.length>3) { db.ref('users/'+auth.currentUser.uid).update({gcash:v}); showToast("Info Saved!"); }
+            else { showToast("Invalid GCash Info"); }
+        }
+
+        function redeemItem(name, cost) {
+            if((userData.points||0) < cost) return showToast("Insufficient Coins");
+            if(!userData.gcash) return showToast("Save Payment Info First!");
+            if(confirm("Redeem "+name+" for "+cost+" coins?")) {
+                db.ref('users/'+userData.uid+'/points').transaction(p=>p-cost);
+                db.ref('redemptions').push({uid:userData.uid, name:userData.name, item:name, cost:cost, status:'pending', timestamp:Date.now()});
+                showToast("Redemption Sent!");
+            }
+        }
+
+        function loadHistory() {
+            const l = document.getElementById('historyList');
+            db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).limitToLast(10).once('value', s => {
+                if(!s.exists()) { l.innerHTML="<div style='text-align:center;opacity:0.5;font-size:12px;'>No transactions yet.</div>"; return; }
+                l.innerHTML="";
+                s.forEach(x => { const d=x.val(); l.innerHTML+=`<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid rgba(255,255,255,0.1); font-size:12px;"><div><b>${d.item}</b><br><small>${new Date(d.timestamp).toLocaleDateString()}</small></div><div style="color:${d.status==='paid'?'lime':'gold'}">${d.status.toUpperCase()}</div></div>`; });
             });
-        } else { showToast("Insufficient Coins"); }
-    }
+        }
 
-    // --- ADS & TASKS ---
-    let strictTimer = null; let strictSeconds = 30;
-    function startStrictWatch() {
-        const adsterraLink = "https://directoryeditorweep.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"; window.open(adsterraLink, "_blank");
-        document.getElementById('adTimerOverlay').style.display = 'flex';
-        strictSeconds = 30; const cd = document.getElementById('adCountdown'); const st = document.getElementById('adStatusText');
-        clearInterval(strictTimer);
-        strictTimer = setInterval(() => {
-            if(document.hidden) { st.innerText = "⚠️ PAUSED! Return to app."; return; }
-            strictSeconds--; cd.innerText = strictSeconds + "s"; st.innerText = "Watching Ad...";
-            if(strictSeconds <= 0) { clearInterval(strictTimer); document.getElementById('adTimerOverlay').style.display = 'none'; document.getElementById('adCaptchaOverlay').style.display = 'flex'; const n1=Math.floor(Math.random()*10); const n2=Math.floor(Math.random()*10); document.getElementById('mathQ').innerText=`${n1} + ${n2} = ?`; document.getElementById('mathQ').dataset.ans=n1+n2; }
-        }, 1000);
-    }
-    function verifyAdMath() { if(document.getElementById('mathAns').value === document.getElementById('mathQ').dataset.ans) { document.getElementById('adCaptchaOverlay').style.display='none'; db.ref('users/'+userData.uid+'/points').transaction(p=>(p||0)+50); showToast("Reward: +50 Coins"); playSound('win'); } else { showToast("Wrong Answer"); } }
-    
-    function startTaskSafe(url, reward, taskKey) { 
-        const last = localStorage.getItem('task_cooldown_'+taskKey); 
-        if(last && (Date.now()-parseInt(last)) < 43200000) return showToast("Task Cooldown.");
-        showCustomConfirm("START TASK", "Complete offer to earn.", () => {
-            window.open(url, '_blank'); const btn=document.getElementById('btn-task-'+taskKey); if(btn){ btn.disabled=true; btn.innerHTML="Wait 60s..."; setTimeout(()=>{ btn.innerHTML="CLAIM"; btn.disabled=false; btn.style.background="#22c55e"; btn.onclick=()=>{ db.ref('users/'+userData.uid+'/points').transaction(p=>(p||0)+reward); showToast("+"+reward+" Coins!"); localStorage.setItem('task_cooldown_'+taskKey, Date.now()); btn.innerHTML="DONE"; btn.disabled=true; }; }, 60000); }
-        });
-    }
-    function openVideoLocker(taskKey) { showToast("Opening Video Task..."); window.open("https://doctoredits.com/1874676", "_blank"); }
+        // Skins & Ads Logic placeholders
+        function updateSkinButtons() {} 
+        function equipSkin(s) { db.ref('users/'+userData.uid).update({equippedSkin:s}); showToast("Equipped!"); }
+        function buyOrEquipSkin(s,c) { if((userData.points||0)>=c){ if(confirm("Buy?")){ db.ref('users/'+userData.uid+'/points').transaction(p=>p-c); let o=userData.ownedSkins||['default']; o.push(s); db.ref('users/'+userData.uid).update({ownedSkins:o}); } } else showToast("Need coins"); }
+        function watchAd() { alert("Ad playing..."); db.ref('users/'+userData.uid+'/points').transaction(p=>(p||0)+50); showToast("+50 Coins"); }
 
-</script>
+    </script>
 </body>
 </html>
