@@ -449,36 +449,10 @@
         .post-image-container { width: 100%; max-height: 300px; overflow: hidden; display: flex; justify-content: center; background: #000; margin-bottom: 10px; }
         .post-image { max-width: 100%; max-height: 300px; object-fit: contain; }
         
-        /* Hanapin ang .post-actions at palitan ng mga ito */
-.post-actions { display: flex; border-top: 1px solid rgba(255,255,255,0.05); position: relative; }
-
-.reaction-container { position: relative; flex: 1; }
-
-.reaction-menu {
-    position: absolute; bottom: 50px; left: 10px; background: white;
-    padding: 5px 10px; border-radius: 30px; display: none; gap: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 100;
-    animation: reactPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes reactPop {
-    from { transform: scale(0.5) translateY(20px); opacity: 0; }
-    to { transform: scale(1) translateY(0); opacity: 1; }
-}
-
-.reaction-container:hover .reaction-menu { display: flex; }
-
-.react-btn {
-    font-size: 24px; cursor: pointer; transition: transform 0.2s;
-}
-.react-btn:hover { transform: scale(1.4); }
-
-.action-btn.active-react { color: var(--gold) !important; font-weight: 800; }
-
-.reaction-summary {
-    display: flex; align-items: center; gap: 4px; font-size: 11px;
-    padding: 5px 15px; color: #94a3b8;
-}
+        .post-actions { display: flex; border-top: 1px solid rgba(255,255,255,0.05); }
+        .action-btn { flex: 1; background: transparent; border: none; color: #94a3b8; padding: 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; }
+        .action-btn:hover { background: rgba(255,255,255,0.05); color: white; }
+        .action-btn.liked { color: var(--minigame); }
         
         /* Friend Request Notification in Feed */
         .friend-req-card { background: rgba(14, 165, 233, 0.1); border: 1px solid var(--accent); padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
@@ -685,6 +659,10 @@
         <div class="legal-text">
             <span>⚠️ DISCLAIMER: NOT A GAMBLING SITE</span>
             <span style="opacity: 0.6; font-size: 9px;">For entertainment purposes only. No real money betting.</span>
+            <div style="margin-top: 5px; opacity: 0.8; font-size: 10px;">
+                <a href="terms.html" style="color:#cbd5e1; text-decoration:none; margin:0 5px;">Terms</a> |
+                <a href="privacy.html" style="color:#cbd5e1; text-decoration:none; margin:0 5px;">Privacy</a>
+            </div>
         </div>
     </div>
 </div>
@@ -1053,6 +1031,13 @@
             <span style="font-size:10px; font-weight:800; color:white; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px;"><i data-lucide="history" style="width:12px"></i> Transaction History</span>
             <div id="historyList" class="history-list"></div>
         </div>
+        
+        <div style="margin-top:15px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+            <a href="about.html" style="display:block; color:#94a3b8; font-size:12px; padding:8px 0; text-decoration:none;">About Us</a>
+            <a href="privacy.html" style="display:block; color:#94a3b8; font-size:12px; padding:8px 0; text-decoration:none;">Privacy Policy</a>
+            <a href="terms.html" style="display:block; color:#94a3b8; font-size:12px; padding:8px 0; text-decoration:none;">Terms of Service</a>
+        </div>
+
         <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); border-radius:14px; font-weight:800; margin-top:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
             <i data-lucide="log-out" style="width:18px"></i> Sign Out
         </button>
@@ -2196,40 +2181,28 @@
                     const moodHtml = post.mood ? `<div class="mood-display">Feeling ${post.mood}</div>` : '';
                     const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
                     
-                   // Palitan ang innerHTML ng postDiv sa loob ng loop:
-postDiv.innerHTML = `
-    <div class="post-header">
-        <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
-        <div class="post-meta">
-            <div class="post-author">${post.authorName} ${getBadgeHtml(post.authorPoints || 0)} ${friendBadge}</div>
-            <div class="post-time">${fixDate(post.timestamp)}</div>
-            ${moodHtml}
-        </div>
-    </div>
-    <div class="post-content">${post.content}</div>
-    ${imgHtml}
-    <div class="reaction-summary" id="react-summary-${post.key}">
-        <span id="react-icon-box-${post.key}">❤️</span> 
-        <span id="like-count-${post.key}">${post.likes || 0}</span>
-    </div>
-    <div class="post-actions">
-        <div class="reaction-container">
-            <button class="action-btn" id="main-react-btn-${post.key}">
-                <i data-lucide="thumbs-up" style="width:14px;"></i> React
-            </button>
-            <div class="reaction-menu">
-                <span class="react-btn" onclick="applyReaction('${post.key}', '❤️', '${post.uid}')">❤️</span>
-                <span class="react-btn" onclick="applyReaction('${post.key}', '😆', '${post.uid}')">😆</span>
-                <span class="react-btn" onclick="applyReaction('${post.key}', '😮', '${post.uid}')">😮</span>
-                <span class="react-btn" onclick="applyReaction('${post.key}', '😢', '${post.uid}')">😢</span>
-                <span class="react-btn" onclick="applyReaction('${post.key}', '🔥', '${post.uid}')">🔥</span>
-            </div>
-        </div>
-        <button class="action-btn" onclick="openComments('${post.key}')">
-            <i data-lucide="message-circle" style="width:14px"></i> Comment
-        </button>
-    </div>
-`;
+                    postDiv.innerHTML = `
+                        <div class="post-header">
+                            <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
+                            <div class="post-meta">
+                                <div class="post-author">${post.authorName} ${getBadgeHtml(post.authorPoints || 0)} ${friendBadge}</div>
+                                <div class="post-time">${fixDate(post.timestamp)}</div>
+                                ${moodHtml}
+                            </div>
+                        </div>
+                        <div class="post-content">${post.content}</div>
+                        ${imgHtml}
+                        <div class="post-actions">
+                            <button class="action-btn" id="like-btn-${post.key}" onclick="toggleLike('${post.key}', '${post.uid}')">
+                                <i data-lucide="heart" style="width:14px;"></i> 
+                                <span id="like-count-${post.key}">${post.likes || 0}</span>
+                            </button>
+                            <button class="action-btn" onclick="openComments('${post.key}')">
+                                <i data-lucide="message-circle" style="width:14px"></i> Comment
+                            </button>
+                        </div>
+                    `;
+                    feedContainer.appendChild(postDiv);
                     
                     // === IN-FEED ADS INJECTION ===
                     adCounter++;
@@ -2302,40 +2275,6 @@ postDiv.innerHTML = `
         });
     }
 
-    function applyReaction(postKey, emoji, authorUid) {
-    const myUid = auth.currentUser.uid;
-    const reactRef = db.ref('postLikes/' + postKey + '/' + myUid);
-    const countRef = document.getElementById('like-count-' + postKey);
-    const iconBox = document.getElementById('react-icon-box-' + postKey);
-    const mainBtn = document.getElementById('main-react-btn-' + postKey);
-
-    reactRef.once('value', s => {
-        const alreadyReacted = s.exists();
-        
-        // Update database
-        reactRef.set({ emoji: emoji, time: Date.now() });
-        
-        if(!alreadyReacted) {
-            db.ref('socialPosts/' + postKey + '/likes').transaction(l => (l || 0) + 1);
-            countRef.innerText = parseInt(countRef.innerText) + 1;
-            
-            // Reward logic (Counted pa rin sa points)
-            if(authorUid !== myUid) {
-                db.ref('users/' + authorUid + '/points').transaction(p => (p || 0) + 10);
-                showToast(`Sent ${emoji}! (+10 pts to author)`);
-            }
-        } else {
-            showToast(`Changed to ${emoji}`);
-        }
-
-        // UI Updates
-        iconBox.innerText = emoji;
-        mainBtn.innerHTML = `<span style="font-size:16px">${emoji}</span> Reacted`;
-        mainBtn.classList.add('active-react');
-        playSound('pop');
-    });
-}
 </script>
 </body>
 </html>
-
