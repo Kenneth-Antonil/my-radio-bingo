@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Radio Bingo Live | Me</title>
+    <link href="style.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+</head>
+<body>
+
+<div id="splash-screen">
+    <div class="splash-logo">RB<span>LIVE</span></div>
+    <div class="splash-loader"></div>
+</div>
+
+<div id="customToast"><i data-lucide="info" class="toast-icon"></i><span class="toast-msg" id="toastMsg">Notification</span></div>
+<div id="customConfirmModal">
+    <div class="conf-content">
+        <h3 class="conf-title" id="confTitle">Confirm</h3>
+        <p class="conf-msg" id="confMsg">Proceed?</p>
+        <div class="conf-actions">
+            <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
+            <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
+        </div>
+    </div>
+</div>
+
+<div id="editProfileModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 style="margin-top:0;">Edit Profile</h3>
+        <label class="edit-label">Display Name</label>
+        <input type="text" id="editName" class="edit-input" placeholder="Enter name">
+        <label class="edit-label">Bio / Status</label>
+        <input type="text" id="editBio" class="edit-input" placeholder="Enter bio">
+        <label class="edit-label">Cover Photo URL</label>
+        <input type="text" id="editCover" class="edit-input" placeholder="https://...">
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button onclick="saveProfileChanges()" style="flex:1; background:var(--success); color:white; padding:12px; border:none; border-radius:12px; font-weight:800;">SAVE</button>
+            <button onclick="document.getElementById('editProfileModal').style.display='none'" style="flex:1; background:rgba(255,255,255,0.1); color:white; padding:12px; border:none; border-radius:12px;">CANCEL</button>
+        </div>
+    </div>
+</div>
+
+<div id="messengerModal" class="pm-modal">
+    <div class="pm-container">
+        <div class="pm-header">
+            <button onclick="closeMessenger()" style="background:none; border:none; color:white;"><i data-lucide="arrow-left"></i></button>
+            <h3>Messages</h3>
+            <div style="width:24px;"></div>
+        </div>
+        <div class="pm-inbox-list" id="inboxList"></div>
+    </div>
+    <div id="pmChatView" class="pm-chat-view">
+        <div class="pm-chat-header">
+            <button onclick="closePmChat()" style="background:none; border:none; color:white;"><i data-lucide="arrow-left"></i></button>
+            <h4 id="pmChatName" style="margin:0; color:white;">User</h4>
+            <div style="width:24px;"></div>
+        </div>
+        <div id="pmMessages" class="pm-messages"></div>
+        <form class="pm-input-area" onsubmit="event.preventDefault(); sendPm();">
+            <input type="text" id="pmInput" class="pm-styled-input" placeholder="Type a message..." autocomplete="off">
+            <button type="submit" style="background:var(--messenger-blue); border:none; width:45px; height:45px; border-radius:50%; color:white; display:flex; align-items:center; justify-content:center;"><i data-lucide="send"></i></button>
+        </form>
+    </div>
+</div>
+
+<div class="profile-page-container" style="display:flex; position:relative; background:#020617; min-height:100vh;">
+    <div class="profile-cover" id="myCoverPhoto">
+        <button onclick="document.getElementById('editProfileModal').style.display='flex'" style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.6); color:white; border:none; padding:8px 12px; border-radius:20px; font-size:12px; cursor:pointer;"><i data-lucide="edit-2" style="width:12px"></i> Edit Cover</button>
+    </div>
+
+    <div class="profile-info-section">
+        <div class="profile-header-row">
+            <img id="myProfileImg" class="profile-page-img" src="">
+            <button onclick="openMessenger()" style="background:var(--messenger-blue); color:white; border:none; width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 5px 15px rgba(0,132,255,0.4); cursor:pointer;"><i data-lucide="message-circle"></i></button>
+        </div>
+        
+        <h1 id="myName" class="profile-page-name">User Name</h1>
+        <p id="myBio" class="profile-page-bio">Radio Bingo Player</p>
+
+        <div class="profile-stats">
+            <div class="stat-item"><div class="stat-val" id="myPoints">0</div><div class="stat-lbl">Points</div></div>
+            <div class="stat-item"><div class="stat-val" id="myFriends">0</div><div class="stat-lbl">Friends</div></div>
+            <div class="stat-item"><div class="stat-val" id="myWins">0</div><div class="stat-lbl">Wins</div></div>
+        </div>
+
+        <div class="gcash-section">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="margin:0; color:var(--accent-glow); font-size:12px; text-transform:uppercase;">Redemption Details</h4>
+                <i data-lucide="credit-card" style="width:16px; opacity:0.7;"></i>
+            </div>
+            <input type="text" id="gcashInput" class="styled-input" placeholder="GCash Name / Number">
+            <button onclick="saveGcash()" style="width:100%; margin-top:10px; background:var(--accent); color:white; border:none; padding:12px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer;">SAVE INFO</button>
+        </div>
+
+        <div class="history-box">
+            <h4 style="margin:0 0 15px 0; color:#94a3b8; font-size:12px; text-transform:uppercase;">Recent Activity</h4>
+            <div id="historyList" class="history-list">
+                <div style="text-align:center; padding:20px; opacity:0.5; font-size:12px;">No history yet.</div>
+            </div>
+        </div>
+
+        <button onclick="logout()" style="width:100%; padding:15px; background:rgba(239, 68, 68, 0.1); color:#ef4444; border:1px solid rgba(239, 68, 68, 0.3); border-radius:12px; font-weight:bold; cursor:pointer; margin-top:20px; margin-bottom:40px;">SIGN OUT</button>
+    </div>
+</div>
+
+<div class="bottom-nav">
+    <button class="nav-item" onclick="window.location.href='index.html'">
+        <i data-lucide="home" class="nav-icon"></i><span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" onclick="window.location.href='bingo.html'">
+        <i data-lucide="play-circle" class="nav-icon"></i><span class="nav-label">Bingo</span>
+    </button>
+    <div class="nav-center" onclick="window.location.href='index.html'">
+        <div class="nav-icon-bg"><i data-lucide="plus" style="width:28px; height:28px;"></i></div>
+    </div>
+    <button class="nav-item" onclick="window.location.href='store.html'">
+        <i data-lucide="shopping-bag" class="nav-icon"></i><span class="nav-label">Store</span>
+    </button>
+    <button class="nav-item active" onclick="window.location.href='me.html'">
+        <i data-lucide="user" class="nav-icon"></i><span class="nav-label">Me</span>
+    </button>
+</div>
+
+<script>
+    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); });
+    function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss) { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
+    
+    // UTILS
+    const sounds = { click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3') };
+    function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; sounds[type].play().catch(e=>{}); } }
+    function showToast(msg) { const toast = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; toast.classList.add('show'); playSound('click'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
+    
+    // CONFIRM MODAL
+    let confirmCallback = null;
+    function showCustomConfirm(title, msg, onYes) { document.getElementById('confTitle').innerText = title; document.getElementById('confMsg').innerText = msg; document.getElementById('customConfirmModal').style.display = 'flex'; confirmCallback = onYes; playSound('click'); }
+    function closeCustomConfirm() { document.getElementById('customConfirmModal').style.display = 'none'; confirmCallback = null; }
+    document.getElementById('confYesBtn').addEventListener('click', () => { if(confirmCallback) confirmCallback(); closeCustomConfirm(); });
+
+    // FIREBASE INIT
+    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+    lucide.createIcons();
+
+    let userData = {};
+
+    auth.onAuthStateChanged(u => {
+        if(u) {
+            db.ref('users/'+u.uid).on('value', s => {
+                userData = s.val(); userData.uid = u.uid;
+                document.getElementById('myProfileImg').src = userData.photo || u.photoURL;
+                document.getElementById('myName').innerText = userData.name || u.displayName;
+                document.getElementById('myBio').innerText = userData.bio || "Radio Bingo Player";
+                document.getElementById('myPoints').innerText = (userData.points || 0).toLocaleString();
+                if(userData.cover) document.getElementById('myCoverPhoto').style.backgroundImage = `url('${userData.cover}')`;
+                if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
+                
+                // Pre-fill Edit Modal
+                document.getElementById('editName').value = userData.name;
+                document.getElementById('editBio').value = userData.bio || "";
+                document.getElementById('editCover').value = userData.cover || "";
+
+                loadHistory();
+                db.ref('friends/'+u.uid).on('value', f => document.getElementById('myFriends').innerText = f.numChildren());
+                db.ref('wins/'+u.uid).on('value', w => document.getElementById('myWins').innerText = w.numChildren());
+            });
+        } else {
+            window.location.href = "index.html";
+        }
+    });
+
+    // --- PROFILE ACTIONS ---
+    function saveGcash() {
+        const val = document.getElementById('gcashInput').value;
+        if(val.length < 5) return showToast("Invalid Info");
+        db.ref('users/' + auth.currentUser.uid).update({ gcash: val });
+        showToast("Info Saved!");
+    }
+
+    function saveProfileChanges() {
+        const n = document.getElementById('editName').value;
+        const b = document.getElementById('editBio').value;
+        const c = document.getElementById('editCover').value;
+        db.ref('users/' + auth.currentUser.uid).update({ name: n, bio: b, cover: c });
+        document.getElementById('editProfileModal').style.display='none';
+        showToast("Profile Updated!");
+    }
+
+    function loadHistory() {
+        const l = document.getElementById('historyList');
+        // Combined history from wins, redemptions, etc. can be complex.
+        // For simplicity, showing redemptions and recent point changes if tracked.
+        // Here we just fetch redemptions for demo.
+        db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).limitToLast(10).once('value', s => {
+            if(!s.exists()) return;
+            l.innerHTML = "";
+            s.forEach(x => {
+                const d = x.val();
+                l.innerHTML += `<div class="history-item"><div><b>${d.item}</b><br><small>${new Date(d.timestamp).toLocaleDateString()}</small></div><div style="color:${d.status==='paid'?'var(--success)':'var(--gold)'}">${d.status.toUpperCase()}</div></div>`;
+            });
+        });
+    }
+
+    function logout() {
+        showCustomConfirm("LOGOUT", "Are you sure you want to sign out?", () => {
+            auth.signOut().then(() => window.location.href = "index.html");
+        });
+    }
+
+    // --- MESSENGER LOGIC ---
+    let activeChatUid = null;
+    function openMessenger() { document.getElementById('messengerModal').style.display='flex'; loadInbox(); }
+    function closeMessenger() { document.getElementById('messengerModal').style.display='none'; }
+    
+    function loadInbox() {
+        const l = document.getElementById('inboxList'); l.innerHTML = "<div style='padding:20px;opacity:0.5;text-align:center;'>Loading friends...</div>";
+        db.ref('friends/'+auth.currentUser.uid).once('value', s => {
+            l.innerHTML = "";
+            if(!s.exists()) { l.innerHTML="<div style='padding:20px;opacity:0.5;text-align:center;'>No friends yet. Add some!</div>"; return; }
+            s.forEach(f => {
+                const fid = f.key;
+                db.ref('users/'+fid).once('value', u => {
+                    const d = u.val();
+                    l.innerHTML += `<div class="pm-item" onclick="openPmChat('${fid}','${d.name}')"><img src="${d.photo}" class="pm-avatar"><div class="pm-info"><div class="pm-name">${d.name}</div><div class="pm-preview">Tap to chat</div></div></div>`;
+                });
+            });
+        });
+    }
+
+    function openPmChat(uid, name) {
+        activeChatUid = uid;
+        document.getElementById('pmChatName').innerText = name;
+        document.getElementById('pmChatView').style.display='flex';
+        const msgs = document.getElementById('pmMessages'); msgs.innerHTML = "Loading...";
+        
+        const chatID = [auth.currentUser.uid, uid].sort().join('_');
+        db.ref('privateMessages/'+chatID).limitToLast(50).on('value', s => {
+            msgs.innerHTML = "";
+            s.forEach(m => {
+                const d = m.val();
+                const cls = d.from === auth.currentUser.uid ? 'msg-me' : 'msg-them';
+                msgs.innerHTML += `<div class="msg-bubble ${cls}">${d.text}</div>`;
+            });
+            msgs.scrollTop = msgs.scrollHeight;
+        });
+    }
+
+    function closePmChat() {
+        document.getElementById('pmChatView').style.display='none';
+        activeChatUid = null;
+        // Detach listener if possible, or just ignore
+    }
+
+    function sendPm() {
+        const t = document.getElementById('pmInput').value.trim();
+        if(!t || !activeChatUid) return;
+        const chatID = [auth.currentUser.uid, activeChatUid].sort().join('_');
+        db.ref('privateMessages/'+chatID).push({ from:auth.currentUser.uid, text:t, timestamp:Date.now() });
+        document.getElementById('pmInput').value = "";
+    }
+
+</script>
+</body>
+</html>
