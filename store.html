@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#02040a">
     <title>Radio Bingo Live | Store</title>
     
     <link rel="stylesheet" href="style.css">
 
     <link rel="icon" type="image/png" href="https://i.imgur.com/7D8u8h6.png">
+    
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -17,6 +18,28 @@
     <script src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
 </head>
 <body>
+
+<div id="splash-screen">
+    <div class="splash-logo">RB<span>LIVE</span></div>
+    <div class="splash-loader"></div>
+</div>
+
+<div id="customToast">
+    <i data-lucide="info" class="toast-icon"></i>
+    <span class="toast-msg" id="toastMsg">Notification!</span>
+</div>
+
+<div id="customConfirmModal">
+    <div class="conf-content">
+        <i data-lucide="alert-triangle" style="width: 50px; height: 50px; color: var(--gold); margin-bottom: 15px;"></i>
+        <h3 class="conf-title" id="confTitle">Confirm Action</h3>
+        <p class="conf-msg" id="confMsg">Are you sure?</p>
+        <div class="conf-actions">
+            <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
+            <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
+        </div>
+    </div>
+</div>
 
 <div class="bottom-nav">
     <button class="nav-item" onclick="window.location.href='index.html'">
@@ -40,90 +63,79 @@
     </button>
 </div>
 
-<div id="customToast">
-    <i data-lucide="info" class="toast-icon"></i>
-    <span class="toast-msg" id="toastMsg">Notification!</span>
-</div>
-
-<div id="customConfirmModal">
-    <div class="conf-content">
-        <i data-lucide="alert-circle" style="width: 40px; height: 40px; color: var(--gold); margin-bottom: 15px;"></i>
-        <h3 class="conf-title" id="confTitle">Confirm Action</h3>
-        <p class="conf-msg" id="confMsg">Are you sure?</p>
-        <div class="conf-actions">
-            <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
-            <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
-        </div>
-    </div>
-</div>
-
 <div class="container">
     
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; padding-top: 10px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; padding-top:10px;">
         <div>
-            <h3 style="margin:0; font-size: 20px; font-weight: 900; color: white;">MARKETPLACE</h3>
-            <p style="margin: 5px 0 0 0; font-size: 11px; opacity: 0.8; font-weight: 600; color: #cbd5e1;">Redeem, Shop Skins, or Earn</p>
+            <h3 style="margin:0; font-family:'Outfit', sans-serif; font-size: 24px; font-weight: 900; color: white; letter-spacing:-0.5px;">MARKETPLACE</h3>
+            <p style="margin: 5px 0 0 0; font-size: 12px; font-weight: 600; color: var(--text-muted);">Redeem, Shop Skins, or Earn</p>
         </div>
-        <div class="points-badge" style="height:35px; border-radius: 10px;"><i data-lucide="coins" style="width:14px"></i> <span id="storePoints">0</span></div>
+        <div class="points-badge" style="height:40px; border-radius: 50px; padding:0 15px;">
+            <i data-lucide="coins" style="width:18px; color:var(--gold);"></i> 
+            <span id="storePoints" style="font-size:16px;">0</span>
+        </div>
     </div>
 
     <div class="store-nav">
-        <button class="store-tab-btn active" onclick="switchStoreTab('cashout')" id="tabBtnCash">Cash Out</button>
+        <button class="store-tab-btn active" onclick="switchStoreTab('cashout')" id="tabBtnCash">Redeem</button>
         <button class="store-tab-btn" onclick="switchStoreTab('skins')" id="tabBtnSkins">Skins</button>
-        <button class="store-tab-btn" onclick="switchStoreTab('earn')" id="tabBtnEarn" style="color:var(--gold);">Tasks</button>
+        <button class="store-tab-btn" onclick="switchStoreTab('earn')" id="tabBtnEarn" style="color:var(--gold-shine);">Tasks</button>
     </div>
 
-    <div class="glass-panel" style="padding: 15px; border-radius: 18px; margin-bottom: 20px; border: 1px dashed var(--gold); text-align: center; position: relative; overflow: hidden;">
-        <h4 style="margin: 0 0 10px 0; color: var(--gold); font-size: 14px; text-transform: uppercase;">⚡ FREE RB COINS ⚡</h4>
+    <div class="glass-panel" style="padding: 20px; margin-bottom: 25px; border: 1px solid rgba(251, 191, 36, 0.3); text-align: center; position: relative;">
+        <h4 style="margin: 0 0 15px 0; color: var(--gold); font-size: 12px; font-weight:800; text-transform: uppercase; letter-spacing:1px; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i data-lucide="zap" style="width:14px;"></i> DAILY BOOST
+        </h4>
         
-        <div id="adTimerOverlay" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 50; align-items: center; justify-content: center; flex-direction: column;">
-            <div id="adStatusIcon" style="font-size: 30px; margin-bottom: 10px;">📺</div>
-            <div style="font-size: 18px; font-weight: 900; color: white;" id="adCountdown">30s</div>
-            <div style="font-size: 12px; color: #ef4444; padding: 0 20px; margin-top: 5px; font-weight:800;" id="adStatusText">Do not close app or switch tabs!</div>
+        <div id="adTimerOverlay" style="display: none; position: absolute; inset: 0; background: rgba(2, 4, 10, 0.98); z-index: 50; align-items: center; justify-content: center; flex-direction: column; border-radius:24px;">
+            <div id="adStatusIcon" style="font-size: 40px; margin-bottom: 15px;">📺</div>
+            <div style="font-size: 24px; font-weight: 900; color: white;" id="adCountdown">30s</div>
+            <div style="font-size: 12px; color: var(--danger); padding: 0 20px; margin-top: 10px; font-weight:700;" id="adStatusText">Do not close app or switch tabs!</div>
         </div>
         
-        <div id="adCaptchaOverlay" style="display: none; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.98); z-index: 51; align-items: center; justify-content: center; flex-direction: column;">
-            <div style="font-size: 14px; font-weight: 700; color: var(--accent-glow); margin-bottom: 10px;">HUMAN VERIFICATION</div>
-            <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 12px; margin-bottom: 10px;">
-                <span id="mathQ" style="font-size: 20px; font-weight: 900; color: white;">5 + 3 = ?</span>
+        <div id="adCaptchaOverlay" style="display: none; position: absolute; inset: 0; background: rgba(2, 4, 10, 0.98); z-index: 51; align-items: center; justify-content: center; flex-direction: column; border-radius:24px;">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary-glow); margin-bottom: 15px; text-transform:uppercase; letter-spacing:1px;">Human Verification</div>
+            <div style="background: rgba(255,255,255,0.05); padding: 15px 30px; border-radius: 16px; margin-bottom: 15px; border:1px solid rgba(255,255,255,0.1);">
+                <span id="mathQ" style="font-size: 28px; font-weight: 900; color: white; font-family: var(--font-display);">5 + 3 = ?</span>
             </div>
-            <div style="display: flex; gap: 5px;">
-                <input type="number" id="mathAns" style="width: 60px; padding: 8px; border-radius: 8px; border: 1px solid var(--accent); background: #0f172a; color: white; text-align: center; font-weight: 800;">
-                <button onclick="verifyAdMath()" style="background: var(--success); border: none; padding: 8px 12px; border-radius: 8px; color: white; font-weight: 900;">OK</button>
+            <div style="display: flex; gap: 8px;">
+                <input type="number" id="mathAns" style="width: 80px; padding: 12px; border-radius: 12px; border: 1px solid var(--primary); background: #0f172a; color: white; text-align: center; font-weight: 800; font-size:18px;">
+                <button onclick="verifyAdMath()" style="background: var(--success); border: none; padding: 0 20px; border-radius: 12px; color: white; font-weight: 900; cursor:pointer;">OK</button>
             </div>
         </div>
 
-        <button id="btnWatchAd" onclick="startStrictWatch()" style="background: linear-gradient(135deg, #f59e0b, #b45309); width: 100%; border: none; padding: 15px; border-radius: 12px; font-weight: 900; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4); text-shadow: 0 1px 2px black;">
-            <i data-lucide="play-circle" style="width: 20px;"></i> WATCH AD (+50 Coins)
+        <button id="btnWatchAd" onclick="startStrictWatch()" style="background: linear-gradient(135deg, #f59e0b, #b45309); width: 100%; border: none; padding: 16px; border-radius: 16px; font-weight: 900; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3); text-shadow: 0 1px 2px rgba(0,0,0,0.3); transition:0.2s;">
+            <i data-lucide="play" style="width: 18px; fill:white;"></i> WATCH AD (+50 Coins)
         </button>
-        <p style="font-size: 10px; opacity: 0.6; margin-top: 8px; color:var(--danger);">*Timer pauses if you leave the app!</p>
+        <p style="font-size: 10px; opacity: 0.6; margin-top: 10px; color:var(--text-muted);">*Timer pauses if you leave the app!</p>
     </div>
 
     <div id="storeSection-cashout" style="display:block;">
         <div class="reward-grid">
             <div class="reward-item">
-                <div class="reward-main"><div class="reward-icon-box"><i data-lucide="gift" style="width:22px"></i></div><div class="reward-info"><b>₱20 Gift Card</b><small><i data-lucide="database" style="width:10px"></i> 50,000 Coins</small></div></div>
+                <div class="reward-main"><div class="reward-icon-box"><i data-lucide="gift" style="width:24px"></i></div><div class="reward-info"><b>₱20 GCash</b><small><i data-lucide="database" style="width:10px"></i> 50,000 Coins</small></div></div>
                 <button class="btn-redeem" onclick="redeemItem('₱20 Gift Card', 50000)">Redeem</button>
             </div>
             <div class="reward-item">
-                <div class="reward-main"><div class="reward-icon-box" style="color:var(--gold); background:rgba(251, 191, 36, 0.1); border-color:rgba(251, 191, 36, 0.3);"><i data-lucide="gift" style="width:22px"></i></div><div class="reward-info"><b>₱50 Gift Card</b><small><i data-lucide="database" style="width:10px"></i> 125,000 Coins</small></div></div>
+                <div class="reward-main"><div class="reward-icon-box" style="color:var(--gold); background:rgba(251, 191, 36, 0.1); border-color:rgba(251, 191, 36, 0.3);"><i data-lucide="gift" style="width:24px"></i></div><div class="reward-info"><b>₱50 GCash</b><small><i data-lucide="database" style="width:10px"></i> 125,000 Coins</small></div></div>
                 <button class="btn-redeem" onclick="redeemItem('₱50 Gift Card', 125000)">Redeem</button>
             </div>
             <div class="reward-item">
-                <div class="reward-main"><div class="reward-icon-box" style="color:var(--success); background:rgba(16, 185, 129, 0.1); border-color:rgba(16, 185, 129, 0.3);"><i data-lucide="gift" style="width:22px"></i></div><div class="reward-info"><b>₱100 Gift Card</b><small><i data-lucide="database" style="width:10px"></i> 250,000 Coins</small></div></div>
+                <div class="reward-main"><div class="reward-icon-box" style="color:var(--success); background:rgba(16, 185, 129, 0.1); border-color:rgba(16, 185, 129, 0.3);"><i data-lucide="gift" style="width:24px"></i></div><div class="reward-info"><b>₱100 GCash</b><small><i data-lucide="database" style="width:10px"></i> 250,000 Coins</small></div></div>
                 <button class="btn-redeem" onclick="redeemItem('₱100 Gift Card', 250000)">Redeem</button>
             </div>
         </div>
-        <p style="text-align: center; font-size: 10px; opacity: 0.6; margin-top: 25px; line-height: 1.5; text-shadow:0 1px 2px black;">*Processing may take 24-48 hours.<br>Make sure your redemption details are correct in "Me" page.</p>
+        <p style="text-align: center; font-size: 10px; color: var(--text-muted); margin-top: 30px; line-height: 1.6;">Processing takes 24-48 hours.<br>Ensure your details are correct in "Me" page.</p>
     </div>
 
     <div id="storeSection-skins" style="display:none;">
-        <p style="font-size:11px; opacity:0.7; margin-bottom:15px; text-align:center;">Customize your Bingo Card. Look rich, play rich.</p>
-        
-        <div style="margin-bottom:20px; padding:15px; background:rgba(255,255,255,0.05); border-radius:12px; text-align:center;">
-            <label style="font-size:12px; font-weight:700; display:block; margin-bottom:10px; color:var(--accent-glow);">UPLOAD CUSTOM BACKGROUND</label>
+        <div style="margin-bottom:20px; padding:15px; background:rgba(255,255,255,0.05); border-radius:16px; border:1px dashed rgba(255,255,255,0.2); text-align:center; display:flex; justify-content:space-between; align-items:center;">
+            <div style="text-align:left;">
+                <label style="font-size:12px; font-weight:800; display:block; color:white;">CUSTOM SKIN</label>
+                <span style="font-size:10px; color:var(--text-muted);">Upload your own image</span>
+            </div>
             <input type="file" accept="image/*" id="customSkinInput" style="display:none" onchange="handleCustomSkinUpload(this)">
-            <button onclick="document.getElementById('customSkinInput').click()" style="background:var(--accent); color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:800; font-size:11px; cursor:pointer;">CHOOSE IMAGE</button>
+            <button onclick="document.getElementById('customSkinInput').click()" style="background:var(--primary); color:white; border:none; padding:8px 16px; border-radius:10px; font-weight:800; font-size:11px; cursor:pointer;">UPLOAD</button>
         </div>
 
         <div class="skins-grid">
@@ -146,14 +158,22 @@
     </div>
 
     <div id="storeSection-earn" style="display:none;">
-        <p style="font-size:11px; opacity:0.7; margin-bottom:15px; text-align:center;">Complete tasks to earn huge coins instantly.</p>
         <div class="task-list">
-            <div class="task-item" style="border-color: #ef4444; background: linear-gradient(90deg, rgba(69,10,10,0.8), rgba(15,23,42,0.8));">
-                <div class="task-info"><h4 style="color:#fca5a5;">Watch Video Task</h4><p>Watch full video to unlock reward</p><span class="task-reward" style="background: rgba(239,68,68,0.2); border-color:#ef4444; color:#fca5a5;">+2,000 Coins</span></div>
-                <button class="btn-do-task" style="background:#ef4444;" id="btn-task-video" onclick="openVideoLocker('video')">WATCH</button>
+            <div class="task-item" style="border-color: rgba(239, 68, 68, 0.4); background: linear-gradient(135deg, rgba(69,10,10,0.6), rgba(15,23,42,0.8));">
+                <div class="task-info">
+                    <h4 style="color:#fca5a5; display:flex; align-items:center; gap:6px;"><i data-lucide="play-circle" style="width:14px"></i> Watch Video</h4>
+                    <p>Watch full video to unlock reward</p>
+                    <span class="task-reward" style="background: rgba(239,68,68,0.2); border-color:#ef4444; color:#fca5a5;">+2,000 Coins</span>
+                </div>
+                <button class="btn-do-task" style="background:#ef4444; box-shadow:0 4px 15px rgba(239,68,68,0.3);" id="btn-task-video" onclick="openVideoLocker('video')">WATCH</button>
             </div>
+            
             <div class="task-item">
-                <div class="task-info"><h4>Premium Offer</h4><p>Complete simple offer to verify</p><span class="task-reward">+5,000 Coins</span></div>
+                <div class="task-info">
+                    <h4 style="display:flex; align-items:center; gap:6px;"><i data-lucide="star" style="width:14px; color:var(--gold);"></i> Premium Offer</h4>
+                    <p>Complete simple offer to verify</p>
+                    <span class="task-reward">+5,000 Coins</span>
+                </div>
                 <button class="btn-do-task" id="btn-task-premium" onclick="startTaskSafe('https://doctoredits.com/1874673', 5000, 'premium')">GO</button>
             </div>
         </div>
@@ -162,7 +182,8 @@
 
 <script>
     // === INITIALIZATION ===
-    window.addEventListener('load', () => { lucide.createIcons(); });
+    window.addEventListener('load', () => { lucide.createIcons(); setTimeout(hideSplash, 1500); });
+    function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss) { ss.style.opacity='0'; setTimeout(()=>ss.style.display='none',800); }}
     
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
