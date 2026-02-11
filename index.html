@@ -3,453 +3,651 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Radio Bingo Live</title>
-    <link href="style.css" rel="stylesheet">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Radio Bingo Live | Home</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="icon" type="image/png" href="https://i.imgur.com/7D8u8h6.png">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/7D8u8h6.png">
+    <link rel="manifest" href="manifest.json">
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
     
-    <style>
-        /* Hide views by default, show active */
-        .view-section { display: none; padding-bottom: 80px; animation: fadeIn 0.3s ease; }
-        .view-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
+    <script src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
+    <script src="https://pl28660496.effectivegatecpm.com/a6/64/bf/a664bf7e7084386b4f4b428590030df3.js"></script>
 </head>
 <body>
 
-    <div id="splash-screen">
-        <div class="splash-logo">RB<span>LIVE</span></div>
-        <div class="splash-loader"></div>
+<div class="bottom-nav">
+    <button class="nav-item active" onclick="window.location.reload()">
+        <i data-lucide="home" class="nav-icon"></i>
+        <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" onclick="window.location.href='bingo.html'">
+        <i data-lucide="play-circle" class="nav-icon"></i>
+        <span class="nav-label">Bingo</span>
+    </button>
+    <div class="nav-center" onclick="document.getElementById('postInput').focus()">
+        <div class="nav-icon-bg"><i data-lucide="plus" style="width:28px; height:28px;"></i></div>
+    </div>
+    <button class="nav-item" onclick="window.location.href='store.html'">
+        <i data-lucide="shopping-bag" class="nav-icon"></i>
+        <span class="nav-label">Store</span>
+    </button>
+    <button class="nav-item" onclick="window.location.href='me.html'">
+        <i data-lucide="user" class="nav-icon"></i>
+        <span class="nav-label">Me</span>
+    </button>
+</div>
+
+<div id="splash-screen">
+    <div class="splash-logo">RB<span>LIVE</span></div>
+    <div class="splash-loader"></div>
+</div>
+
+<div id="customToast">
+    <i data-lucide="info" class="toast-icon"></i>
+    <span class="toast-msg" id="toastMsg">Notification!</span>
+</div>
+
+<div id="customConfirmModal">
+    <div class="conf-content">
+        <i data-lucide="alert-circle" style="width: 40px; height: 40px; color: var(--gold); margin-bottom: 15px;"></i>
+        <h3 class="conf-title" id="confTitle">Confirm Action</h3>
+        <p class="conf-msg" id="confMsg">Are you sure you want to proceed?</p>
+        <div class="conf-actions">
+            <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
+            <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
+        </div>
+    </div>
+</div>
+
+<div id="installGate">
+    <div class="gate-logo">RB<span>LIVE</span></div>
+    <div class="gate-title">Install to Play</div>
+    <p class="gate-desc">To access the full Radio Bingo experience, you must install the official App.</p>
+    <button id="gateInstallBtn" class="gate-btn-install" onclick="triggerInstall()">
+        <i data-lucide="download-cloud" style="width:20px; height:20px;"></i> INSTALL APP
+    </button>
+</div>
+
+<div id="notifBlocker">
+    <div class="notif-gate-icon">
+        <i data-lucide="bell-ring" style="width: 40px; height: 40px; color: #3b82f6;"></i>
+    </div>
+    <div class="notif-gate-title">ENABLE NOTIFICATIONS</div>
+    <p class="notif-gate-desc">To ensure fairness and real-time updates for Bingo Calls, this app requires push notifications to be enabled.</p>
+    <button onclick="requestGatePermission()" class="btn-allow-notif">
+        <i data-lucide="check-circle" style="width:20px"></i> ALLOW NOTIFICATIONS
+    </button>
+    <div id="blockedHelp" class="blocked-help">
+        <strong style="color:var(--danger); display:block; margin-bottom:5px;">⚠️ NOTIFICATIONS ARE BLOCKED!</strong>
+        1. Click the <b>Lock Icon 🔒</b> or <b>Settings Icon</b> beside the URL bar.<br>
+        2. Click <b>Permissions</b> or <b>Site Settings</b>.<br>
+        3. Find <b>Notifications</b> and set to <b>Allow</b>.<br>
+        4. Reload this page.
+    </div>
+</div>
+
+<div id="loginOverlay">
+    <div class="login-bg-blob blob-1"></div>
+    <div class="login-bg-blob blob-2"></div>
+    <div class="login-app-container">
+        <div class="app-logo-lg">RB<span>LIVE</span></div>
+        <p class="app-tagline">The ultimate live bingo experience.<br>Play, Win, and Redeem Rewards.</p>
+        <div class="promo-badge">
+            <i data-lucide="gift" style="width:16px"></i> 
+            <span>Register now & Get 500 Free RB Coins</span>
+        </div>
+        <div class="auth-btn-group">
+            <button class="btn-main-auth" onclick="login()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="Google" style="width:20px">
+                Sign in with Google
+            </button>
+        </div>
+    </div>
+    <div class="login-footer-legal">
+        <div class="legal-text">
+            <span>⚠️ DISCLAIMER: NOT A GAMBLING SITE</span>
+            <span style="opacity: 0.6; font-size: 9px;">For entertainment purposes only. No real money betting.</span>
+        </div>
+    </div>
+</div>
+
+<div class="nav">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-weight: 900; font-size: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.8);">RB <span style="color:var(--accent-glow)">LIVE</span></span>
+    </div>
+    <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
+        <div class="user-stats">
+            <div class="icon-btn" onclick="openSearch()">
+                <i data-lucide="search" style="width:20px"></i>
+            </div>
+            <div class="icon-btn" onclick="openNotifs()">
+                <i data-lucide="bell" style="width:20px"></i>
+                <span id="notifDot" class="notif-badge"></span>
+            </div>
+            <div class="points-badge" onclick="window.location.href='store.html'"><i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span></div>
+        </div>
+        <img id="userImg" onclick="document.getElementById('menuModal').style.display='flex'" src="">
+    </div>
+</div>
+
+<div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang.</div></div>
+
+<div class="container">
+    <div class="ad-container-global">
+        <script type="text/javascript">
+            atOptions = { 'key' : '9bf585b6ee39cb9b515e2fae1fa958c2', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+        </script>
+        <script type="text/javascript" src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
     </div>
 
-    <div id="customToast"><i data-lucide="info" class="toast-icon"></i><span class="toast-msg" id="toastMsg">Notification</span></div>
+    <div id="view-home" style="display:block;">
+        <div id="friendRequestsSection"></div>
+        
+        <div class="post-creator" id="mainPostCreator">
+            <h4 style="margin:0 0 10px 0; color:white; font-size:14px;">Post Something</h4>
+            <textarea id="postInput" class="post-input" placeholder="What's on your mind?"></textarea>
+            
+            <div class="image-preview-container" id="imgPreviewCont">
+                <img id="postImgPreview" class="image-preview-img">
+                <div class="btn-remove-img" onclick="removePostImage()">X</div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                <label for="postImgInput" style="cursor:pointer; color:var(--accent-glow); font-size:12px; font-weight:700; display:flex; align-items:center; gap:5px;">
+                    <i data-lucide="image" style="width:16px;"></i> Photo
+                </label>
+                <input type="file" id="postImgInput" accept="image/*" style="display:none" onchange="handlePostImage(this)">
+            </div>
+            
+            <div class="mood-selector" style="margin-top:10px;">
+                <div class="mood-chip" onclick="selectMood(this, 'Happy')">😊 Happy</div>
+                <div class="mood-chip" onclick="selectMood(this, 'Sad')">😔 Sad</div>
+                <div class="mood-chip" onclick="selectMood(this, 'Excited')">🤩 Excited</div>
+                <div class="mood-chip" onclick="selectMood(this, 'Angry')">😡 Angry</div>
+                <div class="mood-chip" onclick="selectMood(this, 'Chill')">😎 Chill</div>
+            </div>
+            <button class="btn-post" onclick="createPost()">POST</button>
+        </div>
+
+        <div id="pymkSection" class="pymk-section" style="display:none;">
+            <div class="pymk-title">People You May Know</div>
+            <div class="pymk-scroll" id="pymkList"></div>
+        </div>
+
+        <div id="socialFeed" class="social-feed-container">
+            <div style="text-align:center; padding:20px; opacity:0.5;">Loading Feed...</div>
+        </div>
+    </div>
+</div>
+
+<div id="searchModal" class="search-modal-container">
+    <div class="search-header">
+        <button onclick="document.getElementById('searchModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="arrow-left"></i></button>
+        <div class="search-bar-wrap">
+            <i data-lucide="search" style="width:16px; opacity:0.5;"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search users or posts..." onkeyup="handleSearch()">
+        </div>
+    </div>
+    <div id="searchResults" class="search-results">
+        <div style="text-align:center; opacity:0.5; padding:20px;">Type to search...</div>
+    </div>
+</div>
+
+<div id="commentModalBackdrop" class="comment-modal-backdrop" onclick="closeComments()"></div>
+<div id="commentModal" class="comment-modal">
+    <div class="comment-header">
+        <h3 style="margin:0; font-size:16px;">Comments</h3>
+        <button onclick="closeComments()" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+    </div>
+    <div id="commentList" class="comment-list"></div>
+    <form class="comment-input-area" onsubmit="event.preventDefault(); sendComment();">
+        <input type="text" id="commentInput" class="comment-input" placeholder="Write a comment..." autocomplete="off">
+        <button type="submit" style="background:none; border:none; color:var(--accent);"><i data-lucide="send"></i></button>
+    </form>
+</div>
+
+<div id="notifModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="background:rgba(255,255,255,0.1); padding:8px; border-radius:10px;"><i data-lucide="bell" style="width:20px;"></i></div>
+                <h3 style="margin:0; font-size:18px;">Notifications</h3>
+            </div>
+            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+        </div>
+        <div id="notifList"></div>
+    </div>
+</div>
+
+<div id="userOptionsModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()" style="text-align:center;">
+        <img id="optUserImg" style="width:60px; height:60px; border-radius:50%; border:2px solid var(--accent); margin-bottom:10px;">
+        <h3 id="optUserName" style="margin:0 0 20px 0; color:white;">User</h3>
+        
+        <button class="user-opt-btn" onclick="window.location.href='me.html'"><i data-lucide="user"></i> View Profile</button>
+        <button class="user-opt-btn" onclick="optAddFriend()"><i data-lucide="user-plus"></i> Add Friend</button>
+        <button class="user-opt-btn" onclick="document.getElementById('userOptionsModal').style.display='none'"><i data-lucide="x"></i> Close</button>
+    </div>
+</div>
+
+<div id="menuModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="profile-header">
+            <img id="profileImgLarge" class="profile-img-large" src="">
+            <div class="profile-name-info">
+                <h2 class="profile-name" id="profileNameDisplay">User Name</h2>
+                <span class="profile-uid" id="profileUidDisplay">UID: ---</span>
+            </div>
+            <button onclick="document.getElementById('menuModal').style.display='none'" style="background:none; border:none; color:white; opacity:0.5;"><i data-lucide="x"></i></button>
+        </div>
+        <button onclick="auth.signOut().then(()=>location.reload())" style="width:100%; padding:14px; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); border-radius:14px; font-weight:800; margin-top:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i data-lucide="log-out" style="width:18px"></i> Sign Out
+        </button>
+    </div>
+</div>
+
+<script>
+    // === INITIALIZATION & UTILS ===
+    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); checkNotifGate(); checkInstallGate(); loadSocialFeed(); loadPYMK(); });
+    setTimeout(hideSplash, 5000);
+    function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
     
-    <div id="customConfirmModal">
-        <div class="conf-content">
-            <h3 class="conf-title" id="confTitle">Confirm</h3>
-            <p class="conf-msg" id="confMsg">Proceed?</p>
-            <div class="conf-actions">
-                <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
-                <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
-            </div>
-        </div>
-    </div>
+    function checkNotifGate() {
+        const blocker = document.getElementById('notifBlocker');
+        const help = document.getElementById('blockedHelp');
+        if (!("Notification" in window)) { showToast("Notifications not supported on this device."); blocker.style.display = 'none'; return; }
+        if (Notification.permission === "granted") { blocker.style.display = 'none'; } else if (Notification.permission === "denied") { blocker.style.display = 'flex'; help.style.display = 'block'; } else { blocker.style.display = 'flex'; help.style.display = 'none'; }
+    }
+    function requestGatePermission() { Notification.requestPermission().then(permission => { if (permission === "granted") { checkNotifGate(); requestNotifyPermission(); } else { checkNotifGate(); } }); }
+    function showToast(msg) { const toast = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; toast.classList.add('show'); playSound('click'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
 
-    <div id="loginOverlay">
-        <div class="login-bg-blob blob-1"></div>
-        <div class="login-bg-blob blob-2"></div>
-        <div class="login-app-container">
-            <div class="app-logo-lg">RB<span>LIVE</span></div>
-            <p class="app-tagline">Play, Win, and Connect.</p>
-            <div class="auth-btn-group">
-                <button class="btn-main-auth" onclick="login()">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" style="width:20px"> Sign in with Google
-                </button>
-            </div>
-        </div>
-    </div>
+    let confirmCallback = null;
+    function showCustomConfirm(title, msg, onYes) { document.getElementById('confTitle').innerText = title; document.getElementById('confMsg').innerText = msg; document.getElementById('customConfirmModal').style.display = 'flex'; confirmCallback = onYes; playSound('click'); }
+    function closeCustomConfirm() { document.getElementById('customConfirmModal').style.display = 'none'; confirmCallback = null; }
+    document.getElementById('confYesBtn').addEventListener('click', () => { if(confirmCallback) confirmCallback(); closeCustomConfirm(); });
 
-    <div id="grandJackpotModal" onclick="this.style.display='none'">
-        <div class="jackpot-rays"></div>
-        <div class="jackpot-content">
-            <div class="icon-glow"><i data-lucide="crown" style="width: 80px; height: 80px;"></i></div>
-            <h1 class="jp-title">JACKPOT WIN!</h1>
-            <h2 class="jp-amount" id="grandPrizeAmount">10,000 RB COINS</h2>
-            <div class="jp-name" id="jpWinnerName">WINNER NAME</div>
-            <p style="font-size: 11px; color: white; opacity: 0.7; margin-top: 20px;">Tap anywhere to close</p>
-        </div>
-    </div>
+    let deferredPrompt;
+    function checkInstallGate() {
+        const gate = document.getElementById('installGate');
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (isStandalone) { gate.style.display = 'none'; } else { gate.style.display = 'flex'; }
+    }
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
+    function triggerInstall() { if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; } }
 
-    <div class="nav">
-        <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-weight: 900; font-size: 20px;">RB <span style="color:var(--accent-glow)">LIVE</span></span>
-        </div>
-        <div id="userPanel" style="display:none; align-items: center; gap: 10px;">
-            <div class="user-stats">
-                <div class="points-badge" onclick="switchNav('store')"><i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span></div>
-            </div>
-            <img id="userImg" src="" style="width:45px; height:45px; border-radius:50%; border:2px solid var(--accent);" onclick="switchNav('me')">
-        </div>
-    </div>
+    lucide.createIcons();
+    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database(); const auth = firebase.auth();
+    let messaging; try { messaging = firebase.messaging(); } catch(e) { console.log("Messaging failed to init", e); }
+    let userData = {}; 
+    const sounds = { click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3'), pop: new Audio('https://cdn.freesound.org/previews/536/536108_1415754-lq.mp3'), win: new Audio('https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3') };
+    function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; sounds[type].volume = 1.0; sounds[type].play().catch(e => console.log("Audio play error", e)); } }
+    function requestNotifyPermission() { if ("Notification" in window) { Notification.requestPermission().then(permission => { if (permission === "granted" && messaging) { messaging.getToken().then((currentToken) => { if (currentToken && auth.currentUser) db.ref('users/' + auth.currentUser.uid).update({ fcmToken: currentToken }); }).catch((err) => console.log('Err token', err)); } }); } }
 
-    <div id="view-home" class="view-section active">
-        <div class="container">
-            <div id="friendRequestsSection"></div>
+    function fixDate(timestamp) { if(!timestamp) return "No Date"; const d = new Date(parseInt(timestamp)); return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) + " " + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }); }
+    function login() { playSound('click'); auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(() => { requestNotifyPermission(); checkNotifGate(); }); }
+
+    auth.onAuthStateChanged(u => {
+        if(u) {
+            if(messaging) { messaging.getToken().then((token) => { if(token) db.ref('users/' + u.uid).update({ fcmToken: token }); }).catch((err)=>console.log(err)); messaging.onMessage((payload) => { showToast("Notification Received"); playSound('pop'); }); }
+            document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('userPanel').style.display = 'flex';
+            document.getElementById('userImg').src = u.photoURL; document.getElementById('profileImgLarge').src = u.photoURL;
+            document.getElementById('profileUidDisplay').innerText = "ID: " + u.uid.substring(0,8);
             
-            <div class="post-creator">
-                <h4 style="margin:0 0 10px 0; color:white; font-size:14px;">Post Something</h4>
-                <textarea id="postInput" class="post-input" placeholder="What's on your mind?"></textarea>
-                <div class="image-preview-container" id="imgPreviewCont">
-                    <img id="postImgPreview" class="image-preview-img">
-                    <div class="btn-remove-img" onclick="removePostImage()">X</div>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
-                    <label for="postImgInput" style="cursor:pointer; color:var(--accent-glow); font-size:12px; font-weight:700; display:flex; align-items:center; gap:5px;"><i data-lucide="image" style="width:16px;"></i> Photo</label>
-                    <input type="file" id="postImgInput" accept="image/*" style="display:none" onchange="handlePostImage(this)">
-                </div>
-                <button class="btn-post" onclick="createPost()">POST</button>
-            </div>
+            const userRef = db.ref('users/'+u.uid);
+            userRef.once('value', snapshot => { 
+                if (!snapshot.exists()) { 
+                    const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase(); 
+                    userRef.set({ name: u.displayName, photo: u.photoURL, points: 500, refCode: newRefCode, last_seen: Date.now(), lastLoginDate: new Date().toDateString() }); 
+                } else { 
+                    const data = snapshot.val(); 
+                    const updates = { last_seen: Date.now() }; 
+                    if (!data.name) updates.name = u.displayName;
+                    if (!data.photo) updates.photo = u.photoURL;
+                    const today = new Date().toDateString(); 
+                    if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 200; updates.lastLoginDate = today; showToast("🎁 Daily Bonus! +200 RB Coins."); playSound('win'); } 
+                    userRef.update(updates); 
+                } 
+            });
+            userRef.on('value', s => { 
+                if(s.exists()){ 
+                    userData = s.val(); userData.uid = u.uid; 
+                    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString(); 
+                    const badgeHtml = getBadgeHtml(userData.points || 0);
+                    document.getElementById('profileNameDisplay').innerHTML = `${userData.name} ${badgeHtml}`;
+                } 
+            });
+            listenNotifications(u.uid);
+            loadPYMK();
+            loadSocialFeed();
+        } else { document.getElementById('loginOverlay').style.display = 'flex'; }
+    });
 
-            <div id="socialFeed" class="social-feed-container">
-                <div style="text-align:center; padding:20px; opacity:0.5;">Loading Feed...</div>
-            </div>
-        </div>
-    </div>
+    function getBadgeHtml(points) {
+        let tierClass = "tier-bronze";
+        if(points >= 100000) tierClass = "tier-diamond";
+        else if(points >= 50000) tierClass = "tier-platinum";
+        else if(points >= 25000) tierClass = "tier-gold";
+        else if(points >= 10000) tierClass = "tier-silver";
+        return `<span class="badge-tier ${tierClass}"><i data-lucide="badge-check" class="badge-icon"></i></span>`;
+    }
 
-    <div id="view-bingo" class="view-section">
-        <div class="container">
-            <div class="video-feed-wrapper">
-                <div class="video-container">
-                    <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" frameborder="0" allowfullscreen></iframe>
-                </div>
-            </div>
+    function compressImage(file, maxWidth, quality) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+            };
+        });
+    }
 
-            <div id="nextDrawBanner" class="next-draw-container">
-                <div class="nd-icon"><i data-lucide="calendar-days"></i></div>
-                <div class="nd-info"><div class="next-draw-label">Susunod na Bola</div><div id="nextDrawTime" class="next-draw-time">--:-- --</div></div>
-            </div>
-            
-            <div id="winnerBanner"><span><i data-lucide="party-popper"></i> WINNER!</span><span class="winner-line" id="winnerPatternLine"></span></div>
+    // === SOCIAL & HOME LOGIC ===
+    let selectedMood = "Happy";
+    let selectedImageBase64 = null;
+    let postListener = null;
 
-            <div class="draw-panel">
-                <div class="prev-balls" id="ballRow"></div>
-                <div class="current-ball-box">
-                    <span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">NOW DRAWN</span>
-                    <span id="currentBall" style="font-size:36px; font-weight:900; color:white;">--</span>
-                </div>
-            </div>
-
-            <div class="card" id="bingoCardContainer">
-                <div id="lateOverlay" class="late-overlay">
-                    <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px;"></i>
-                    <div class="late-text">GAME ONGOING</div>
-                    <div class="late-subtext">Wait for next round.</div>
-                </div>
-                <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div class="pattern-box"><span class="pattern-text" id="patternName">Normal Bingo</span></div>
-                    <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:12px"></i> NEW CARD</button>
-                </div>
-                <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
-                <div class="grid" id="bingoGrid"></div>
-            </div>
-
-            <div class="chat-box">
-                <div class="chat-header"><h3>LIVE CHAT</h3></div>
-                <div id="chatList"></div>
-                <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();" style="margin:10px;">
-                    <input type="text" id="chatIn" placeholder="Say something..." autocomplete="off">
-                    <button type="submit" class="send-btn"><i data-lucide="send"></i></button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div id="view-store" class="view-section">
-        <div class="container">
-            <h2 style="margin:0 0 15px 0;">Marketplace</h2>
-            
-            <div class="store-nav">
-                <button class="store-tab-btn active" onclick="switchStoreTab('cashout')" id="tabBtnCash">Cash Out</button>
-                <button class="store-tab-btn" onclick="switchStoreTab('skins')" id="tabBtnSkins">Skins</button>
-                <button class="store-tab-btn" onclick="switchStoreTab('earn')" id="tabBtnEarn">Tasks</button>
-            </div>
-
-            <div id="storeSection-cashout">
-                <div class="gcash-section" style="margin-bottom:20px; border:1px solid rgba(251, 191, 36, 0.3); background:rgba(251, 191, 36, 0.05);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <h4 style="margin:0; color:var(--gold); font-size:12px; text-transform:uppercase;">1. Set Payment Info</h4>
-                        <i data-lucide="credit-card" style="width:16px; opacity:0.7;"></i>
-                    </div>
-                    <input type="text" id="gcashInput" class="styled-input" placeholder="GCash Name / Number">
-                    <button onclick="saveGcash()" style="width:100%; margin-top:10px; background:var(--gold); color:black; border:none; padding:10px; border-radius:12px; font-weight:800; font-size:12px; cursor:pointer;">SAVE INFO</button>
-                </div>
-
-                <h4 style="margin:0 0 10px 0; font-size:12px; text-transform:uppercase; color:#94a3b8;">2. Choose Reward</h4>
-                <div class="reward-grid">
-                    <div class="reward-item">
-                        <div class="reward-main"><div class="reward-icon-box"><i data-lucide="gift"></i></div><div class="reward-info"><b>₱20 GCash</b><small>50,000 Coins</small></div></div>
-                        <button class="btn-redeem" onclick="redeemItem('₱20 GCash', 50000)">Redeem</button>
-                    </div>
-                    <div class="reward-item">
-                        <div class="reward-main"><div class="reward-icon-box"><i data-lucide="gift"></i></div><div class="reward-info"><b>₱50 GCash</b><small>125,000 Coins</small></div></div>
-                        <button class="btn-redeem" onclick="redeemItem('₱50 GCash', 125000)">Redeem</button>
-                    </div>
-                </div>
-
-                <div class="history-box" style="margin-top:25px;">
-                    <h4 style="margin:0 0 15px 0; color:#94a3b8; font-size:12px; text-transform:uppercase;">Recent Transactions</h4>
-                    <div id="historyList" class="history-list">
-                        <div style="text-align:center; padding:20px; opacity:0.5; font-size:12px;">No history yet.</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="storeSection-skins" style="display:none;">
-                <div class="skins-grid">
-                    <div class="skin-item"><div class="skin-preview" style="background:rgba(30,41,59,0.8);">B</div><div class="skin-name">Classic</div><button class="btn-buy-skin equip" id="btn-skin-default" onclick="equipSkin('default')">EQUIP</button></div>
-                    <div class="skin-item"><div class="skin-preview" style="background:#083344; border:1px solid cyan; color:cyan;">B</div><div class="skin-name">Neon</div><div class="skin-cost">50k</div><button class="btn-buy-skin buy" id="btn-skin-neon" onclick="buyOrEquipSkin('neon', 50000)">BUY</button></div>
-                    <div class="skin-item"><div class="skin-preview" style="background:gold; color:black;">B</div><div class="skin-name">Gold</div><div class="skin-cost">100k</div><button class="btn-buy-skin buy" id="btn-skin-gold" onclick="buyOrEquipSkin('gold', 100000)">BUY</button></div>
-                </div>
-            </div>
-
-            <div id="storeSection-earn" style="display:none;">
-                <div class="task-list">
-                    <div class="task-item">
-                        <div class="task-info"><h4>Watch Ad</h4><span class="task-reward">+50 Coins</span></div>
-                        <button class="btn-do-task" onclick="watchAd()">WATCH</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="view-me" class="view-section">
-        <div class="profile-page-container" style="position:relative; display:block; padding-bottom:80px;">
-            <div class="profile-cover" id="myCoverPhoto">
-                <button onclick="document.getElementById('editProfileModal').style.display='flex'" style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.6); color:white; border:none; padding:8px 12px; border-radius:20px; font-size:12px; cursor:pointer;">Edit Cover</button>
-            </div>
-            <div class="profile-info-section">
-                <img id="myProfileImg" class="profile-page-img" src="">
-                <h1 id="myName" class="profile-page-name">User Name</h1>
-                <p id="myBio" class="profile-page-bio">Radio Bingo Player</p>
-                
-                <div class="profile-stats">
-                    <div class="stat-item"><div class="stat-val" id="myPoints">0</div><div class="stat-lbl">Points</div></div>
-                    <div class="stat-item"><div class="stat-val" id="myFriends">0</div><div class="stat-lbl">Friends</div></div>
-                </div>
-
-                <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:16px; margin-top:20px;">
-                    <button onclick="document.getElementById('editProfileModal').style.display='flex'" style="width:100%; padding:12px; background:transparent; border:1px solid rgba(255,255,255,0.1); color:white; border-radius:12px; margin-bottom:10px;">Edit Profile</button>
-                    <button onclick="logout()" style="width:100%; padding:15px; background:rgba(239, 68, 68, 0.2); color:#ef4444; border:none; border-radius:12px; font-weight:bold;">SIGN OUT</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="editProfileModal" class="modal" onclick="this.style.display='none'">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <h3>Edit Profile</h3>
-            <input type="text" id="editName" class="edit-input" placeholder="Name">
-            <input type="text" id="editBio" class="edit-input" placeholder="Bio">
-            <input type="text" id="editCover" class="edit-input" placeholder="Cover URL">
-            <button onclick="saveProfileChanges()" style="width:100%; background:var(--success); padding:10px; border:none; border-radius:10px; color:white; font-weight:bold;">SAVE</button>
-        </div>
-    </div>
-
-    <div class="bottom-nav">
-        <button class="nav-item active" id="nav-home" onclick="switchNav('home')">
-            <i data-lucide="home" class="nav-icon"></i><span class="nav-label">Home</span>
-        </button>
-        <button class="nav-item" id="nav-bingo" onclick="switchNav('bingo')">
-            <i data-lucide="play-circle" class="nav-icon"></i><span class="nav-label">Bingo</span>
-        </button>
-        <div class="nav-center" onclick="switchNav('home'); document.getElementById('postInput').focus();">
-            <div class="nav-icon-bg"><i data-lucide="plus"></i></div>
-        </div>
-        <button class="nav-item" id="nav-store" onclick="switchNav('store')">
-            <i data-lucide="shopping-bag" class="nav-icon"></i><span class="nav-label">Store</span>
-        </button>
-        <button class="nav-item" id="nav-me" onclick="switchNav('me')">
-            <i data-lucide="user" class="nav-icon"></i><span class="nav-label">Me</span>
-        </button>
-    </div>
-
-    <script>
-        // --- GLOBAL SETUP ---
-        window.addEventListener('load', () => { setTimeout(() => document.getElementById('splash-screen').style.display = 'none', 1500); });
-        const sounds = { click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3') };
-        function playSound(t) { try{sounds[t].play()}catch(e){} }
-        function showToast(m) { const t=document.getElementById('customToast'); document.getElementById('toastMsg').innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); }
-        
-        let confirmCallback = null;
-        function showCustomConfirm(title, msg, onYes) { document.getElementById('confTitle').innerText=title; document.getElementById('confMsg').innerText=msg; document.getElementById('customConfirmModal').style.display='flex'; confirmCallback=onYes; }
-        function closeCustomConfirm() { document.getElementById('customConfirmModal').style.display='none'; }
-        document.getElementById('confYesBtn').onclick = () => { if(confirmCallback) confirmCallback(); closeCustomConfirm(); };
-
-        // --- FIREBASE ---
-        const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database(); const auth = firebase.auth();
-        lucide.createIcons();
-
-        let userData = {};
-        
-        // --- NAVIGATION LOGIC (NO LOADING) ---
-        function switchNav(viewId) {
-            playSound('click');
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.getElementById('view-' + viewId).classList.add('active');
-            
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            const navBtn = document.getElementById('nav-' + viewId);
-            if(navBtn) navBtn.classList.add('active');
-            
-            // Special refresh if needed
-            if(viewId === 'store') updateStoreUI();
+    function selectMood(el, mood) {
+        const isActive = el.classList.contains('active');
+        document.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('active'));
+        if(!isActive) { el.classList.add('active'); selectedMood = mood; } else { selectedMood = null; }
+    }
+    
+    function handlePostImage(input) {
+        if(input.files && input.files[0]) {
+            compressImage(input.files[0], 800, 0.7).then(base64 => {
+                selectedImageBase64 = base64;
+                document.getElementById('postImgPreview').src = selectedImageBase64;
+                document.getElementById('imgPreviewCont').style.display = 'block';
+            });
         }
+    }
+    
+    function removePostImage() {
+        selectedImageBase64 = null;
+        document.getElementById('postImgInput').value = "";
+        document.getElementById('imgPreviewCont').style.display = 'none';
+    }
 
-        // --- AUTH ---
-        function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-        function logout() { showCustomConfirm("Log Out", "Are you sure?", () => auth.signOut()); }
+    function createPost() {
+        const txt = document.getElementById('postInput').value.trim();
+        if(!txt && !selectedImageBase64) return showToast("Type something or add photo!");
+        const postData = {
+            uid: auth.currentUser.uid,
+            authorName: userData.name,
+            authorPhoto: userData.photo,
+            authorPoints: userData.points, 
+            content: txt,
+            mood: selectedMood,
+            image: selectedImageBase64,
+            timestamp: Date.now(),
+            likes: 0
+        };
+        db.ref('socialPosts').push(postData);
+        document.getElementById('postInput').value = "";
+        removePostImage();
+        document.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('active'));
+        selectedMood = null;
+        showToast("Posted!");
+        playSound('pop');
+    }
 
-        auth.onAuthStateChanged(u => {
-            if(u) {
-                document.getElementById('loginOverlay').style.display='none';
-                document.getElementById('userPanel').style.display='flex';
-                document.getElementById('userImg').src = u.photoURL;
-                
-                db.ref('users/'+u.uid).on('value', s => {
-                    userData = s.val() || {}; userData.uid = u.uid;
-                    document.getElementById('userPoints').innerText = (userData.points||0).toLocaleString();
-                    
-                    // Profile Updates
-                    document.getElementById('myProfileImg').src = userData.photo || u.photoURL;
-                    document.getElementById('myName').innerText = userData.name || u.displayName;
-                    document.getElementById('myPoints').innerText = (userData.points||0).toLocaleString();
-                    document.getElementById('myBio').innerText = userData.bio || "No bio yet";
-                    if(userData.cover) document.getElementById('myCoverPhoto').style.backgroundImage = `url('${userData.cover}')`;
-                    if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash;
-                    
-                    // Bingo Card
-                    if(userData.currentCard) renderCard(userData.currentCard);
-                    else generateNewCard();
-                    
-                    updateStoreUI();
-                    loadHistory();
+    function loadSocialFeed() {
+        const feedContainer = document.getElementById('socialFeed');
+        if(postListener) return; 
+        feedContainer.innerHTML = "<div style='text-align:center; padding:20px; opacity:0.5;'>Loading Feed...</div>";
+        db.ref('friends/' + auth.currentUser.uid).once('value', fSnap => {
+            const myFriends = fSnap.exists() ? Object.keys(fSnap.val()) : [];
+            postListener = db.ref('socialPosts').limitToLast(50);
+            postListener.on('value', pSnap => {
+                const allPosts = [];
+                pSnap.forEach(child => { allPosts.push({ key: child.key, ...child.val() }); });
+                allPosts.sort((a, b) => b.timestamp - a.timestamp);
+                feedContainer.innerHTML = "";
+                if(allPosts.length === 0) {
+                    feedContainer.innerHTML = "<div style='text-align:center; padding:20px; opacity:0.5;'>No posts yet. Be the first!</div>";
+                    return;
+                }
+                let adCounter = 0;
+                allPosts.forEach(post => {
+                    const isFriend = myFriends.includes(post.uid);
+                    const isMe = post.uid === auth.currentUser.uid;
+                    const friendBadge = (isFriend || isMe) ? `<span class="friend-badge">${isMe ? 'YOU' : 'FRIEND'}</span>` : '';
+                    const postDiv = document.createElement('div');
+                    postDiv.className = 'post-card';
+                    postDiv.id = 'post-' + post.key;
+                    const moodHtml = post.mood ? `<div class="mood-display">Feeling ${post.mood}</div>` : '';
+                    const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
+                    postDiv.innerHTML = `
+                        <div class="post-header">
+                            <img class="post-avatar" src="${post.authorPhoto}">
+                            <div class="post-meta">
+                                <div class="post-author">${post.authorName} ${getBadgeHtml(post.authorPoints || 0)} ${friendBadge}</div>
+                                <div class="post-time">${fixDate(post.timestamp)}</div>
+                                ${moodHtml}
+                            </div>
+                        </div>
+                        <div class="post-content">${post.content}</div>
+                        ${imgHtml}
+                        <div class="post-actions">
+                            <button class="action-btn" id="like-btn-${post.key}" onclick="toggleLike('${post.key}', '${post.uid}')">
+                                <i data-lucide="heart" style="width:14px;"></i> 
+                                <span id="like-count-${post.key}">${post.likes || 0}</span>
+                            </button>
+                            <button class="action-btn" onclick="openComments('${post.key}')">
+                                <i data-lucide="message-circle" style="width:14px"></i> Comment
+                            </button>
+                        </div>
+                    `;
+                    feedContainer.appendChild(postDiv);
+                    adCounter++;
+                    if(adCounter % 5 === 0) {
+                         const adDiv = document.createElement('div');
+                         adDiv.className = 'ad-container-global';
+                         adDiv.style.margin = '15px auto';
+                         adDiv.innerHTML = `<script type="text/javascript">atOptions = { 'key' : '59f94c5cb7bcd84edb277947774c3b9d', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };<\/script><script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"><\/script>`;
+                         feedContainer.appendChild(adDiv);
+                    }
+                    db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
+                        if(lSnap.exists()) {
+                            const btn = document.getElementById('like-btn-' + post.key);
+                            if(btn) { btn.classList.add('liked'); btn.querySelector('svg').style.fill = 'var(--minigame)'; }
+                        }
+                    });
                 });
-                
-                // Load Feeds
-                loadSocialFeed();
-                initBingo();
+                lucide.createIcons();
+            });
+        });
+        
+        // Init Friend Requests
+        db.ref('friendRequests/' + auth.currentUser.uid).on('value', s => {
+            const container = document.getElementById('friendRequestsSection');
+            container.innerHTML = "";
+            s.forEach(req => {
+                const requesterId = req.key;
+                db.ref('users/' + requesterId).once('value', u => {
+                    const uData = u.val();
+                    const div = document.createElement('div');
+                    div.className = 'friend-req-card';
+                    div.innerHTML = `<div class="req-info"><img src="${uData.photo}" style="width:30px;height:30px;border-radius:50%;"><span style="font-weight:700; font-size:12px; color:white;">${uData.name} wants to be friends</span></div><div class="req-actions"><button class="btn-accept" onclick="acceptFriend('${requesterId}')">Accept</button><button class="btn-decline" onclick="declineFriend('${requesterId}')">X</button></div>`;
+                    container.appendChild(div);
+                });
+            });
+        });
+    }
+
+    function toggleLike(postKey, authorUid) {
+        const myUid = auth.currentUser.uid;
+        const likeRef = db.ref('postLikes/' + postKey + '/' + myUid);
+        const countRef = document.getElementById('like-count-' + postKey);
+        const btn = document.getElementById('like-btn-' + postKey);
+        const icon = btn.querySelector('svg');
+        let currentCount = parseInt(countRef.innerText);
+        likeRef.once('value', s => {
+            if(s.exists()) {
+                likeRef.remove();
+                db.ref('socialPosts/' + postKey + '/likes').transaction(l => (l || 1) - 1);
+                btn.classList.remove('liked'); icon.style.fill = 'none'; countRef.innerText = currentCount - 1;
             } else {
-                document.getElementById('loginOverlay').style.display='flex';
-                document.getElementById('userPanel').style.display='none';
+                likeRef.set(true);
+                db.ref('socialPosts/' + postKey + '/likes').transaction(l => (l || 0) + 1);
+                btn.classList.add('liked'); icon.style.fill = 'var(--minigame)'; countRef.innerText = currentCount + 1;
             }
         });
-
-        // --- BINGO LOGIC ---
-        let gameDrawn = []; let marks = [12];
-        function initBingo() {
-            db.ref('drawnNumbers').on('value', s => {
-                const v = s.val(); gameDrawn = v ? Object.values(v).map(n=>n.toString()) : [];
-                document.getElementById('currentBall').innerText = gameDrawn.length ? gameDrawn[gameDrawn.length-1] : "--";
-                updateGridHits();
-                checkWin();
-                
-                // Prev Balls
-                const r = document.getElementById('ballRow'); r.innerHTML="";
-                gameDrawn.slice(-5).reverse().forEach(n => r.innerHTML+=`<div class="ball-small">${n}</div>`);
+    }
+    
+    function loadPYMK() {
+        if(!auth.currentUser) return;
+        const list = document.getElementById('pymkList');
+        const container = document.getElementById('pymkSection');
+        db.ref('users').limitToLast(20).once('value', s => {
+            db.ref('friends/' + auth.currentUser.uid).once('value', fSnap => {
+                const friends = fSnap.exists() ? Object.keys(fSnap.val()) : [];
+                friends.push(auth.currentUser.uid);
+                const candidates = [];
+                s.forEach(uSnap => { if(!friends.includes(uSnap.key)) candidates.push({ uid: uSnap.key, ...uSnap.val() }); });
+                const shuffled = candidates.sort(() => 0.5 - Math.random()).slice(0, 5);
+                if(shuffled.length > 0) {
+                    list.innerHTML = "";
+                    shuffled.forEach(u => {
+                        const div = document.createElement('div'); div.className = 'pymk-card';
+                        div.innerHTML = `<img src="${u.photo || 'https://via.placeholder.com/60'}" class="pymk-img"><div class="pymk-name">${u.name}</div><button class="btn-add-friend-sm" onclick="sendFriendReqPYMK('${u.uid}')">ADD</button>`;
+                        list.appendChild(div);
+                    });
+                    container.style.display = 'block';
+                } else { container.style.display = 'none'; }
             });
-            db.ref('gameState/latestWinner').on('value', s => {
-                const w = s.val();
-                if(w && w.name) {
-                    document.getElementById('winnerBanner').style.display='block';
-                    document.getElementById('winnerBanner').innerHTML = `<span>WINNER: ${w.name}</span>`;
-                } else {
-                    document.getElementById('winnerBanner').style.display='none';
+        });
+    }
+
+    function sendFriendReqPYMK(uid) { db.ref('friendRequests/' + uid + '/' + auth.currentUser.uid).set(true); showToast("Request Sent!"); loadPYMK(); }
+    function acceptFriend(requesterUid) {
+        const myUid = auth.currentUser.uid;
+        db.ref('friends/' + myUid + '/' + requesterUid).set(true);
+        db.ref('friends/' + requesterUid + '/' + myUid).set(true);
+        db.ref('friendRequests/' + myUid + '/' + requesterUid).remove();
+        showToast("You are now friends!");
+    }
+    function declineFriend(requesterUid) { db.ref('friendRequests/' + auth.currentUser.uid + '/' + requesterUid).remove(); }
+    
+    // === NOTIFICATIONS ===
+    function listenNotifications(uid) { 
+        db.ref('notifications/' + uid).on('value', s => { 
+            const dot = document.getElementById('notifDot'); 
+            if(s.exists()) dot.style.display = 'block'; else dot.style.display = 'none';
+        }); 
+    }
+    function openNotifs() { document.getElementById('notifModal').style.display='flex'; playSound('click'); renderNotifs(); }
+    function renderNotifs() { 
+        const list = document.getElementById('notifList'); 
+        db.ref('notifications/' + auth.currentUser.uid).once('value', s => { 
+            list.innerHTML = ""; 
+            let hasSystem = false;
+            s.forEach(n => { 
+                const val = n.val(); 
+                if(val.type === 'pm') return;
+                hasSystem = true;
+                const div = document.createElement('div'); div.className = 'notif-card-new'; 
+                div.innerHTML = `<div class="notif-header-new"><div class="notif-title"><i data-lucide="info" style="width:14px"></i> SYSTEM MSG</div></div><div class="notif-body">${val.msg}</div><div style="font-size:9px; opacity:0.4; margin-top:8px; text-align:right;">${fixDate(val.time)}</div>`; 
+                list.prepend(div); 
+            }); 
+            if(!hasSystem) list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:40px;'>No new notifications</div>";
+            lucide.createIcons(); 
+        }); 
+    }
+
+    // === SEARCH & COMMENTS ===
+    function openSearch() { document.getElementById('searchModal').style.display = 'flex'; document.getElementById('searchInput').focus(); }
+    function handleSearch() {
+        const q = document.getElementById('searchInput').value.toLowerCase().trim();
+        const resDiv = document.getElementById('searchResults');
+        if(q.length < 2) { resDiv.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px;'>Type more to search...</div>"; return; }
+        db.ref('users').once('value', s => {
+            resDiv.innerHTML = ""; let found = false;
+            s.forEach(uSnap => {
+                const u = uSnap.val();
+                if(u.name.toLowerCase().includes(q)) {
+                    found = true;
+                    const div = document.createElement('div'); div.className = 'search-res-item';
+                    div.onclick = () => { showUserOptions(uSnap.key, u.name, u.photo); };
+                    div.innerHTML = `<img src="${u.photo || 'https://via.placeholder.com/40'}" class="search-res-img"><div style="font-size:14px; font-weight:700; color:white;">${u.name}</div>`;
+                    resDiv.appendChild(div);
                 }
             });
-        }
-        function generateNewCard() {
-            if(gameDrawn.length > 0) return showToast("Game Ongoing!");
-            let card = []; let cols = [[1,15],[16,30],[31,45],[46,60],[61,75]];
-            cols.forEach(r => { let nums=[]; while(nums.length<5){let n=Math.floor(Math.random()*(r[1]-r[0]+1))+r[0]; if(!nums.includes(n))nums.push(n);} card.push(...nums); });
-            let final = []; for(let r=0;r<5;r++) for(let c=0;c<5;c++) final.push(card[c*5+r]);
-            final[12] = "FREE";
-            db.ref('users/'+auth.currentUser.uid).update({ currentCard: final });
-        }
-        function renderCard(card) {
-            const g = document.getElementById('bingoGrid'); g.innerHTML="";
-            card.forEach((n,i) => {
-                const d = document.createElement('div'); d.className='cell'; d.innerText = n==="FREE"?"★":n;
-                if(n==="FREE") { d.classList.add('hit'); if(!marks.includes(12)) marks.push(12); }
-                g.appendChild(d);
-            });
-            updateGridHits();
-        }
-        function updateGridHits() {
-            marks=[12]; 
-            document.querySelectorAll('.cell').forEach((c,i)=>{
-                if(gameDrawn.includes(c.innerText) || c.innerText==="★"){ c.classList.add('hit'); if(!marks.includes(i)) marks.push(i); }
-            });
-        }
-        function checkWin() {
-            // Simple Pattern Check (Horizontal/Vertical)
-            // Implementation omitted for brevity, add specific patterns here if needed
-        }
-        function sendChat() {
-            const i = document.getElementById('chatIn');
-            if(i.value) db.ref('chats').push({name:userData.name, msg:i.value, pfp:userData.photo});
-            i.value="";
-        }
-        db.ref('chats').limitToLast(20).on('child_added', s=>{
-            const d=s.val();
-            document.getElementById('chatList').innerHTML += `<div class="chat-row"><img class="chat-pfp" src="${d.pfp}"><div class="bubble"><b>${d.name}</b>: ${d.msg}</div></div>`;
-            document.getElementById('chatList').scrollTop = 9999;
+            if(!found) resDiv.innerHTML = "<div style='text-align:center; opacity:0.5; padding:20px;'>No users found.</div>";
         });
+    }
 
-        // --- STORE LOGIC ---
-        function switchStoreTab(tab) {
-            document.querySelectorAll('.store-tab-btn').forEach(b=>b.classList.remove('active'));
-            document.querySelectorAll('[id^="storeSection-"]').forEach(s=>s.style.display='none');
-            document.getElementById('storeSection-'+tab).style.display='block';
-            if(tab==='cashout') document.getElementById('tabBtnCash').classList.add('active');
-            if(tab==='skins') document.getElementById('tabBtnSkins').classList.add('active');
-            if(tab==='earn') document.getElementById('tabBtnEarn').classList.add('active');
-        }
-        function saveGcash() {
-            const v = document.getElementById('gcashInput').value;
-            if(v.length>3) { db.ref('users/'+auth.currentUser.uid).update({gcash:v}); showToast("Saved!"); }
-        }
-        function redeemItem(name, cost) {
-            if((userData.points||0) < cost) return showToast("Not enough coins");
-            if(!userData.gcash) return showToast("Set Payment Info first!");
-            showCustomConfirm("Redeem?", name, () => {
-                db.ref('users/'+auth.currentUser.uid+'/points').transaction(p=>p-cost);
-                db.ref('redemptions').push({uid:auth.currentUser.uid, name:userData.name, item:name, cost:cost, status:'pending', timestamp:Date.now()});
-                showToast("Request Sent!");
+    let currentOpenPostKey = null;
+    function openComments(postKey) {
+        currentOpenPostKey = postKey;
+        const list = document.getElementById('commentList');
+        list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding:20px;'>Loading...</div>";
+        document.getElementById('commentModal').style.display = 'flex';
+        document.getElementById('commentModalBackdrop').style.display = 'block';
+        db.ref('postComments/' + postKey).on('value', s => {
+            list.innerHTML = "";
+            if(!s.exists()) { list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding:20px;'>No comments yet.</div>"; return; }
+            s.forEach(c => {
+                const com = c.val();
+                const div = document.createElement('div'); div.className = 'comment-item';
+                div.innerHTML = `<img class="comment-avatar" src="${com.uPhoto}"><div class="comment-content-block"><div class="comment-bubble"><div class="comment-author">${com.uName}</div><div class="comment-text">${com.text}</div></div></div>`;
+                list.appendChild(div);
             });
-        }
-        function updateStoreUI() {
-            // Update buttons logic here
-        }
-        function loadHistory() {
-            const l = document.getElementById('historyList');
-            db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).limitToLast(5).once('value', s => {
-                if(!s.exists()) { l.innerHTML="<div style='text-align:center;opacity:0.5;'>No transactions.</div>"; return; }
-                l.innerHTML="";
-                s.forEach(x => { const d=x.val(); l.innerHTML+=`<div class="history-item" style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid rgba(255,255,255,0.1);"><div>${d.item}</div><div>${d.status}</div></div>`; });
-            });
-        }
+            list.scrollTop = list.scrollHeight;
+        });
+    }
+    function closeComments() { document.getElementById('commentModal').style.display = 'none'; document.getElementById('commentModalBackdrop').style.display = 'none'; if(currentOpenPostKey) db.ref('postComments/' + currentOpenPostKey).off(); currentOpenPostKey = null; }
+    function sendComment() {
+        const txt = document.getElementById('commentInput').value.trim();
+        if(!txt || !currentOpenPostKey) return;
+        db.ref('postComments/' + currentOpenPostKey).push({ uid: auth.currentUser.uid, uName: userData.name, uPhoto: userData.photo, text: txt, time: Date.now() });
+        document.getElementById('commentInput').value = "";
+    }
+    
+    let targetUserForOpt = null;
+    function showUserOptions(uid, name, photo) {
+        targetUserForOpt = { uid, name, photo };
+        document.getElementById('optUserImg').src = photo;
+        document.getElementById('optUserName').innerText = name;
+        document.getElementById('userOptionsModal').style.display = 'flex';
+    }
+    function optAddFriend() {
+        if(!targetUserForOpt) return;
+        const targetUid = targetUserForOpt.uid;
+        if(targetUid === auth.currentUser.uid) { showToast("That's you!"); return; }
+        db.ref('friendRequests/' + targetUid + '/' + auth.currentUser.uid).set(true);
+        showToast("Friend Request Sent!");
+        document.getElementById('userOptionsModal').style.display = 'none';
+    }
 
-        // --- SOCIAL LOGIC ---
-        function createPost() {
-            const t = document.getElementById('postInput').value;
-            if(t) { db.ref('socialPosts').push({content:t, authorName:userData.name, authorPhoto:userData.photo, timestamp:Date.now()}); document.getElementById('postInput').value=""; showToast("Posted!"); }
-        }
-        function loadSocialFeed() {
-            db.ref('socialPosts').limitToLast(20).on('value', s => {
-                const c = document.getElementById('socialFeed'); c.innerHTML="";
-                s.forEach(x => { const p=x.val(); c.innerHTML = `<div class="post-card" style="background:#1e293b; padding:15px; border-radius:12px; margin-bottom:10px;"><div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;"><img src="${p.authorPhoto}" style="width:30px;height:30px;border-radius:50%;"><b>${p.authorName}</b></div><div>${p.content}</div></div>` + c.innerHTML; });
-            });
-        }
-        
-        // --- PROFILE EDIT ---
-        function saveProfileChanges() {
-            const n = document.getElementById('editName').value;
-            const b = document.getElementById('editBio').value;
-            const c = document.getElementById('editCover').value;
-            if(n) db.ref('users/'+auth.currentUser.uid).update({name:n});
-            if(b) db.ref('users/'+auth.currentUser.uid).update({bio:b});
-            if(c) db.ref('users/'+auth.currentUser.uid).update({cover:c});
-            document.getElementById('editProfileModal').style.display='none';
-            showToast("Updated!");
-        }
-
-    </script>
+</script>
 </body>
 </html>
