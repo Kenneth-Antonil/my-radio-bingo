@@ -3,44 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
     <title>Radio Bingo Live | Play</title>
-    <link href="style.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="icon" type="image/png" href="https://i.imgur.com/7D8u8h6.png">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
 </head>
 <body>
 
-<div id="splash-screen">
-    <div class="splash-logo">RB<span>LIVE</span></div>
-    <div class="splash-loader"></div>
-</div>
-
-<div id="customToast"><i data-lucide="info" class="toast-icon"></i><span class="toast-msg" id="toastMsg">Notification</span></div>
-
-<div id="grandJackpotModal" onclick="this.style.display='none'">
-    <div class="jackpot-rays"></div>
-    <div class="jackpot-content">
-        <div class="icon-glow"><i data-lucide="crown" style="width: 80px; height: 80px;"></i></div>
-        <h1 class="jp-title">JACKPOT WIN!</h1>
-        <h2 class="jp-amount" id="grandPrizeAmount">10,000 RB COINS</h2>
-        <div class="jp-name" id="jpWinnerName">WINNER NAME</div>
-        <p style="font-size: 11px; color: white; opacity: 0.7; margin-top: 20px;">Tap anywhere to close</p>
+<div class="bottom-nav">
+    <button class="nav-item" onclick="window.location.href='index.html'">
+        <i data-lucide="home" class="nav-icon"></i>
+        <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item active" onclick="window.location.reload()">
+        <i data-lucide="play-circle" class="nav-icon"></i>
+        <span class="nav-label">Bingo</span>
+    </button>
+    <div class="nav-center" onclick="window.location.href='index.html'">
+        <div class="nav-icon-bg"><i data-lucide="plus" style="width:28px; height:28px;"></i></div>
     </div>
+    <button class="nav-item" onclick="window.location.href='store.html'">
+        <i data-lucide="shopping-bag" class="nav-icon"></i>
+        <span class="nav-label">Store</span>
+    </button>
+    <button class="nav-item" onclick="window.location.href='me.html'">
+        <i data-lucide="user" class="nav-icon"></i>
+        <span class="nav-label">Me</span>
+    </button>
 </div>
 
 <div class="nav">
     <div style="display:flex; align-items:center; gap:10px;">
-        <span style="font-weight: 900; font-size: 20px;">RB <span style="color:var(--accent-glow)">LIVE</span></span>
+        <span style="font-weight: 900; font-size: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.8);">RB <span style="color:var(--accent-glow)">LIVE</span></span>
     </div>
     <div id="userPanel" style="display:flex; align-items: center; gap: 10px;">
-        <div class="user-stats">
-            <div class="points-badge" onclick="window.location.href='store.html'"><i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span></div>
+        <div class="points-badge" onclick="window.location.href='store.html'"><i data-lucide="coins" style="width:18px"></i> <span id="userPoints">0</span></div>
+        <img id="userImg" src="" style="width:40px; height:40px; border-radius:50%; border:2px solid var(--accent);">
+    </div>
+</div>
+
+<div class="disclaimer"><div class="marquee-content">⚠️ DISCLAIMER: HINDI ITO GAMBLING SITE. For ENTERTAINMENT PURPOSES lamang.</div></div>
+
+<div id="customToast">
+    <i data-lucide="info" class="toast-icon"></i>
+    <span class="toast-msg" id="toastMsg">Notification!</span>
+</div>
+
+<div id="customConfirmModal">
+    <div class="conf-content">
+        <i data-lucide="alert-circle" style="width: 40px; height: 40px; color: var(--gold); margin-bottom: 15px;"></i>
+        <h3 class="conf-title" id="confTitle">Confirm Action</h3>
+        <p class="conf-msg" id="confMsg">Are you sure?</p>
+        <div class="conf-actions">
+            <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
+            <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
         </div>
-        <img id="userImg" src="" style="width:45px; height:45px; border-radius:50%; border:2px solid var(--accent);" onclick="window.location.href='me.html'">
     </div>
 </div>
 
@@ -56,12 +82,14 @@
                 <h3 style="margin:0; font-size:16px; font-weight:900; color:white; letter-spacing:1px;">WAITING FOR LIVE</h3>
                 <p style="margin:5px 0 0; font-size:12px; color:#64748b;">Stand by for the next draw.</p>
             </div>
-            <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none; position:absolute; top:0; left:0; width:100%; height:100%;"></iframe>
+            <iframe id="liveVideoFrame" width="100%" height="100%" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="border:none; position:absolute; top:0; left:0; width:100%; height:100%;"></iframe>
         </div>
     </div>
 
     <div id="jackpotBanner">
-        <div class="jp-label-new"><i data-lucide="crown" style="width: 16px;"></i> JACKPOT ROUND <i data-lucide="crown" style="width: 16px;"></i></div>
+        <div class="jp-label-new">
+            <i data-lucide="crown" style="width: 16px;"></i> JACKPOT ROUND <i data-lucide="crown" style="width: 16px;"></i>
+        </div>
         <span class="jackpot-amount" id="jackpotDisplayVal">5,000</span>
         <div style="font-size: 10px; opacity: 0.7; margin-top: 5px; color: #fbbf24;">RB COINS GRAND PRIZE</div>
     </div>
@@ -81,28 +109,24 @@
 
     <div class="draw-panel">
         <div class="prev-balls" id="ballRow"></div>
-        <div class="current-ball-box">
-            <span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">NOW DRAWN</span>
-            <span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.5);">--</span>
-        </div>
+        <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">NOW DRAWN</span><span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.5);">--</span></div>
     </div>
     
     <div class="card" id="bingoCardContainer">
         <div id="lateOverlay" class="late-overlay">
-            <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom:15px;"></i>
+            <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom:15px; filter: drop-shadow(0 0 10px var(--danger));"></i>
             <div class="late-text">GAME ONGOING</div>
-            <div class="late-subtext">Sorry, ongoing na ang bola.</div>
-            <div style="margin-top:20px; background:rgba(255,255,255,0.1); padding:10px 20px; border-radius:12px;">
+            <div class="late-subtext">Sorry, ongoing na ang bola. Bawal na sumali ang late.</div>
+            <div style="margin-top:20px; background:rgba(255,255,255,0.1); padding:10px 20px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
                 <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
                 <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
             </div>
         </div>
         <div id="gameOverOverlay" class="game-over-overlay">
-            <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom:15px;"></i>
+            <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom:15px; filter: drop-shadow(0 0 15px var(--gold));"></i>
             <div class="late-text">Game Finished</div>
             <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
         </div>
-
         <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
             <div class="pattern-box">
                 <div class="pattern-dot"></div>
@@ -127,263 +151,139 @@
         <div class="chat-input-area">
             <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
                 <input type="text" id="chatIn" placeholder="Say something..." autocomplete="off">
-                <button type="submit" class="send-btn"><i data-lucide="send" style="width:16px"></i></button>
+                <button type="submit" class="send-btn">
+                    <i data-lucide="send" style="width:16px"></i>
+                </button>
             </form>
         </div>
     </div>
 </div>
 
-<div class="bottom-nav">
-    <button class="nav-item" onclick="window.location.href='index.html'">
-        <i data-lucide="home" class="nav-icon"></i><span class="nav-label">Home</span>
-    </button>
-    <button class="nav-item active" onclick="window.location.href='bingo.html'">
-        <i data-lucide="play-circle" class="nav-icon"></i><span class="nav-label">Bingo</span>
-    </button>
-    <div class="nav-center" onclick="window.location.href='index.html'">
-        <div class="nav-icon-bg"><i data-lucide="plus" style="width:28px; height:28px;"></i></div>
+<div id="grandJackpotModal" onclick="this.style.display='none'">
+    <div class="jackpot-rays"></div>
+    <div class="jackpot-content">
+        <div class="icon-glow"><i data-lucide="crown" style="width: 80px; height: 80px;"></i></div>
+        <h1 class="jp-title">JACKPOT WIN!</h1>
+        <h2 class="jp-amount" id="grandPrizeAmount">10,000 RB COINS</h2>
+        <div class="jp-name" id="jpWinnerName">WINNER NAME</div>
+        <p style="font-size: 11px; color: white; opacity: 0.7; margin-top: 20px;">Tap anywhere to close</p>
     </div>
-    <button class="nav-item" onclick="window.location.href='store.html'">
-        <i data-lucide="shopping-bag" class="nav-icon"></i><span class="nav-label">Store</span>
-    </button>
-    <button class="nav-item" onclick="window.location.href='me.html'">
-        <i data-lucide="user" class="nav-icon"></i><span class="nav-label">Me</span>
-    </button>
 </div>
 
 <script>
-    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); });
-    function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss) { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
-
-    const sounds = { click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3'), newBall: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3'), pop: new Audio('https://cdn.freesound.org/previews/536/536108_1415754-lq.mp3'), win: new Audio('https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3'), cardFlip: new Audio('https://cdn.freesound.org/previews/240/240776_4107740-lq.mp3') };
-    function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; sounds[type].play().catch(e=>{}); } }
-    function showToast(msg) { const toast = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; toast.classList.add('show'); playSound('click'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
-    function fixDate(t) { if(!t) return ""; return new Date(t).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
-
-    // FIREBASE INIT
+    // === INITIALIZATION ===
+    window.addEventListener('load', () => { lucide.createIcons(); });
+    
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
+    const db = firebase.database(); const auth = firebase.auth();
 
-    let userData = {};
-    let cardNumbers = [];
-    let marks = [12];
-    let gameDrawn = [];
-    let currentPattern = "Normal Bingo";
-    let isJackpotActive = false;
-    let currentJackpotAmount = 500;
-    let selectedReplyId = null;
+    let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; 
+    let selectedReplyId = null; let isJackpotActive = false; let currentJackpotAmount = 500; let lastSpokenNumber = null;
 
+    const sounds = { click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3'), newBall: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3'), win: new Audio('https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3'), cardFlip: new Audio('https://cdn.freesound.org/previews/240/240776_4107740-lq.mp3') };
+    function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; sounds[type].volume = 1.0; sounds[type].play().catch(e => console.log(e)); } }
+    function showToast(msg) { const toast = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; toast.classList.add('show'); playSound('click'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
+    function fixDate(timestamp) { if(!timestamp) return "No Date"; const d = new Date(parseInt(timestamp)); return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) + " " + d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }); }
+
+    let confirmCallback = null;
+    function showCustomConfirm(title, msg, onYes) { document.getElementById('confTitle').innerText = title; document.getElementById('confMsg').innerText = msg; document.getElementById('customConfirmModal').style.display = 'flex'; confirmCallback = onYes; playSound('click'); }
+    function closeCustomConfirm() { document.getElementById('customConfirmModal').style.display = 'none'; confirmCallback = null; }
+    document.getElementById('confYesBtn').addEventListener('click', () => { if(confirmCallback) confirmCallback(); closeCustomConfirm(); });
+
+    // === AUTH CHECK ===
     auth.onAuthStateChanged(u => {
         if(u) {
             document.getElementById('userImg').src = u.photoURL;
-            db.ref('users/'+u.uid).on('value', s => {
-                userData = s.val(); userData.uid = u.uid;
-                document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
-                if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
-                applySkin(userData.equippedSkin || 'default');
+            const userRef = db.ref('users/'+u.uid);
+            userRef.on('value', s => { 
+                if(s.exists()){ 
+                    userData = s.val(); userData.uid = u.uid; 
+                    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString(); 
+                    if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); } 
+                    checkLateJoiner();
+                    applySkin(userData.equippedSkin || 'default');
+                } 
             });
-            initBingo();
-            setupChat();
-            listenForNextDraw();
-            listenJackpot();
-            listenVideoUpdate();
-            setupPresence(u.uid);
-            lucide.createIcons();
+            initBingo(); setupChat(); listenForNextDraw(); listenJackpot(); listenVideoUpdate();
+            // Online Presence
+            const onlineRef = db.ref('.info/connected'); const userStatusRef = db.ref('status/' + u.uid); 
+            onlineRef.on('value', (snapshot) => { if (snapshot.val() === false) return; userStatusRef.onDisconnect().remove().then(() => { userStatusRef.set({ state: 'online', name: u.displayName }); }); }); 
+            db.ref('status').on('value', (s) => { document.getElementById('onlineCount').innerText = s.numChildren() || 0; });
         } else {
-            window.location.href = "index.html"; // Redirect if not logged in
+            // Redirect to home if not logged in
+            window.location.href = 'index.html';
         }
     });
 
-    // --- GAME LOGIC ---
+    // === BINGO GAME LOGIC ===
     function initBingo() {
-        db.ref('gameState/latestWinner').on('value', s => {
-            const win = s.val(); const b = document.getElementById('winnerBanner'); const o = document.getElementById('gameOverOverlay');
-            document.getElementById('bingoCardContainer').classList.remove('card-puro', 'card-win', 'card-lost');
-            document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting', 'win-glow'));
-            
-            if(win && win.name) {
-                b.innerHTML = `<span><i data-lucide="party-popper"></i> WINNER: ${win.name.toUpperCase()}</span><span class="winner-line">Pattern: ${currentPattern}</span>`;
-                b.style.display = 'block'; playSound('win'); lucide.createIcons();
-                if(win.uid === auth.currentUser.uid) {
-                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-                    document.getElementById('bingoCardContainer').classList.add('card-win');
-                } else {
-                    document.getElementById('bingoCardContainer').classList.add('card-lost');
-                    o.style.display = 'flex';
-                    const nt = document.getElementById('nextDrawTime').innerText;
-                    document.getElementById('gameOverMsg').innerHTML = `Winner: <b>${win.name}</b><br>Next: ${nt}`;
-                }
-            } else {
-                b.style.display = 'none'; o.style.display = 'none';
-            }
-        });
-
+        db.ref('gameState/latestWinner').on('value', s => { const win = s.val(); const banner = document.getElementById('winnerBanner'); const cardCont = document.getElementById('bingoCardContainer'); const gameOverlay = document.getElementById('gameOverOverlay'); cardCont.classList.remove('card-puro'); document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting')); if(win && win.name) { banner.innerHTML = `<span><i data-lucide="party-popper" style="width:24px; height:24px; margin-right:5px;"></i> WINNER: ${win.name.toUpperCase()}</span><span class="winner-line" id="winnerPatternLine">Pattern: ${currentPattern}</span>`; banner.style.display = 'block'; playSound('win'); lucide.createIcons(); if(win.uid === auth.currentUser.uid) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; spawnFlyingCoins(20); triggerScreenShake(); } else { cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; const nextTime = document.getElementById('nextDrawTime').innerText; document.getElementById('gameOverMsg').innerHTML = `Sayang! Si <b>${win.name.toUpperCase()}</b> ang nanalo.<br><br>Bawi tayo sa next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ${nextTime}</span>`; } } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); gameOverlay.style.display = 'none'; document.querySelectorAll('.cell').forEach(c => { c.classList.remove('win-glow', 'win-line-h', 'win-line-v', 'win-line-d1', 'win-line-d2'); }); } });
         db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternName').innerText = currentPattern; checkWin(); });
-        
-        db.ref('drawnNumbers').on('value', s => {
-            const val = s.val(); const newDrawn = val ? Object.values(val).map(n=>n.toString()) : [];
-            if(newDrawn.length > gameDrawn.length) { playSound('newBall'); showToast("BOLA: " + newDrawn[newDrawn.length-1]); }
-            gameDrawn = newDrawn;
-            const btn = document.getElementById('newCardBtn');
-            if(gameDrawn.length > 0) { btn.disabled = true; btn.innerHTML = "IN GAME"; } else { btn.disabled = false; btn.innerHTML = "NEW CARD"; }
-            updateGridHits(); renderPrevBalls(); checkWin(); checkPuroStatus(); checkLateJoiner();
-        });
-
-        db.ref('gameState/lastCalled').on('value', s => { document.getElementById('currentBall').innerText = s.val() || "--"; });
+        db.ref('drawnNumbers').on('value', s => { const val = s.val(); const newGameDrawn = val ? Object.values(val).map(n => n.toString()) : []; if(newGameDrawn.length > 0 && gameDrawn.length > 0) { const newBalls = newGameDrawn.filter(x => !gameDrawn.includes(x)); if(newBalls.length > 0) { const latestBall = newBalls[newBalls.length - 1]; playSound('newBall'); showToast("BOLA: " + latestBall); } } gameDrawn = newGameDrawn; const btn = document.getElementById('newCardBtn'); if(gameDrawn.length > 0) { btn.disabled = true; btn.innerHTML = `<i data-lucide="lock" style="width:14px"></i> IN GAME`; } else { btn.disabled = false; btn.innerHTML = `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`; } lucide.createIcons(); checkLateJoiner(); updateGridHits(); renderPrevBalls(); checkWin(); checkPuroStatus(); });
+        db.ref('gameState/lastCalled').on('value', s => { if(s.exists()) { const num = s.val(); document.getElementById('currentBall').innerText = num; if (num !== lastSpokenNumber) { speakNumber(num); lastSpokenNumber = num; } } else { document.getElementById('currentBall').innerText = "--"; lastSpokenNumber = null; } });
     }
+    
+    function speakNumber(num) { if ('speechSynthesis' in window) { let letter = "B"; if (num > 15) letter = "I"; if (num > 30) letter = "N"; if (num > 45) letter = "G"; if (num > 60) letter = "O"; const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 0.9; window.speechSynthesis.speak(msg); } }
 
-    function generateNewCard() {
-        if(gameDrawn.length > 0) return showToast("Game ongoing!");
-        let card = []; let cols = [[1,15],[16,30],[31,45],[46,60],[61,75]];
-        cols.forEach(r => { let nums = []; while(nums.length < 5) { let n = Math.floor(Math.random()*(r[1]-r[0]+1))+r[0]; if(!nums.includes(n)) nums.push(n); } card.push(...nums); });
-        let final = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) { final.push(card[c*5 + r]); } }
-        final[12] = "FREE";
-        db.ref('users/'+auth.currentUser.uid).update({ currentCard: final, cardTimestamp: Date.now(), hasWonCurrent: false });
-        playSound('cardFlip');
-    }
+    function generateNewCard() { if(gameDrawn.length > 0) return showToast("Bawal magpalit habang may laro!"); let card = []; let cols = [[1,15],[16,30],[31,45],[46,60],[61,75]]; cols.forEach(r => { let nums = []; while(nums.length < 5) { let n = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0]; if(!nums.includes(n)) nums.push(n); } card.push(...nums); }); let finalCard = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) { finalCard.push(card[c*5 + r]); } } finalCard[12] = "FREE"; db.ref('users/' + auth.currentUser.uid).update({ currentCard: finalCard, cardTimestamp: Date.now(), hasWonCurrent: false }); cardNumbers = finalCard; renderCard(); playSound('cardFlip'); }
+    function renderCard() { const grid = document.getElementById('bingoGrid'); grid.innerHTML = ""; cardNumbers.forEach((n, i) => { const div = document.createElement('div'); div.className = 'cell'; div.innerText = n === "FREE" ? "★" : n; if(n === "FREE") { div.classList.add('hit'); if(!marks.includes(12)) marks.push(12); } grid.appendChild(div); }); updateGridHits(); applySkin(userData.equippedSkin || 'default'); }
+    function updateGridHits() { marks = [12]; const cells = document.querySelectorAll('.cell'); cells.forEach((c, i) => { const val = c.innerText; if(gameDrawn.includes(val) || val === "★") { c.classList.add('hit'); if(!marks.includes(i)) marks.push(i); } }); }
+    function renderPrevBalls() { const row = document.getElementById('ballRow'); row.innerHTML = ""; const last5 = gameDrawn.slice(-5).reverse(); last5.forEach(n => { let d = document.createElement('div'); d.className = 'ball-small'; d.innerText = n; row.appendChild(d); }); }
+    function checkLateJoiner() { const overlay = document.getElementById('lateOverlay'); if(gameDrawn.length > 0 && !userData.currentCard) { overlay.style.display = 'flex'; } else if (gameDrawn.length > 0 && userData.cardTimestamp > db.ref('gameState/gameStartTime')) { overlay.style.display = 'none'; } else { overlay.style.display = 'none'; } }
+    
+    function checkWin() { if(userData.hasWonCurrent || gameDrawn.length === 0) return; db.ref('gameState/latestWinner').once('value', snap => { if(snap.exists()) return; let winningWays = []; if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; } else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; } else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; } else { winningWays = [ [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], [0,6,12,18,24], [4,8,12,16,20] ]; } for(let i = 0; i < winningWays.length; i++) { let w = winningWays[i]; if(w.every(idx => marks.includes(idx))) { highlightWinningPattern(w, i); triggerWin(); break; } } }); }
+    function checkPuroStatus() { if(userData.hasWonCurrent || gameDrawn.length === 0) return; document.getElementById('bingoCardContainer').classList.remove('card-puro'); document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting')); let winningWays = []; if (currentPattern === "Blackout") winningWays = [Array.from({length: 25}, (_, i) => i)]; else if (currentPattern === "Letter X") winningWays = [[0,4,6,8,12,16,18,20,24]]; else if (currentPattern === "Four Corners") winningWays = [[0,4,20,24]]; else winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; for (let i = 0; i < winningWays.length; i++) { let w = winningWays[i]; let missing = w.filter(idx => !marks.includes(idx)); if (missing.length === 1) { document.getElementById('bingoCardContainer').classList.add('card-puro'); const missingIdx = missing[0]; const cells = document.querySelectorAll('.cell'); if(cells[missingIdx]) cells[missingIdx].classList.add('cell-waiting'); break; } } }
+    function highlightWinningPattern(indices, patternType) { const cells = document.querySelectorAll('.cell'); indices.forEach(idx => { const cell = cells[idx]; cell.classList.add('win-glow'); if (currentPattern === 'Normal Bingo') { if (patternType < 5) cell.classList.add('win-line-h'); else if (patternType < 10) cell.classList.add('win-line-v'); else if (patternType === 10) cell.classList.add('win-line-d1'); else cell.classList.add('win-line-d2'); } }); }
 
-    function renderCard() {
-        const grid = document.getElementById('bingoGrid'); grid.innerHTML = "";
-        cardNumbers.forEach((n, i) => {
-            const div = document.createElement('div'); div.className = 'cell'; div.innerText = n === "FREE" ? "★" : n;
-            if(n === "FREE") { div.classList.add('hit'); if(!marks.includes(12)) marks.push(12); }
-            grid.appendChild(div);
-        });
-        updateGridHits(); applySkin(userData.equippedSkin);
-    }
+    function triggerWin() { const uid = auth.currentUser.uid; let winPrize = 500; if (isJackpotActive) winPrize = currentJackpotAmount; db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize }); db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize); db.ref('users/' + uid).update({ hasWonCurrent: true }); userData.hasWonCurrent = true; if (isJackpotActive) { const jpModal = document.getElementById('grandJackpotModal'); document.getElementById('grandPrizeAmount').innerText = winPrize.toLocaleString() + " RB COINS"; document.getElementById('jpWinnerName').innerText = userData.name; jpModal.style.display = 'flex'; confetti({ particleCount: 500, spread: 120, startVelocity: 60 }); } }
 
-    function updateGridHits() {
-        marks = [12]; const cells = document.querySelectorAll('.cell');
-        cells.forEach((c, i) => { const v = c.innerText; if(gameDrawn.includes(v) || v === "★") { c.classList.add('hit'); if(!marks.includes(i)) marks.push(i); } });
-    }
-
-    function renderPrevBalls() {
-        const r = document.getElementById('ballRow'); r.innerHTML = "";
-        gameDrawn.slice(-5).reverse().forEach(n => { r.innerHTML += `<div class="ball-small">${n}</div>`; });
-    }
-
-    function checkWin() {
-        if(userData.hasWonCurrent || gameDrawn.length === 0) return;
-        db.ref('gameState/latestWinner').once('value', snap => {
-            if(snap.exists()) return;
-            // PATTERNS
-            let patterns = [];
-            if(currentPattern==="Blackout") patterns=[Array.from({length:25},(_,i)=>i)];
-            else if(currentPattern==="Letter X") patterns=[[0,4,6,8,12,16,18,20,24]];
-            else if(currentPattern==="Four Corners") patterns=[[0,4,20,24]];
-            else patterns = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
-            
-            for(let i=0; i<patterns.length; i++) {
-                if(patterns[i].every(idx => marks.includes(idx))) {
-                    triggerWin(); break;
-                }
-            }
-        });
-    }
-
-    function triggerWin() {
-        const prize = isJackpotActive ? currentJackpotAmount : 500;
-        db.ref('gameState/latestWinner').set({ name: userData.name, uid: userData.uid, prize: prize });
-        db.ref('users/'+userData.uid).update({ hasWonCurrent: true, points: (userData.points||0)+prize });
-        if(isJackpotActive) {
-            document.getElementById('grandPrizeAmount').innerText = prize.toLocaleString();
-            document.getElementById('jpWinnerName').innerText = userData.name;
-            document.getElementById('grandJackpotModal').style.display='flex';
+    function applySkin(skinId) { 
+        const card = document.getElementById('bingoCardContainer'); 
+        card.classList.remove('card-skin-neon', 'card-skin-gold', 'card-skin-pink', 'card-skin-matrix', 'card-skin-kitty', 'card-skin-doraemon', 'card-skin-spongebob', 'card-skin-kuromi', 'card-skin-custom'); 
+        card.style.backgroundImage = 'none'; 
+        if(skinId === 'neon') card.classList.add('card-skin-neon'); 
+        if(skinId === 'gold') card.classList.add('card-skin-gold'); 
+        if(skinId === 'pink') card.classList.add('card-skin-pink'); 
+        if(skinId === 'matrix') card.classList.add('card-skin-matrix'); 
+        if(skinId === 'kitty') card.classList.add('card-skin-kitty');
+        if(skinId === 'doraemon') card.classList.add('card-skin-doraemon');
+        if(skinId === 'spongebob') card.classList.add('card-skin-spongebob');
+        if(skinId === 'kuromi') card.classList.add('card-skin-kuromi');
+        if(skinId === 'custom') {
+            card.classList.add('card-skin-custom');
+            const storedBG = localStorage.getItem('customSkinBG');
+            if(storedBG) card.style.backgroundImage = `url('${storedBG}')`;
         }
     }
 
-    function checkPuroStatus() {
-        if(userData.hasWonCurrent || gameDrawn.length === 0) return;
-        let patterns = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
-        if(currentPattern==="Blackout") patterns=[Array.from({length:25},(_,i)=>i)];
-        
-        let isPuro = false;
-        patterns.forEach(p => {
-            const missing = p.filter(idx => !marks.includes(idx));
-            if(missing.length === 1) {
-                isPuro = true;
-                const cells = document.querySelectorAll('.cell');
-                cells[missing[0]].classList.add('cell-waiting');
-            }
-        });
-        if(isPuro) document.getElementById('bingoCardContainer').classList.add('card-puro');
-    }
-
-    function checkLateJoiner() {
-        const o = document.getElementById('lateOverlay');
-        if(gameDrawn.length > 0 && userData.cardTimestamp > db.ref('gameState/gameStartTime')) { o.style.display='none'; }
-        else if(gameDrawn.length > 0 && !userData.currentCard) { o.style.display='flex'; } 
-        else { o.style.display='none'; }
-    }
-
-    // --- SKINS ---
-    function applySkin(skinId) {
-        const c = document.getElementById('bingoCardContainer');
-        c.className = 'card'; // Reset
-        c.style.backgroundImage = 'none';
-        if(skinId!=='default') c.classList.add('card-skin-'+skinId);
-        if(skinId==='custom' && localStorage.getItem('customSkinBG')) {
-            c.style.backgroundImage = `url('${localStorage.getItem('customSkinBG')}')`;
-        }
-    }
-
-    // --- CHAT ---
-    function setupChat() {
-        const l = document.getElementById('chatList');
-        db.ref('chats').limitToLast(50).on('child_added', s => {
-            const d = s.val(); const isMe = d.uid === auth.currentUser.uid;
-            const rep = d.replyMsg ? `<div style="font-size:10px;opacity:0.7;border-left:2px solid #38bdf8;padding-left:4px;margin-bottom:2px;">Replying: ${d.replyMsg}</div>` : '';
-            l.innerHTML += `<div class="chat-row" style="flex-direction:${isMe?'row-reverse':'row'}"><img class="chat-pfp" src="${d.pfp}"><div class="chat-content"><div class="bubble"><div class="chat-name" onclick="reply('${d.key}','${d.msg}')">${d.name}</div>${rep}${d.msg}</div></div></div>`;
-            l.scrollTop = l.scrollHeight;
-        });
-    }
-    function sendChat() {
-        const i = document.getElementById('chatIn'); const msg = i.value.trim(); if(!msg) return;
-        const p = { name: userData.name, msg: msg, pfp: userData.photo, uid: userData.uid, time: Date.now() };
-        if(selectedReplyId) { p.replyTo=selectedReplyId; p.replyMsg=document.getElementById('replyText').innerText.replace("Replying to: ",""); cancelReply(); }
-        db.ref('chats').push(p); i.value="";
-    }
-    function reply(k,m) { selectedReplyId=k; document.getElementById('replyText').innerText="Replying to: "+m; document.getElementById('replyIndicator').style.display='flex'; }
-    function cancelReply() { selectedReplyId=null; document.getElementById('replyIndicator').style.display='none'; }
-
-    // --- UTILS & LISTENERS ---
-    function listenJackpot() { db.ref('gameState/jackpot').on('value', s=>{ const d=s.val(); if(d&&d.active){ document.getElementById('jackpotBanner').style.display='block'; document.getElementById('jackpotDisplayVal').innerText=d.amount; isJackpotActive=true; currentJackpotAmount=parseInt(d.amount.replace(/[^0-9]/g,'')); } else { document.getElementById('jackpotBanner').style.display='none'; isJackpotActive=false; } }); }
-    function listenForNextDraw() { db.ref('gameState/schedules').on('value', updateSched); db.ref('gameState/nextDraw').on('value', updateSched); }
-    function updateSched() {
-        db.ref('gameState').once('value', s => {
-            const g = s.val(); const now = Date.now();
-            const banner = document.getElementById('nextDrawBanner');
-            const timeEl = document.getElementById('nextDrawTime');
-            const labelEl = document.querySelector('.next-draw-label');
-            const lateSched = document.getElementById('lateNextSched');
-
-            if(g.drawnNumbers && Object.keys(g.drawnNumbers).length > 0) {
-                 labelEl.innerText = "GAME STATUS"; timeEl.innerText = "GAME ONGOING"; 
-                 return;
-            }
-
-            let next = null;
-            if(g.schedules) { const times = Object.values(g.schedules).map(x=>(typeof x==='object'?x.time:x)).filter(t=>t>now).sort((a,b)=>a-b); if(times.length) next=times[0]; }
-            if(!next && g.nextDraw > now) next = g.nextDraw;
-
-            if(next) { 
-                const txt = new Date(next).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-                timeEl.innerText = txt; labelEl.innerText = "SUSUNOD NA BOLA"; lateSched.innerText = txt;
-            } else {
-                labelEl.innerText = "WAITING"; timeEl.innerText = "STAND BY";
-            }
-        });
-    }
-    function listenVideoUpdate() { 
-        db.ref('gameState/videoSettings').on('value', s => { 
-            const v = s.val(); const f = document.getElementById('liveVideoFrame'); const off = document.getElementById('videoOfflineState');
-            if(v && v.type==='offline') { f.style.display='none'; off.style.display='flex'; }
-            else if(v && v.url) { f.style.display='block'; off.style.display='none'; if(f.src.indexOf(v.url)<0) f.src=`https://www.youtube.com/embed/${v.url}?autoplay=1&mute=1`; }
+    // === CHAT LOGIC ===
+    function setupChat() { 
+        const list = document.getElementById('chatList'); 
+        db.ref('chats').limitToLast(50).on('child_added', s => { 
+            const d = s.val(); const key = s.key; if(isUserMuted(d.uid)) return; 
+            const isMe = d.uid === auth.currentUser.uid; 
+            const div = document.createElement('div'); div.className = 'chat-row'; div.style.flexDirection = isMe ? 'row-reverse' : 'row'; 
+            let replyHtml = ''; if(d.replyTo && d.replyMsg) { replyHtml = `<div style="font-size:10px; opacity:0.7; border-left:2px solid var(--accent); padding-left:5px; margin-bottom:5px; background:rgba(0,0,0,0.2); padding:4px; border-radius:4px;">Replying to: ${d.replyMsg.substring(0, 30)}...</div>`; } 
+            div.innerHTML = `<img class="chat-pfp" src="${d.pfp}"><div class="chat-content"><div class="bubble">${!isMe ? `<div class="chat-name" onclick="replyTo('${key}', '${d.msg.replace(/'/g, "\\'")}')">${d.name}</div>` : ''}${replyHtml}<div class="chat-text">${d.msg}</div></div></div>`; 
+            list.appendChild(div); list.scrollTop = list.scrollHeight; 
         }); 
     }
-    function setupPresence(uid) { db.ref('.info/connected').on('value', s=>{ if(s.val()===false)return; db.ref('status/'+uid).onDisconnect().remove(); db.ref('status/'+uid).update({state:'online'}); }); db.ref('status').on('value', s=>document.getElementById('onlineCount').innerText=s.numChildren()); }
+    function isUserMuted(uid) { const muted = localStorage.getItem('muted_users'); if(!muted) return false; return JSON.parse(muted).includes(uid); }
+    function sendChat() { const inp = document.getElementById('chatIn'); const msg = inp.value.trim(); if(!msg) return; const payload = { name: userData.name, msg: msg, pfp: userData.photo, uid: userData.uid, time: Date.now() }; if(selectedReplyId) { payload.replyTo = selectedReplyId; payload.replyMsg = document.getElementById('replyText').innerText.replace("Replying to: ", ""); cancelReply(); } db.ref('chats').push(payload); inp.value = ""; }
+    function replyTo(key, msg) { selectedReplyId = key; document.getElementById('replyText').innerText = "Replying to: " + msg.substring(0, 20) + "..."; document.getElementById('replyIndicator').style.display = 'flex'; document.getElementById('chatIn').focus(); }
+    function cancelReply() { selectedReplyId = null; document.getElementById('replyIndicator').style.display = 'none'; }
+
+    // === LISTENERS ===
+    function listenForNextDraw() { db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); }); db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); }); }
+    function updateNextDrawDisplay() { db.ref('gameState').on('value', s => { const gameData = s.val() || {}; const now = Date.now(); if(gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0) { const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); banner.style.display = 'flex'; banner.style.background = 'rgba(71, 85, 105, 0.9)'; banner.style.borderColor = '#94a3b8'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; labelEl.innerText = "GAME STATUS"; labelEl.style.color = "#e2e8f0"; timeEl.innerText = "GAME ONGOING"; timeEl.style.fontSize = "20px"; timeEl.style.color = "#ffffff"; timeEl.style.fontWeight = "900"; return; } let displayTime = null; if(gameData.schedules) { const rawScheds = Object.values(gameData.schedules); const times = rawScheds.map(val => (typeof val === 'object' && val.time) ? val.time : val); const futureTimes = times.filter(t => t > now); const sorted = futureTimes.sort((a,b) => a - b); if(sorted.length > 0) { displayTime = sorted[0]; } } if(!displayTime && gameData.nextDraw) { if(gameData.nextDraw > now) { displayTime = gameData.nextDraw; } } const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const lateSched = document.getElementById('lateNextSched'); if(displayTime && displayTime > now) { banner.style.display = 'flex'; banner.style.background = 'rgba(15, 23, 42, 0.8)'; banner.style.borderColor = 'rgba(251, 191, 36, 0.4)'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; const formatted = fixDate(displayTime); timeEl.innerText = formatted; timeEl.style.fontSize = "18px"; timeEl.style.color = "white"; labelEl.innerText = "SUSUNOD NA BOLA"; labelEl.style.color = "var(--gold)"; lateSched.innerText = formatted; } else { banner.style.display = 'flex'; banner.style.background = 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))'; banner.style.borderColor = '#3b82f6'; banner.style.boxShadow = '0 10px 30px rgba(59, 130, 246, 0.2)'; labelEl.innerText = "WAITING FOR DRAW"; labelEl.style.color = "#93c5fd"; timeEl.innerText = "MAGHINTAY SA SUSUNOD NA DRAW."; timeEl.style.fontSize = "11px"; timeEl.style.fontWeight = "700"; timeEl.style.lineHeight = "1.4"; lateSched.innerText = "--:--"; } }); }
+    
+    function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { const data = s.val(); const banner = document.getElementById('jackpotBanner'); if(data && data.active) { banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = data.amount + " RB COINS"; isJackpotActive = true; const rawAmount = parseInt(data.amount.replace(/[^0-9]/g, '')); currentJackpotAmount = isNaN(rawAmount) ? 500 : rawAmount; } else { banner.style.display = 'none'; isJackpotActive = false; currentJackpotAmount = 500; } }); }
+    function listenVideoUpdate() { db.ref('gameState/videoSettings').on('value', s => { const v = s.val(); const iframe = document.getElementById('liveVideoFrame'); const offline = document.getElementById('videoOfflineState'); if (v && v.type === 'offline') { iframe.style.display = 'none'; iframe.src = ""; offline.style.display = 'flex'; } else if(v && v.url) { offline.style.display = 'none'; iframe.style.display = 'block'; const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/; const match = v.url.match(regExp); let videoId = (match && match[2].length === 11) ? match[2] : null; if(!videoId && v.url.length === 11) videoId = v.url; if (videoId) { const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1`; if(iframe.src !== embedUrl) { iframe.src = embedUrl; } } } }); }
+    
+    // Utils
+    function spawnFlyingCoins(amount) { const count = Math.min(amount, 15); const targetEl = document.querySelector('.points-badge'); if(!targetEl) return; const rect = targetEl.getBoundingClientRect(); const targetX = rect.left + (rect.width / 2); const targetY = rect.top + (rect.height / 2); const startX = window.innerWidth / 2; const startY = window.innerHeight / 2; for(let i=0; i<count; i++) { setTimeout(() => { const coin = document.createElement('div'); coin.className = 'flying-coin'; coin.style.left = startX + 'px'; coin.style.top = startY + 'px'; document.body.appendChild(coin); const spread = 80; const randX = (Math.random() - 0.5) * spread; const randY = (Math.random() - 0.5) * spread; requestAnimationFrame(() => { coin.style.transition = 'transform 0.3s ease-out'; coin.style.transform = `translate(${randX}px, ${randY}px) scale(1.2)`; setTimeout(() => { coin.style.transition = 'transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.6s'; const moveX = targetX - startX; const moveY = targetY - startY; coin.style.transform = `translate(${moveX}px, ${moveY}px) scale(0.5)`; coin.style.opacity = '0'; }, 300); setTimeout(() => coin.remove(), 900); }); }, i * 30); } }
+    function triggerScreenShake() { const target = document.getElementById('bingoCardContainer'); if (target) { target.classList.add('shake-effect'); setTimeout(() => target.classList.remove('shake-effect'), 300); } if (navigator.vibrate) navigator.vibrate([30, 30, 30]); }
 
 </script>
 </body>
