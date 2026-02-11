@@ -10,6 +10,40 @@
     
     <link rel="stylesheet" href="style.css">
 
+    <style>
+        /* === FACEBOOK STYLE REACTIONS === */
+        .reaction-wrapper { position: relative; display: inline-block; flex: 1; }
+        .reaction-box {
+            display: none; 
+            position: absolute; 
+            bottom: 45px; 
+            left: 0; 
+            background: white; 
+            padding: 5px 10px; 
+            border-radius: 50px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            gap: 8px; 
+            z-index: 100; 
+            animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        /* Show on hover of wrapper */
+        .reaction-wrapper:hover .reaction-box { display: flex; }
+        
+        .react-emoji { font-size: 24px; cursor: pointer; transition: transform 0.2s; user-select: none; }
+        .react-emoji:hover { transform: scale(1.3) translateY(-5px); }
+        
+        @keyframes popUp { from { transform: scale(0) translateY(10px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+        /* Active Colors */
+        .react-active-like { color: #3b82f6 !important; font-weight: 900 !important; } 
+        .react-active-love { color: #ef4444 !important; font-weight: 900 !important; }
+        .react-active-haha, .react-active-wow, .react-active-sad { color: #f59e0b !important; font-weight: 900 !important; }
+        .react-active-angry { color: #dc2626 !important; font-weight: 900 !important; }
+        
+        /* Ensure post actions allows overflow for popup */
+        .post-actions { overflow: visible !important; }
+    </style>
+
     <link rel="icon" type="image/png" href="https://i.imgur.com/7D8u8h6.png">
     <link rel="apple-touch-icon" href="https://i.imgur.com/7D8u8h6.png">
     <link rel="manifest" href="manifest.json">
@@ -443,8 +477,22 @@
                     const postDiv = document.createElement('div');
                     postDiv.className = 'post-card';
                     postDiv.id = 'post-' + post.key;
+                    
                     const moodHtml = post.mood ? `<div class="mood-display">Feeling ${post.mood}</div>` : '';
                     const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
+                    
+                    // REACTION LOGIC FOR POST
+                    const myReaction = post.reactions ? post.reactions[auth.currentUser.uid] : null;
+                    let reactIcon = '<i data-lucide="thumbs-up" style="width:14px;"></i> Like';
+                    let reactClass = '';
+
+                    if(myReaction === 'love') { reactIcon = '❤️ Love'; reactClass = 'react-active-love'; }
+                    else if(myReaction === 'haha') { reactIcon = '😂 Haha'; reactClass = 'react-active-haha'; }
+                    else if(myReaction === 'wow') { reactIcon = '😮 Wow'; reactClass = 'react-active-wow'; }
+                    else if(myReaction === 'sad') { reactIcon = '😢 Sad'; reactClass = 'react-active-sad'; }
+                    else if(myReaction === 'angry') { reactIcon = '😡 Angry'; reactClass = 'react-active-angry'; }
+                    else if(myReaction === 'like') { reactIcon = '👍 Like'; reactClass = 'react-active-like'; }
+
                     postDiv.innerHTML = `
                         <div class="post-header">
                             <img class="post-avatar" src="${post.authorPhoto}">
@@ -456,17 +504,29 @@
                         </div>
                         <div class="post-content">${post.content}</div>
                         ${imgHtml}
-                        <div class="post-actions">
-                            <button class="action-btn" id="like-btn-${post.key}" onclick="toggleLike('${post.key}', '${post.uid}')">
-                                <i data-lucide="heart" style="width:14px;"></i> 
-                                <span id="like-count-${post.key}">${post.likes || 0}</span>
-                            </button>
+                        
+                        <div class="post-actions" style="overflow:visible;">
+                            <div class="reaction-wrapper" style="flex:1;">
+                                <div class="reaction-box">
+                                    <div class="react-emoji" onclick="submitReaction('${post.key}', 'like')">👍</div>
+                                    <div class="react-emoji" onclick="submitReaction('${post.key}', 'love')">❤️</div>
+                                    <div class="react-emoji" onclick="submitReaction('${post.key}', 'haha')">😂</div>
+                                    <div class="react-emoji" onclick="submitReaction('${post.key}', 'wow')">😮</div>
+                                    <div class="react-emoji" onclick="submitReaction('${post.key}', 'sad')">😢</div>
+                                    <div class="react-emoji" onclick="submitReaction('${post.key}', 'angry')">😡</div>
+                                </div>
+                                <button class="action-btn ${reactClass}" id="react-btn-${post.key}" onclick="submitReaction('${post.key}', 'like')">
+                                    <span id="react-icon-${post.key}">${reactIcon}</span> 
+                                    <span style="margin-left:5px; opacity:0.6;" id="react-count-${post.key}">${post.reactCount || 0}</span>
+                                </button>
+                            </div>
                             <button class="action-btn" onclick="openComments('${post.key}')">
                                 <i data-lucide="message-circle" style="width:14px"></i> Comment
                             </button>
                         </div>
                     `;
                     feedContainer.appendChild(postDiv);
+                    
                     adCounter++;
                     if(adCounter % 5 === 0) {
                          const adDiv = document.createElement('div');
@@ -475,12 +535,6 @@
                          adDiv.innerHTML = `<script type="text/javascript">atOptions = { 'key' : '59f94c5cb7bcd84edb277947774c3b9d', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };<\/script><script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"><\/script>`;
                          feedContainer.appendChild(adDiv);
                     }
-                    db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
-                        if(lSnap.exists()) {
-                            const btn = document.getElementById('like-btn-' + post.key);
-                            if(btn) { btn.classList.add('liked'); btn.querySelector('svg').style.fill = 'var(--minigame)'; }
-                        }
-                    });
                 });
                 lucide.createIcons();
             });
@@ -503,24 +557,50 @@
         });
     }
 
-    function toggleLike(postKey, authorUid) {
+    // === NEW REACTION LOGIC ===
+    function submitReaction(postKey, type) {
         const myUid = auth.currentUser.uid;
-        const likeRef = db.ref('postLikes/' + postKey + '/' + myUid);
-        const countRef = document.getElementById('like-count-' + postKey);
-        const btn = document.getElementById('like-btn-' + postKey);
-        const icon = btn.querySelector('svg');
-        let currentCount = parseInt(countRef.innerText);
-        likeRef.once('value', s => {
-            if(s.exists()) {
-                likeRef.remove();
-                db.ref('socialPosts/' + postKey + '/likes').transaction(l => (l || 1) - 1);
-                btn.classList.remove('liked'); icon.style.fill = 'none'; countRef.innerText = currentCount - 1;
+        const postRef = db.ref('socialPosts/' + postKey);
+        const userReactRef = db.ref('socialPosts/' + postKey + '/reactions/' + myUid);
+        
+        userReactRef.once('value', snapshot => {
+            const currentReact = snapshot.val();
+            
+            if (currentReact === type) {
+                // Remove reaction (toggle off)
+                userReactRef.remove();
+                postRef.child('reactCount').transaction(c => (c || 1) - 1);
+                updateReactUI(postKey, null);
             } else {
-                likeRef.set(true);
-                db.ref('socialPosts/' + postKey + '/likes').transaction(l => (l || 0) + 1);
-                btn.classList.add('liked'); icon.style.fill = 'var(--minigame)'; countRef.innerText = currentCount + 1;
+                // Add or Change reaction
+                userReactRef.set(type);
+                if (!currentReact) {
+                    postRef.child('reactCount').transaction(c => (c || 0) + 1);
+                }
+                updateReactUI(postKey, type);
+                showToast("Reacted: " + type.toUpperCase());
+                playSound('pop');
             }
         });
+    }
+
+    function updateReactUI(key, type) {
+        const btn = document.getElementById('react-btn-' + key);
+        const iconSpan = document.getElementById('react-icon-' + key);
+        
+        // Reset
+        btn.className = "action-btn"; 
+        
+        if(!type) {
+            iconSpan.innerHTML = '<i data-lucide="thumbs-up" style="width:14px;"></i> Like';
+            lucide.createIcons();
+        }
+        else if(type === 'like') { iconSpan.innerHTML = '👍 Like'; btn.classList.add('react-active-like'); }
+        else if(type === 'love') { iconSpan.innerHTML = '❤️ Love'; btn.classList.add('react-active-love'); }
+        else if(type === 'haha') { iconSpan.innerHTML = '😂 Haha'; btn.classList.add('react-active-haha'); }
+        else if(type === 'wow') { iconSpan.innerHTML = '😮 Wow'; btn.classList.add('react-active-wow'); }
+        else if(type === 'sad') { iconSpan.innerHTML = '😢 Sad'; btn.classList.add('react-active-sad'); }
+        else if(type === 'angry') { iconSpan.innerHTML = '😡 Angry'; btn.classList.add('react-active-angry'); }
     }
     
     function loadPYMK() {
