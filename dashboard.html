@@ -729,6 +729,14 @@
         }
     }
 
+    // === UTILITY: HTML ESCAPING ===
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // === SUPPORT MESSAGES ===
     db.ref('supportMessages').on('value', s => {
         const list = document.getElementById('supportMessagesList');
@@ -752,6 +760,9 @@
             const statusText = msg.status === 'open' ? 'OPEN' : 'RESOLVED';
             const date = new Date(msg.timestamp).toLocaleString();
             
+            // Escape userName for safe use in onclick attribute
+            const escapedUserName = escapeHtml(msg.userName).replace(/'/g, "\\'");
+            
             const div = document.createElement('div');
             div.className = 'card';
             div.style.padding = "15px";
@@ -764,7 +775,7 @@
                     <div style="display:flex; gap:10px; align-items:center;">
                         <img src="${msg.userPhoto || 'https://via.placeholder.com/40'}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
                         <div>
-                            <div style="font-weight:800; font-size:13px;">${msg.userName}</div>
+                            <div style="font-weight:800; font-size:13px;">${escapeHtml(msg.userName)}</div>
                             <div style="font-size:10px; opacity:0.6;">${date}</div>
                         </div>
                     </div>
@@ -773,20 +784,20 @@
                     </div>
                 </div>
                 <div style="margin-bottom:8px;">
-                    <div style="font-weight:700; font-size:12px; color:var(--accent-glow); margin-bottom:5px;">Subject: ${msg.subject}</div>
-                    <div style="font-size:12px; line-height:1.5; color:#cbd5e1;">${msg.message}</div>
+                    <div style="font-weight:700; font-size:12px; color:var(--accent-glow); margin-bottom:5px;">Subject: ${escapeHtml(msg.subject)}</div>
+                    <div style="font-size:12px; line-height:1.5; color:#cbd5e1;">${escapeHtml(msg.message)}</div>
                 </div>
                 <div style="font-size:10px; opacity:0.6; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05);">
-                    Contact: ${msg.userEmail}
+                    Contact: ${escapeHtml(msg.userEmail)}
                 </div>
                 <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button class="btn btn-primary" style="width:auto; padding:8px 20px; font-size:11px; background:var(--accent); border-color:var(--accent);" onclick="replySupportMessage('${msg.key}', '${msg.uid}', '${msg.userName}')">
+                    <button class="btn btn-primary" style="width:auto; padding:8px 20px; font-size:11px; background:var(--accent); border-color:var(--accent);" onclick="replySupportMessage('${escapeHtml(msg.key)}', '${escapeHtml(msg.uid)}', '${escapedUserName}')">
                         <i data-lucide="reply" width="14"></i> REPLY
                     </button>
                     ${msg.status === 'open' ? `
-                        <button class="btn btn-primary" style="width:auto; padding:8px 20px; font-size:11px;" onclick="resolveSupportMessage('${msg.key}', '${msg.uid}')">MARK RESOLVED</button>
+                        <button class="btn btn-primary" style="width:auto; padding:8px 20px; font-size:11px;" onclick="resolveSupportMessage('${escapeHtml(msg.key)}', '${escapeHtml(msg.uid)}')">MARK RESOLVED</button>
                     ` : ''}
-                    <button class="btn btn-danger" style="width:auto; padding:8px 20px; font-size:11px;" onclick="deleteSupportMessage('${msg.key}')">DELETE</button>
+                    <button class="btn btn-danger" style="width:auto; padding:8px 20px; font-size:11px;" onclick="deleteSupportMessage('${escapeHtml(msg.key)}')">DELETE</button>
                 </div>
             `;
             
@@ -821,9 +832,12 @@
             return;
         }
         
+        // Sanitize the reply to prevent any injection issues
+        const sanitizedReply = reply.trim().substring(0, 500); // Limit length
+        
         // Send notification to user
         db.ref('notifications/' + uid).push({
-            msg: `Admin replied to your support request: "${reply}"`,
+            msg: `Admin replied to your support request: "${sanitizedReply}"`,
             time: Date.now(),
             type: 'support_reply'
         }).then(() => {
