@@ -1745,7 +1745,7 @@
             if(messaging) { messaging.getToken().then((token) => { if(token) db.ref('users/' + u.uid).update({ fcmToken: token }); }).catch((err)=>console.log(err)); messaging.onMessage((payload) => { const title = payload.notification ? payload.notification.title : "Notification"; const body = payload.notification ? payload.notification.body : "New message"; showToast(title + ": " + body); playSound('pop'); }); }
             document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('userPanel').style.display = 'flex';
             
-            document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(u.photoURL, 0, 45, u.uid);
+            document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photoURL), 0, 45, u.uid);
 
             document.getElementById('profileUidDisplay').innerText = "ID: " + u.uid.substring(0,8);
             
@@ -1791,8 +1791,8 @@
                     document.getElementById('profileNameDisplay').innerText = displayName;
                     
                     // Update Avatars with badges
-                    document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(displayPhoto, userData.points, 45, u.uid);
-                    document.getElementById('menuAvatarContainer').innerHTML = renderAvatarWithBadge(displayPhoto, userData.points, 70, u.uid);
+                    document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.points, 45, u.uid);
+                    document.getElementById('menuAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.points, 70, u.uid);
                 } 
             });
             initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate();
@@ -1855,6 +1855,21 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // === UTILITY: URL VALIDATION ===
+    function sanitizeUrl(url) {
+        if (!url) return 'https://via.placeholder.com/40';
+        // Allow only http/https/data URLs, and Firebase storage URLs
+        try {
+            const urlObj = new URL(url);
+            if (['http:', 'https:', 'data:'].includes(urlObj.protocol)) {
+                return url;
+            }
+        } catch (e) {
+            // Invalid URL
+        }
+        return 'https://via.placeholder.com/40';
     }
 
     // === UTILITY: IMAGE COMPRESSION ===
@@ -2490,7 +2505,9 @@
                         const sender = uSnap.val();
                         if(sender) {
                             const messagePreview = m.image ? '📷 Photo' : (m.text.length > 30 ? m.text.substring(0, 30) + '...' : m.text);
-                            showToast(`💬 ${sender.name}: ${messagePreview}`);
+                            const sanitizedName = escapeHtml(sender.name);
+                            const sanitizedPreview = escapeHtml(messagePreview);
+                            showToast(`💬 ${sanitizedName}: ${sanitizedPreview}`);
                         }
                     });
                 }
@@ -2688,9 +2705,9 @@
         db.ref('users/' + uid).once('value', s => {
             const u = s.val();
             // Inject avatar with badge
-            document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(u.photo || 'https://via.placeholder.com/100', u.points || 0, 140, uid);
+            document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.points || 0, 140, uid);
             
-            document.getElementById('pageProfileName').innerHTML = `${u.name}`;
+            document.getElementById('pageProfileName').textContent = u.name;
             document.getElementById('pageProfileBio').innerText = u.bio || "Radio Bingo Player";
             
             if(u.cover) {
@@ -2988,7 +3005,7 @@
                 const sanitizedName = escapeHtml(com.uName);
                 
                 div.innerHTML = `
-                    <span class="preview-user" onclick="openUserProfile('${com.uid}')">${sanitizedName}</span>
+                    <button class="preview-user" onclick="openUserProfile('${com.uid}')" style="background:none; border:none; padding:0; font:inherit; cursor:pointer;" aria-label="View ${sanitizedName}'s profile">${sanitizedName}</button>
                     <span class="preview-text">${sanitizedText}</span>
                 `;
                 
@@ -3106,7 +3123,9 @@
             <div class="post-actions" style="position:relative;">
                 <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
                     <i data-lucide="heart" id="like-icon-${post.key}" style="width:14px;"></i> 
-                    <button id="like-count-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" style="cursor:pointer; background:none; border:none; color:inherit; font:inherit; padding:0; margin-left:4px;" aria-label="View who reacted to this post">${post.likes || 0}</button>
+                    <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post">
+                        <span id="like-count-${post.key}">${post.likes || 0}</span>
+                    </span>
                 </button>
                 <div id="react-pop-${post.key}" class="reaction-popup" onmouseleave="this.style.display='none'">
                     <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '❤️')">❤️</span>
@@ -3129,9 +3148,10 @@
             if(lSnap.exists()) {
                 const btn = postDiv.querySelector('#like-btn-' + post.key);
                 const reaction = lSnap.val(); // Get stored emoji
+                const sanitizedReaction = reaction === true ? '❤️' : escapeHtml(reaction);
                 if(btn) {
                     btn.classList.add('liked');
-                    btn.innerHTML = `<span style="font-size:16px;">${reaction === true ? '❤️' : reaction}</span> <button id="like-count-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" style="cursor:pointer; background:none; border:none; color:inherit; font:inherit; padding:0; margin-left:4px;" aria-label="View who reacted to this post">${post.likes || 0}</button>`;
+                    btn.innerHTML = `<span style="font-size:16px;">${sanitizedReaction}</span> <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post"><span id="like-count-${post.key}">${post.likes || 0}</span></span>`;
                 }
             }
         });
@@ -3251,14 +3271,14 @@
                         };
                         
                         const sanitizedName = escapeHtml(user.name);
-                        const sanitizedPhoto = escapeHtml(user.photo || 'https://via.placeholder.com/40');
+                        const sanitizedPhoto = sanitizeUrl(user.photo || 'https://via.placeholder.com/40');
                         
                         div.innerHTML = `
                             <img class="reaction-viewer-avatar" src="${sanitizedPhoto}" alt="${sanitizedName}'s profile picture">
                             <div class="reaction-viewer-info">
                                 <div class="reaction-viewer-name">${sanitizedName}</div>
                             </div>
-                            <div class="reaction-viewer-emoji">${reaction.emoji === true ? '❤️' : reaction.emoji}</div>
+                            <div class="reaction-viewer-emoji">${reaction.emoji === true ? '❤️' : escapeHtml(reaction.emoji)}</div>
                         `;
                         
                         list.appendChild(div);
