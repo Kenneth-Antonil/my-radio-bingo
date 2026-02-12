@@ -3172,7 +3172,7 @@
             `;
             
             // Load replies
-            db.ref('supportTicketReplies/' + ticketKey).orderByChild('timestamp').on('value', rSnap => {
+            db.ref('supportTicketReplies/' + ticketKey).orderByChild('timestamp').once('value', rSnap => {
                 // Clear only replies, keep original message
                 const existingOriginal = repliesContainer.querySelector('.ticket-original-message');
                 repliesContainer.innerHTML = '';
@@ -3213,9 +3213,6 @@
     
     function closeTicketDetail() {
         document.getElementById('ticketDetailModal').style.display = 'none';
-        if(currentTicketKey) {
-            db.ref('supportTicketReplies/' + currentTicketKey).off();
-        }
         currentTicketKey = null;
     }
     
@@ -3242,13 +3239,22 @@
             message: replyText,
             timestamp: Date.now(),
             isAdmin: false
+        }).then(() => {
+            // Reload ticket detail to show new reply
+            openTicketDetail(currentTicketKey);
+            
+            // Clear input
+            document.getElementById('ticketReplyInput').value = '';
+            showToast("Reply sent!");
+            playSound('pop');
         });
         
-        // Get ticket owner to send notification (if replying user is not the owner)
+        // Get ticket owner to send notification
+        // Note: In a production environment, verify isAdmin flag before sending admin notifications
         db.ref('supportMessages/' + currentTicketKey).once('value', ticketSnap => {
             const ticket = ticketSnap.val();
             if(ticket && ticket.uid !== auth.currentUser.uid) {
-                // This would be an admin replying, notify the ticket owner
+                // Another user (likely admin/support) is replying, notify the ticket owner
                 db.ref('notifications/' + ticket.uid).push({
                     msg: `Support replied to your ticket: ${ticket.subject}`,
                     time: Date.now(),
@@ -3259,11 +3265,6 @@
                 });
             }
         });
-        
-        // Clear input
-        document.getElementById('ticketReplyInput').value = '';
-        showToast("Reply sent!");
-        playSound('pop');
         
         // Update ticket status to open if it was closed
         db.ref('supportMessages/' + currentTicketKey + '/status').set('open');
