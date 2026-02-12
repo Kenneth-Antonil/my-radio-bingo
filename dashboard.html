@@ -760,9 +760,6 @@
             const statusText = msg.status === 'open' ? 'OPEN' : 'RESOLVED';
             const date = new Date(msg.timestamp).toLocaleString();
             
-            // Escape userName for safe use in onclick attribute
-            const escapedUserName = escapeHtml(msg.userName).replace(/'/g, "\\'");
-            
             const div = document.createElement('div');
             div.className = 'card';
             div.style.padding = "15px";
@@ -791,17 +788,52 @@
                     Contact: ${escapeHtml(msg.userEmail)}
                 </div>
                 <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button class="btn btn-primary" style="width:auto; padding:8px 20px; font-size:11px; background:var(--accent); border-color:var(--accent);" onclick="replySupportMessage('${escapeHtml(msg.key)}', '${escapeHtml(msg.uid)}', '${escapedUserName}')">
+                    <button class="btn btn-primary reply-support-btn" 
+                        style="width:auto; padding:8px 20px; font-size:11px; background:var(--accent); border-color:var(--accent);"
+                        data-msg-key="${msg.key}" 
+                        data-uid="${msg.uid}" 
+                        data-username="${escapeHtml(msg.userName)}">
                         <i data-lucide="reply" width="14"></i> REPLY
                     </button>
                     ${msg.status === 'open' ? `
-                        <button class="btn btn-primary" style="width:auto; padding:8px 20px; font-size:11px;" onclick="resolveSupportMessage('${escapeHtml(msg.key)}', '${escapeHtml(msg.uid)}')">MARK RESOLVED</button>
+                        <button class="btn btn-primary resolve-support-btn" 
+                            style="width:auto; padding:8px 20px; font-size:11px;"
+                            data-msg-key="${msg.key}" 
+                            data-uid="${msg.uid}">MARK RESOLVED</button>
                     ` : ''}
-                    <button class="btn btn-danger" style="width:auto; padding:8px 20px; font-size:11px;" onclick="deleteSupportMessage('${escapeHtml(msg.key)}')">DELETE</button>
+                    <button class="btn btn-danger delete-support-btn" 
+                        style="width:auto; padding:8px 20px; font-size:11px;"
+                        data-msg-key="${msg.key}">DELETE</button>
                 </div>
             `;
             
             list.appendChild(div);
+            
+            // Add event listeners using data attributes
+            const replyBtn = div.querySelector('.reply-support-btn');
+            if (replyBtn) {
+                replyBtn.addEventListener('click', function() {
+                    replySupportMessage(
+                        this.dataset.msgKey, 
+                        this.dataset.uid, 
+                        this.dataset.username
+                    );
+                });
+            }
+            
+            const resolveBtn = div.querySelector('.resolve-support-btn');
+            if (resolveBtn) {
+                resolveBtn.addEventListener('click', function() {
+                    resolveSupportMessage(this.dataset.msgKey, this.dataset.uid);
+                });
+            }
+            
+            const deleteBtn = div.querySelector('.delete-support-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', function() {
+                    deleteSupportMessage(this.dataset.msgKey);
+                });
+            }
         });
         
         lucide.createIcons();
