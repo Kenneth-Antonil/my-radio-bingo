@@ -901,7 +901,6 @@
         /* REACTION VIEWER MODAL */
         .reaction-viewer-modal {
             position: fixed;
-            inset: auto;
             bottom: 0;
             left: 0;
             right: 0;
@@ -1403,7 +1402,7 @@
 <div id="reactionViewerModal" class="reaction-viewer-modal">
     <div class="reaction-viewer-header">
         <h3 style="margin:0; font-size:16px;">Reactions</h3>
-        <button onclick="closeReactionViewer()" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+        <button onclick="closeReactionViewer()" style="background:none; border:none; color:white;" aria-label="Close reactions"><i data-lucide="x"></i></button>
     </div>
     <div id="reactionViewerList" class="reaction-viewer-list"></div>
 </div>
@@ -1848,6 +1847,14 @@
         if(points >= 100000) return `<i data-lucide="diamond" style="width:12px; height:12px; fill:#06b6d4; color:#06b6d4; margin-left:4px;"></i>`;
         if(points >= 25000) return `<i data-lucide="crown" style="width:12px; height:12px; fill:#fbbf24; color:#fbbf24; margin-left:4px;"></i>`;
         return ""; 
+    }
+
+    // === UTILITY: TEXT SANITIZATION ===
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     // === UTILITY: IMAGE COMPRESSION ===
@@ -2977,10 +2984,12 @@
                 div.style.marginBottom = '5px';
                 
                 const truncatedText = com.text.length > 50 ? com.text.substring(0, 50) + '...' : com.text;
+                const sanitizedText = escapeHtml(truncatedText);
+                const sanitizedName = escapeHtml(com.uName);
                 
                 div.innerHTML = `
-                    <span class="preview-user" onclick="openUserProfile('${com.uid}')">${com.uName}</span>
-                    <span class="preview-text">${truncatedText}</span>
+                    <span class="preview-user" onclick="openUserProfile('${com.uid}')">${sanitizedName}</span>
+                    <span class="preview-text">${sanitizedText}</span>
                 `;
                 
                 previewList.appendChild(div);
@@ -3097,7 +3106,7 @@
             <div class="post-actions" style="position:relative;">
                 <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
                     <i data-lucide="heart" id="like-icon-${post.key}" style="width:14px;"></i> 
-                    <span id="like-count-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" style="cursor:pointer;">${post.likes || 0}</span>
+                    <button id="like-count-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" style="cursor:pointer; background:none; border:none; color:inherit; font:inherit; padding:0; margin-left:4px;" aria-label="View who reacted to this post">${post.likes || 0}</button>
                 </button>
                 <div id="react-pop-${post.key}" class="reaction-popup" onmouseleave="this.style.display='none'">
                     <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '❤️')">❤️</span>
@@ -3111,7 +3120,7 @@
             </div>
             <div id="comment-preview-${post.key}" class="comment-preview-area" style="display:none;">
                 <div id="preview-list-${post.key}" style="margin-bottom:8px;"></div>
-                <button onclick="openComments('${post.key}')" style="background:none; border:none; color:var(--accent); font-size:11px; font-weight:700; cursor:pointer; padding:0;">View all comments</button>
+                <button onclick="openComments('${post.key}')" style="background:none; border:none; color:var(--accent); font-size:11px; font-weight:700; cursor:pointer; padding:0;" aria-label="View all comments for this post">View all comments</button>
             </div>
         `;
         
@@ -3122,7 +3131,7 @@
                 const reaction = lSnap.val(); // Get stored emoji
                 if(btn) {
                     btn.classList.add('liked');
-                    btn.innerHTML = `<span style="font-size:16px;">${reaction === true ? '❤️' : reaction}</span> <span id="like-count-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" style="cursor:pointer;">${post.likes || 0}</span>`;
+                    btn.innerHTML = `<span style="font-size:16px;">${reaction === true ? '❤️' : reaction}</span> <button id="like-count-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" style="cursor:pointer; background:none; border:none; color:inherit; font:inherit; padding:0; margin-left:4px;" aria-label="View who reacted to this post">${post.likes || 0}</button>`;
                 }
             }
         });
@@ -3231,11 +3240,23 @@
                             closeReactionViewer();
                             openUserProfile(reaction.uid);
                         };
+                        div.setAttribute('role', 'button');
+                        div.setAttribute('tabindex', '0');
+                        div.onkeypress = (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                closeReactionViewer();
+                                openUserProfile(reaction.uid);
+                            }
+                        };
+                        
+                        const sanitizedName = escapeHtml(user.name);
+                        const sanitizedPhoto = escapeHtml(user.photo || 'https://via.placeholder.com/40');
                         
                         div.innerHTML = `
-                            <img class="reaction-viewer-avatar" src="${user.photo || 'https://via.placeholder.com/40'}">
+                            <img class="reaction-viewer-avatar" src="${sanitizedPhoto}" alt="${sanitizedName}'s profile picture">
                             <div class="reaction-viewer-info">
-                                <div class="reaction-viewer-name">${user.name}</div>
+                                <div class="reaction-viewer-name">${sanitizedName}</div>
                             </div>
                             <div class="reaction-viewer-emoji">${reaction.emoji === true ? '❤️' : reaction.emoji}</div>
                         `;
