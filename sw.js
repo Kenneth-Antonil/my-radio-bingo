@@ -22,6 +22,10 @@ messaging.onBackgroundMessage((payload) => {
   const notificationOptions = {
     body: payload.notification.body,
     icon: payload.notification.icon || 'https://i.imgur.com/7D8u8h6.png',
+    badge: 'https://i.imgur.com/7D8u8h6.png',
+    vibrate: [200, 100, 200],
+    tag: 'radio-bingo-notification',
+    requireInteraction: false,
     data: payload.data
   };
 

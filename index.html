@@ -898,6 +898,79 @@
         #view-home, #view-bingo { display: none; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+        /* REACTION VIEWER MODAL */
+        .reaction-viewer-modal {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60vh;
+            background: #1e293b;
+            z-index: 8000;
+            display: none;
+            flex-direction: column;
+            border-radius: 20px 20px 0 0;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 -10px 50px rgba(0,0,0,0.5);
+        }
+        .reaction-viewer-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 7999;
+            display: none;
+            backdrop-filter: blur(2px);
+        }
+        .reaction-viewer-header {
+            padding: 15px;
+            background: #1e293b;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 20px 20px 0 0;
+        }
+        .reaction-viewer-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .reaction-viewer-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .reaction-viewer-item:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .reaction-viewer-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+        .reaction-viewer-info {
+            flex: 1;
+        }
+        .reaction-viewer-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: white;
+        }
+        .reaction-viewer-emoji {
+            font-size: 20px;
+        }
+
         /* === PEOPLE YOU MAY KNOW (PYMK) === */
         .pymk-section { margin-bottom: 20px; }
         .pymk-title { padding: 0 5px; margin-bottom: 10px; font-size: 14px; font-weight: 800; color: #cbd5e1; }
@@ -1325,6 +1398,15 @@
     </form>
 </div>
 
+<div id="reactionViewerBackdrop" class="reaction-viewer-backdrop" onclick="closeReactionViewer()"></div>
+<div id="reactionViewerModal" class="reaction-viewer-modal">
+    <div class="reaction-viewer-header">
+        <h3 style="margin:0; font-size:16px;">Reactions</h3>
+        <button onclick="closeReactionViewer()" style="background:none; border:none; color:white;" aria-label="Close reactions"><i data-lucide="x"></i></button>
+    </div>
+    <div id="reactionViewerList" class="reaction-viewer-list"></div>
+</div>
+
 <div id="searchModal" class="search-modal-container">
     <div class="search-header">
         <button onclick="document.getElementById('searchModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="arrow-left"></i></button>
@@ -1663,7 +1745,7 @@
             if(messaging) { messaging.getToken().then((token) => { if(token) db.ref('users/' + u.uid).update({ fcmToken: token }); }).catch((err)=>console.log(err)); messaging.onMessage((payload) => { const title = payload.notification ? payload.notification.title : "Notification"; const body = payload.notification ? payload.notification.body : "New message"; showToast(title + ": " + body); playSound('pop'); }); }
             document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('userPanel').style.display = 'flex';
             
-            document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(u.photoURL, 0, 45, true);
+            document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photoURL), 0, 45, u.uid);
 
             document.getElementById('profileUidDisplay').innerText = "ID: " + u.uid.substring(0,8);
             
@@ -1709,8 +1791,8 @@
                     document.getElementById('profileNameDisplay').innerText = displayName;
                     
                     // Update Avatars with badges
-                    document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(displayPhoto, userData.points, 45, true);
-                    document.getElementById('menuAvatarContainer').innerHTML = renderAvatarWithBadge(displayPhoto, userData.points, 70);
+                    document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.points, 45, u.uid);
+                    document.getElementById('menuAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.points, 70, u.uid);
                 } 
             });
             initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate();
@@ -1719,7 +1801,7 @@
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
     // === BADGE & AVATAR SYSTEM ===
-    function renderAvatarWithBadge(photoUrl, points, size, isSelf = false) {
+    function renderAvatarWithBadge(photoUrl, points, size, uid = null) {
         let tierClass = "tier-bronze-bg";
         let tierIcon = ""; // Default empty
         if(points >= 100000) { tierClass = "tier-diamond-bg"; tierIcon = '<i data-lucide="diamond" style="width:50%; height:50%;"></i>'; }
@@ -1728,8 +1810,12 @@
         else if(points >= 10000) { tierClass = "tier-silver-bg"; tierIcon = '<i data-lucide="star" style="width:50%; height:50%;"></i>'; }
         else { tierIcon = '<i data-lucide="circle-dot" style="width:50%; height:50%;"></i>'; }
 
-        // Data attribute for online status updates
-        const uidAttr = isSelf ? `data-uid="${auth.currentUser.uid}"` : '';
+        // Data attribute for online status updates - only if uid is provided
+        const uidAttr = uid ? `data-uid="${uid}"` : '';
+        
+        // Check if user is online - only show indicator if they are active
+        const isOnline = uid && onlineUsers[uid];
+        const onlineClass = isOnline ? 'is-online' : '';
 
         setTimeout(() => lucide.createIcons(), 50);
 
@@ -1739,7 +1825,7 @@
                 <div class="avatar-badge-icon ${tierClass}">
                     ${tierIcon}
                 </div>
-                <div class="online-indicator ${isSelf ? 'is-online' : ''}"></div>
+                <div class="online-indicator ${onlineClass}"></div>
             </div>
         `;
     }
@@ -1761,6 +1847,29 @@
         if(points >= 100000) return `<i data-lucide="diamond" style="width:12px; height:12px; fill:#06b6d4; color:#06b6d4; margin-left:4px;"></i>`;
         if(points >= 25000) return `<i data-lucide="crown" style="width:12px; height:12px; fill:#fbbf24; color:#fbbf24; margin-left:4px;"></i>`;
         return ""; 
+    }
+
+    // === UTILITY: TEXT SANITIZATION ===
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // === UTILITY: URL VALIDATION ===
+    function sanitizeUrl(url) {
+        if (!url) return 'https://via.placeholder.com/40';
+        // Allow only http/https/data URLs, and Firebase storage URLs
+        try {
+            const urlObj = new URL(url);
+            if (['http:', 'https:', 'data:'].includes(urlObj.protocol)) {
+                return url;
+            }
+        } catch (e) {
+            // Invalid URL
+        }
+        return 'https://via.placeholder.com/40';
     }
 
     // === UTILITY: IMAGE COMPRESSION ===
@@ -1816,7 +1925,7 @@
                         const div = document.createElement('div');
                         div.className = 'pymk-card';
                         div.innerHTML = `
-                            ${renderAvatarWithBadge(u.photo || 'https://via.placeholder.com/60', u.points || 0, 50)}
+                            ${renderAvatarWithBadge(u.photo || 'https://via.placeholder.com/60', u.points || 0, 50, u.uid)}
                             <div class="pymk-name" style="margin-top:5px;">${u.name}</div>
                             <button class="btn-add-friend-sm" onclick="sendFriendReqPYMK('${u.uid}')">ADD</button>
                         `;
@@ -2380,8 +2489,28 @@
         pmListenerRef.on('child_added', s => { 
             const m = s.val(); 
             const key = s.key;
+            
+            // Play sound for new incoming messages when not in initial load
             if(!isInitialLoad && m.to === myUid && (m.timestamp > (Date.now() - 2000))) {
                 playSound('pop');
+                
+                // Show toast notification if PM modal is closed or chat is with different user
+                const pmModal = document.getElementById('pmModal');
+                const isPMModalClosed = pmModal.style.display === 'none' || !pmModal.style.display;
+                const isDifferentChat = currentChatPartner !== m.from;
+                
+                if(isPMModalClosed || isDifferentChat) {
+                    // Get sender name
+                    db.ref('users/' + m.from).once('value', uSnap => {
+                        const sender = uSnap.val();
+                        if(sender) {
+                            const messagePreview = m.image ? '📷 Photo' : (m.text.length > 30 ? m.text.substring(0, 30) + '...' : m.text);
+                            const sanitizedName = escapeHtml(sender.name);
+                            const sanitizedPreview = escapeHtml(messagePreview);
+                            showToast(`💬 ${sanitizedName}: ${sanitizedPreview}`);
+                        }
+                    });
+                }
             }
 
             if(!currentChatPartner) return; 
@@ -2576,9 +2705,9 @@
         db.ref('users/' + uid).once('value', s => {
             const u = s.val();
             // Inject avatar with badge
-            document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(u.photo || 'https://via.placeholder.com/100', u.points || 0, 140);
+            document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.points || 0, 140, uid);
             
-            document.getElementById('pageProfileName').innerHTML = `${u.name}`;
+            document.getElementById('pageProfileName').textContent = u.name;
             document.getElementById('pageProfileBio').innerText = u.bio || "Radio Bingo Player";
             
             if(u.cover) {
@@ -2846,6 +2975,45 @@
         document.getElementById('commentInput').focus();
     }
 
+    function loadCommentPreview(postKey) {
+        const previewContainer = document.getElementById('comment-preview-' + postKey);
+        const previewList = document.getElementById('preview-list-' + postKey);
+        
+        if(!previewContainer || !previewList) return;
+        
+        db.ref('postComments/' + postKey).limitToLast(2).once('value', s => {
+            if(!s.exists()) {
+                previewContainer.style.display = 'none';
+                return;
+            }
+            
+            previewContainer.style.display = 'block';
+            previewList.innerHTML = '';
+            
+            const comments = [];
+            s.forEach(c => {
+                comments.push({ key: c.key, ...c.val() });
+            });
+            
+            comments.forEach(com => {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.style.marginBottom = '5px';
+                
+                const truncatedText = com.text.length > 50 ? com.text.substring(0, 50) + '...' : com.text;
+                const sanitizedText = escapeHtml(truncatedText);
+                const sanitizedName = escapeHtml(com.uName);
+                
+                div.innerHTML = `
+                    <button class="preview-user" onclick="openUserProfile('${com.uid}')" style="background:none; border:none; padding:0; font:inherit; cursor:pointer;" aria-label="View ${sanitizedName}'s profile">${sanitizedName}</button>
+                    <span class="preview-text">${sanitizedText}</span>
+                `;
+                
+                previewList.appendChild(div);
+            });
+        });
+    }
+
 
     let postListener = null;
     let feedSortMethod = 'hype';
@@ -2955,7 +3123,9 @@
             <div class="post-actions" style="position:relative;">
                 <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
                     <i data-lucide="heart" id="like-icon-${post.key}" style="width:14px;"></i> 
-                    <span id="like-count-${post.key}">${post.likes || 0}</span>
+                    <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post">
+                        <span id="like-count-${post.key}">${post.likes || 0}</span>
+                    </span>
                 </button>
                 <div id="react-pop-${post.key}" class="reaction-popup" onmouseleave="this.style.display='none'">
                     <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '❤️')">❤️</span>
@@ -2967,6 +3137,10 @@
                     <i data-lucide="message-circle" style="width:14px"></i> Comment
                 </button>
             </div>
+            <div id="comment-preview-${post.key}" class="comment-preview-area" style="display:none;">
+                <div id="preview-list-${post.key}" style="margin-bottom:8px;"></div>
+                <button onclick="openComments('${post.key}')" style="background:none; border:none; color:var(--accent); font-size:11px; font-weight:700; cursor:pointer; padding:0;" aria-label="View all comments for this post">View all comments</button>
+            </div>
         `;
         
         // Load initial state (simple check if liked)
@@ -2974,12 +3148,16 @@
             if(lSnap.exists()) {
                 const btn = postDiv.querySelector('#like-btn-' + post.key);
                 const reaction = lSnap.val(); // Get stored emoji
+                const sanitizedReaction = reaction === true ? '❤️' : escapeHtml(reaction);
                 if(btn) {
                     btn.classList.add('liked');
-                    btn.innerHTML = `<span style="font-size:16px;">${reaction === true ? '❤️' : reaction}</span> <span id="like-count-${post.key}">${post.likes || 0}</span>`;
+                    btn.innerHTML = `<span style="font-size:16px;">${sanitizedReaction}</span> <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post"><span id="like-count-${post.key}">${post.likes || 0}</span></span>`;
                 }
             }
         });
+        
+        // Load comment preview
+        loadCommentPreview(post.key);
         
         return postDiv;
     }
@@ -3039,6 +3217,86 @@
                 likeRef.set(emoji);
             }
         });
+    }
+
+    let currentReactionPostKey = null;
+
+    function openReactionViewer(postKey) {
+        currentReactionPostKey = postKey;
+        const modal = document.getElementById('reactionViewerModal');
+        const backdrop = document.getElementById('reactionViewerBackdrop');
+        const list = document.getElementById('reactionViewerList');
+        
+        modal.style.display = 'flex';
+        backdrop.style.display = 'block';
+        list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding:20px;'>Loading...</div>";
+        
+        // Fetch all reactions for this post
+        db.ref('postLikes/' + postKey).once('value', s => {
+            list.innerHTML = "";
+            
+            if(!s.exists()) {
+                list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding:20px;'>No reactions yet</div>";
+                return;
+            }
+            
+            const reactions = [];
+            s.forEach(child => {
+                reactions.push({
+                    uid: child.key,
+                    emoji: child.val()
+                });
+            });
+            
+            // Fetch user details for each reactor
+            let processed = 0;
+            reactions.forEach(reaction => {
+                db.ref('users/' + reaction.uid).once('value', uSnap => {
+                    const user = uSnap.val();
+                    if(user) {
+                        const div = document.createElement('div');
+                        div.className = 'reaction-viewer-item';
+                        div.onclick = () => {
+                            closeReactionViewer();
+                            openUserProfile(reaction.uid);
+                        };
+                        div.setAttribute('role', 'button');
+                        div.setAttribute('tabindex', '0');
+                        div.onkeypress = (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                closeReactionViewer();
+                                openUserProfile(reaction.uid);
+                            }
+                        };
+                        
+                        const sanitizedName = escapeHtml(user.name);
+                        const sanitizedPhoto = sanitizeUrl(user.photo || 'https://via.placeholder.com/40');
+                        
+                        div.innerHTML = `
+                            <img class="reaction-viewer-avatar" src="${sanitizedPhoto}" alt="${sanitizedName}'s profile picture">
+                            <div class="reaction-viewer-info">
+                                <div class="reaction-viewer-name">${sanitizedName}</div>
+                            </div>
+                            <div class="reaction-viewer-emoji">${reaction.emoji === true ? '❤️' : escapeHtml(reaction.emoji)}</div>
+                        `;
+                        
+                        list.appendChild(div);
+                    }
+                    
+                    processed++;
+                    if(processed === reactions.length) {
+                        lucide.createIcons();
+                    }
+                });
+            });
+        });
+    }
+
+    function closeReactionViewer() {
+        document.getElementById('reactionViewerModal').style.display = 'none';
+        document.getElementById('reactionViewerBackdrop').style.display = 'none';
+        currentReactionPostKey = null;
     }
 
     // Ilagay ito sa pinakababa ng iyong script
