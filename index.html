@@ -1362,7 +1362,7 @@
             /* Create Post Section - Mobile Responsive */
             .post-tools {
                 flex-wrap: wrap;
-                gap: 8px;
+                gap: 10px;
             }
             .tool-btn, .visibility-selector, .btn-post-modern {
                 flex: 1 1 calc(50% - 4px);
@@ -1813,11 +1813,11 @@
             <i data-lucide="user" style="width:20px;"></i>
             <span>Share to My Profile</span>
         </button>
-        <button class="share-btn-option" id="nativeShareBtn" onclick="shareViaWebShare()">
+        <button class="share-btn-option" id="nativeShareBtn" onclick="shareViaWebShare()" aria-hidden="false">
             <i data-lucide="share-2" style="width:20px;"></i>
             <span>Share via...</span>
         </button>
-        <button class="share-btn-option" id="copyLinkBtn" onclick="copyPostLink()" style="display:none;">
+        <button class="share-btn-option" id="copyLinkBtn" onclick="copyPostLink()" style="display:none;" aria-hidden="true">
             <i data-lucide="link" style="width:20px;"></i>
             <span>Copy Link</span>
         </button>
@@ -3951,10 +3951,14 @@
         
         if (navigator.share) {
             nativeShareBtn.style.display = 'flex';
+            nativeShareBtn.setAttribute('aria-hidden', 'false');
             copyLinkBtn.style.display = 'none';
+            copyLinkBtn.setAttribute('aria-hidden', 'true');
         } else {
             nativeShareBtn.style.display = 'none';
+            nativeShareBtn.setAttribute('aria-hidden', 'true');
             copyLinkBtn.style.display = 'flex';
+            copyLinkBtn.setAttribute('aria-hidden', 'false');
         }
         
         // Get post data to show preview
@@ -4052,7 +4056,8 @@
                         closeShareModal();
                     })
                     .catch((error) => {
-                        if (error.name !== 'AbortError') {
+                        // Ignore user cancellations (AbortError, NotAllowedError)
+                        if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
                             console.error('Error sharing:', error);
                             showToast("Failed to share");
                         }
@@ -4093,6 +4098,7 @@
         textArea.select();
         
         try {
+            // Using deprecated document.execCommand as fallback for legacy browser support
             document.execCommand('copy');
             showToast("Link copied to clipboard!");
             playSound('pop');
