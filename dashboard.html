@@ -155,6 +155,7 @@
         <button class="tab-btn" onclick="openTab('settings-tab', this)"><i data-lucide="sliders" width="16"></i> SETTINGS</button>
         <button class="tab-btn" onclick="openTab('users-tab', this)"><i data-lucide="user-cog" width="16"></i> PLAYERS</button>
         <button class="tab-btn" onclick="openTab('cashout-tab', this)"><i data-lucide="wallet" width="16"></i> CASHOUTS</button>
+        <button class="tab-btn" onclick="openTab('support-tab', this)"><i data-lucide="message-square" width="16"></i> SUPPORT</button>
     </div>
 
     <div id="settings-tab" class="tab-content">
@@ -279,6 +280,16 @@
     </div>
 
     <div id="cashout-tab" class="tab-content"><div class="card"><h2><i data-lucide="wallet"></i> GCash Requests</h2><div id="cashoutList"></div></div></div>
+    
+    <div id="support-tab" class="tab-content">
+        <div class="card">
+            <h2><i data-lucide="message-square"></i> Support Messages</h2>
+            <div style="font-size:11px; opacity:0.6; margin-bottom:15px;">User support requests and inquiries</div>
+            <div id="supportMessagesList" style="display:flex; flex-direction:column; gap:15px;">
+                <div style="opacity:0.5; text-align:center; padding:40px; font-size:12px;">Loading support messages...</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="activity-panel">
@@ -683,6 +694,89 @@
                      }
                  });
             }
+        }
+    }
+
+    // === SUPPORT MESSAGES ===
+    db.ref('supportMessages').on('value', s => {
+        const list = document.getElementById('supportMessagesList');
+        list.innerHTML = "";
+        
+        if(!s.exists()) {
+            list.innerHTML = '<div style="opacity:0.5; text-align:center; padding:40px; font-size:12px;">No support messages yet.</div>';
+            return;
+        }
+        
+        const messages = [];
+        s.forEach(child => {
+            messages.push({ key: child.key, ...child.val() });
+        });
+        
+        // Sort by timestamp, newest first
+        messages.sort((a, b) => b.timestamp - a.timestamp);
+        
+        messages.forEach(msg => {
+            const statusColor = msg.status === 'open' ? 'var(--gold)' : 'var(--success)';
+            const statusText = msg.status === 'open' ? 'OPEN' : 'RESOLVED';
+            const date = new Date(msg.timestamp).toLocaleString();
+            
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.style.padding = "15px";
+            div.style.marginBottom = "10px";
+            div.style.background = msg.status === 'open' ? 'rgba(251, 191, 36, 0.05)' : 'rgba(0,0,0,0.2)';
+            div.style.borderLeft = `3px solid ${statusColor}`;
+            
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <img src="${msg.userPhoto || 'https://via.placeholder.com/40'}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+                        <div>
+                            <div style="font-weight:800; font-size:13px;">${msg.userName}</div>
+                            <div style="font-size:10px; opacity:0.6;">${date}</div>
+                        </div>
+                    </div>
+                    <div style="font-size:10px; font-weight:800; color:${statusColor}; text-transform:uppercase; border:1px solid ${statusColor}; padding:4px 8px; border-radius:6px;">
+                        ${statusText}
+                    </div>
+                </div>
+                <div style="margin-bottom:8px;">
+                    <div style="font-weight:700; font-size:12px; color:var(--accent-glow); margin-bottom:5px;">Subject: ${msg.subject}</div>
+                    <div style="font-size:12px; line-height:1.5; color:#cbd5e1;">${msg.message}</div>
+                </div>
+                <div style="font-size:10px; opacity:0.6; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05);">
+                    Contact: ${msg.userEmail}
+                </div>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    ${msg.status === 'open' ? `
+                        <button class="btn btn-primary" style="width:auto; padding:8px 20px; font-size:11px;" onclick="resolveSupportMessage('${msg.key}', '${msg.uid}')">MARK RESOLVED</button>
+                    ` : ''}
+                    <button class="btn btn-danger" style="width:auto; padding:8px 20px; font-size:11px;" onclick="deleteSupportMessage('${msg.key}')">DELETE</button>
+                </div>
+            `;
+            
+            list.appendChild(div);
+        });
+        
+        lucide.createIcons();
+    });
+
+    function resolveSupportMessage(key, uid) {
+        if(confirm('Mark this message as resolved?')) {
+            db.ref('supportMessages/' + key).update({ status: 'resolved' });
+            
+            // Send notification to user
+            db.ref('notifications/' + uid).push({
+                msg: 'Your support request has been resolved. Thank you!',
+                time: Date.now(),
+                type: 'support'
+            });
+        }
+    }
+
+    function deleteSupportMessage(key) {
+        if(confirm('Delete this support message?')) {
+            db.ref('supportMessages/' + key).remove();
         }
     }
 </script>
