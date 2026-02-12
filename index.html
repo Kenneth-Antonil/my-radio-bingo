@@ -981,6 +981,120 @@
         .preview-item { display: flex; gap: 5px; font-size: 11px; align-items: center; }
         .preview-user { font-weight: 800; color: white; cursor: pointer; }
         .preview-text { color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        
+        /* Support Ticket Styles */
+        .ticket-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .ticket-item:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+        .ticket-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .ticket-subject {
+            font-weight: 800;
+            font-size: 12px;
+            color: white;
+        }
+        .ticket-status {
+            font-size: 9px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .ticket-status.open {
+            background: rgba(251, 191, 36, 0.2);
+            color: var(--gold);
+        }
+        .ticket-status.closed {
+            background: rgba(100, 116, 139, 0.2);
+            color: #94a3b8;
+        }
+        .ticket-time {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 5px;
+        }
+        .ticket-reply-count {
+            font-size: 10px;
+            color: var(--accent-glow);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .ticket-reply-item {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        .ticket-reply-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .ticket-reply-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .ticket-reply-author {
+            font-weight: 800;
+            font-size: 12px;
+            color: white;
+        }
+        .ticket-reply-admin-badge {
+            background: var(--accent);
+            color: white;
+            font-size: 8px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+        .ticket-reply-time {
+            font-size: 10px;
+            color: #64748b;
+            margin-left: auto;
+        }
+        .ticket-reply-content {
+            font-size: 12px;
+            line-height: 1.5;
+            color: #e2e8f0;
+        }
+        .ticket-original-message {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        .ticket-original-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--accent-glow);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
 
         /* Friend Request Notification in Feed */
         .friend-req-card { background: rgba(14, 165, 233, 0.1); border: 1px solid var(--accent); padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
@@ -1964,6 +2078,38 @@
             <i data-lucide="send" style="width:16px;"></i>
             SEND MESSAGE
         </button>
+        
+        <div id="myTicketsSection" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <h4 style="margin:0 0 15px 0; font-size: 14px; font-weight: 800; color: var(--accent-glow); display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="inbox" style="width:16px;"></i> MY TICKETS
+            </h4>
+            <div id="ticketsList" style="max-height: 200px; overflow-y: auto;"></div>
+        </div>
+    </div>
+</div>
+
+<div id="ticketDetailModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-height: 80vh; overflow-y: auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; position: sticky; top: 0; background: #1e293b; z-index: 10;">
+            <div>
+                <h3 style="margin:0; font-size: 18px; font-weight: 900;" id="ticketDetailSubject">Ticket Subject</h3>
+                <p style="margin: 5px 0 0 0; font-size: 11px; opacity: 0.8; font-weight: 600;">
+                    Status: <span id="ticketDetailStatus" style="color: var(--gold);">Open</span>
+                </p>
+            </div>
+            <button onclick="closeTicketDetail()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x"></i></button>
+        </div>
+        
+        <div id="ticketRepliesContainer" style="margin-bottom: 15px;"></div>
+        
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+            <label class="edit-label">Reply to Ticket</label>
+            <textarea id="ticketReplyInput" class="edit-input" rows="4" placeholder="Type your reply here..." style="resize:vertical;"></textarea>
+            <button onclick="submitTicketReply()" style="width:100%; padding:12px; background:var(--accent); border:none; border-radius:12px; font-weight:900; color:white; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px;">
+                <i data-lucide="send" style="width:16px;"></i>
+                SEND REPLY
+            </button>
+        </div>
     </div>
 </div>
 
@@ -2917,6 +3063,7 @@
     function openSupportModal() {
         document.getElementById('menuModal').style.display = 'none';
         document.getElementById('supportModal').style.display = 'flex';
+        loadMyTickets(); // Load user's tickets when opening modal
         setTimeout(() => lucide.createIcons(), 50);
     }
 
@@ -2949,10 +3096,177 @@
         showToast("Message sent! We'll respond soon.");
         playSound('pop');
         
-        // Clear form and close
+        // Clear form and refresh ticket list
         document.getElementById('supportSubject').value = '';
         document.getElementById('supportMessage').value = '';
-        document.getElementById('supportModal').style.display = 'none';
+        loadMyTickets();
+    }
+    
+    function loadMyTickets() {
+        const ticketsList = document.getElementById('ticketsList');
+        ticketsList.innerHTML = '<div style="text-align:center; padding:15px; opacity:0.5; font-size:11px;">Loading tickets...</div>';
+        
+        db.ref('supportMessages').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => {
+            ticketsList.innerHTML = '';
+            
+            if(!s.exists()) {
+                ticketsList.innerHTML = '<div style="text-align:center; padding:15px; opacity:0.5; font-size:11px;">No tickets yet</div>';
+                return;
+            }
+            
+            const tickets = [];
+            s.forEach(child => {
+                tickets.push({ key: child.key, ...child.val() });
+            });
+            
+            // Sort by timestamp descending
+            tickets.sort((a, b) => b.timestamp - a.timestamp);
+            
+            tickets.forEach(ticket => {
+                // Count replies
+                db.ref('supportTicketReplies/' + ticket.key).once('value', rSnap => {
+                    const replyCount = rSnap.numChildren();
+                    
+                    const ticketDiv = document.createElement('div');
+                    ticketDiv.className = 'ticket-item';
+                    ticketDiv.onclick = () => openTicketDetail(ticket.key);
+                    
+                    ticketDiv.innerHTML = `
+                        <div class="ticket-item-header">
+                            <div class="ticket-subject">${escapeHtml(ticket.subject)}</div>
+                            <div class="ticket-status ${ticket.status}">${ticket.status}</div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div class="ticket-time">${fixDate(ticket.timestamp)}</div>
+                            ${replyCount > 0 ? `<div class="ticket-reply-count"><i data-lucide="message-circle" style="width:12px;"></i> ${replyCount}</div>` : ''}
+                        </div>
+                    `;
+                    
+                    ticketsList.appendChild(ticketDiv);
+                    lucide.createIcons();
+                });
+            });
+        });
+    }
+    
+    let currentTicketKey = null;
+    
+    function openTicketDetail(ticketKey) {
+        currentTicketKey = ticketKey;
+        
+        db.ref('supportMessages/' + ticketKey).once('value', s => {
+            const ticket = s.val();
+            if(!ticket) return;
+            
+            document.getElementById('ticketDetailSubject').innerText = ticket.subject;
+            document.getElementById('ticketDetailStatus').innerText = ticket.status.toUpperCase();
+            document.getElementById('ticketDetailStatus').style.color = ticket.status === 'open' ? 'var(--gold)' : '#94a3b8';
+            
+            const repliesContainer = document.getElementById('ticketRepliesContainer');
+            repliesContainer.innerHTML = `
+                <div class="ticket-original-message">
+                    <div class="ticket-original-label">Original Message</div>
+                    <div class="ticket-reply-content">${escapeHtml(ticket.message)}</div>
+                    <div class="ticket-reply-time" style="margin-top:8px;">${fixDate(ticket.timestamp)}</div>
+                </div>
+            `;
+            
+            // Load replies
+            db.ref('supportTicketReplies/' + ticketKey).orderByChild('timestamp').on('value', rSnap => {
+                // Clear only replies, keep original message
+                const existingOriginal = repliesContainer.querySelector('.ticket-original-message');
+                repliesContainer.innerHTML = '';
+                if(existingOriginal) {
+                    repliesContainer.appendChild(existingOriginal);
+                }
+                
+                if(!rSnap.exists()) {
+                    repliesContainer.innerHTML += '<div style="text-align:center; padding:20px; opacity:0.5; font-size:11px;">No replies yet</div>';
+                } else {
+                    rSnap.forEach(child => {
+                        const reply = child.val();
+                        const isAdmin = reply.isAdmin || false;
+                        const adminBadge = isAdmin ? '<span class="ticket-reply-admin-badge">Support Team</span>' : '';
+                        
+                        const replyDiv = document.createElement('div');
+                        replyDiv.className = 'ticket-reply-item';
+                        replyDiv.innerHTML = `
+                            <div class="ticket-reply-header">
+                                <img src="${reply.authorPhoto}" class="ticket-reply-avatar">
+                                <div>
+                                    <div class="ticket-reply-author">${escapeHtml(reply.authorName)} ${adminBadge}</div>
+                                </div>
+                                <div class="ticket-reply-time">${fixDate(reply.timestamp)}</div>
+                            </div>
+                            <div class="ticket-reply-content">${escapeHtml(reply.message)}</div>
+                        `;
+                        repliesContainer.appendChild(replyDiv);
+                    });
+                    lucide.createIcons();
+                }
+            });
+            
+            document.getElementById('ticketDetailModal').style.display = 'flex';
+            setTimeout(() => lucide.createIcons(), 50);
+        });
+    }
+    
+    function closeTicketDetail() {
+        document.getElementById('ticketDetailModal').style.display = 'none';
+        if(currentTicketKey) {
+            db.ref('supportTicketReplies/' + currentTicketKey).off();
+        }
+        currentTicketKey = null;
+    }
+    
+    function submitTicketReply() {
+        if(!currentTicketKey) return;
+        
+        const replyText = document.getElementById('ticketReplyInput').value.trim();
+        
+        if(!replyText) {
+            showToast("Please enter a reply");
+            return;
+        }
+        
+        if(replyText.length < 5) {
+            showToast("Reply too short");
+            return;
+        }
+        
+        // Add reply to Firebase
+        db.ref('supportTicketReplies/' + currentTicketKey).push({
+            uid: auth.currentUser.uid,
+            authorName: userData.name,
+            authorPhoto: userData.photo,
+            message: replyText,
+            timestamp: Date.now(),
+            isAdmin: false
+        });
+        
+        // Get ticket owner to send notification (if replying user is not the owner)
+        db.ref('supportMessages/' + currentTicketKey).once('value', ticketSnap => {
+            const ticket = ticketSnap.val();
+            if(ticket && ticket.uid !== auth.currentUser.uid) {
+                // This would be an admin replying, notify the ticket owner
+                db.ref('notifications/' + ticket.uid).push({
+                    msg: `Support replied to your ticket: ${ticket.subject}`,
+                    time: Date.now(),
+                    type: 'support_reply',
+                    from: auth.currentUser.uid,
+                    ticketId: currentTicketKey,
+                    image: userData.photo
+                });
+            }
+        });
+        
+        // Clear input
+        document.getElementById('ticketReplyInput').value = '';
+        showToast("Reply sent!");
+        playSound('pop');
+        
+        // Update ticket status to open if it was closed
+        db.ref('supportMessages/' + currentTicketKey + '/status').set('open');
     }
 
     let selectedMood = null; // UPDATED DEFAULT
