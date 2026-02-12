@@ -98,7 +98,7 @@
         .avatar-badge-icon {
             position: absolute;
             bottom: -2px;
-            right: -2px;
+            left: -2px; /* Changed from right to left to avoid overlap with online indicator */
             width: 40%; /* Scales relative to image */
             height: 40%;
             border-radius: 50%;
@@ -955,6 +955,23 @@
         .comment-preview-bubble { background: #334155; padding: 6px 10px; border-radius: 10px; max-width: 100%; }
         .comment-preview-text { font-size: 12px; color: #cbd5e1; word-break: break-word; line-height: 1.4; }
 
+        /* SHARE POST MODAL */
+        .share-modal { 
+            position: fixed; inset: auto; bottom: 0; left: 0; right: 0; height: auto; max-height: 60vh;
+            background: #1e293b; z-index: 7000; display: none; flex-direction: column; 
+            border-radius: 20px 20px 0 0; border-top: 1px solid rgba(255,255,255,0.1);
+            animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 -10px 50px rgba(0,0,0,0.5);
+        }
+        .share-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 6999; display: none; backdrop-filter: blur(2px); }
+        .share-header { padding: 15px; background: #1e293b; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; border-radius: 20px 20px 0 0; }
+        .share-content { padding: 20px; display: flex; flex-direction: column; gap: 15px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+        .share-btn-option { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: white; padding: 15px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
+        .share-btn-option:hover { background: rgba(59, 130, 246, 0.2); transform: translateY(-2px); }
+        .share-post-preview { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; margin-bottom: 10px; }
+        .share-post-preview-author { font-size: 12px; font-weight: 700; color: #cbd5e1; margin-bottom: 5px; }
+        .share-post-preview-content { font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
         .image-preview-container { display: none; position: relative; margin-bottom: 10px; }
         .image-preview-img { max-height: 100px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); }
         .btn-remove-img { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid white; font-size: 12px; }
@@ -1549,6 +1566,21 @@
     </form>
 </div>
 
+<div id="shareModalBackdrop" class="share-modal-backdrop" onclick="closeShareModal()"></div>
+<div id="shareModal" class="share-modal">
+    <div class="share-header">
+        <h3 style="margin:0; font-size:16px;">Share Post</h3>
+        <button onclick="closeShareModal()" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+    </div>
+    <div class="share-content">
+        <div class="share-post-preview" id="sharePreview"></div>
+        <button class="share-btn-option" onclick="shareToOwnProfile()">
+            <i data-lucide="user" style="width:20px;"></i>
+            <span>Share to My Profile</span>
+        </button>
+    </div>
+</div>
+
 <div id="reactionViewerBackdrop" class="reaction-viewer-backdrop" onclick="closeReactionViewer()"></div>
 <div id="reactionViewerModal" class="reaction-viewer-modal">
     <div class="reaction-viewer-header">
@@ -1708,6 +1740,10 @@
         </div>
         
         <div style="margin-top:15px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+            <button onclick="openSupportModal(); playSound('click');" style="display:flex; align-items:center; gap:8px; color:#94a3b8; font-size:12px; padding:8px 0; text-decoration:none; background:none; border:none; cursor:pointer; width:100%; text-align:left;">
+                <i data-lucide="message-square" style="width:14px;"></i>
+                Contact Support
+            </button>
             <a href="about.html" style="display:block; color:#94a3b8; font-size:12px; padding:8px 0; text-decoration:none;">About Us</a>
             <a href="privacy.html" style="display:block; color:#94a3b8; font-size:12px; padding:8px 0; text-decoration:none;">Privacy Policy</a>
             <a href="terms.html" style="display:block; color:#94a3b8; font-size:12px; padding:8px 0; text-decoration:none;">Terms of Service</a>
@@ -1815,6 +1851,29 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<div id="supportModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+            <div>
+                <h3 style="margin:0; font-size: 20px; font-weight: 900;">CONTACT SUPPORT</h3>
+                <p style="margin: 5px 0 0 0; font-size: 11px; opacity: 0.8; font-weight: 600;">Send a message to our team</p>
+            </div>
+            <button onclick="document.getElementById('supportModal').style.display='none'" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x"></i></button>
+        </div>
+        
+        <label class="edit-label">Subject</label>
+        <input type="text" id="supportSubject" class="edit-input" placeholder="Brief description of your issue">
+        
+        <label class="edit-label">Message</label>
+        <textarea id="supportMessage" class="edit-input" rows="6" placeholder="Please describe your issue in detail..." style="resize:vertical;"></textarea>
+        
+        <button onclick="submitSupportRequest()" style="width:100%; padding:15px; background:var(--accent); border:none; border-radius:12px; font-weight:900; color:white; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i data-lucide="send" style="width:16px;"></i>
+            SEND MESSAGE
+        </button>
     </div>
 </div>
 
@@ -2107,11 +2166,20 @@
                     shuffled.forEach(u => {
                         const div = document.createElement('div');
                         div.className = 'pymk-card';
-                        div.innerHTML = `
-                            ${renderAvatarWithBadge(u.photo || 'https://via.placeholder.com/60', u.points || 0, 50, u.uid)}
-                            <div class="pymk-name" style="margin-top:5px;">${u.name}</div>
-                            <button class="btn-add-friend-sm" onclick="sendFriendReqPYMK('${u.uid}')">ADD</button>
-                        `;
+                        
+                        // Check if request already sent
+                        db.ref('friendRequests/' + u.uid + '/' + auth.currentUser.uid).once('value', reqSnap => {
+                            const btnHtml = reqSnap.exists() 
+                                ? `<button class="btn-add-friend-sm" style="opacity:0.6;" onclick="cancelFriendReqPYMK('${u.uid}')">CANCEL</button>`
+                                : `<button class="btn-add-friend-sm" onclick="sendFriendReqPYMK('${u.uid}')">ADD</button>`;
+                            
+                            div.innerHTML = `
+                                ${renderAvatarWithBadge(u.photo || 'https://via.placeholder.com/60', u.points || 0, 50, u.uid)}
+                                <div class="pymk-name" style="margin-top:5px;">${u.name}</div>
+                                ${btnHtml}
+                            `;
+                        });
+                        
                         list.appendChild(div);
                     });
                     container.style.display = 'block';
@@ -2126,6 +2194,12 @@
         db.ref('friendRequests/' + uid + '/' + auth.currentUser.uid).set(true);
         showToast("Request Sent!");
         loadPYMK(); 
+    }
+    
+    function cancelFriendReqPYMK(uid) {
+        db.ref('friendRequests/' + uid + '/' + auth.currentUser.uid).remove();
+        showToast("Request Cancelled");
+        loadPYMK();
     }
     
     let bannerTargetUrl = "";
@@ -2749,6 +2823,48 @@
     function redeemItem(name, cost) { if(userData.points >= cost) { if(!userData.gcash) return showToast("Save redemption info first!"); showCustomConfirm("REDEEM REWARD?", "Exchange " + cost + " pts for " + name + "?", () => { deductPoints(cost); db.ref('redemptions').push({ uid: userData.uid, name: userData.name, gcash: userData.gcash, item: name, cost: cost, status: 'pending', timestamp: Date.now() }); showToast("Request Sent!"); loadHistory(); }); } else { showToast("Insufficient RB Coins"); } }
     function loadHistory() { const list = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { list.innerHTML = ""; s.forEach(r => { const d = r.val(); let color = '#fbbf24'; if(d.status === 'sent') color = '#10b981'; if(d.status === 'denied') color = '#ef4444'; list.innerHTML += `<div class="history-item"><div><div style="font-weight:700; font-size:12px;">${d.item}</div><div style="font-size:10px; opacity:0.6;">${fixDate(d.timestamp)}</div></div><div style="font-size:10px; font-weight:800; color:${color}; text-transform:uppercase; border:1px solid ${color}; padding:2px 6px; border-radius:4px;">${d.status}</div></div>`; }); }); }
 
+    // === SUPPORT CONTACT FUNCTIONS ===
+    function openSupportModal() {
+        document.getElementById('menuModal').style.display = 'none';
+        document.getElementById('supportModal').style.display = 'flex';
+        setTimeout(() => lucide.createIcons(), 50);
+    }
+
+    function submitSupportRequest() {
+        const subject = document.getElementById('supportSubject').value.trim();
+        const message = document.getElementById('supportMessage').value.trim();
+        
+        if(!subject || !message) {
+            showToast("Please fill in all fields");
+            return;
+        }
+        
+        if(message.length < 10) {
+            showToast("Message too short. Please provide more details.");
+            return;
+        }
+        
+        // Save to Firebase
+        db.ref('supportMessages').push({
+            uid: auth.currentUser.uid,
+            userName: userData.name,
+            userEmail: userData.gcash || 'Not provided',
+            userPhoto: userData.photo,
+            subject: subject,
+            message: message,
+            timestamp: Date.now(),
+            status: 'open'
+        });
+        
+        showToast("Message sent! We'll respond soon.");
+        playSound('pop');
+        
+        // Clear form and close
+        document.getElementById('supportSubject').value = '';
+        document.getElementById('supportMessage').value = '';
+        document.getElementById('supportModal').style.display = 'none';
+    }
+
     let selectedMood = null; // UPDATED DEFAULT
     let targetUserForOpt = null;
     let selectedImageBase64 = null;
@@ -2945,9 +3061,13 @@
                 } else {
                      db.ref('friendRequests/' + uid + '/' + myUid).once('value', reqSnap => {
                          if(reqSnap.exists()) {
-                             btn.innerText = "Request Sent";
+                             btn.innerText = "Cancel Request";
                              btn.className = "profile-action-btn secondary";
-                             btn.onclick = null;
+                             btn.onclick = () => {
+                                 db.ref('friendRequests/' + uid + '/' + myUid).remove();
+                                 updateProfileButtonState(uid);
+                                 showToast("Request Cancelled");
+                             };
                          } else {
                              btn.innerText = "Add Friend";
                              btn.className = "profile-action-btn";
@@ -3371,6 +3491,86 @@
     }
 
 
+    // === SHARE POST FUNCTIONS ===
+    let currentSharePostKey = null;
+
+    function openShareModal(postKey) {
+        currentSharePostKey = postKey;
+        
+        // Get post data to show preview
+        db.ref('socialPosts/' + postKey).once('value', s => {
+            const post = s.val();
+            if(!post) return;
+            
+            const sanitizedAuthor = escapeHtml(post.authorName);
+            const sanitizedContent = escapeHtml(post.content || '');
+            const truncatedContent = sanitizedContent.length > 100 ? sanitizedContent.substring(0, 100) + '...' : sanitizedContent;
+            
+            document.getElementById('sharePreview').innerHTML = `
+                <div class="share-post-preview-author">${sanitizedAuthor}</div>
+                <div class="share-post-preview-content">${truncatedContent}</div>
+            `;
+            
+            document.getElementById('shareModal').style.display = 'flex';
+            document.getElementById('shareModalBackdrop').style.display = 'block';
+            setTimeout(() => lucide.createIcons(), 50);
+        });
+    }
+
+    function closeShareModal() {
+        document.getElementById('shareModal').style.display = 'none';
+        document.getElementById('shareModalBackdrop').style.display = 'none';
+        currentSharePostKey = null;
+    }
+
+    function shareToOwnProfile() {
+        if(!currentSharePostKey) return;
+        
+        db.ref('socialPosts/' + currentSharePostKey).once('value', s => {
+            const originalPost = s.val();
+            if(!originalPost) return;
+            
+            // Create a new post that references the original
+            const shareData = {
+                uid: auth.currentUser.uid,
+                authorName: userData.name,
+                authorPhoto: userData.photo,
+                authorPoints: userData.points,
+                authorWins: userData.bingoWins || 0,
+                content: '', // Empty content for pure share
+                timestamp: Date.now(),
+                likes: 0,
+                isShared: true,
+                sharedPostKey: currentSharePostKey,
+                sharedFrom: originalPost.uid,
+                sharedFromName: originalPost.authorName,
+                sharedFromPhoto: originalPost.authorPhoto,
+                sharedContent: originalPost.content,
+                sharedImage: originalPost.image,
+                sharedMood: originalPost.mood
+            };
+            
+            db.ref('socialPosts').push(shareData);
+            
+            // Notify original author
+            if(originalPost.uid !== auth.currentUser.uid) {
+                db.ref('notifications/' + originalPost.uid).push({
+                    msg: `${userData.name} shared your post`,
+                    time: Date.now(),
+                    type: 'share',
+                    from: auth.currentUser.uid,
+                    postId: currentSharePostKey,
+                    image: userData.photo
+                });
+            }
+            
+            showToast("Post shared!");
+            playSound('pop');
+            closeShareModal();
+        });
+    }
+
+
     let postListener = null;
     let feedSortMethod = 'hype';
 
@@ -3467,6 +3667,30 @@
         const moodHtml = post.mood ? `<div class="mood-display">Feeling ${post.mood}</div>` : '';
         const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
         
+        // Check if this is a shared post
+        let sharedPostHtml = '';
+        if(post.isShared && post.sharedContent !== undefined) {
+            const sharedImgHtml = post.sharedImage ? `<div class="post-image-container"><img src="${post.sharedImage}" class="post-image"></div>` : '';
+            const sharedMoodHtml = post.sharedMood ? `<div class="mood-display">Feeling ${post.sharedMood}</div>` : '';
+            sharedPostHtml = `
+                <div class="shared-post-container">
+                    <div style="font-size:10px; color:#94a3b8; margin-bottom:8px; display:flex; align-items:center; gap:5px;">
+                        <i data-lucide="share-2" style="width:12px;"></i>
+                        <span>Shared from ${escapeHtml(post.sharedFromName)}</span>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:flex-start;">
+                        <img src="${post.sharedFromPhoto}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" onclick="openUserProfile('${post.sharedFrom}')">
+                        <div style="flex:1;">
+                            <div style="font-weight:700; font-size:11px; color:white; margin-bottom:3px;">${escapeHtml(post.sharedFromName)}</div>
+                            ${sharedMoodHtml}
+                            <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">${escapeHtml(post.sharedContent || '')}</div>
+                            ${sharedImgHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
         postDiv.innerHTML = `
             <div class="post-header">
                 <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
@@ -3476,8 +3700,9 @@
                     ${moodHtml}
                 </div>
             </div>
-            <div class="post-content">${post.content}</div>
+            <div class="post-content">${post.content || ''}</div>
             ${imgHtml}
+            ${sharedPostHtml}
             <div class="reaction-summary-bar" id="reaction-summary-${post.key}" onclick="openReactionViewer('${post.key}')"></div>
             <div class="post-actions" style="position:relative;">
                 <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
@@ -3494,6 +3719,9 @@
                 </div>
                 <button class="action-btn" onclick="openComments('${post.key}')">
                     <i data-lucide="message-circle" style="width:14px"></i> Comment
+                </button>
+                <button class="action-btn" onclick="openShareModal('${post.key}')">
+                    <i data-lucide="share-2" style="width:14px"></i> Share
                 </button>
             </div>
             <div id="comment-preview-${post.key}" class="comment-preview-area" style="display:none;">
