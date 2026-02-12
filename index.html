@@ -3457,11 +3457,14 @@
     }
 
     function deletePost(postKey) {
-        if(!confirm("Are you sure you want to delete this post? This cannot be undone.")) {
+        if(!confirm("Are you sure you want to delete this post?")) {
             return;
         }
         
+        const ANIMATION_DURATION = 300;
+        
         // Soft delete: mark as deleted instead of removing
+        // Note: Firebase security rules should verify that auth.uid matches the post author's uid
         db.ref('socialPosts/' + postKey).update({
             deleted: true,
             deletedAt: Date.now()
@@ -3469,9 +3472,9 @@
             // Remove from DOM immediately
             const postElement = document.getElementById('post-' + postKey);
             if(postElement) {
-                postElement.style.transition = 'opacity 0.3s ease';
+                postElement.style.transition = `opacity ${ANIMATION_DURATION}ms ease`;
                 postElement.style.opacity = '0';
-                setTimeout(() => postElement.remove(), 300);
+                setTimeout(() => postElement.remove(), ANIMATION_DURATION);
             }
             showToast("Post deleted");
             playSound('pop');
