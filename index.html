@@ -1743,13 +1743,13 @@
     
     // Skin Shop Data Structure
     const skinShop = {
-        'kitty': { id: 'kitty', name: 'Hello Kitty', cost: 75000, preview: 'background:pink; border:2px solid hotpink; color:deeppink; font-family:\'Comic Neue\',cursive;' },
-        'doraemon': { id: 'doraemon', name: 'Doraemon', cost: 75000, preview: 'background:#0096df; border:2px solid white; color:white; border-radius:50%;' },
-        'spongebob': { id: 'spongebob', name: 'SpongeBob', cost: 75000, preview: 'background:#f7f44d; border:2px dashed brown; color:brown;' },
-        'kuromi': { id: 'kuromi', name: 'Kuromi', cost: 75000, preview: 'background:black; border:2px solid purple; color:pink;' },
-        'neon': { id: 'neon', name: 'Neon City', cost: 50000, preview: 'background:rgba(8,51,68,1); border:2px solid #06b6d4; color:#67e8f9; text-shadow:0 0 5px #06b6d4;' },
-        'gold': { id: 'gold', name: 'Luxury Gold', cost: 100000, preview: 'background:linear-gradient(135deg, #451a03, #000); border:2px solid #f59e0b; color:#fcd34d; font-family:\'Times New Roman\',serif;' },
-        'pink': { id: 'pink', name: 'Kawaii Pink', cost: 25000, preview: 'background:rgba(80, 7, 36, 1); border:2px solid #ec4899; color:#fbcfe8; border-radius:50%;' }
+        'kitty': { name: 'Hello Kitty', cost: 75000, preview: 'background:pink; border:2px solid hotpink; color:deeppink; font-family:\'Comic Neue\',cursive;' },
+        'doraemon': { name: 'Doraemon', cost: 75000, preview: 'background:#0096df; border:2px solid white; color:white; border-radius:50%;' },
+        'spongebob': { name: 'SpongeBob', cost: 75000, preview: 'background:#f7f44d; border:2px dashed brown; color:brown;' },
+        'kuromi': { name: 'Kuromi', cost: 75000, preview: 'background:black; border:2px solid purple; color:pink;' },
+        'neon': { name: 'Neon City', cost: 50000, preview: 'background:rgba(8,51,68,1); border:2px solid #06b6d4; color:#67e8f9; text-shadow:0 0 5px #06b6d4;' },
+        'gold': { name: 'Luxury Gold', cost: 100000, preview: 'background:linear-gradient(135deg, #451a03, #000); border:2px solid #f59e0b; color:#fcd34d; font-family:\'Times New Roman\',serif;' },
+        'pink': { name: 'Kawaii Pink', cost: 25000, preview: 'background:rgba(80, 7, 36, 1); border:2px solid #ec4899; color:#fbcfe8; border-radius:50%;' }
     };
 
     const sounds = { click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3'), newBall: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3'), pop: new Audio('https://cdn.freesound.org/previews/536/536108_1415754-lq.mp3'), win: new Audio('https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3'), lose: new Audio('https://cdn.freesound.org/previews/76/76376_877451-lq.mp3'), spin: new Audio('https://cdn.freesound.org/previews/413/413203_5121236-lq.mp3'), cardFlip: new Audio('https://cdn.freesound.org/previews/240/240776_4107740-lq.mp3'), stop: new Audio('https://cdn.freesound.org/previews/256/256113_3263906-lq.mp3'), tumble: new Audio('https://cdn.freesound.org/previews/256/256113_3263906-lq.mp3'), drop: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3') };
@@ -2925,11 +2925,11 @@
             const skinsList = document.getElementById('giftableSkinsList');
             skinsList.innerHTML = '';
             
-            Object.values(skinShop).forEach(skin => {
+            Object.entries(skinShop).forEach(([skinId, skin]) => {
                 const div = document.createElement('div');
                 div.className = 'skin-item';
                 
-                const isOwned = recipientOwnedSkins.includes(skin.id);
+                const isOwned = recipientOwnedSkins.includes(skinId);
                 
                 div.innerHTML = `
                     <div class="skin-preview" style="${skin.preview}">B</div>
@@ -2942,7 +2942,7 @@
                 
                 if(!isOwned) {
                     const btn = div.querySelector('button');
-                    btn.onclick = () => confirmSkinGift(recipientId, skin.id, recipientName);
+                    btn.onclick = () => confirmSkinGift(recipientId, skinId, recipientName);
                 }
                 
                 skinsList.appendChild(div);
@@ -2987,10 +2987,11 @@
         
         // 1. Deduct points from sender using transaction
         db.ref('users/' + senderId + '/points').transaction(currentPoints => {
-            if(currentPoints >= skin.cost) {
-                return currentPoints - skin.cost;
+            const points = currentPoints || 0;
+            if(points >= skin.cost) {
+                return points - skin.cost;
             } else {
-                return; // Abort transaction
+                return undefined; // Abort transaction explicitly
             }
         }, (error, committed, snapshot) => {
             if(error) {
@@ -3012,33 +3013,36 @@
                 }
                 return skins;
             }, (error2, committed2) => {
-                if(error2) {
+                if(error2 || !committed2) {
                     console.error("Failed to add skin to recipient:", error2);
+                    showToast("Gift failed! Contact support.");
+                    // Note: In production, implement compensating transaction to refund sender
+                    return;
                 }
+                
+                // 3. Create notification for recipient (only after successful skin transfer)
+                db.ref('notifications/' + recipientId).push({
+                    msg: `${senderName} gifted you the ${skin.name} skin!`,
+                    type: 'gift',
+                    from: senderId,
+                    time: Date.now()
+                });
+                
+                // 4. Log the transaction (only after successful completion)
+                db.ref('giftLogs').push({
+                    from: senderId,
+                    to: recipientId,
+                    skinId: skinId,
+                    cost: skin.cost,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
+                
+                // 5. UI Feedback
+                document.getElementById('giftSkinModal').style.display = 'none';
+                showToast("Gift sent successfully!");
+                spawnFlyingCoins(10);
+                playSound('win');
             });
-            
-            // 3. Create notification for recipient
-            db.ref('notifications/' + recipientId).push({
-                msg: `${senderName} gifted you the ${skin.name} skin!`,
-                type: 'gift',
-                from: senderId,
-                time: Date.now()
-            });
-            
-            // 4. Log the transaction
-            db.ref('giftLogs').push({
-                from: senderId,
-                to: recipientId,
-                skinId: skinId,
-                cost: skin.cost,
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            });
-            
-            // 5. UI Feedback
-            document.getElementById('giftSkinModal').style.display = 'none';
-            showToast("Gift sent successfully!");
-            spawnFlyingCoins(10);
-            playSound('win');
         });
     }
 
