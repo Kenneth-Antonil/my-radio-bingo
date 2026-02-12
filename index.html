@@ -874,8 +874,16 @@
         .cmt-action-btn { background: none; border: none; padding: 0; color: #94a3b8; font-size: 10px; font-weight: 700; cursor: pointer; }
         .cmt-action-btn:hover { color: white; }
         
-        .comment-input-area { padding: 10px; background: #1e293b; display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+        .comment-input-area { padding: 10px; background: #1e293b; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+        .comment-input-row { display: flex; gap: 10px; }
         .comment-input { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 20px; color: white; outline: none; }
+        
+        .comment-preview-box { display: none; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 15px; margin-top: 5px; }
+        .comment-preview-label { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+        .comment-preview-content { display: flex; gap: 8px; align-items: flex-start; }
+        .comment-preview-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); }
+        .comment-preview-bubble { background: #334155; padding: 6px 10px; border-radius: 10px; max-width: 100%; }
+        .comment-preview-text { font-size: 12px; color: #cbd5e1; word-break: break-word; line-height: 1.4; }
 
         .image-preview-container { display: none; position: relative; margin-bottom: 10px; }
         .image-preview-img { max-height: 100px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); }
@@ -1393,8 +1401,19 @@
     </div>
     <div id="commentList" class="comment-list"></div>
     <form class="comment-input-area" onsubmit="event.preventDefault(); sendComment();">
-        <input type="text" id="commentInput" class="comment-input" placeholder="Write a comment..." autocomplete="off">
-        <button type="submit" style="background:none; border:none; color:var(--accent);"><i data-lucide="send"></i></button>
+        <div id="commentPreviewBox" class="comment-preview-box">
+            <div class="comment-preview-label">Preview</div>
+            <div class="comment-preview-content">
+                <img id="commentPreviewAvatar" class="comment-preview-avatar" src="https://via.placeholder.com/40" alt="Your avatar">
+                <div class="comment-preview-bubble">
+                    <div id="commentPreviewText" class="comment-preview-text"></div>
+                </div>
+            </div>
+        </div>
+        <div class="comment-input-row">
+            <input type="text" id="commentInput" class="comment-input" placeholder="Write a comment..." autocomplete="off" oninput="updateCommentPreview()">
+            <button type="submit" style="background:none; border:none; color:var(--accent);"><i data-lucide="send"></i></button>
+        </div>
     </form>
 </div>
 
@@ -2933,6 +2952,8 @@
         document.getElementById('commentModalBackdrop').style.display = 'none';
         db.ref('postComments/' + currentOpenPostKey).off(); 
         currentOpenPostKey = null;
+        document.getElementById('commentInput').value = '';
+        updateCommentPreview(); // Clear preview
     }
 
     function sendComment() {
@@ -2964,6 +2985,25 @@
         });
 
         document.getElementById('commentInput').value = "";
+        updateCommentPreview(); // Clear preview
+    }
+    
+    function updateCommentPreview() {
+        const input = document.getElementById('commentInput');
+        const previewBox = document.getElementById('commentPreviewBox');
+        const previewText = document.getElementById('commentPreviewText');
+        const previewAvatar = document.getElementById('commentPreviewAvatar');
+        
+        const txt = input.value.trim();
+        
+        if(txt && userData) {
+            previewBox.style.display = 'block';
+            previewText.textContent = txt;
+            previewAvatar.src = userData.photo || 'https://via.placeholder.com/40';
+        } else {
+            previewBox.style.display = 'none';
+            previewText.textContent = '';
+        }
     }
     
     function likeComment(postKey, commentKey) {
@@ -2973,6 +3013,7 @@
     function replyComment(name) {
         document.getElementById('commentInput').value = `@${name} `;
         document.getElementById('commentInput').focus();
+        updateCommentPreview(); // Show preview for reply
     }
 
     function loadCommentPreview(postKey) {
