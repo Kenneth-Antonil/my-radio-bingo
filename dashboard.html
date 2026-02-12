@@ -780,6 +780,9 @@
                     Contact: ${msg.userEmail}
                 </div>
                 <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button class="btn btn-primary" style="width:auto; padding:8px 20px; font-size:11px; background:var(--accent); border-color:var(--accent);" onclick="replySupportMessage('${msg.key}', '${msg.uid}', '${msg.userName}')">
+                        <i data-lucide="reply" width="14"></i> REPLY
+                    </button>
                     ${msg.status === 'open' ? `
                         <button class="btn btn-primary" style="width:auto; padding:8px 20px; font-size:11px;" onclick="resolveSupportMessage('${msg.key}', '${msg.uid}')">MARK RESOLVED</button>
                     ` : ''}
@@ -810,6 +813,25 @@
         if(confirm('Delete this support message?')) {
             db.ref('supportMessages/' + key).remove();
         }
+    }
+
+    function replySupportMessage(key, uid, userName) {
+        const reply = prompt(`Reply to ${userName}:`);
+        if (!reply || reply.trim() === '') {
+            return;
+        }
+        
+        // Send notification to user
+        db.ref('notifications/' + uid).push({
+            msg: `Admin replied to your support request: "${reply}"`,
+            time: Date.now(),
+            type: 'support_reply'
+        }).then(() => {
+            alert('Reply sent successfully!');
+        }).catch(err => {
+            console.error('Error sending reply:', err);
+            alert('Failed to send reply');
+        });
     }
 </script>
 </body>
