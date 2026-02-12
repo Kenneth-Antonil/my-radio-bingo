@@ -1049,6 +1049,31 @@
             font-size: 20px;
         }
 
+        /* === REACTION SUMMARY BAR === */
+        .reaction-summary-bar {
+            display: flex;
+            gap: 8px;
+            padding: 6px 15px;
+            font-size: 12px;
+            color: #94a3b8;
+            flex-wrap: wrap;
+            align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+        }
+        .reaction-summary-bar:empty { display: none; }
+        .reaction-summary-item {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            background: rgba(255,255,255,0.05);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .reaction-summary-item:hover { background: rgba(255,255,255,0.1); }
+
         /* === PEOPLE YOU MAY KNOW (PYMK) === */
         .pymk-section { margin-bottom: 20px; }
         .pymk-title { padding: 0 5px; margin-bottom: 10px; font-size: 14px; font-weight: 800; color: #cbd5e1; }
@@ -1058,6 +1083,28 @@
         .pymk-name { font-size: 13px; font-weight: 700; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; margin-bottom: 8px; }
         .btn-add-friend-sm { background: rgba(14, 165, 233, 0.2); color: var(--accent-glow); border: 1px solid var(--accent); padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; cursor: pointer; width: 100%; }
         .btn-add-friend-sm:hover { background: var(--accent); color: white; }
+
+        /* === PROFILE BUTTON GROUP === */
+        .profile-btn-group {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 360px;
+            margin-bottom: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .profile-btn-group .profile-action-btn,
+        .profile-btn-group .btn-unfriend-modern {
+            flex: 1;
+            min-width: 0;
+            max-width: none;
+            width: auto;
+            margin-bottom: 0;
+            padding: 12px 16px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
 
         /* MOBILE SPECIFIC OPTIMIZATIONS */
         @media (max-width: 480px) {
@@ -1072,6 +1119,12 @@
                 max-width: 100%; 
                 padding: 12px 24px; 
                 font-size: 13px;
+            }
+            .profile-btn-group { max-width: 100%; }
+            .profile-btn-group .profile-action-btn,
+            .profile-btn-group .btn-unfriend-modern {
+                padding: 10px 12px;
+                font-size: 11px;
             }
             .app-logo-lg { font-size: 40px; }
             .modal-content { max-height: 85vh; width: 95%; }
@@ -1532,15 +1585,17 @@
         <h2 id="pageProfileName" class="profile-page-name">User Name</h2>
         <p id="pageProfileBio" class="profile-page-bio">Radio Bingo Player</p>
         
-        <button id="profileMainActionBtn" class="profile-action-btn" onclick="handleProfileMainAction()">Add Friend</button>
-        
-        <button id="giftSkinBtn" class="profile-action-btn" style="display:none; background:linear-gradient(135deg, #f59e0b, #d97706); border:none; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4); color: white;">
-            <i data-lucide="gift" style="width:16px"></i> Gift Skin
-        </button>
-        
-        <button id="unfriendBtn" class="btn-unfriend-modern" style="display:none;" onclick="unfriendUser()">
-            <i data-lucide="user-x" style="width:16px"></i> Unfriend
-        </button>
+        <div class="profile-btn-group">
+            <button id="profileMainActionBtn" class="profile-action-btn" onclick="handleProfileMainAction()">Add Friend</button>
+            
+            <button id="giftSkinBtn" class="profile-action-btn" style="display:none; background:linear-gradient(135deg, #f59e0b, #d97706); border:none; box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4); color: white;">
+                <i data-lucide="gift" style="width:16px"></i> Gift Skin
+            </button>
+            
+            <button id="unfriendBtn" class="btn-unfriend-modern" style="display:none;" onclick="unfriendUser()">
+                <i data-lucide="user-x" style="width:16px"></i> Unfriend
+            </button>
+        </div>
         
         <div class="profile-stats-card">
             <div class="stat-item">
@@ -1919,8 +1974,8 @@
                     document.getElementById('profileNameDisplay').innerText = displayName;
                     
                     // Update Avatars with badges
-                    document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.points, 45, u.uid);
-                    document.getElementById('menuAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.points, 70, u.uid);
+                    document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.bingoWins || 0, 45, u.uid);
+                    document.getElementById('menuAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.bingoWins || 0, 70, u.uid);
                 } 
             });
             initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate();
@@ -1929,13 +1984,13 @@
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
     // === BADGE & AVATAR SYSTEM ===
-    function renderAvatarWithBadge(photoUrl, points, size, uid = null) {
+    function renderAvatarWithBadge(photoUrl, wins, size, uid = null) {
         let tierClass = "tier-bronze-bg";
         let tierIcon = ""; // Default empty
-        if(points >= 100000) { tierClass = "tier-diamond-bg"; tierIcon = '<i data-lucide="diamond" style="width:50%; height:50%;"></i>'; }
-        else if(points >= 50000) { tierClass = "tier-platinum-bg"; tierIcon = '<i data-lucide="shield" style="width:50%; height:50%;"></i>'; }
-        else if(points >= 25000) { tierClass = "tier-gold-bg"; tierIcon = '<i data-lucide="crown" style="width:50%; height:50%;"></i>'; }
-        else if(points >= 10000) { tierClass = "tier-silver-bg"; tierIcon = '<i data-lucide="star" style="width:50%; height:50%;"></i>'; }
+        if(wins >= 30) { tierClass = "tier-diamond-bg"; tierIcon = '<i data-lucide="diamond" style="width:50%; height:50%;"></i>'; }
+        else if(wins >= 15) { tierClass = "tier-platinum-bg"; tierIcon = '<i data-lucide="shield" style="width:50%; height:50%;"></i>'; }
+        else if(wins >= 5) { tierClass = "tier-gold-bg"; tierIcon = '<i data-lucide="crown" style="width:50%; height:50%;"></i>'; }
+        else if(wins >= 1) { tierClass = "tier-silver-bg"; tierIcon = '<i data-lucide="star" style="width:50%; height:50%;"></i>'; }
         else { tierIcon = '<i data-lucide="circle-dot" style="width:50%; height:50%;"></i>'; }
 
         // Data attribute for online status updates - only if uid is provided
@@ -1970,10 +2025,10 @@
     }
 
     // Helper to get simple HTML badge string for text
-    function getBadgeHtml(points) {
+    function getBadgeHtml(wins) {
         // Just returns empty or simple icon for text-flow
-        if(points >= 100000) return `<i data-lucide="diamond" style="width:12px; height:12px; fill:#06b6d4; color:#06b6d4; margin-left:4px;"></i>`;
-        if(points >= 25000) return `<i data-lucide="crown" style="width:12px; height:12px; fill:#fbbf24; color:#fbbf24; margin-left:4px;"></i>`;
+        if(wins >= 30) return `<i data-lucide="diamond" style="width:12px; height:12px; fill:#06b6d4; color:#06b6d4; margin-left:4px;"></i>`;
+        if(wins >= 5) return `<i data-lucide="crown" style="width:12px; height:12px; fill:#fbbf24; color:#fbbf24; margin-left:4px;"></i>`;
         return ""; 
     }
 
@@ -2334,7 +2389,7 @@
     function checkPuroStatus() { if(userData.hasWonCurrent || gameDrawn.length === 0) return; document.getElementById('bingoCardContainer').classList.remove('card-puro'); document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting')); let winningWays = []; if (currentPattern === "Blackout") winningWays = [Array.from({length: 25}, (_, i) => i)]; else if (currentPattern === "Letter X") winningWays = [[0,4,6,8,12,16,18,20,24]]; else if (currentPattern === "Four Corners") winningWays = [[0,4,20,24]]; else winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; for (let i = 0; i < winningWays.length; i++) { let w = winningWays[i]; let missing = w.filter(idx => !marks.includes(idx)); if (missing.length === 1) { document.getElementById('bingoCardContainer').classList.add('card-puro'); const missingIdx = missing[0]; const cells = document.querySelectorAll('.cell'); if(cells[missingIdx]) cells[missingIdx].classList.add('cell-waiting'); break; } } }
     function highlightWinningPattern(indices, patternType) { const cells = document.querySelectorAll('.cell'); indices.forEach(idx => { const cell = cells[idx]; cell.classList.add('win-glow'); if (currentPattern === 'Normal Bingo') { if (patternType < 5) cell.classList.add('win-line-h'); else if (patternType < 10) cell.classList.add('win-line-v'); else if (patternType === 10) cell.classList.add('win-line-d1'); else cell.classList.add('win-line-d2'); } }); }
 
-    function triggerWin() { const uid = auth.currentUser.uid; let winPrize = 500; if (isJackpotActive) winPrize = currentJackpotAmount; db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize }); db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize); db.ref('users/' + uid).update({ hasWonCurrent: true }); userData.hasWonCurrent = true; if (isJackpotActive) { const jpModal = document.getElementById('grandJackpotModal'); document.getElementById('grandPrizeAmount').innerText = winPrize.toLocaleString() + " RB COINS"; document.getElementById('jpWinnerName').innerText = userData.name; jpModal.style.display = 'flex'; confetti({ particleCount: 500, spread: 120, startVelocity: 60 }); } }
+    function triggerWin() { const uid = auth.currentUser.uid; let winPrize = 500; if (isJackpotActive) winPrize = currentJackpotAmount; db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize }); db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize); db.ref('users/' + uid + '/bingoWins').transaction(w => (w || 0) + 1); db.ref('users/' + uid).update({ hasWonCurrent: true }); userData.hasWonCurrent = true; if (isJackpotActive) { const jpModal = document.getElementById('grandJackpotModal'); document.getElementById('grandPrizeAmount').innerText = winPrize.toLocaleString() + " RB COINS"; document.getElementById('jpWinnerName').innerText = userData.name; jpModal.style.display = 'flex'; confetti({ particleCount: 500, spread: 120, startVelocity: 60 }); } }
     function generateNewCard() { if(gameDrawn.length > 0) return showToast("Bawal magpalit habang may laro!"); let card = []; let cols = [[1,15],[16,30],[31,45],[46,60],[61,75]]; cols.forEach(r => { let nums = []; while(nums.length < 5) { let n = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0]; if(!nums.includes(n)) nums.push(n); } card.push(...nums); }); let finalCard = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) { finalCard.push(card[c*5 + r]); } } finalCard[12] = "FREE"; db.ref('users/' + auth.currentUser.uid).update({ currentCard: finalCard, cardTimestamp: Date.now(), hasWonCurrent: false }); cardNumbers = finalCard; renderCard(); playSound('cardFlip'); }
     function renderCard() { const grid = document.getElementById('bingoGrid'); grid.innerHTML = ""; cardNumbers.forEach((n, i) => { const div = document.createElement('div'); div.className = 'cell'; div.innerText = n === "FREE" ? "★" : n; if(n === "FREE") { div.classList.add('hit'); if(!marks.includes(12)) marks.push(12); } grid.appendChild(div); }); updateGridHits(); applySkin(userData.equippedSkin || 'default'); }
     function updateGridHits() { marks = [12]; const cells = document.querySelectorAll('.cell'); cells.forEach((c, i) => { const val = c.innerText; if(gameDrawn.includes(val) || val === "★") { c.classList.add('hit'); if(!marks.includes(i)) marks.push(i); } }); }
@@ -2409,7 +2464,7 @@
                         div.className = 'pm-item'; 
                         div.onclick = () => openPrivateChat(partnerId, u.name, u.photo); 
                         const previewText = lastMsg.image ? 'Sent a photo' : lastMsg.text;
-                        div.innerHTML = `<img class="pm-avatar" src="${u.photo || 'https://via.placeholder.com/40'}"><div class="pm-info"><span class="pm-name">${u.name} ${getBadgeHtml(u.points || 0)}</span><span class="pm-preview">${lastMsg.from === uid ? 'You: ' : ''}${previewText}</span></div>`; 
+                        div.innerHTML = `<img class="pm-avatar" src="${u.photo || 'https://via.placeholder.com/40'}"><div class="pm-info"><span class="pm-name">${u.name} ${getBadgeHtml(u.bingoWins || 0)}</span><span class="pm-preview">${lastMsg.from === uid ? 'You: ' : ''}${previewText}</span></div>`; 
                         list.appendChild(div); 
                         lucide.createIcons();
                     }); 
@@ -2798,7 +2853,8 @@
             uid: auth.currentUser.uid,
             authorName: userData.name,
             authorPhoto: userData.photo,
-            authorPoints: userData.points, 
+            authorPoints: userData.points,
+            authorWins: userData.bingoWins || 0,
             content: txt,
             mood: selectedMood,
             image: selectedImageBase64,
@@ -2833,7 +2889,7 @@
         db.ref('users/' + uid).once('value', s => {
             const u = s.val();
             // Inject avatar with badge
-            document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.points || 0, 140, uid);
+            document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.bingoWins || 0, 140, uid);
             
             document.getElementById('pageProfileName').textContent = u.name;
             document.getElementById('pageProfileBio').innerText = u.bio || "Radio Bingo Player";
@@ -2929,6 +2985,7 @@
                 const div = createPostElement(post, false);
                 container.appendChild(div);
                 loadCommentPreview(post.key);
+                loadReactionSummary(post.key);
             });
             
             if(count === 0) container.innerHTML = "<div style='color:white; opacity:0.5; font-size:12px; text-align:center; padding:20px;'>No posts yet</div>";
@@ -3153,7 +3210,7 @@
                         };
                         div.innerHTML = `
                             <img src="${u.photo || 'https://via.placeholder.com/40'}" class="search-res-img">
-                            <div style="font-size:14px; font-weight:700; color:white;">${u.name} ${getBadgeHtml(u.points || 0)}</div>
+                            <div style="font-size:14px; font-weight:700; color:white;">${u.name} ${getBadgeHtml(u.bingoWins || 0)}</div>
                         `;
                         resDiv.appendChild(div);
                     }
@@ -3187,7 +3244,7 @@
                     <img class="comment-avatar" src="${com.uPhoto}">
                     <div class="comment-content-block">
                         <div class="comment-bubble">
-                            <div class="comment-author">${com.uName} ${getBadgeHtml(com.uPoints || 0)}</div>
+                            <div class="comment-author">${com.uName} ${getBadgeHtml(com.uWins || 0)}</div>
                             <div class="comment-text">${com.text}</div>
                         </div>
                         <div class="comment-actions">
@@ -3222,6 +3279,7 @@
             uName: userData.name,
             uPhoto: userData.photo,
             uPoints: userData.points,
+            uWins: userData.bingoWins || 0,
             text: txt,
             time: Date.now()
         });
@@ -3373,6 +3431,7 @@
                     const div = createPostElement(post, isFriend || isMe);
                     feedContainer.appendChild(div);
                     loadCommentPreview(post.key);
+                    loadReactionSummary(post.key);
                     
                     // === IN-FEED ADS INJECTION ===
                     adCounter++;
@@ -3412,13 +3471,14 @@
             <div class="post-header">
                 <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
                 <div class="post-meta">
-                    <div class="post-author">${post.authorName} ${getBadgeHtml(post.authorPoints || 0)} ${friendBadge}</div>
+                    <div class="post-author">${post.authorName} ${getBadgeHtml(post.authorWins || 0)} ${friendBadge}</div>
                     <div class="post-time">${fixDate(post.timestamp)}</div>
                     ${moodHtml}
                 </div>
             </div>
             <div class="post-content">${post.content}</div>
             ${imgHtml}
+            <div class="reaction-summary-bar" id="reaction-summary-${post.key}" onclick="openReactionViewer('${post.key}')"></div>
             <div class="post-actions" style="position:relative;">
                 <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
                     <i data-lucide="heart" id="like-icon-${post.key}" style="width:14px;"></i> 
@@ -3456,6 +3516,32 @@
         });
         
         return postDiv;
+    }
+
+    function loadReactionSummary(postKey) {
+        db.ref('postLikes/' + postKey).on('value', s => {
+            const bar = document.getElementById('reaction-summary-' + postKey);
+            if (!bar) return;
+            bar.innerHTML = '';
+            if (!s.exists()) return;
+
+            const counts = {};
+            s.forEach(child => {
+                let emoji = child.val();
+                // Legacy compatibility: old reactions stored as boolean true, convert to heart emoji
+                if (emoji === true) emoji = '❤️';
+                counts[emoji] = (counts[emoji] || 0) + 1;
+            });
+
+            // Sort by count descending
+            const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+            sorted.forEach(([emoji, count]) => {
+                const span = document.createElement('span');
+                span.className = 'reaction-summary-item';
+                span.innerHTML = emoji + ' ' + count;
+                bar.appendChild(span);
+            });
+        });
     }
 
     function showReactionPopup(postKey) {
