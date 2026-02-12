@@ -192,6 +192,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 10px;
             border-top: 1px solid rgba(255,255,255,0.05);
             padding-top: 15px;
         }
@@ -199,18 +200,27 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.05);
-            padding: 8px 14px;
-            border-radius: 30px;
-            color: #94a3b8;
-            font-size: 11px;
-            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 50px;
+            color: white;
+            font-size: 12px;
+            font-weight: 800;
             cursor: pointer;
-            transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .tool-btn:active { transform: scale(0.95); }
-        .tool-btn.photo-tool { color: var(--accent-glow); }
+        .tool-btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+        }
+        .tool-btn:active { 
+            transform: translateY(0);
+        }
+        .tool-btn.photo-tool { color: white; }
         .btn-post-modern {
             background: linear-gradient(135deg, var(--accent), #2563eb);
             color: white;
@@ -234,22 +244,26 @@
         }
         
         .visibility-selector {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            border: none;
             color: white;
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
+            padding: 12px 20px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 800;
             cursor: pointer;
             outline: none;
-            transition: 0.2s;
-            margin-left: auto;
-            margin-right: 10px;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .visibility-selector:hover {
-            background: rgba(255,255,255,0.08);
-            border-color: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+        }
+        .visibility-selector:active {
+            transform: translateY(0);
         }
         .visibility-selector option {
             background: #1e293b;
@@ -1344,6 +1358,23 @@
             .app-logo-lg { font-size: 40px; }
             .modal-content { max-height: 85vh; width: 95%; }
             .container { padding-bottom: 100px; }
+            
+            /* Create Post Section - Mobile Responsive */
+            .post-tools {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .tool-btn, .visibility-selector, .btn-post-modern {
+                flex: 1 1 calc(50% - 4px);
+                min-width: calc(50% - 4px);
+                justify-content: center;
+                padding: 10px 16px;
+                font-size: 11px;
+            }
+            .btn-post-modern {
+                flex: 1 1 100%;
+                min-width: 100%;
+            }
         }
         
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9712694598388252"
@@ -1781,6 +1812,14 @@
         <button class="share-btn-option" onclick="shareToOwnProfile()">
             <i data-lucide="user" style="width:20px;"></i>
             <span>Share to My Profile</span>
+        </button>
+        <button class="share-btn-option" id="nativeShareBtn" onclick="shareViaWebShare()">
+            <i data-lucide="share-2" style="width:20px;"></i>
+            <span>Share via...</span>
+        </button>
+        <button class="share-btn-option" id="copyLinkBtn" onclick="copyPostLink()" style="display:none;">
+            <i data-lucide="link" style="width:20px;"></i>
+            <span>Copy Link</span>
         </button>
     </div>
 </div>
@@ -3906,6 +3945,18 @@
     function openShareModal(postKey) {
         currentSharePostKey = postKey;
         
+        // Check if Web Share API is available
+        const nativeShareBtn = document.getElementById('nativeShareBtn');
+        const copyLinkBtn = document.getElementById('copyLinkBtn');
+        
+        if (navigator.share) {
+            nativeShareBtn.style.display = 'flex';
+            copyLinkBtn.style.display = 'none';
+        } else {
+            nativeShareBtn.style.display = 'none';
+            copyLinkBtn.style.display = 'flex';
+        }
+        
         // Get post data to show preview
         db.ref('socialPosts/' + postKey).once('value', s => {
             const post = s.val();
@@ -3978,6 +4029,84 @@
             playSound('pop');
             closeShareModal();
         });
+    }
+
+    function shareViaWebShare() {
+        if(!currentSharePostKey) return;
+        
+        db.ref('socialPosts/' + currentSharePostKey).once('value', s => {
+            const post = s.val();
+            if(!post) return;
+            
+            const shareData = {
+                title: 'Check out this post!',
+                text: `${post.authorName}: ${post.content || 'Shared a post'}`,
+                url: window.location.origin + '/?post=' + currentSharePostKey
+            };
+            
+            if (navigator.share) {
+                navigator.share(shareData)
+                    .then(() => {
+                        showToast("Shared successfully!");
+                        playSound('pop');
+                        closeShareModal();
+                    })
+                    .catch((error) => {
+                        // Ignore user cancellations (AbortError, NotAllowedError)
+                        if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+                            console.error('Error sharing:', error);
+                            showToast("Failed to share");
+                        }
+                    });
+            } else {
+                showToast("Sharing not supported");
+            }
+        });
+    }
+
+    function copyPostLink() {
+        if(!currentSharePostKey) return;
+        
+        const postUrl = window.location.origin + '/?post=' + currentSharePostKey;
+        
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(postUrl)
+                .then(() => {
+                    showToast("Link copied to clipboard!");
+                    playSound('pop');
+                    closeShareModal();
+                })
+                .catch((error) => {
+                    console.error('Error copying to clipboard:', error);
+                    fallbackCopyToClipboard(postUrl);
+                });
+        } else {
+            fallbackCopyToClipboard(postUrl);
+        }
+    }
+
+    function fallbackCopyToClipboard(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        
+        try {
+            // Last-resort fallback using deprecated document.execCommand
+            // Required for Internet Explorer and Safari versions prior to 13.1
+            // This is only called after modern Clipboard API fails or is unavailable
+            document.execCommand('copy');
+            showToast("Link copied to clipboard!");
+            playSound('pop');
+            closeShareModal();
+        } catch (error) {
+            console.error('Fallback copy failed:', error);
+            showToast("Failed to copy link");
+        }
+        
+        document.body.removeChild(textArea);
     }
 
 
