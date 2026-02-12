@@ -1459,6 +1459,10 @@
         
         <button id="profileMainActionBtn" class="profile-action-btn" onclick="handleProfileMainAction()">Add Friend</button>
         
+        <button id="giftSkinBtn" class="profile-action-btn" style="display:none; margin-top:10px; background:linear-gradient(135deg, #f59e0b, #d97706); border:none;">
+            <i data-lucide="gift" style="width:16px"></i> Gift Skin
+        </button>
+        
         <button id="unfriendBtn" class="btn-unfriend-modern" style="display:none;" onclick="unfriendUser()">
             <i data-lucide="user-x" style="width:16px"></i> Unfriend
         </button>
@@ -1499,6 +1503,21 @@
         <input type="file" id="editCoverPicInput" class="edit-input" accept="image/*" onchange="handleProfileUpload(this, 'cover')">
 
         <button onclick="saveProfileChanges()" style="width:100%; padding:15px; background:var(--accent); border:none; border-radius:12px; font-weight:900; color:white; cursor:pointer;">SAVE CHANGES</button>
+    </div>
+</div>
+
+<div id="giftSkinModal" class="modal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+            <div>
+                <h3 style="margin:0; font-size: 18px; font-weight: 900;" id="giftModalTitle">Gift a Skin</h3>
+                <p style="margin: 5px 0 0 0; font-size: 11px; opacity: 0.8; font-weight: 600;">Select a skin to gift</p>
+            </div>
+            <button onclick="document.getElementById('giftSkinModal').style.display='none'" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x"></i></button>
+        </div>
+        <div id="giftableSkinsList" class="skins-grid">
+            <!-- Dynamically populated -->
+        </div>
     </div>
 </div>
 
@@ -1721,6 +1740,17 @@
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; let lastNotifiedDraw = ""; let selectedReplyId = null;
     let currentJackpotAmount = 500; let isJackpotActive = false;
     let onlineUsers = {};
+    
+    // Skin Shop Data Structure
+    const skinShop = {
+        'kitty': { name: 'Hello Kitty', cost: 75000, preview: 'background:pink; border:2px solid hotpink; color:deeppink; font-family:\'Comic Neue\',cursive;' },
+        'doraemon': { name: 'Doraemon', cost: 75000, preview: 'background:#0096df; border:2px solid white; color:white; border-radius:50%;' },
+        'spongebob': { name: 'SpongeBob', cost: 75000, preview: 'background:#f7f44d; border:2px dashed brown; color:brown;' },
+        'kuromi': { name: 'Kuromi', cost: 75000, preview: 'background:black; border:2px solid purple; color:pink;' },
+        'neon': { name: 'Neon City', cost: 50000, preview: 'background:rgba(8,51,68,1); border:2px solid #06b6d4; color:#67e8f9; text-shadow:0 0 5px #06b6d4;' },
+        'gold': { name: 'Luxury Gold', cost: 100000, preview: 'background:linear-gradient(135deg, #451a03, #000); border:2px solid #f59e0b; color:#fcd34d; font-family:\'Times New Roman\',serif;' },
+        'pink': { name: 'Kawaii Pink', cost: 25000, preview: 'background:rgba(80, 7, 36, 1); border:2px solid #ec4899; color:#fbcfe8; border-radius:50%;' }
+    };
 
     const sounds = { click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3'), newBall: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3'), pop: new Audio('https://cdn.freesound.org/previews/536/536108_1415754-lq.mp3'), win: new Audio('https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3'), lose: new Audio('https://cdn.freesound.org/previews/76/76376_877451-lq.mp3'), spin: new Audio('https://cdn.freesound.org/previews/413/413203_5121236-lq.mp3'), cardFlip: new Audio('https://cdn.freesound.org/previews/240/240776_4107740-lq.mp3'), stop: new Audio('https://cdn.freesound.org/previews/256/256113_3263906-lq.mp3'), tumble: new Audio('https://cdn.freesound.org/previews/256/256113_3263906-lq.mp3'), drop: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3') };
     function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; if(type === 'drop') sounds[type].volume = 0.3; else sounds[type].volume = 1.0; sounds[type].play().catch(e => console.log("Audio play error", e)); } }
@@ -2759,9 +2789,11 @@
     function updateProfileButtonState(uid) {
         const btn = document.getElementById('profileMainActionBtn');
         const unfriendBtn = document.getElementById('unfriendBtn');
+        const giftSkinBtn = document.getElementById('giftSkinBtn');
         const myUid = auth.currentUser.uid;
         
         unfriendBtn.style.display = 'none';
+        giftSkinBtn.style.display = 'none';
         
         if(uid === myUid) {
             btn.innerText = "Edit Profile";
@@ -2769,6 +2801,10 @@
             btn.onclick = openEditProfile;
             btn.style.display = 'block';
         } else {
+            // Show Gift Skin button for other users
+            giftSkinBtn.style.display = 'block';
+            giftSkinBtn.onclick = () => openGiftModal(uid);
+            
             db.ref('friends/' + myUid + '/' + uid).once('value', s => {
                 if(s.exists()) {
                     btn.innerText = "Message";
@@ -2866,6 +2902,147 @@
             pfpInput.value = ""; delete pfpInput.dataset.b64;
             coverInput.value = ""; delete coverInput.dataset.b64;
             openMyProfile(); // Refresh
+        });
+    }
+
+    // === GIFT SKIN FUNCTIONS ===
+    function openGiftModal(recipientId) {
+        // Fetch recipient data first
+        db.ref('users/' + recipientId).once('value', recipientSnap => {
+            const recipient = recipientSnap.val();
+            if(!recipient) {
+                showToast("User not found");
+                return;
+            }
+            
+            const recipientOwnedSkins = recipient.ownedSkins || ['default'];
+            const recipientName = recipient.name;
+            
+            // Update modal title
+            document.getElementById('giftModalTitle').innerText = `Gift a Skin to ${recipientName}`;
+            
+            // Populate skins list
+            const skinsList = document.getElementById('giftableSkinsList');
+            skinsList.innerHTML = '';
+            
+            Object.entries(skinShop).forEach(([skinId, skin]) => {
+                const div = document.createElement('div');
+                div.className = 'skin-item';
+                
+                const isOwned = recipientOwnedSkins.includes(skinId);
+                
+                div.innerHTML = `
+                    <div class="skin-preview" style="${skin.preview}">B</div>
+                    <div class="skin-name">${skin.name}</div>
+                    <div class="skin-cost">${skin.cost.toLocaleString()} Coins</div>
+                    <button class="btn-buy-skin ${isOwned ? 'owned' : 'buy'}" ${isOwned ? 'disabled' : ''}>
+                        ${isOwned ? 'Already Owned' : 'GIFT'}
+                    </button>
+                `;
+                
+                if(!isOwned) {
+                    const btn = div.querySelector('button');
+                    btn.onclick = () => confirmSkinGift(recipientId, skinId, recipientName);
+                }
+                
+                skinsList.appendChild(div);
+            });
+            
+            // Show modal
+            document.getElementById('giftSkinModal').style.display = 'flex';
+            lucide.createIcons();
+        });
+    }
+    
+    function confirmSkinGift(recipientId, skinId, recipientName) {
+        const skin = skinShop[skinId];
+        if(!skin) {
+            showToast("Skin not found");
+            return;
+        }
+        
+        // Check if sender has enough points
+        if(userData.points < skin.cost) {
+            showToast("Insufficient Coins");
+            return;
+        }
+        
+        // Show confirmation dialog
+        showCustomConfirm(
+            "GIFT SKIN?",
+            `Gift the ${skin.name} skin to ${recipientName} for ${skin.cost.toLocaleString()} Coins?`,
+            () => executeSkinGift(recipientId, skinId)
+        );
+    }
+    
+    function executeSkinGift(recipientId, skinId) {
+        const skin = skinShop[skinId];
+        if(!skin) {
+            showToast("Skin not found");
+            return;
+        }
+        
+        const senderId = auth.currentUser.uid;
+        const senderName = userData.name;
+        
+        // 1. Deduct points from sender using transaction
+        db.ref('users/' + senderId + '/points').transaction(currentPoints => {
+            const points = currentPoints || 0;
+            if(points >= skin.cost) {
+                return points - skin.cost;
+            } else {
+                return undefined; // Abort transaction explicitly
+            }
+        }, (error, committed, snapshot) => {
+            if(error) {
+                showToast("Transaction failed");
+                console.error(error);
+                return;
+            }
+            
+            if(!committed) {
+                showToast("Insufficient Coins");
+                return;
+            }
+            
+            // 2. Add skin to recipient's ownedSkins array
+            db.ref('users/' + recipientId + '/ownedSkins').transaction(currentSkins => {
+                const skins = currentSkins || ['default'];
+                if(!skins.includes(skinId)) {
+                    skins.push(skinId);
+                }
+                return skins;
+            }, (error2, committed2) => {
+                if(error2 || !committed2) {
+                    console.error("Failed to add skin to recipient:", error2);
+                    showToast("Gift failed! Contact support.");
+                    // Note: In production, implement compensating transaction to refund sender
+                    return;
+                }
+                
+                // 3. Create notification for recipient (only after successful skin transfer)
+                db.ref('notifications/' + recipientId).push({
+                    msg: `${senderName} gifted you the ${skin.name} skin!`,
+                    type: 'gift',
+                    from: senderId,
+                    time: Date.now()
+                });
+                
+                // 4. Log the transaction (only after successful completion)
+                db.ref('giftLogs').push({
+                    from: senderId,
+                    to: recipientId,
+                    skinId: skinId,
+                    cost: skin.cost,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
+                
+                // 5. UI Feedback
+                document.getElementById('giftSkinModal').style.display = 'none';
+                showToast("Gift sent successfully!");
+                spawnFlyingCoins(10);
+                playSound('win');
+            });
         });
     }
 
