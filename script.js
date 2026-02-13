@@ -1452,6 +1452,14 @@ function openUserProfile(uid) {
     document.getElementById('pageProfileFeed').innerHTML = "<div style='color:white; opacity:0.5; text-align:center; padding: var(--spacing-lg);'>Loading...</div>";
     document.getElementById('profileMainActionBtn').style.display = 'none';
     document.getElementById('unfriendBtn').style.display = 'none';
+    
+    // Show/hide settings menu button based on whether viewing own profile
+    const settingsBtn = document.getElementById('profileSettingsMenuBtn');
+    if(auth.currentUser && uid === auth.currentUser.uid) {
+        settingsBtn.style.display = 'flex';
+    } else {
+        settingsBtn.style.display = 'none';
+    }
 
     db.ref('users/' + uid).once('value', s => {
         const u = s.val();
@@ -1486,6 +1494,9 @@ function openUserProfile(uid) {
 
 function closeProfilePage() {
     document.getElementById('userProfilePage').style.display = 'none';
+    // Hide dropdown if open
+    const dropdown = document.getElementById('profileSettingsDropdown');
+    if(dropdown) dropdown.classList.remove('show');
     currentProfileUid = null;
 }
 
@@ -1613,6 +1624,159 @@ function saveProfileChanges() {
         pfpInput.value = ""; delete pfpInput.dataset.b64;
         coverInput.value = ""; delete coverInput.dataset.b64;
         openMyProfile(); // Refresh
+    });
+}
+
+// Constants
+const MIN_VERIFICATION_REASON_LENGTH = 10;
+
+// === PROFILE SETTINGS FUNCTIONS ===
+function toggleProfileSettingsDropdown() {
+    const dropdown = document.getElementById('profileSettingsDropdown');
+    dropdown.classList.toggle('show');
+}
+
+// Close dropdown when clicking outside (executed once on load)
+(function() {
+    let profileDropdownListenerAdded = false;
+    if(!profileDropdownListenerAdded) {
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.profile-settings-menu-btn') && !e.target.closest('.profile-settings-dropdown')) {
+                const dropdown = document.getElementById('profileSettingsDropdown');
+                if(dropdown) dropdown.classList.remove('show');
+            }
+        });
+        profileDropdownListenerAdded = true;
+    }
+})();
+
+// Close profile modals with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const settingsModal = document.getElementById('profileAccountSettingsModal');
+        const verificationModal = document.getElementById('profileVerificationModal');
+        
+        if(settingsModal && settingsModal.style.display === 'flex') {
+            settingsModal.style.display = 'none';
+        }
+        if(verificationModal && verificationModal.style.display === 'flex') {
+            verificationModal.style.display = 'none';
+        }
+    }
+});
+
+function openProfileAccountSettings() {
+    // Close dropdown
+    document.getElementById('profileSettingsDropdown').classList.remove('show');
+    
+    // Update verification status display
+    if(auth.currentUser) {
+        db.ref('users/' + auth.currentUser.uid).once('value', s => {
+            const user = s.val();
+            if(user) {
+                updateProfileVerificationStatusDisplay(user);
+            }
+        });
+    }
+    
+    // Show modal
+    document.getElementById('profileAccountSettingsModal').style.display = 'flex';
+    setTimeout(() => lucide.createIcons(), 50);
+}
+
+function updateProfileVerificationStatusDisplay(user) {
+    const statusText = document.getElementById('profileVerificationStatusText');
+    if(!statusText) return;
+    
+    if(user.verified) {
+        statusText.innerHTML = '<span style="color:#10b981;">✓ Verified</span>';
+    } else if(user.verificationStatus === 'pending') {
+        statusText.innerHTML = '<span style="color:#f59e0b;">⏳ Pending review</span>';
+    } else if(user.verificationStatus === 'rejected') {
+        statusText.innerHTML = '<span style="color:#ef4444;">✗ Rejected - Request again</span>';
+    } else {
+        statusText.textContent = 'Request verification';
+    }
+}
+
+function openProfileVerificationModal() {
+    if(!auth.currentUser) return;
+    
+    // Close settings modal
+    document.getElementById('profileAccountSettingsModal').style.display = 'none';
+    
+    const uid = auth.currentUser.uid;
+    db.ref('users/' + uid).once('value', s => {
+        const user = s.val();
+        if(!user) return;
+        
+        const modal = document.getElementById('profileVerificationModal');
+        const formContainer = document.getElementById('profileVerificationFormContainer');
+        const statusContainer = document.getElementById('profileVerificationStatusContainer');
+        const statusMessage = document.getElementById('profileVerificationStatusMessage');
+        
+        if(user.verified) {
+            // Already verified
+            formContainer.style.display = 'none';
+            statusContainer.style.display = 'block';
+            statusMessage.style.background = 'rgba(16, 185, 129, 0.15)';
+            statusMessage.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+            statusMessage.style.color = '#10b981';
+            statusMessage.innerHTML = '<strong>✓ Account Verified!</strong><br>Your account already has a verification badge.';
+        } else if(user.verificationStatus === 'pending') {
+            // Pending request
+            formContainer.style.display = 'none';
+            statusContainer.style.display = 'block';
+            statusMessage.style.background = 'rgba(245, 158, 11, 0.15)';
+            statusMessage.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+            statusMessage.style.color = '#f59e0b';
+            statusMessage.innerHTML = '<strong>⏳ Request Pending</strong><br>Your verification request is being reviewed by admins.';
+        } else {
+            // Can request
+            formContainer.style.display = 'block';
+            statusContainer.style.display = 'none';
+            document.getElementById('profileVerificationReason').value = user.verificationReason || '';
+        }
+        
+        modal.style.display = 'flex';
+        setTimeout(() => lucide.createIcons(), 50);
+    });
+}
+
+function submitProfileVerificationRequest() {
+    if(!auth.currentUser) return;
+    
+    const reason = document.getElementById('profileVerificationReason').value.trim();
+    if(reason.length < MIN_VERIFICATION_REASON_LENGTH) {
+        showToast(`Please provide a reason (at least ${MIN_VERIFICATION_REASON_LENGTH} characters)`);
+        return;
+    }
+    
+    const uid = auth.currentUser.uid;
+    const updates = {
+        verificationStatus: 'pending',
+        verificationReason: reason,
+        verificationRequestedAt: Date.now()
+    };
+    
+    db.ref('users/' + uid).update(updates).then(() => {
+        showToast('✓ Verification request submitted!');
+        document.getElementById('profileVerificationModal').style.display = 'none';
+    }).catch(err => {
+        console.error('Error submitting verification request:', err);
+        showToast('Error submitting request. Please try again.');
+    });
+}
+
+function logoutFromProfile() {
+    // Close the modal
+    document.getElementById('profileAccountSettingsModal').style.display = 'none';
+    
+    // Show confirmation and logout
+    showCustomConfirm("Sign Out?", "Are you sure you want to log out?", () => {
+        auth.signOut().then(() => {
+            window.location.reload();
+        });
     });
 }
 
