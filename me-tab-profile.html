@@ -287,6 +287,28 @@
 
     <div class="settings-section">
         <div class="settings-section-title">
+            <i data-lucide="user"></i>
+            Account Settings
+        </div>
+
+        <div class="settings-item" onclick="openVerificationRequestModal()">
+            <div class="settings-item-info">
+                <div class="settings-item-icon" style="color: #3b82f6; background: rgba(59, 130, 246, 0.1);">
+                    <i data-lucide="shield-check"></i>
+                </div>
+                <div class="settings-item-text">
+                    <h4>Verification Badge</h4>
+                    <p id="verification-status-text">Request verification</p>
+                </div>
+            </div>
+            <div class="settings-item-arrow">
+                <i data-lucide="chevron-right"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <div class="settings-section-title">
             <i data-lucide="settings"></i>
             App Settings
         </div>
@@ -358,6 +380,35 @@
     </div>
 </div>
 
+<!-- Verification Request Modal -->
+<div id="verificationModal" class="modal" onclick="this.style.display='none'" style="display:none;">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 500px;">
+        <h3 style="margin-top:0; color:white; display:flex; align-items:center; gap:10px;">
+            <i data-lucide="shield-check" style="width:24px; height:24px; color:var(--accent);"></i>
+            Request Verification Badge
+        </h3>
+        
+        <p style="color:rgba(255,255,255,0.7); font-size:14px; margin-bottom:20px;">
+            Request a verification badge to show that your account is authentic. Admins will review your request.
+        </p>
+        
+        <div id="verificationFormContainer">
+            <label class="edit-label">Reason for Verification Request</label>
+            <textarea id="verificationReason" class="edit-input" placeholder="Why do you want to be verified? (e.g., I'm an active player, content creator, etc.)" rows="4" style="resize: vertical;"></textarea>
+            
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('verificationModal').style.display='none'" style="flex:1;">Cancel</button>
+                <button class="btn btn-primary" onclick="submitVerificationRequest()" style="flex:1;">Submit Request</button>
+            </div>
+        </div>
+        
+        <div id="verificationStatusContainer" style="display:none;">
+            <div id="verificationStatusMessage" style="padding:15px; border-radius:8px; margin-bottom:15px;"></div>
+            <button class="btn btn-secondary" onclick="document.getElementById('verificationModal').style.display='none'" style="width:100%;">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
     function initProfilePage() {
         if(!auth.currentUser) return;
@@ -385,6 +436,9 @@
             }
             
             document.getElementById('profile-wins').textContent = user.bingoWins || 0;
+            
+            // Update verification status display
+            updateVerificationStatusDisplay(user);
             
             // Friends count
             db.ref('friends/' + uid).once('value', fSnap => {
@@ -505,5 +559,94 @@
 
     function openTerms() {
         window.open('terms.html', '_blank');
+    }
+
+    function updateVerificationStatusDisplay(user) {
+        const statusText = document.getElementById('verification-status-text');
+        if(!statusText) return;
+        
+        if(user.verified) {
+            statusText.innerHTML = '<span style="color:#10b981;">✓ Verified</span>';
+        } else if(user.verificationStatus === 'pending') {
+            statusText.innerHTML = '<span style="color:#f59e0b;">⏳ Pending review</span>';
+        } else if(user.verificationStatus === 'rejected') {
+            statusText.innerHTML = '<span style="color:#ef4444;">✗ Rejected - Request again</span>';
+        } else {
+            statusText.textContent = 'Request verification';
+        }
+    }
+
+    function openVerificationRequestModal() {
+        if(!auth.currentUser) return;
+        
+        const uid = auth.currentUser.uid;
+        db.ref('users/' + uid).once('value', s => {
+            const user = s.val();
+            if(!user) return;
+            
+            const modal = document.getElementById('verificationModal');
+            const formContainer = document.getElementById('verificationFormContainer');
+            const statusContainer = document.getElementById('verificationStatusContainer');
+            const statusMessage = document.getElementById('verificationStatusMessage');
+            
+            if(user.verified) {
+                // Already verified
+                formContainer.style.display = 'none';
+                statusContainer.style.display = 'block';
+                statusMessage.style.background = 'rgba(16, 185, 129, 0.15)';
+                statusMessage.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+                statusMessage.style.color = '#10b981';
+                statusMessage.innerHTML = '<strong>✓ Account Verified!</strong><br>Your account already has a verification badge.';
+            } else if(user.verificationStatus === 'pending') {
+                // Pending request
+                formContainer.style.display = 'none';
+                statusContainer.style.display = 'block';
+                statusMessage.style.background = 'rgba(245, 158, 11, 0.15)';
+                statusMessage.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+                statusMessage.style.color = '#f59e0b';
+                statusMessage.innerHTML = '<strong>⏳ Request Pending</strong><br>Your verification request is being reviewed by admins.';
+            } else {
+                // Can request
+                formContainer.style.display = 'block';
+                statusContainer.style.display = 'none';
+                document.getElementById('verificationReason').value = user.verificationReason || '';
+            }
+            
+            modal.style.display = 'flex';
+            lucide.createIcons();
+        });
+    }
+
+    function submitVerificationRequest() {
+        if(!auth.currentUser) return;
+        
+        const reason = document.getElementById('verificationReason').value.trim();
+        if(reason.length < 10) {
+            if(typeof showToast === 'function') {
+                showToast('Please provide a reason (at least 10 characters)');
+            } else {
+                alert('Please provide a reason (at least 10 characters)');
+            }
+            return;
+        }
+        
+        const uid = auth.currentUser.uid;
+        const updates = {
+            verificationStatus: 'pending',
+            verificationReason: reason,
+            verificationRequestedAt: Date.now()
+        };
+        
+        db.ref('users/' + uid).update(updates).then(() => {
+            if(typeof showToast === 'function') {
+                showToast('✓ Verification request submitted!');
+            }
+            document.getElementById('verificationModal').style.display = 'none';
+        }).catch(err => {
+            console.error('Error submitting verification request:', err);
+            if(typeof showToast === 'function') {
+                showToast('Error submitting request. Please try again.');
+            }
+        });
     }
 </script>

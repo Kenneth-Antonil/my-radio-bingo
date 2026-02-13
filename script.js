@@ -179,8 +179,8 @@ auth.onAuthStateChanged(u => {
                 document.getElementById('profileNameDisplay').innerText = displayName;
                 
                 // Update Avatars with badges
-                document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.bingoWins || 0, 45, u.uid);
-                document.getElementById('menuAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.bingoWins || 0, 70, u.uid);
+                document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.bingoWins || 0, 45, u.uid, userData.verified || false);
+                document.getElementById('menuAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.bingoWins || 0, 70, u.uid, userData.verified || false);
             } 
         });
         initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate();
@@ -189,7 +189,7 @@ auth.onAuthStateChanged(u => {
     } else { document.getElementById('loginOverlay').style.display = 'flex'; }
 });
 // === BADGE & AVATAR SYSTEM ===
-function renderAvatarWithBadge(photoUrl, wins, size, uid = null) {
+function renderAvatarWithBadge(photoUrl, wins, size, uid = null, verified = false) {
     let tierClass = "tier-bronze-bg";
     let tierIcon = ""; // Default empty
     if(wins >= 30) { tierClass = "tier-diamond-bg"; tierIcon = '<i data-lucide="diamond" style="width:50%; height:50%;"></i>'; }
@@ -205,6 +205,9 @@ function renderAvatarWithBadge(photoUrl, wins, size, uid = null) {
     const isOnline = uid && onlineUsers[uid];
     const onlineClass = isOnline ? 'is-online' : '';
 
+    // Verification badge - use helper function for consistency
+    const verifiedBadge = verified ? `<div class="verification-badge" title="Verified Account"><i data-lucide="badge-check" style="width:70%; height:70%;"></i></div>` : '';
+
     setTimeout(() => lucide.createIcons(), 50);
 
     return `
@@ -214,6 +217,7 @@ function renderAvatarWithBadge(photoUrl, wins, size, uid = null) {
                 ${tierIcon}
             </div>
             <div class="online-indicator ${onlineClass}"></div>
+            ${verifiedBadge}
         </div>
     `;
 }
@@ -235,6 +239,12 @@ function getBadgeHtml(wins) {
     if(wins >= 30) return `<i data-lucide="diamond" style="width:12px; height:12px; fill:#06b6d4; color:#06b6d4; margin-left:4px;"></i>`;
     if(wins >= 5) return `<i data-lucide="crown" style="width:12px; height:12px; fill:#fbbf24; color:#fbbf24; margin-left:4px;"></i>`;
     return ""; 
+}
+
+// Helper to get verification badge HTML
+function getVerificationBadgeHtml(verified) {
+    if(!verified) return "";
+    return `<i data-lucide="badge-check" style="width:14px; height:14px; fill:#3b82f6; color:#3b82f6; margin-left:4px;" title="Verified Account"></i>`;
 }
 
 // === UTILITY: TEXT SANITIZATION ===
@@ -1350,6 +1360,7 @@ function createPost() {
         authorPhoto: userData.photo,
         authorPoints: userData.points,
         authorWins: userData.bingoWins || 0,
+        authorVerified: userData.verified || false,
         content: txt,
         mood: selectedMood,
         image: selectedImageBase64,
@@ -1445,9 +1456,14 @@ function openUserProfile(uid) {
     db.ref('users/' + uid).once('value', s => {
         const u = s.val();
         // Inject avatar with badge
-        document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.bingoWins || 0, 140, uid);
+        document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.bingoWins || 0, 140, uid, u.verified || false);
         
         document.getElementById('pageProfileName').textContent = u.name;
+        // Add verification badge if verified
+        if(u.verified) {
+            document.getElementById('pageProfileName').innerHTML = u.name + ' ' + getVerificationBadgeHtml(true);
+            setTimeout(() => lucide.createIcons(), 50);
+        }
         document.getElementById('pageProfileBio').innerText = u.bio || "Radio Bingo Player";
         
         if(u.cover) {
@@ -2254,7 +2270,7 @@ function createPostElement(post, isFriend) {
         <div class="post-header">
             <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
             <div class="post-meta">
-                <div class="post-author">${post.authorName} ${getBadgeHtml(post.authorWins || 0)} ${friendBadge}</div>
+                <div class="post-author">${post.authorName} ${getBadgeHtml(post.authorWins || 0)} ${getVerificationBadgeHtml(post.authorVerified)} ${friendBadge}</div>
                 <div class="post-time">${fixDate(post.timestamp)} ${visibilityBadge}</div>
                 ${moodHtml}
             </div>
