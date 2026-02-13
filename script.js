@@ -45,6 +45,15 @@ let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; l
 let currentJackpotAmount = 500; let isJackpotActive = false;
 let onlineUsers = {};
 
+// === CURRENCY SETTINGS (UPDATED) ===
+const COIN_TO_PHP_RATE = 1; // PALITAN MO ITO: Kung 100 coins = 1 Peso, gawin mong 100. Kung 1:1, iwan sa 1.
+
+function formatCurrency(amount) {
+    const pesoVal = (amount || 0) / COIN_TO_PHP_RATE;
+    return '₱' + pesoVal.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+// ===================================
+
 // Skin Shop Data Structure
 const skinShop = {
     'kitty': { name: 'Hello Kitty', cost: 75000, preview: 'background:pink; border:2px solid hotpink; color:deeppink; font-family:\'Comic Neue\',cursive;' },
@@ -143,7 +152,7 @@ auth.onAuthStateChanged(u => {
                 if (!data.photo) updates.photo = u.photoURL;
                 
                 const today = new Date().toDateString(); 
-                if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 200; updates.lastLoginDate = today; showToast("🎁 Daily Bonus! +200 RB Coins."); playSound('win'); } 
+                if (data.lastLoginDate !== today) { updates.points = (data.points || 0) + 200; updates.lastLoginDate = today; showToast("🎁 Daily Bonus! " + formatCurrency(200)); playSound('win'); } 
                 if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase(); 
                 if(!data.ownedSkins) updates.ownedSkins = ['default']; 
                 if(!data.equippedSkin) updates.equippedSkin = 'default'; 
@@ -153,7 +162,9 @@ auth.onAuthStateChanged(u => {
         userRef.on('value', s => { 
             if(s.exists()){ 
                 userData = s.val(); userData.uid = u.uid; 
-                document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString(); 
+                // UPDATED: Use Currency Format
+                document.getElementById('storePoints').innerText = formatCurrency(userData.points); 
+                
                 document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || ""); 
                 if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none'; 
                 if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash; 
@@ -415,7 +426,8 @@ function buyOrEquipSkin(skinId, cost) {
         equipSkin(skinId); 
     } else { 
         if(userData.points >= cost) { 
-            showCustomConfirm("BUY SKIN?", "Purchase for " + cost + " Coins?", () => { 
+            // UPDATED: Use formatCurrency in confirm
+            showCustomConfirm("BUY SKIN?", "Purchase for " + formatCurrency(cost) + "?", () => { 
                 deductPoints(cost); 
                 let newOwned = [...userData.ownedSkins, skinId]; 
                 db.ref('users/' + userData.uid).update({ ownedSkins: newOwned, equippedSkin: skinId }); 
@@ -424,7 +436,7 @@ function buyOrEquipSkin(skinId, cost) {
                 spawnFlyingCoins(10); 
             }); 
         } else { 
-            showToast("Insufficient Coins"); 
+            showToast("Insufficient Balance"); 
         } 
     } 
 }
@@ -495,8 +507,8 @@ function startStrictWatch() {
     }, 1000); 
 }
 
-function startTaskSafe(url, reward, taskKey) { const lastRun = localStorage.getItem('task_cooldown_' + taskKey); const cooldownTime = 12 * 60 * 60 * 1000; if(lastRun && (Date.now() - parseInt(lastRun)) < cooldownTime) { showToast("⏳ Task in cooldown. Try again later."); return; } showCustomConfirm("START TASK", "Complete offer to earn coins.", () => { window.open(url, '_blank'); const btn = document.getElementById('btn-task-' + taskKey); if(btn) { btn.disabled = true; btn.innerHTML = `<i data-lucide="loader" class="icon-spin"></i> 60s`; let timeLeft = 60; const timer = setInterval(() => { timeLeft--; btn.innerHTML = `<i data-lucide="loader" class="icon-spin"></i> ${timeLeft}s`; if(timeLeft <= 0) { clearInterval(timer); btn.innerHTML = "CLAIM REWARD"; btn.disabled = false; btn.style.background = "#22c55e"; btn.onclick = () => claimTaskReward(reward, taskKey); } }, 1000); } }); }
-function claimTaskReward(reward, taskKey) { addPoints(reward); showToast(`🎉 +${reward} Coins Received!`); playSound('win'); spawnFlyingCoins(20); const btn = document.getElementById('btn-task-' + taskKey); if(btn) { btn.innerHTML = "COMPLETED"; btn.disabled = true; btn.style.background = "#334155"; } localStorage.setItem('task_cooldown_' + taskKey, Date.now()); }
+function startTaskSafe(url, reward, taskKey) { const lastRun = localStorage.getItem('task_cooldown_' + taskKey); const cooldownTime = 12 * 60 * 60 * 1000; if(lastRun && (Date.now() - parseInt(lastRun)) < cooldownTime) { showToast("⏳ Task in cooldown. Try again later."); return; } showCustomConfirm("START TASK", "Complete offer to earn.", () => { window.open(url, '_blank'); const btn = document.getElementById('btn-task-' + taskKey); if(btn) { btn.disabled = true; btn.innerHTML = `<i data-lucide="loader" class="icon-spin"></i> 60s`; let timeLeft = 60; const timer = setInterval(() => { timeLeft--; btn.innerHTML = `<i data-lucide="loader" class="icon-spin"></i> ${timeLeft}s`; if(timeLeft <= 0) { clearInterval(timer); btn.innerHTML = "CLAIM REWARD"; btn.disabled = false; btn.style.background = "#22c55e"; btn.onclick = () => claimTaskReward(reward, taskKey); } }, 1000); } }); }
+function claimTaskReward(reward, taskKey) { addPoints(reward); showToast(`🎉 +${formatCurrency(reward)} Received!`); playSound('win'); spawnFlyingCoins(20); const btn = document.getElementById('btn-task-' + taskKey); if(btn) { btn.innerHTML = "COMPLETED"; btn.disabled = true; btn.style.background = "#334155"; } localStorage.setItem('task_cooldown_' + taskKey, Date.now()); }
 function openVideoLocker(taskKey) { const lastRun = localStorage.getItem('task_cooldown_video'); if(lastRun && (Date.now() - parseInt(lastRun)) < 300000) { showToast("⏳ Wait before watching again."); return; } showCustomConfirm("WATCH VIDEO", "You will be redirected to the video task. Complete it to earn.", () => { localStorage.setItem('task_cooldown_video', Date.now()); const win = window.open("", "_blank"); if(win) { win.document.write(`<html><head><title>Video Task Verification</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{background:#000; color:white; font-family:sans-serif; text-align:center; padding:20px; display:flex; flex-direction:column; justify-content:center; height:100vh;}</style></head><body><h2>Loading Video Task...</h2><p>Please wait while we load the verification.</p><script type="text/javascript">var lck = false;</scr`+`ipt><script type="text/javascript" src="https://doctoredits.com/script_include.php?id=1874676"></scr`+`ipt><script type="text/javascript">if(!lck){top.location = 'https://doctoredits.com/help/ablk.php?lkt=2'; }</scr`+`ipt><noscript>Please enable JavaScript to access this page.<meta http-equiv="refresh" content="0;url=https://doctoredits.com/help/enable_javascript.php?lkt=2" ></meta></noscript><button onclick="window.close()" style="margin-top:20px; padding:12px 20px; background:red; color:white; border:none; border-radius:5px;">Close & Return to Game</button></body></html>`); win.document.close(); } else { showToast("Pop-up blocked! Please allow pop-ups."); } }); }
 
 function setupPresence(uid) { 
@@ -595,7 +607,7 @@ function deleteNotif(key, event) {
     showToast("Notification Deleted"); 
 }
 
-function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { const data = s.val(); const banner = document.getElementById('jackpotBanner'); if(data && data.active) { banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = data.amount + " RB COINS"; isJackpotActive = true; const rawAmount = parseInt(data.amount.replace(/[^0-9]/g, '')); currentJackpotAmount = isNaN(rawAmount) ? 500 : rawAmount; } else { banner.style.display = 'none'; isJackpotActive = false; currentJackpotAmount = 500; } }); }
+function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { const data = s.val(); const banner = document.getElementById('jackpotBanner'); if(data && data.active) { banner.style.display = 'block'; const rawAmount = parseInt(data.amount) || 0; document.getElementById('jackpotDisplayVal').innerText = formatCurrency(rawAmount); isJackpotActive = true; currentJackpotAmount = rawAmount; } else { banner.style.display = 'none'; isJackpotActive = false; currentJackpotAmount = 500; } }); }
 
 function listenVideoUpdate() { db.ref('gameState/videoSettings').on('value', s => { const v = s.val(); const iframe = document.getElementById('liveVideoFrame'); const offline = document.getElementById('videoOfflineState'); if (v && v.type === 'offline') { iframe.style.display = 'none'; iframe.src = ""; offline.style.display = 'flex'; } else if(v && v.url) { offline.style.display = 'none'; iframe.style.display = 'block'; const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/; const match = v.url.match(regExp); let videoId = (match && match[2].length === 11) ? match[2] : null; if(!videoId && v.url.length === 11) videoId = v.url; if (videoId) { const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1`; if(iframe.src !== embedUrl) { iframe.src = embedUrl; } } } }); }
 
@@ -618,7 +630,7 @@ function checkWin() { if(userData.hasWonCurrent || gameDrawn.length === 0) retur
 function checkPuroStatus() { if(userData.hasWonCurrent || gameDrawn.length === 0) return; document.getElementById('bingoCardContainer').classList.remove('card-puro'); document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting')); let winningWays = []; if (currentPattern === "Blackout") winningWays = [Array.from({length: 25}, (_, i) => i)]; else if (currentPattern === "Letter X") winningWays = [[0,4,6,8,12,16,18,20,24]]; else if (currentPattern === "Four Corners") winningWays = [[0,4,20,24]]; else winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; for (let i = 0; i < winningWays.length; i++) { let w = winningWays[i]; let missing = w.filter(idx => !marks.includes(idx)); if (missing.length === 1) { document.getElementById('bingoCardContainer').classList.add('card-puro'); const missingIdx = missing[0]; const cells = document.querySelectorAll('.cell'); if(cells[missingIdx]) cells[missingIdx].classList.add('cell-waiting'); break; } } }
 function highlightWinningPattern(indices, patternType) { const cells = document.querySelectorAll('.cell'); indices.forEach(idx => { const cell = cells[idx]; cell.classList.add('win-glow'); if (currentPattern === 'Normal Bingo') { if (patternType < 5) cell.classList.add('win-line-h'); else if (patternType < 10) cell.classList.add('win-line-v'); else if (patternType === 10) cell.classList.add('win-line-d1'); else cell.classList.add('win-line-d2'); } }); }
 
-function triggerWin() { const uid = auth.currentUser.uid; let winPrize = 500; if (isJackpotActive) winPrize = currentJackpotAmount; db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize }); db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize); db.ref('users/' + uid + '/bingoWins').transaction(w => (w || 0) + 1); db.ref('users/' + uid).update({ hasWonCurrent: true }); userData.hasWonCurrent = true; if (isJackpotActive) { const jpModal = document.getElementById('grandJackpotModal'); document.getElementById('grandPrizeAmount').innerText = winPrize.toLocaleString() + " RB COINS"; document.getElementById('jpWinnerName').innerText = userData.name; jpModal.style.display = 'flex'; confetti({ particleCount: 500, spread: 120, startVelocity: 60 }); } }
+function triggerWin() { const uid = auth.currentUser.uid; let winPrize = 500; if (isJackpotActive) winPrize = currentJackpotAmount; db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize }); db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize); db.ref('users/' + uid + '/bingoWins').transaction(w => (w || 0) + 1); db.ref('users/' + uid).update({ hasWonCurrent: true }); userData.hasWonCurrent = true; if (isJackpotActive) { const jpModal = document.getElementById('grandJackpotModal'); document.getElementById('grandPrizeAmount').innerText = formatCurrency(winPrize); document.getElementById('jpWinnerName').innerText = userData.name; jpModal.style.display = 'flex'; confetti({ particleCount: 500, spread: 120, startVelocity: 60 }); } }
 function generateNewCard() { if(gameDrawn.length > 0) return showToast("Bawal magpalit habang may laro!"); let card = []; let cols = [[1,15],[16,30],[31,45],[46,60],[61,75]]; cols.forEach(r => { let nums = []; while(nums.length < 5) { let n = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0]; if(!nums.includes(n)) nums.push(n); } card.push(...nums); }); let finalCard = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) { finalCard.push(card[c*5 + r]); } } finalCard[12] = "FREE"; db.ref('users/' + auth.currentUser.uid).update({ currentCard: finalCard, cardTimestamp: Date.now(), hasWonCurrent: false }); cardNumbers = finalCard; renderCard(); playSound('cardFlip'); }
 function renderCard() { const grid = document.getElementById('bingoGrid'); grid.innerHTML = ""; cardNumbers.forEach((n, i) => { const div = document.createElement('div'); div.className = 'cell'; div.innerText = n === "FREE" ? "★" : n; if(n === "FREE") { div.classList.add('hit'); if(!marks.includes(12)) marks.push(12); } grid.appendChild(div); }); updateGridHits(); applySkin(userData.equippedSkin || 'default'); }
 function updateGridHits() { marks = [12]; const cells = document.querySelectorAll('.cell'); cells.forEach((c, i) => { const val = c.innerText; if(gameDrawn.includes(val) || val === "★") { c.classList.add('hit'); if(!marks.includes(i)) marks.push(i); } }); }
@@ -967,7 +979,7 @@ function listenPrivateMessages(myUid) {
 function deductPoints(amt) { db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) - amt); spawnLossAnimation(amt); }
 function addPoints(amt) { db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) + amt); }
 
-function verifyAdMath() { const ans = document.getElementById('mathAns').value; const corr = document.getElementById('mathQ').dataset.ans; if(ans === corr) { document.getElementById('adCaptchaOverlay').style.display = 'none'; addPoints(50); showToast("Reward: +50 Coins Added!"); } else { showToast("Wrong Answer!"); } }
+function verifyAdMath() { const ans = document.getElementById('mathAns').value; const corr = document.getElementById('mathQ').dataset.ans; if(ans === corr) { document.getElementById('adCaptchaOverlay').style.display = 'none'; addPoints(50); showToast("Reward: " + formatCurrency(50) + " Added!"); } else { showToast("Wrong Answer!"); } }
 
 function spawnFlyingCoins(amount) { const count = Math.min(amount, 15); const targetEl = document.querySelector('.points-badge') || document.querySelector('.game-balance-pill'); if(!targetEl) return; const rect = targetEl.getBoundingClientRect(); const targetX = rect.left + (rect.width / 2); const targetY = rect.top + (rect.height / 2); const startX = window.innerWidth / 2; const startY = window.innerHeight / 2; for(let i=0; i<count; i++) { setTimeout(() => { const coin = document.createElement('div'); coin.className = 'flying-coin'; coin.style.left = startX + 'px'; coin.style.top = startY + 'px'; document.body.appendChild(coin); const spread = 80; const randX = (Math.random() - 0.5) * spread; const randY = (Math.random() - 0.5) * spread; requestAnimationFrame(() => { coin.style.transition = 'transform 0.3s ease-out'; coin.style.transform = `translate(${randX}px, ${randY}px) scale(1.2)`; setTimeout(() => { coin.style.transition = 'transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.6s'; const moveX = targetX - startX; const moveY = targetY - startY; coin.style.transform = `translate(${moveX}px, ${moveY}px) scale(0.5)`; coin.style.opacity = '0'; }, 300); setTimeout(() => coin.remove(), 900); }); }, i * 30); } }
 function triggerScreenShake() { const activeGame = document.querySelector('.game-overlay-fs[style*="flex"]'); const target = activeGame ? activeGame.querySelector('.roulette-table, .slot-machine-frame, .hl-table, .color-table, .l9-table, .dice-table') : document.getElementById('bingoCardContainer'); if (target) { target.classList.add('shake-effect'); setTimeout(() => target.classList.remove('shake-effect'), 300); } if (navigator.vibrate) navigator.vibrate([30, 30, 30]); }
@@ -975,8 +987,8 @@ function spawnLossAnimation(amount) { const activeGame = document.querySelector(
 
 function openMenuModal() { document.getElementById('menuModal').style.display='flex'; }
 function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length > 3) { db.ref('users/'+auth.currentUser.uid).update({ gcash: num }); showToast("Info Saved!"); } else showToast("Invalid Details"); }
-function redeemItem(name, cost) { if(userData.points >= cost) { if(!userData.gcash) return showToast("Save redemption info first!"); showCustomConfirm("REDEEM REWARD?", "Exchange " + cost + " pts for " + name + "?", () => { deductPoints(cost); db.ref('redemptions').push({ uid: userData.uid, name: userData.name, gcash: userData.gcash, item: name, cost: cost, status: 'pending', timestamp: Date.now() }); showToast("Request Sent!"); loadHistory(); }); } else { showToast("Insufficient RB Coins"); } }
-function loadHistory() { const list = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { list.innerHTML = ""; s.forEach(r => { const d = r.val(); let color = '#fbbf24'; if(d.status === 'sent') color = '#10b981'; if(d.status === 'denied') color = '#ef4444'; list.innerHTML += `<div class="history-item"><div><div style="font-weight:700; font-size:12px;">${d.item}</div><div style="font-size:10px; opacity:0.6;">${fixDate(d.timestamp)}</div></div><div style="font-size:10px; font-weight:800; color:${color}; text-transform:uppercase; border:1px solid ${color}; padding:2px 6px; border-radius:4px;">${d.status}</div></div>`; }); }); }
+function redeemItem(name, cost) { if(userData.points >= cost) { if(!userData.gcash) return showToast("Save redemption info first!"); showCustomConfirm("REDEEM REWARD?", "Exchange " + formatCurrency(cost) + " for " + name + "?", () => { deductPoints(cost); db.ref('redemptions').push({ uid: userData.uid, name: userData.name, gcash: userData.gcash, item: name, cost: cost, status: 'pending', timestamp: Date.now() }); showToast("Request Sent!"); loadHistory(); }); } else { showToast("Insufficient Balance"); } }
+function loadHistory() { const list = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { list.innerHTML = ""; s.forEach(r => { const d = r.val(); let color = '#fbbf24'; if(d.status === 'sent') color = '#10b981'; if(d.status === 'denied') color = '#ef4444'; list.innerHTML += `<div class="history-item"><div><div style="font-weight:700; font-size:12px;">${d.item} (${formatCurrency(d.cost)})</div><div style="font-size:10px; opacity:0.6;">${fixDate(d.timestamp)}</div></div><div style="font-size:10px; font-weight:800; color:${color}; text-transform:uppercase; border:1px solid ${color}; padding:2px 6px; border-radius:4px;">${d.status}</div></div>`; }); }); }
 
 // === SUPPORT CONTACT FUNCTIONS ===
 function openSupportModal() {
@@ -1616,7 +1628,7 @@ function openGiftModal(recipientId) {
             div.innerHTML = `
                 <div class="skin-preview" style="${skin.preview}">B</div>
                 <div class="skin-name">${skin.name}</div>
-                <div class="skin-cost">${skin.cost.toLocaleString()} Coins</div>
+                <div class="skin-cost">${formatCurrency(skin.cost)}</div>
                 <button class="btn-buy-skin ${isOwned ? 'owned' : 'buy'}" ${isOwned ? 'disabled' : ''}>
                     ${isOwned ? 'Already Owned' : 'GIFT'}
                 </button>
@@ -1645,14 +1657,14 @@ function confirmSkinGift(recipientId, skinId, recipientName) {
     
     // Check if sender has enough points
     if(userData.points < skin.cost) {
-        showToast("Insufficient Coins");
+        showToast("Insufficient Balance");
         return;
     }
     
     // Show confirmation dialog
     showCustomConfirm(
         "GIFT SKIN?",
-        `Gift the ${skin.name} skin to ${recipientName} for ${skin.cost.toLocaleString()} Coins?`,
+        `Gift the ${skin.name} skin to ${recipientName} for ${formatCurrency(skin.cost)}?`,
         () => executeSkinGift(recipientId, skinId)
     );
 }
@@ -1683,7 +1695,7 @@ function executeSkinGift(recipientId, skinId) {
         }
         
         if(!committed) {
-            showToast("Insufficient Coins");
+            showToast("Insufficient Balance");
             return;
         }
         
@@ -2475,4 +2487,3 @@ if (ss) {
     setTimeout(() => ss.style.display = 'none', 800);
 }
 }, 5000); // Mawawala after 5 seconds kahit anong mangyari
-
