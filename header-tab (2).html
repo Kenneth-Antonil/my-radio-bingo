@@ -1,0 +1,150 @@
+<!-- ========================================= -->
+<!-- HEADER TAB COMPONENT -->
+<!-- ========================================= -->
+
+<!-- Header Styles -->
+<style>
+    .header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 999;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(15, 23, 42, 0.95) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: var(--spacing-md) var(--spacing-lg);
+        padding-top: calc(var(--spacing-md) + env(safe-area-inset-top));
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .header-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 22px;
+        font-weight: 900;
+        color: white;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .header-title:active {
+        transform: scale(0.95);
+    }
+    .app-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        transition: transform 0.3s;
+    }
+    .header-title:hover .app-icon {
+        transform: rotate(5deg) scale(1.05);
+    }
+    .header-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+    .header-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 10px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .header-btn:active {
+        transform: scale(0.95);
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .header-btn i {
+        width: 20px;
+        height: 20px;
+        color: white;
+    }
+    .notif-badge {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: #ef4444;
+        color: white;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 5px;
+        border-radius: 8px;
+        min-width: 16px;
+        text-align: center;
+        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
+    }
+</style>
+
+<!-- Header HTML -->
+<header class="header">
+    <div class="header-content">
+        <div class="header-title" onclick="scrollToTop()" role="button" tabindex="0" onkeypress="if(event.key==='Enter'||event.key===' '){scrollToTop()}" aria-label="Scroll to top">
+            <img src="https://i.imgur.com/7D8u8h6.png" alt="App Icon" class="app-icon">
+            <span>Radio Bingo</span>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn" onclick="openSearchModal()" aria-label="Search users">
+                <i data-lucide="search"></i>
+            </button>
+            <button class="header-btn" onclick="openNotifications()" aria-label="View notifications">
+                <i data-lucide="bell"></i>
+                <span id="notif-badge" class="notif-badge" style="display:none;">0</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- JavaScript for Header -->
+<script>
+    function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    function openSearchModal() {
+        document.getElementById('searchModal').style.display = 'flex';
+        document.getElementById('searchModalBackdrop').style.display = 'block';
+        document.getElementById('searchInput').focus();
+    }
+    
+    function openNotifications() {
+        document.getElementById('notificationModal').style.display = 'flex';
+        document.getElementById('notificationBackdrop').style.display = 'block';
+        loadNotifications();
+    }
+    
+    // Update notification badge
+    function updateNotificationBadge() {
+        if (!auth.currentUser) return;
+        
+        db.ref('notifications/' + auth.currentUser.uid).on('value', snapshot => {
+            let unreadCount = 0;
+            snapshot.forEach(child => {
+                const notif = child.val();
+                if (!notif.read) unreadCount++;
+            });
+            
+            const badge = document.getElementById('notif-badge');
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        });
+    }
+</script>

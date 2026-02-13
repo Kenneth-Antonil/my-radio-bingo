@@ -1,0 +1,195 @@
+<!-- ========================================= -->
+<!-- BOTTOM NAVIGATION COMPONENT -->
+<!-- ========================================= -->
+
+<!-- Bottom Nav Styles -->
+<style>
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 998;
+        background: linear-gradient(0deg, rgba(15, 23, 42, 0.98) 0%, rgba(15, 23, 42, 0.95) 100%);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: var(--spacing-sm) var(--spacing-md);
+        padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom));
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .nav-container {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 12px;
+        transition: all 0.2s;
+        position: relative;
+    }
+    
+    .nav-item:active {
+        transform: scale(0.95);
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .nav-icon {
+        width: 24px;
+        height: 24px;
+        color: rgba(255, 255, 255, 0.4);
+        transition: all 0.3s;
+    }
+    
+    .nav-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.4);
+        transition: all 0.3s;
+    }
+    
+    .nav-item.active .nav-icon {
+        color: var(--accent);
+        transform: scale(1.1);
+    }
+    
+    .nav-item.active .nav-label {
+        color: var(--accent);
+        font-weight: 600;
+    }
+    
+    /* Active indicator dot */
+    .nav-item.active::before {
+        content: '';
+        position: absolute;
+        top: 4px;
+        width: 4px;
+        height: 4px;
+        background: var(--accent);
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--accent-glow);
+    }
+    
+    /* Special styling for center/featured nav item */
+    .nav-item.featured {
+        background: linear-gradient(135deg, var(--accent) 0%, #0284c7 100%);
+        border-radius: 16px;
+        padding: 12px 16px;
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    }
+    
+    .nav-item.featured .nav-icon {
+        color: white;
+    }
+    
+    .nav-item.featured .nav-label {
+        color: white;
+        font-weight: 600;
+    }
+    
+    .nav-item.featured:active {
+        transform: scale(0.95);
+        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.4);
+    }
+</style>
+
+<!-- Bottom Navigation HTML -->
+<nav class="bottom-nav">
+    <div class="nav-container">
+        <!-- Home -->
+        <div class="nav-item active" onclick="switchTab('home')" role="button" tabindex="0" 
+             onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('home')}" 
+             aria-label="Home tab">
+            <i data-lucide="home" class="nav-icon"></i>
+            <span class="nav-label">Home</span>
+        </div>
+        
+        <!-- Bingo (Featured) -->
+        <div class="nav-item featured" onclick="switchTab('bingo')" role="button" tabindex="0" 
+             onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('bingo')}" 
+             aria-label="Bingo tab">
+            <i data-lucide="grid-3x3" class="nav-icon"></i>
+            <span class="nav-label">Bingo</span>
+        </div>
+        
+        <!-- Store -->
+        <div class="nav-item" onclick="switchTab('store')" role="button" tabindex="0" 
+             onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('store')}" 
+             aria-label="Store tab">
+            <i data-lucide="shopping-bag" class="nav-icon"></i>
+            <span class="nav-label">Store</span>
+        </div>
+        
+        <!-- Profile/Me -->
+        <div class="nav-item" onclick="switchTab('me')" role="button" tabindex="0" 
+             onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('me')}" 
+             aria-label="Profile tab">
+            <i data-lucide="user" class="nav-icon"></i>
+            <span class="nav-label">Me</span>
+        </div>
+    </div>
+</nav>
+
+<!-- JavaScript for Bottom Navigation -->
+<script>
+    // Current active tab
+    let currentTab = 'home';
+
+    function switchTab(tabName) {
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.style.display = 'none';
+        });
+        
+        // Show selected tab
+        const selectedTab = document.getElementById(tabName + '-tab');
+        if (selectedTab) {
+            selectedTab.style.display = 'block';
+        }
+        
+        // Update nav items
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        // Add active class to current nav item
+        event.currentTarget.classList.add('active');
+        
+        // Update current tab
+        currentTab = tabName;
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Load tab-specific content
+        if (tabName === 'home') {
+            loadPosts();
+        } else if (tabName === 'bingo') {
+            loadBingoData();
+        } else if (tabName === 'store') {
+            loadStoreItems();
+        } else if (tabName === 'me') {
+            loadProfileData();
+        }
+        
+        // Reinitialize Lucide icons
+        lucide.createIcons();
+    }
+    
+    // Initialize navigation on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set home as default active tab
+        switchTab('home');
+    });
+</script>
