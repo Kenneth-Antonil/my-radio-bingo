@@ -2703,19 +2703,24 @@ function toggleMobileMenu() {
     const overlay = document.getElementById('mobileMenuOverlay');
     const hamburger = document.getElementById('hamburgerBtn');
     
-    if (menu && overlay && hamburger) {
-        menu.classList.toggle('active');
-        overlay.classList.toggle('active');
-        hamburger.classList.toggle('active');
-        
-        // Prevent body scroll when menu is open
-        if (menu.classList.contains('active')) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
-        }
-        
-        // Re-init lucide icons for the menu
+    if (!menu || !overlay || !hamburger) {
+        console.warn('Mobile menu elements not found. Ensure mobileMenu, mobileMenuOverlay, and hamburgerBtn elements exist in the DOM.');
+        return;
+    }
+    
+    menu.classList.toggle('active');
+    overlay.classList.toggle('active');
+    hamburger.classList.toggle('active');
+    
+    // Prevent body scroll when menu is open
+    if (menu.classList.contains('active')) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
+    }
+    
+    // Re-init lucide icons for the menu
+    if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
 }
