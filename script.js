@@ -1,7 +1,7 @@
 if (window.location.pathname.endsWith("index.html")) {
-            var newPath = window.location.pathname.replace(/index\.html$/, "");
-            window.history.replaceState({}, document.title, newPath);
-        }
+    var newPath = window.location.pathname.replace(/index\.html$/, "");
+    window.history.replaceState({}, document.title, newPath);
+}
 
     // === NOTIFICATION BLOCKER LOGIC ===
     window.addEventListener('load', () => { 
