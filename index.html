@@ -21,12 +21,13 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
     <script src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
     <script src="https://pl28660496.effectivegatecpm.com/a6/64/bf/a664bf7e7084386b4f4b428590030df3.js"></script>
 
@@ -34,18 +35,211 @@
 </head>
 <body>
 
+<div class="app-header">
+    <div class="header-left">
+        <div class="brand-logo">RB<span>LIVE</span></div>
+    </div>
+    <div id="userPanel" class="header-right" style="display:none;">
+        <div class="header-icon-btn" onclick="openSearch()">
+            <i data-lucide="search"></i>
+        </div>
+        <div class="header-icon-btn" onclick="openMessenger()">
+            <i data-lucide="message-circle"></i>
+            <span id="pmBadge" class="header-badge"></span>
+        </div>
+        <div class="header-icon-btn" onclick="openNotifs()">
+            <i data-lucide="bell"></i>
+            <span id="notifDot" class="header-badge"></span>
+        </div>
+        <div id="userImgContainer" class="header-avatar" onclick="openMenuModal()"></div>
+    </div>
+</div>
+
+<div class="main-scroll-container">
+    <div class="container">
+        
+        <div class="ad-container-global">
+            <script type="text/javascript">
+                atOptions = { 'key' : '9bf585b6ee39cb9b515e2fae1fa958c2', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+            </script>
+            <script type="text/javascript" src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
+        </div>
+
+        <div id="view-home" style="display:block;">
+            <div id="friendRequestsSection"></div>
+            
+            <div class="post-creator-modern" id="mainPostCreator">
+                <h4 class="post-creator-title">
+                    <i data-lucide="edit-3"></i> Create Post
+                </h4>
+                
+                <textarea id="postInput" class="post-input-modern" placeholder="What's on your mind?"></textarea>
+                
+                <div class="image-preview-container" id="imgPreviewCont">
+                    <img id="postImgPreview" class="image-preview-img">
+                    <div class="btn-remove-img" onclick="removePostImage()"><i data-lucide="x" style="width:12px;"></i></div>
+                </div>
+
+                <div class="action-buttons-row">
+                    <button class="action-btn-ghost" onclick="selectMood(this, 'Happy')">
+                        <i data-lucide="smile"></i> Happy
+                    </button>
+                    <button class="action-btn-ghost" onclick="selectMood(this, 'Sad')">
+                        <i data-lucide="frown"></i> Sad
+                    </button>
+                    <label for="postImgInput" class="action-btn-ghost">
+                        <i data-lucide="image"></i> Photo
+                    </label>
+                    <input type="file" id="postImgInput" accept="image/*" style="display:none" onchange="handlePostImage(this)">
+                </div>
+
+                <div class="post-tools">
+                    <div class="custom-visibility-dropdown">
+                        <input type="hidden" id="postVisibility" value="public">
+                        <button type="button" class="visibility-trigger" onclick="toggleVisibilityDropdown()">
+                            <i data-lucide="globe" id="visibilityIcon"></i>
+                            <span id="visibilityText">Public</span>
+                        </button>
+                        <div class="visibility-dropdown-menu" id="visibilityMenu">
+                            <div class="visibility-option selected" data-value="public" onclick="selectVisibility('public', 'globe', 'Public')">
+                                <i data-lucide="globe"></i>
+                                <span>Public</span>
+                            </div>
+                            <div class="visibility-option" data-value="friends" onclick="selectVisibility('friends', 'users', 'Friends Only')">
+                                <i data-lucide="users"></i>
+                                <span>Friends Only</span>
+                            </div>
+                            <div class="visibility-option" data-value="private" onclick="selectVisibility('private', 'lock', 'Only Me')">
+                                <i data-lucide="lock"></i>
+                                <span>Only Me</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="btn-post-modern" onclick="createPost()">POST</button>
+            </div>
+
+            <div id="pymkSection" class="pymk-section" style="display:none;">
+                <div class="pymk-title">People You May Know</div>
+                <div class="pymk-scroll" id="pymkList"></div>
+            </div>
+
+            <div class="feed-sort-modern">
+                <button class="sort-btn active" id="sort-hype" onclick="toggleFeedSort('hype')">
+                    <i data-lucide="flame" style="width:14px"></i> HOT
+                </button>
+                <button class="sort-btn" id="sort-new" onclick="toggleFeedSort('new')">
+                    <i data-lucide="clock" style="width:14px"></i> NEW
+                </button>
+            </div>
+
+            <div id="socialFeed" class="social-feed-container">
+                <div style="text-align:center; padding: var(--spacing-lg); opacity:0.5;">Loading Feed...</div>
+            </div>
+        </div>
+
+        <div id="view-bingo" style="display:none;">
+            <div class="video-feed-wrapper">
+                <div class="video-container">
+                    <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
+                    <div id="videoOfflineState" style="display:none; position:absolute; inset:0; background:#0f172a; flex-direction:column; align-items:center; justify-content:center; z-index:20;">
+                        <div style="width:60px; height:60px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom: var(--spacing-md); animation:pulse-ring 2s infinite;">
+                            <i data-lucide="radio" style="width:30px; height:30px; color:#94a3b8;"></i>
+                        </div>
+                        <h3 style="margin:0; font-size:16px; font-weight:900; color:white; letter-spacing:1px;">WAITING FOR LIVE</h3>
+                        <p style="margin:5px 0 0; font-size:12px; color:#64748b;">Stand by for the next draw.</p>
+                    </div>
+                    <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none; position:absolute; top:0; left:0; width:100%; height:100%;"></iframe>
+                </div>
+            </div>
+
+            <div id="jackpotBanner">
+                <div class="jp-label-new">
+                    <i data-lucide="crown" style="width: 16px;"></i> JACKPOT ROUND <i data-lucide="crown" style="width: 16px;"></i>
+                </div>
+                <span class="jackpot-amount" id="jackpotDisplayVal">5,000</span>
+                <div style="font-size: 10px; opacity: 0.7; margin-top: 5px; color: #fbbf24;">RB COINS GRAND PRIZE</div>
+            </div>
+
+            <div id="nextDrawBanner" class="next-draw-container">
+                <div class="nd-icon"><i data-lucide="calendar-days"></i></div>
+                <div class="nd-info">
+                    <div class="next-draw-label">Susunod na Bola</div>
+                    <div id="nextDrawTime" class="next-draw-time">--:-- --</div>
+                </div>
+            </div>
+            
+            <div id="winnerBanner">
+                <span><i data-lucide="party-popper" style="width:24px; height:24px;"></i> BINGO WINNER!</span>
+                <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
+            </div>
+
+            <div class="draw-panel">
+                <div class="prev-balls" id="ballRow"></div>
+                <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">NOW DRAWN</span><span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.5);">--</span></div>
+            </div>
+            
+            <div class="card" id="bingoCardContainer">
+                <div id="lateOverlay" class="late-overlay">
+                    <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom: var(--spacing-md); filter: drop-shadow(0 0 10px var(--danger));"></i>
+                    <div class="late-text">GAME ONGOING</div>
+                    <div class="late-subtext">Sorry, ongoing na ang bola. Bawal na sumali ang late.</div>
+                    <div style="margin-top: var(--spacing-lg); background:rgba(255,255,255,0.1); padding: var(--spacing-sm) 20px; border-radius: var(--radius-md); border:1px solid rgba(255,255,255,0.1);">
+                        <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
+                        <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
+                    </div>
+                </div>
+                <div id="gameOverOverlay" class="game-over-overlay">
+                    <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom: var(--spacing-md); filter: drop-shadow(0 0 15px var(--gold));"></i>
+                    <div class="late-text">Game Finished</div>
+                    <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
+                </div>
+                <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
+                    <div class="pattern-box">
+                        <div class="pattern-dot"></div>
+                        <span class="pattern-text" id="patternName">Normal Bingo</span>
+                    </div>
+                    <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
+                </div>
+                <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
+                <div class="grid" id="bingoGrid"></div>
+            </div>
+            
+            <div class="chat-box" style="margin-top:15px;">
+                <div class="chat-header">
+                    <i data-lucide="message-square" style="width:18px; color:var(--accent-glow)"></i>
+                    <h3>LIVE STREAM CHAT</h3>
+                </div>
+                <div id="chatList"></div>
+                <div id="replyIndicator" class="reply-indicator" style="display:none; padding: 5px 15px; background: #374151; color: #d1d5db; font-size: 11px;">
+                    <span id="replyText">Replying to...</span>
+                    <button onclick="cancelReply()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" style="width:14px"></i></button>
+                </div>
+                <div class="chat-input-area">
+                    <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
+                        <input type="text" id="chatIn" placeholder="Say something..." autocomplete="off">
+                        <button type="submit" class="send-btn">
+                            <i data-lucide="send" style="width:16px"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="bottom-nav">
     <button class="nav-item active" onclick="switchTab('home')" id="nav-home">
         <i data-lucide="home" class="nav-icon"></i>
         <span class="nav-label">Home</span>
     </button>
-    <button class="nav-item" onclick="switchTab('bingo')" id="nav-bingo">
+    <button class="nav-item featured" onclick="switchTab('bingo')" id="nav-bingo">
         <i data-lucide="play-circle" class="nav-icon"></i>
         <span class="nav-label">Bingo</span>
     </button>
-    <div class="nav-center" onclick="openPostCreator()">
-        <div class="nav-icon-bg"><i data-lucide="plus" style="width:28px; height:28px;"></i></div>
-    </div>
+    <div style="width: 20px;"></div>
+    
     <button class="nav-item" onclick="document.getElementById('storeModal').style.display='flex'" id="nav-store">
         <i data-lucide="shopping-bag" class="nav-icon"></i>
         <span class="nav-label">Store</span>
@@ -54,13 +248,19 @@
         <i data-lucide="user" class="nav-icon"></i>
         <span class="nav-label">Me</span>
     </button>
+    
+    <div class="nav-center-fab" onclick="openPostCreator()">
+        <i data-lucide="plus"></i>
+    </div>
 </div>
-    <div class="sticky-ad-footer">
+
+<div class="sticky-ad-footer">
     <script type="text/javascript">
         atOptions = { 'key' : 'a664bf7e7084386b4f4b428590030df3', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
     </script>
     <script type="text/javascript" src="https://pl28660496.effectivegatecpm.com/a6/64/bf/a664bf7e7084386b4f4b428590030df3.js"></script>
 </div>
+
 <div id="customPopupBanner">
     <div style="position:relative; max-width:400px; width:100%; animation: popScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
         <button onclick="closeCustomBanner()" style="position:absolute; top:-15px; right:-10px; background:linear-gradient(135deg, #ef4444, #b91c1c); color:white; border:2px solid white; border-radius:50%; width:36px; height:36px; font-weight:bold; cursor:pointer; z-index:10; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,0.3);"><i data-lucide="x" style="width:20px"></i></button>
@@ -152,199 +352,6 @@
     </div>
 </div>
 
-<div class="nav">
-    <div style="display:flex; align-items:center; gap: var(--spacing-sm);">
-        <span style="font-weight: 900; font-size: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.8);">RB <span style="color:var(--accent-glow)">LIVE</span></span>
-    </div>
-    <div id="userPanel" style="display:none; align-items: center; gap: var(--spacing-sm);">
-        <div class="user-stats">
-            <div class="icon-btn" onclick="openSearch()">
-                <i data-lucide="search" style="width:20px"></i>
-            </div>
-            <div class="icon-btn" onclick="openMessenger()">
-                <i data-lucide="message-circle" style="width:20px"></i>
-                <span id="pmBadge" class="notif-badge"></span>
-            </div>
-            <div class="icon-btn" onclick="openNotifs()">
-                <i data-lucide="bell" style="width:20px"></i>
-                <span id="notifDot" class="notif-badge"></span>
-            </div>
-        </div>
-        <div id="userImgContainer" onclick="openMenuModal()"></div>
-    </div>
-</div>
-
-<div class="container">
-    <div class="ad-container-global">
-        <script type="text/javascript">
-            atOptions = { 'key' : '9bf585b6ee39cb9b515e2fae1fa958c2', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-        </script>
-        <script type="text/javascript" src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
-    </div>
-
-    <div id="view-home" style="display:block;">
-        <div id="friendRequestsSection"></div>
-        
-        <div class="post-creator-modern" id="mainPostCreator">
-            <h4 class="post-creator-title">
-                <i data-lucide="edit-3"></i> Create Post
-            </h4>
-            
-            <textarea id="postInput" class="post-input-modern" placeholder="What's on your mind?"></textarea>
-            
-            <div class="image-preview-container" id="imgPreviewCont">
-                <img id="postImgPreview" class="image-preview-img">
-                <div class="btn-remove-img" onclick="removePostImage()"><i data-lucide="x" style="width:12px;"></i></div>
-            </div>
-
-            <div class="action-buttons-row">
-                <button class="action-btn-ghost" onclick="selectMood(this, 'Happy')">
-                    <i data-lucide="smile"></i> Happy
-                </button>
-                <button class="action-btn-ghost" onclick="selectMood(this, 'Sad')">
-                    <i data-lucide="frown"></i> Sad
-                </button>
-                <label for="postImgInput" class="action-btn-ghost">
-                    <i data-lucide="image"></i> Photo
-                </label>
-                <input type="file" id="postImgInput" accept="image/*" style="display:none" onchange="handlePostImage(this)">
-            </div>
-
-            <div class="post-tools">
-                <div class="custom-visibility-dropdown">
-                    <input type="hidden" id="postVisibility" value="public">
-                    <button type="button" class="visibility-trigger" onclick="toggleVisibilityDropdown()">
-                        <i data-lucide="globe" id="visibilityIcon"></i>
-                        <span id="visibilityText">Public</span>
-                    </button>
-                    <div class="visibility-dropdown-menu" id="visibilityMenu">
-                        <div class="visibility-option selected" data-value="public" onclick="selectVisibility('public', 'globe', 'Public')">
-                            <i data-lucide="globe"></i>
-                            <span>Public</span>
-                        </div>
-                        <div class="visibility-option" data-value="friends" onclick="selectVisibility('friends', 'users', 'Friends Only')">
-                            <i data-lucide="users"></i>
-                            <span>Friends Only</span>
-                        </div>
-                        <div class="visibility-option" data-value="private" onclick="selectVisibility('private', 'lock', 'Only Me')">
-                            <i data-lucide="lock"></i>
-                            <span>Only Me</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <button class="btn-post-modern" onclick="createPost()">POST</button>
-        </div>
-
-        <div id="pymkSection" class="pymk-section" style="display:none;">
-            <div class="pymk-title">People You May Know</div>
-            <div class="pymk-scroll" id="pymkList"></div>
-        </div>
-
-        <div class="feed-sort-modern">
-            <button class="sort-btn active" id="sort-hype" onclick="toggleFeedSort('hype')">
-                <i data-lucide="flame" style="width:14px"></i> HOT
-            </button>
-            <button class="sort-btn" id="sort-new" onclick="toggleFeedSort('new')">
-                <i data-lucide="clock" style="width:14px"></i> NEW
-            </button>
-        </div>
-
-        <div id="socialFeed" class="social-feed-container">
-            <div style="text-align:center; padding: var(--spacing-lg); opacity:0.5;">Loading Feed...</div>
-        </div>
-    </div>
-
-    <div id="view-bingo" style="display:none;">
-        <div class="video-feed-wrapper">
-            <div class="video-container">
-                <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
-                <div id="videoOfflineState" style="display:none; position:absolute; inset:0; background:#0f172a; flex-direction:column; align-items:center; justify-content:center; z-index:20;">
-                    <div style="width:60px; height:60px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom: var(--spacing-md); animation:pulse-ring 2s infinite;">
-                        <i data-lucide="radio" style="width:30px; height:30px; color:#94a3b8;"></i>
-                    </div>
-                    <h3 style="margin:0; font-size:16px; font-weight:900; color:white; letter-spacing:1px;">WAITING FOR LIVE</h3>
-                    <p style="margin:5px 0 0; font-size:12px; color:#64748b;">Stand by for the next draw.</p>
-                </div>
-                <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none; position:absolute; top:0; left:0; width:100%; height:100%;"></iframe>
-            </div>
-        </div>
-
-        <div id="jackpotBanner">
-            <div class="jp-label-new">
-                <i data-lucide="crown" style="width: 16px;"></i> JACKPOT ROUND <i data-lucide="crown" style="width: 16px;"></i>
-            </div>
-            <span class="jackpot-amount" id="jackpotDisplayVal">5,000</span>
-            <div style="font-size: 10px; opacity: 0.7; margin-top: 5px; color: #fbbf24;">RB COINS GRAND PRIZE</div>
-        </div>
-
-        <div id="nextDrawBanner" class="next-draw-container">
-            <div class="nd-icon"><i data-lucide="calendar-days"></i></div>
-            <div class="nd-info">
-                <div class="next-draw-label">Susunod na Bola</div>
-                <div id="nextDrawTime" class="next-draw-time">--:-- --</div>
-            </div>
-        </div>
-        
-        <div id="winnerBanner">
-            <span><i data-lucide="party-popper" style="width:24px; height:24px;"></i> BINGO WINNER!</span>
-            <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
-        </div>
-
-        <div class="draw-panel">
-            <div class="prev-balls" id="ballRow"></div>
-            <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">NOW DRAWN</span><span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.5);">--</span></div>
-        </div>
-        
-        <div class="card" id="bingoCardContainer">
-            <div id="lateOverlay" class="late-overlay">
-                <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom: var(--spacing-md); filter: drop-shadow(0 0 10px var(--danger));"></i>
-                <div class="late-text">GAME ONGOING</div>
-                <div class="late-subtext">Sorry, ongoing na ang bola. Bawal na sumali ang late.</div>
-                <div style="margin-top: var(--spacing-lg); background:rgba(255,255,255,0.1); padding: var(--spacing-sm) 20px; border-radius: var(--radius-md); border:1px solid rgba(255,255,255,0.1);">
-                    <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
-                    <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
-                </div>
-            </div>
-            <div id="gameOverOverlay" class="game-over-overlay">
-                <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom: var(--spacing-md); filter: drop-shadow(0 0 15px var(--gold));"></i>
-                <div class="late-text">Game Finished</div>
-                <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
-            </div>
-            <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
-                <div class="pattern-box">
-                    <div class="pattern-dot"></div>
-                    <span class="pattern-text" id="patternName">Normal Bingo</span>
-                </div>
-                <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
-            </div>
-            <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
-            <div class="grid" id="bingoGrid"></div>
-        </div>
-        
-        <div class="chat-box" style="margin-top:15px;">
-            <div class="chat-header">
-                <i data-lucide="message-square" style="width:18px; color:var(--accent-glow)"></i>
-                <h3>LIVE STREAM CHAT</h3>
-            </div>
-            <div id="chatList"></div>
-            <div id="replyIndicator" class="reply-indicator" style="display:none; padding: 5px 15px; background: #374151; color: #d1d5db; font-size: 11px;">
-                <span id="replyText">Replying to...</span>
-                <button onclick="cancelReply()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" style="width:14px"></i></button>
-            </div>
-            <div class="chat-input-area">
-                <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
-                    <input type="text" id="chatIn" placeholder="Say something..." autocomplete="off">
-                    <button type="submit" class="send-btn">
-                        <i data-lucide="send" style="width:16px"></i>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div id="grandJackpotModal" onclick="this.style.display='none'">
     <div class="jackpot-rays"></div>
     <div class="jackpot-content">
@@ -417,7 +424,8 @@
         </div>
     </div>
 </div>
-    <div id="notifModal" class="modal" onclick="this.style.display='none'">
+
+<div id="notifModal" class="modal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--spacing-lg); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
             <div style="display:flex; align-items:center; gap: var(--spacing-sm);">
@@ -586,8 +594,7 @@
             <button onclick="document.getElementById('giftSkinModal').style.display='none'" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x"></i></button>
         </div>
         <div id="giftableSkinsList" class="skins-grid">
-            <!-- Dynamically populated -->
-        </div>
+            </div>
     </div>
 </div>
 
