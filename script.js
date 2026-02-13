@@ -92,8 +92,11 @@ function requestNotifyPermission() { if ("Notification" in window) { Notificatio
 
 function switchTab(tab) {
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    
+    // Hide all views
     document.getElementById('view-home').style.display = 'none';
     document.getElementById('view-bingo').style.display = 'none';
+    document.getElementById('view-store').style.display = 'none';
     
     if(tab === 'home') {
         document.getElementById('view-home').style.display = 'block';
@@ -103,6 +106,10 @@ function switchTab(tab) {
     } else if(tab === 'bingo') {
         document.getElementById('view-bingo').style.display = 'block';
         document.getElementById('nav-bingo').classList.add('active');
+    } else if(tab === 'store') {
+        document.getElementById('view-store').style.display = 'block';
+        document.getElementById('nav-store').classList.add('active');
+        updateSkinButtons();
     }
     playSound('click');
 }
