@@ -1627,17 +1627,41 @@ function saveProfileChanges() {
     });
 }
 
+// Constants
+const MIN_VERIFICATION_REASON_LENGTH = 10;
+
 // === PROFILE SETTINGS FUNCTIONS ===
 function toggleProfileSettingsDropdown() {
     const dropdown = document.getElementById('profileSettingsDropdown');
     dropdown.classList.toggle('show');
 }
 
-// Close dropdown when clicking outside
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('.profile-settings-menu-btn') && !e.target.closest('.profile-settings-dropdown')) {
-        const dropdown = document.getElementById('profileSettingsDropdown');
-        if(dropdown) dropdown.classList.remove('show');
+// Close dropdown when clicking outside (executed once on load)
+(function() {
+    let profileDropdownListenerAdded = false;
+    if(!profileDropdownListenerAdded) {
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.profile-settings-menu-btn') && !e.target.closest('.profile-settings-dropdown')) {
+                const dropdown = document.getElementById('profileSettingsDropdown');
+                if(dropdown) dropdown.classList.remove('show');
+            }
+        });
+        profileDropdownListenerAdded = true;
+    }
+})();
+
+// Close profile modals with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const settingsModal = document.getElementById('profileAccountSettingsModal');
+        const verificationModal = document.getElementById('profileVerificationModal');
+        
+        if(settingsModal && settingsModal.style.display === 'flex') {
+            settingsModal.style.display = 'none';
+        }
+        if(verificationModal && verificationModal.style.display === 'flex') {
+            verificationModal.style.display = 'none';
+        }
     }
 });
 
@@ -1723,8 +1747,8 @@ function submitProfileVerificationRequest() {
     if(!auth.currentUser) return;
     
     const reason = document.getElementById('profileVerificationReason').value.trim();
-    if(reason.length < 10) {
-        showToast('Please provide a reason (at least 10 characters)');
+    if(reason.length < MIN_VERIFICATION_REASON_LENGTH) {
+        showToast(`Please provide a reason (at least ${MIN_VERIFICATION_REASON_LENGTH} characters)`);
         return;
     }
     
