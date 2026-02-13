@@ -518,7 +518,7 @@
                 </div>
                 <div class="settings-item-text">
                     <h4>Sound Effects</h4>
-                    <p id="sound-status">Enable game sounds</p>
+                    <p id="sound-status">Sounds enabled</p>
                 </div>
             </div>
             <div class="toggle-switch" id="sound-toggle">
@@ -533,7 +533,7 @@
                 </div>
                 <div class="settings-item-text">
                     <h4>Push Notifications</h4>
-                    <p id="notifications-status">Get notified of updates</p>
+                    <p id="notifications-status">Notifications enabled</p>
                 </div>
             </div>
             <div class="toggle-switch" id="notifications-toggle">
@@ -705,11 +705,11 @@
         const toggle = document.getElementById('sound-toggle');
         
         if(isMuted) {
-            statusText.textContent = "Sounds are disabled";
+            statusText.textContent = "Sounds disabled";
             icon.setAttribute('data-lucide', 'volume-x');
             toggle.classList.remove('active');
         } else {
-            statusText.textContent = "Enable game sounds";
+            statusText.textContent = "Sounds enabled";
             icon.setAttribute('data-lucide', 'volume-2');
             toggle.classList.add('active');
         }
@@ -719,23 +719,53 @@
     function toggleNotifications() {
         const notificationsEnabled = localStorage.getItem('notifications_enabled') !== 'false';
         const newState = !notificationsEnabled;
-        localStorage.setItem('notifications_enabled', newState);
-        updateNotificationsUI(newState);
         
         if(newState) {
             // Request notification permission if not already granted
             if(typeof Notification !== 'undefined' && Notification.permission === 'default') {
                 Notification.requestPermission().then(permission => {
                     if(permission === 'granted') {
+                        localStorage.setItem('notifications_enabled', true);
+                        updateNotificationsUI(true);
                         if(typeof showToast === 'function') {
                             showToast('✓ Notifications enabled!');
                         }
+                    } else if(permission === 'denied') {
+                        // Permission denied, reset to disabled state
+                        localStorage.setItem('notifications_enabled', false);
+                        updateNotificationsUI(false);
+                        if(typeof showToast === 'function') {
+                            showToast('Notification permission denied');
+                        }
+                    }
+                }).catch(err => {
+                    console.error('Error requesting notification permission:', err);
+                    // Reset to disabled state on error
+                    localStorage.setItem('notifications_enabled', false);
+                    updateNotificationsUI(false);
+                    if(typeof showToast === 'function') {
+                        showToast('Error enabling notifications');
                     }
                 });
-            } else if(typeof showToast === 'function') {
-                showToast('✓ Notifications enabled!');
+            } else if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                // Already granted, just enable
+                localStorage.setItem('notifications_enabled', true);
+                updateNotificationsUI(true);
+                if(typeof showToast === 'function') {
+                    showToast('✓ Notifications enabled!');
+                }
+            } else {
+                // Notification API not available or permission denied
+                localStorage.setItem('notifications_enabled', false);
+                updateNotificationsUI(false);
+                if(typeof showToast === 'function') {
+                    showToast('Notifications not available');
+                }
             }
         } else {
+            // Disable notifications
+            localStorage.setItem('notifications_enabled', false);
+            updateNotificationsUI(false);
             if(typeof showToast === 'function') {
                 showToast('Notifications disabled');
             }
@@ -748,11 +778,11 @@
         const toggle = document.getElementById('notifications-toggle');
         
         if(enabled) {
-            statusText.textContent = "Get notified of updates";
+            statusText.textContent = "Notifications enabled";
             icon.setAttribute('data-lucide', 'bell');
             toggle.classList.add('active');
         } else {
-            statusText.textContent = "Notifications are off";
+            statusText.textContent = "Notifications disabled";
             icon.setAttribute('data-lucide', 'bell-off');
             toggle.classList.remove('active');
         }
