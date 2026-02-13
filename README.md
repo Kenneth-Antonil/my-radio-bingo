@@ -6,6 +6,41 @@ Ang files na ito ay **EXACT COPY** lang ng original code mo. Hinati-hati ko lang
 
 ---
 
+## 🆕 NEW FEATURE: Verification Badge System
+
+The application now includes a verification badge system that allows users to request verification and admins to manage these requests.
+
+### User Features:
+- **Request Verification**: Users can request a verification badge from their profile settings
+- **Status Tracking**: Users can see the status of their request (Pending, Approved, or Rejected)
+- **Verification Badge**: Approved users get a blue checkmark badge displayed on:
+  - Their avatar (small blue badge icon)
+  - Social feed posts (inline with username)
+  - Profile pages (next to name)
+
+### Admin Features:
+- **Verification Tab**: New dedicated tab in the admin dashboard
+- **Review Requests**: View all verification requests with user details and reasons
+- **Filter Options**: Filter requests by status (All, Pending, Approved, Rejected)
+- **Approve/Reject**: Quick action buttons to approve or reject requests
+- **Revoke**: Ability to revoke verification from previously approved users
+- **Notifications**: Automatic notifications sent to users when their request is processed
+
+### How to Use (User):
+1. Navigate to your profile settings (Me tab)
+2. Click on "Verification Badge" option
+3. Fill in the reason for your verification request
+4. Submit and wait for admin review
+
+### How to Use (Admin):
+1. Access the admin dashboard
+2. Click on the "VERIFICATION" tab
+3. Review pending requests
+4. Click "APPROVE" or "REJECT" based on the request
+5. User will receive an automatic notification
+
+---
+
 ## 📦 Main Files (Kailangan para gumana ang app)
 
 ### 1. **index.html**

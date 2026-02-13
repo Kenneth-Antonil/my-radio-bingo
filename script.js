@@ -205,7 +205,7 @@ function renderAvatarWithBadge(photoUrl, wins, size, uid = null, verified = fals
     const isOnline = uid && onlineUsers[uid];
     const onlineClass = isOnline ? 'is-online' : '';
 
-    // Verification badge
+    // Verification badge - use helper function for consistency
     const verifiedBadge = verified ? `<div class="verification-badge" title="Verified Account"><i data-lucide="badge-check" style="width:70%; height:70%;"></i></div>` : '';
 
     setTimeout(() => lucide.createIcons(), 50);

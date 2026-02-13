@@ -347,6 +347,19 @@
     <div id="liveActivityFeed" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
 </div>
 
+<!-- Reject Verification Modal -->
+<div id="rejectVerificationModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:99999; justify-content:center; align-items:center;" onclick="this.style.display='none'">
+    <div style="background:#1e293b; border-radius:16px; padding:24px; max-width:500px; width:90%;" onclick="event.stopPropagation()">
+        <h3 style="margin:0 0 16px 0; color:white; font-size:18px;">Reject Verification Request</h3>
+        <p style="color:rgba(255,255,255,0.7); font-size:13px; margin-bottom:16px;">Provide a reason for rejecting this verification request (optional):</p>
+        <textarea id="rejectReasonInput" placeholder="e.g., Insufficient activity, Suspicious account..." style="width:100%; min-height:100px; padding:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white; font-family:inherit; font-size:13px; resize:vertical;"></textarea>
+        <div style="display:flex; gap:12px; margin-top:20px;">
+            <button onclick="document.getElementById('rejectVerificationModal').style.display='none'" style="flex:1; padding:12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:white; font-weight:600; cursor:pointer;">Cancel</button>
+            <button onclick="confirmRejectVerification()" style="flex:1; padding:12px; background:#ef4444; border:none; border-radius:8px; color:white; font-weight:600; cursor:pointer;">Reject Request</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // --- LOCK SCREEN LOGIC ---
     const ADMIN_PIN = "12345"; // <--- CHANGE THIS TO YOUR DESIRED PIN
@@ -907,6 +920,7 @@
 
     // === VERIFICATION REQUEST MANAGEMENT ===
     let currentVerificationFilter = 'all';
+    let pendingRejectUid = null; // Store UID for rejection confirmation
     
     function loadVerificationRequests() {
         db.ref('users').once('value', snapshot => {
@@ -1002,7 +1016,7 @@
                             </div>
                         </div>
                         <div style="font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:8px;">
-                            UID: ${req.uid.substring(0,8)} • ${req.bingoWins} wins • ${req.points} pts
+                            <span title="${req.uid}">UID: ${req.uid.substring(0,8)}</span> • ${req.bingoWins} wins • ${req.points} pts
                         </div>
                         <div style="font-size:12px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-bottom:8px;">
                             <strong>Reason:</strong> ${escapeHtml(req.reason)}
@@ -1066,22 +1080,32 @@
     }
     
     function rejectVerificationRequest(uid) {
-        const reason = prompt('Enter rejection reason (optional):');
+        pendingRejectUid = uid;
+        document.getElementById('rejectReasonInput').value = '';
+        document.getElementById('rejectVerificationModal').style.display = 'flex';
+    }
+    
+    function confirmRejectVerification() {
+        if (!pendingRejectUid) return;
         
-        db.ref('users/' + uid).update({
+        const reason = document.getElementById('rejectReasonInput').value.trim() || 'No reason provided';
+        
+        db.ref('users/' + pendingRejectUid).update({
             verified: false,
             verificationStatus: 'rejected',
             verificationRejectedAt: Date.now(),
-            verificationRejectionReason: reason || 'No reason provided'
+            verificationRejectionReason: reason
         }).then(() => {
             // Send notification to user
-            db.ref('notifications/' + uid).push({
-                msg: `✗ Your verification request has been rejected. ${reason ? 'Reason: ' + reason : ''}`,
+            db.ref('notifications/' + pendingRejectUid).push({
+                msg: `✗ Your verification request has been rejected. ${reason !== 'No reason provided' ? 'Reason: ' + reason : ''}`,
                 time: Date.now(),
                 type: 'verification_rejected'
             });
             
             alert('Verification rejected.');
+            document.getElementById('rejectVerificationModal').style.display = 'none';
+            pendingRejectUid = null;
             loadVerificationRequests();
         }).catch(err => {
             console.error('Error rejecting verification:', err);
