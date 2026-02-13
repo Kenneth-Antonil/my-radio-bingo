@@ -2696,3 +2696,26 @@ if (ss) {
     setTimeout(() => ss.style.display = 'none', 800);
 }
 }, 5000); // Mawawala after 5 seconds kahit anong mangyari
+
+// === MOBILE MENU TOGGLE FUNCTION ===
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobileMenu');
+    const overlay = document.getElementById('mobileMenuOverlay');
+    const hamburger = document.getElementById('hamburgerBtn');
+    
+    if (menu && overlay && hamburger) {
+        menu.classList.toggle('active');
+        overlay.classList.toggle('active');
+        hamburger.classList.toggle('active');
+        
+        // Prevent body scroll when menu is open
+        if (menu.classList.contains('active')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        
+        // Re-init lucide icons for the menu
+        lucide.createIcons();
+    }
+}
