@@ -2877,9 +2877,29 @@
 
 <script>
     // === NOTIFICATION BLOCKER LOGIC ===
-    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); checkNotifGate(); checkInstallGate(); initBannerListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
-    setTimeout(hideSplash, 5000);
-    function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
+    window.addEventListener('load', () => { 
+        setTimeout(hideSplash, 1500); // Reduced from 2000ms to 1500ms
+        checkNotifGate(); 
+        checkInstallGate(); 
+        initBannerListener(); 
+        loadSocialFeed(); 
+        loadPYMK(); 
+        loadCustomSkin(); 
+    });
+    
+    // Backup splash hide - ensure it disappears even if load event doesn't fire
+    setTimeout(hideSplash, 3000); // Reduced from 5000ms to 3000ms
+    
+    function hideSplash() { 
+        const ss = document.getElementById('splash-screen'); 
+        if(ss && ss.style.display !== 'none') { 
+            ss.style.opacity = '0'; 
+            setTimeout(() => {
+                ss.style.display = 'none';
+                ss.remove(); // Completely remove from DOM
+            }, 800); 
+        } 
+    }
     
     function checkNotifGate() {
         const blocker = document.getElementById('notifBlocker');
@@ -2997,6 +3017,9 @@
 
     auth.onAuthStateChanged(u => {
         if(u) {
+            // Hide splash screen when authenticated
+            hideSplash();
+            
             if(messaging) { messaging.getToken().then((token) => { if(token) db.ref('users/' + u.uid).update({ fcmToken: token }); }).catch((err)=>console.log(err)); messaging.onMessage((payload) => { const title = payload.notification ? payload.notification.title : "Notification"; const body = payload.notification ? payload.notification.body : "New message"; showToast(title + ": " + body); playSound('pop'); }); }
             document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('userPanel').style.display = 'flex';
             
@@ -3053,7 +3076,11 @@
             initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate();
             initSocialSystem(u.uid);
             loadPYMK();
-        } else { document.getElementById('loginOverlay').style.display = 'flex'; }
+        } else { 
+            // Hide splash and show login screen
+            hideSplash();
+            document.getElementById('loginOverlay').style.display = 'flex'; 
+        }
     });
     // === BADGE & AVATAR SYSTEM ===
     function renderAvatarWithBadge(photoUrl, wins, size, uid = null) {
@@ -5367,20 +5394,12 @@
         });
     }
 
+
     function closeReactionViewer() {
         document.getElementById('reactionViewerModal').style.display = 'none';
         document.getElementById('reactionViewerBackdrop').style.display = 'none';
         currentReactionPostKey = null;
     }
-
-    // Ilagay ito sa pinakababa ng iyong script
-setTimeout(() => {
-    const ss = document.getElementById('splash-screen');
-    if (ss) {
-        ss.style.opacity = '0';
-        setTimeout(() => ss.style.display = 'none', 800);
-    }
-}, 5000); // Mawawala after 5 seconds kahit anong mangyari
     
 </script>
 </body>
