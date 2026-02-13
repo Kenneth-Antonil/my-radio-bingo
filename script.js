@@ -1548,6 +1548,7 @@ function loadProfilePosts(uid) {
             container.appendChild(div);
             loadCommentPreview(post.key);
             loadReactionSummary(post.key);
+            loadCommentCount(post.key);
         });
         
         if(count === 0) container.innerHTML = "<div style='color:white; opacity:0.5; font-size:12px; text-align:center; padding: var(--spacing-lg);'>No posts yet</div>";
@@ -2176,6 +2177,7 @@ function loadSocialFeed() {
                 feedContainer.appendChild(div);
                 loadCommentPreview(post.key);
                 loadReactionSummary(post.key);
+                loadCommentCount(post.key);
                 
                 // === IN-FEED ADS INJECTION ===
                 adCounter++;
@@ -2273,7 +2275,10 @@ function createPostElement(post, isFriend) {
         <div class="post-content">${escapeHtml(post.content || '')}</div>
         ${imgHtml}
         ${sharedPostHtml}
-        <div class="reaction-summary-bar" id="reaction-summary-${post.key}" onclick="openReactionViewer('${post.key}')"></div>
+        <div class="post-engagement-bar" id="engagement-bar-${post.key}">
+            <div class="reaction-summary-bar" id="reaction-summary-${post.key}" onclick="openReactionViewer('${post.key}')"></div>
+            <div class="comment-count-bar" id="comment-count-${post.key}" onclick="openComments('${post.key}')" style="cursor:pointer;"></div>
+        </div>
         <div class="post-actions" style="position:relative;">
             <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
                 <i data-lucide="heart" id="like-icon-${post.key}" style="width:14px;"></i> 
@@ -2339,6 +2344,28 @@ function loadReactionSummary(postKey) {
             span.innerHTML = emoji + ' ' + count;
             bar.appendChild(span);
         });
+        
+        // Add total reaction count
+        const totalReactions = Object.values(counts).reduce((a, b) => a + b, 0);
+        if (totalReactions > 0) {
+            const totalSpan = document.createElement('span');
+            totalSpan.style.cssText = 'font-size:12px; color:#94a3b8; margin-left:4px;';
+            totalSpan.textContent = totalReactions.toString();
+            bar.appendChild(totalSpan);
+        }
+    });
+}
+
+function loadCommentCount(postKey) {
+    db.ref('postComments/' + postKey).once('value', s => {
+        const countEl = document.getElementById('comment-count-' + postKey);
+        if (!countEl) return;
+        const count = s.numChildren();
+        if (count > 0) {
+            countEl.textContent = count + ' comment' + (count !== 1 ? 's' : '');
+        } else {
+            countEl.textContent = '';
+        }
     });
 }
 
