@@ -184,6 +184,7 @@
         <button class="tab-btn active" onclick="openTab('bingo-tab', this)"><i data-lucide="layout-grid" width="16"></i> BINGO</button>
         <button class="tab-btn" onclick="openTab('settings-tab', this)"><i data-lucide="sliders" width="16"></i> SETTINGS</button>
         <button class="tab-btn" onclick="openTab('users-tab', this)"><i data-lucide="user-cog" width="16"></i> PLAYERS</button>
+        <button class="tab-btn" onclick="openTab('verification-tab', this)"><i data-lucide="shield-check" width="16"></i> VERIFICATION</button>
         <button class="tab-btn" onclick="openTab('cashout-tab', this)"><i data-lucide="wallet" width="16"></i> CASHOUTS</button>
         <button class="tab-btn" onclick="openTab('support-tab', this)"><i data-lucide="message-square" width="16"></i> SUPPORT</button>
     </div>
@@ -305,6 +306,24 @@
                 <div id="pointHistoryList" style="height: 250px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border:1px solid var(--glass-border);">
                     <div style="opacity:0.5; text-align:center; padding:20px; font-size:12px;">Select a user to view their log history.</div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="verification-tab" class="tab-content">
+        <div class="card">
+            <h2><i data-lucide="shield-check"></i> Verification Requests</h2>
+            <div style="font-size:11px; opacity:0.6; margin-bottom:15px;">Review and manage user verification badge requests</div>
+            
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <button class="btn btn-secondary" onclick="filterVerificationRequests('all')" id="filter-all" style="flex:1; font-size:12px; padding:8px;">All</button>
+                <button class="btn btn-secondary" onclick="filterVerificationRequests('pending')" id="filter-pending" style="flex:1; font-size:12px; padding:8px; background:rgba(245, 158, 11, 0.2); border-color:rgba(245, 158, 11, 0.3);">Pending</button>
+                <button class="btn btn-secondary" onclick="filterVerificationRequests('approved')" id="filter-approved" style="flex:1; font-size:12px; padding:8px;">Approved</button>
+                <button class="btn btn-secondary" onclick="filterVerificationRequests('rejected')" id="filter-rejected" style="flex:1; font-size:12px; padding:8px;">Rejected</button>
+            </div>
+            
+            <div id="verificationRequestsList" style="display:flex; flex-direction:column; gap:15px;">
+                <div style="opacity:0.5; text-align:center; padding:40px; font-size:12px;">Loading verification requests...</div>
             </div>
         </div>
     </div>
@@ -885,6 +904,228 @@
             alert('Failed to send reply');
         });
     }
+
+    // === VERIFICATION REQUEST MANAGEMENT ===
+    let currentVerificationFilter = 'all';
+    
+    function loadVerificationRequests() {
+        db.ref('users').once('value', snapshot => {
+            const requests = [];
+            snapshot.forEach(userSnap => {
+                const user = userSnap.val();
+                const uid = userSnap.key;
+                
+                if (user.verificationStatus || user.verified) {
+                    requests.push({
+                        uid: uid,
+                        name: user.name || 'Unknown',
+                        photo: user.photo || 'https://via.placeholder.com/60',
+                        reason: user.verificationReason || 'No reason provided',
+                        status: user.verified ? 'approved' : (user.verificationStatus || 'none'),
+                        requestedAt: user.verificationRequestedAt || 0,
+                        points: user.points || 0,
+                        bingoWins: user.bingoWins || 0
+                    });
+                }
+            });
+            
+            // Sort by requested date (newest first)
+            requests.sort((a, b) => b.requestedAt - a.requestedAt);
+            
+            renderVerificationRequests(requests);
+        });
+    }
+    
+    function filterVerificationRequests(filter) {
+        currentVerificationFilter = filter;
+        
+        // Update button styles
+        document.querySelectorAll('#verification-tab button[id^="filter-"]').forEach(btn => {
+            btn.style.background = 'rgba(255,255,255,0.05)';
+            btn.style.borderColor = 'rgba(255,255,255,0.1)';
+        });
+        
+        const activeBtn = document.getElementById('filter-' + filter);
+        if (activeBtn) {
+            activeBtn.style.background = 'rgba(59, 130, 246, 0.2)';
+            activeBtn.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+        }
+        
+        loadVerificationRequests();
+    }
+    
+    function renderVerificationRequests(requests) {
+        const list = document.getElementById('verificationRequestsList');
+        list.innerHTML = '';
+        
+        // Filter requests based on current filter
+        const filtered = requests.filter(req => {
+            if (currentVerificationFilter === 'all') return true;
+            if (currentVerificationFilter === 'pending') return req.status === 'pending';
+            if (currentVerificationFilter === 'approved') return req.status === 'approved';
+            if (currentVerificationFilter === 'rejected') return req.status === 'rejected';
+            return true;
+        });
+        
+        if (filtered.length === 0) {
+            list.innerHTML = '<div style="opacity:0.5; text-align:center; padding:40px; font-size:12px;">No verification requests found.</div>';
+            return;
+        }
+        
+        filtered.forEach(req => {
+            const statusColors = {
+                'pending': { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.3)', text: '#f59e0b', label: '⏳ Pending' },
+                'approved': { bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.3)', text: '#10b981', label: '✓ Approved' },
+                'rejected': { bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.3)', text: '#ef4444', label: '✗ Rejected' }
+            };
+            
+            const statusStyle = statusColors[req.status] || statusColors.pending;
+            const dateStr = req.requestedAt ? new Date(req.requestedAt).toLocaleString() : 'Unknown';
+            
+            const div = document.createElement('div');
+            div.style.cssText = `
+                background: rgba(255, 255, 255, 0.02);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                padding: 16px;
+            `;
+            
+            div.innerHTML = `
+                <div style="display:flex; gap:12px; align-items:start;">
+                    <img src="${escapeHtml(req.photo)}" 
+                        style="width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,0.1);">
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                            <div style="font-weight:700; color:white; font-size:14px;">${escapeHtml(req.name)}</div>
+                            <div style="font-size:10px; padding:2px 8px; border-radius:12px; background:${statusStyle.bg}; border:1px solid ${statusStyle.border}; color:${statusStyle.text}; font-weight:600;">
+                                ${statusStyle.label}
+                            </div>
+                        </div>
+                        <div style="font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:8px;">
+                            UID: ${req.uid.substring(0,8)} • ${req.bingoWins} wins • ${req.points} pts
+                        </div>
+                        <div style="font-size:12px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-bottom:8px;">
+                            <strong>Reason:</strong> ${escapeHtml(req.reason)}
+                        </div>
+                        <div style="font-size:10px; opacity:0.5;">
+                            Requested: ${dateStr}
+                        </div>
+                        ${req.status === 'pending' ? `
+                            <div style="display:flex; gap:8px; margin-top:12px;">
+                                <button class="btn btn-primary" 
+                                    onclick="approveVerificationRequest('${req.uid}')"
+                                    style="flex:1; padding:8px; font-size:11px; background:#10b981; border-color:#10b981;">
+                                    <i data-lucide="check" width="14"></i> APPROVE
+                                </button>
+                                <button class="btn btn-danger" 
+                                    onclick="rejectVerificationRequest('${req.uid}')"
+                                    style="flex:1; padding:8px; font-size:11px;">
+                                    <i data-lucide="x" width="14"></i> REJECT
+                                </button>
+                            </div>
+                        ` : req.status === 'approved' ? `
+                            <div style="display:flex; gap:8px; margin-top:12px;">
+                                <button class="btn btn-danger" 
+                                    onclick="revokeVerification('${req.uid}')"
+                                    style="flex:1; padding:8px; font-size:11px;">
+                                    <i data-lucide="shield-off" width="14"></i> REVOKE VERIFICATION
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            list.appendChild(div);
+        });
+        
+        lucide.createIcons();
+    }
+    
+    function approveVerificationRequest(uid) {
+        if (!confirm('Approve this verification request?')) return;
+        
+        db.ref('users/' + uid).update({
+            verified: true,
+            verificationStatus: 'approved',
+            verificationApprovedAt: Date.now()
+        }).then(() => {
+            // Send notification to user
+            db.ref('notifications/' + uid).push({
+                msg: '✓ Your verification request has been approved! You now have a verification badge.',
+                time: Date.now(),
+                type: 'verification_approved'
+            });
+            
+            alert('Verification approved!');
+            loadVerificationRequests();
+        }).catch(err => {
+            console.error('Error approving verification:', err);
+            alert('Failed to approve verification');
+        });
+    }
+    
+    function rejectVerificationRequest(uid) {
+        const reason = prompt('Enter rejection reason (optional):');
+        
+        db.ref('users/' + uid).update({
+            verified: false,
+            verificationStatus: 'rejected',
+            verificationRejectedAt: Date.now(),
+            verificationRejectionReason: reason || 'No reason provided'
+        }).then(() => {
+            // Send notification to user
+            db.ref('notifications/' + uid).push({
+                msg: `✗ Your verification request has been rejected. ${reason ? 'Reason: ' + reason : ''}`,
+                time: Date.now(),
+                type: 'verification_rejected'
+            });
+            
+            alert('Verification rejected.');
+            loadVerificationRequests();
+        }).catch(err => {
+            console.error('Error rejecting verification:', err);
+            alert('Failed to reject verification');
+        });
+    }
+    
+    function revokeVerification(uid) {
+        if (!confirm('Revoke verification badge from this user?')) return;
+        
+        db.ref('users/' + uid).update({
+            verified: false,
+            verificationStatus: 'revoked',
+            verificationRevokedAt: Date.now()
+        }).then(() => {
+            // Send notification to user
+            db.ref('notifications/' + uid).push({
+                msg: '⚠️ Your verification badge has been revoked by an admin.',
+                time: Date.now(),
+                type: 'verification_revoked'
+            });
+            
+            alert('Verification revoked.');
+            loadVerificationRequests();
+        }).catch(err => {
+            console.error('Error revoking verification:', err);
+            alert('Failed to revoke verification');
+        });
+    }
+    
+    // Load verification requests when the tab is opened
+    const verificationTab = document.getElementById('verification-tab');
+    if (verificationTab) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.target.classList.contains('active') && mutation.target.id === 'verification-tab') {
+                    loadVerificationRequests();
+                }
+            });
+        });
+        
+        observer.observe(verificationTab, { attributes: true, attributeFilter: ['class'] });
+    }
 </script>
+
 </body>
 </html>

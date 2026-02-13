@@ -179,8 +179,8 @@ auth.onAuthStateChanged(u => {
                 document.getElementById('profileNameDisplay').innerText = displayName;
                 
                 // Update Avatars with badges
-                document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.bingoWins || 0, 45, u.uid);
-                document.getElementById('menuAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.bingoWins || 0, 70, u.uid);
+                document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.bingoWins || 0, 45, u.uid, userData.verified || false);
+                document.getElementById('menuAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(displayPhoto), userData.bingoWins || 0, 70, u.uid, userData.verified || false);
             } 
         });
         initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate();
@@ -189,7 +189,7 @@ auth.onAuthStateChanged(u => {
     } else { document.getElementById('loginOverlay').style.display = 'flex'; }
 });
 // === BADGE & AVATAR SYSTEM ===
-function renderAvatarWithBadge(photoUrl, wins, size, uid = null) {
+function renderAvatarWithBadge(photoUrl, wins, size, uid = null, verified = false) {
     let tierClass = "tier-bronze-bg";
     let tierIcon = ""; // Default empty
     if(wins >= 30) { tierClass = "tier-diamond-bg"; tierIcon = '<i data-lucide="diamond" style="width:50%; height:50%;"></i>'; }
@@ -205,6 +205,9 @@ function renderAvatarWithBadge(photoUrl, wins, size, uid = null) {
     const isOnline = uid && onlineUsers[uid];
     const onlineClass = isOnline ? 'is-online' : '';
 
+    // Verification badge
+    const verifiedBadge = verified ? `<div class="verification-badge" title="Verified Account"><i data-lucide="badge-check" style="width:70%; height:70%;"></i></div>` : '';
+
     setTimeout(() => lucide.createIcons(), 50);
 
     return `
@@ -214,6 +217,7 @@ function renderAvatarWithBadge(photoUrl, wins, size, uid = null) {
                 ${tierIcon}
             </div>
             <div class="online-indicator ${onlineClass}"></div>
+            ${verifiedBadge}
         </div>
     `;
 }
