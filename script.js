@@ -1,6 +1,8 @@
-var newPath = window.location.pathname.replace(/index\.html$/, "");
+if (window.location.pathname.endsWith("index.html")) {
+            var newPath = window.location.pathname.replace(/index\.html$/, "");
             window.history.replaceState({}, document.title, newPath);
         }
+
     // === NOTIFICATION BLOCKER LOGIC ===
     window.addEventListener('load', () => { 
         setTimeout(hideSplash, 1500); // Reduced from 2000ms to 1500ms
