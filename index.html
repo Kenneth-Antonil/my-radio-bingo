@@ -2754,6 +2754,31 @@
             <i data-lucide="link" style="width:20px;"></i>
             <span>Copy Link</span>
         </button>
+        
+        <!-- Social Media Share Options -->
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: var(--spacing-md) 0; padding-top: var(--spacing-md);">
+            <div style="font-size: 11px; color: #94a3b8; margin-bottom: var(--spacing-sm); font-weight: 700; text-transform: uppercase;">Share via Social Media</div>
+            <button class="share-btn-option" onclick="shareViaFacebook()" style="background: rgba(24, 119, 242, 0.1); border-color: rgba(24, 119, 242, 0.3);">
+                <span style="font-size: 20px;">📘</span>
+                <span>Facebook</span>
+            </button>
+            <button class="share-btn-option" onclick="shareViaTwitter()" style="background: rgba(29, 161, 242, 0.1); border-color: rgba(29, 161, 242, 0.3);">
+                <span style="font-size: 20px;">🐦</span>
+                <span>Twitter</span>
+            </button>
+            <button class="share-btn-option" onclick="shareViaWhatsApp()" style="background: rgba(37, 211, 102, 0.1); border-color: rgba(37, 211, 102, 0.3);">
+                <span style="font-size: 20px;">💬</span>
+                <span>WhatsApp</span>
+            </button>
+            <button class="share-btn-option" onclick="shareViaTelegram()" style="background: rgba(0, 136, 204, 0.1); border-color: rgba(0, 136, 204, 0.3);">
+                <span style="font-size: 20px;">✈️</span>
+                <span>Telegram</span>
+            </button>
+            <button class="share-btn-option" onclick="shareViaMessenger()" style="background: rgba(0, 132, 255, 0.1); border-color: rgba(0, 132, 255, 0.3);">
+                <span style="font-size: 20px;">💬</span>
+                <span>Messenger</span>
+            </button>
+        </div>
     </div>
 </div>
 
@@ -2764,55 +2789,6 @@
         <button onclick="closeReactionViewer()" style="background:none; border:none; color:white;" aria-label="Close reactions"><i data-lucide="x"></i></button>
     </div>
     <div id="reactionViewerList" class="reaction-viewer-list"></div>
-</div>
-
-<!-- SHARE MODAL -->
-<div id="shareModalBackdrop" class="share-modal-backdrop" onclick="closeShareModal()"></div>
-<div id="shareModal" class="share-modal-container">
-    <div class="share-modal-header">
-        <div class="share-modal-title">Share Post</div>
-        <button class="share-modal-close" onclick="closeShareModal()">
-            <i data-lucide="x"></i>
-        </button>
-    </div>
-    <div class="share-modal-body">
-        <div id="sharePostInfo" class="share-post-info">
-            <div class="share-post-author" id="shareAuthorName">Loading...</div>
-            <div class="share-post-text" id="sharePostText"></div>
-        </div>
-        
-        <div class="share-options-grid">
-            <button class="share-option-btn" onclick="shareViaFacebook()">
-                <div class="share-icon-wrapper facebook">📘</div>
-                <div class="share-option-label">Facebook</div>
-            </button>
-            
-            <button class="share-option-btn" onclick="shareViaTwitter()">
-                <div class="share-icon-wrapper twitter">🐦</div>
-                <div class="share-option-label">Twitter</div>
-            </button>
-            
-            <button class="share-option-btn" onclick="shareViaWhatsApp()">
-                <div class="share-icon-wrapper whatsapp">💬</div>
-                <div class="share-option-label">WhatsApp</div>
-            </button>
-            
-            <button class="share-option-btn" onclick="shareViaTelegram()">
-                <div class="share-icon-wrapper telegram">✈️</div>
-                <div class="share-option-label">Telegram</div>
-            </button>
-            
-            <button class="share-option-btn" onclick="shareViaMessenger()">
-                <div class="share-icon-wrapper messenger">💬</div>
-                <div class="share-option-label">Messenger</div>
-            </button>
-            
-            <button class="share-option-btn" onclick="copyShareLink()">
-                <div class="share-icon-wrapper copy">🔗</div>
-                <div class="share-option-label">Copy Link</div>
-            </button>
-        </div>
-    </div>
 </div>
 
 <div id="searchModal" class="search-modal-container">
@@ -5679,175 +5655,83 @@
         currentReactionPostKey = null;
     }
     
-    // === SHARE FUNCTIONALITY ===
-    let currentSharePostKey = null;
-    let currentSharePostData = null;
-    
-    function openShareModal(postKey) {
-        currentSharePostKey = postKey;
-        
-        // Get post data
-        db.ref('socialPosts/' + postKey).once('value', snapshot => {
-            if(snapshot.exists()) {
-                currentSharePostData = snapshot.val();
-                
-                // Update modal content
-                document.getElementById('shareAuthorName').textContent = currentSharePostData.authorName || 'User';
-                document.getElementById('sharePostText').textContent = currentSharePostData.content || '';
-                
-                // Show modal
-                document.getElementById('shareModalBackdrop').style.display = 'block';
-                document.getElementById('shareModal').style.display = 'flex';
-                
-                lucide.createIcons();
-            }
-        });
-    }
-    
-    function closeShareModal() {
-        document.getElementById('shareModalBackdrop').style.display = 'none';
-        document.getElementById('shareModal').style.display = 'none';
-        currentSharePostKey = null;
-        currentSharePostData = null;
-    }
-    
+    // === SOCIAL MEDIA SHARE FUNCTIONS ===
     function getShareUrl() {
-        // Create a shareable URL - you can customize this based on your domain
+        if(!currentSharePostKey) return window.location.origin;
         const baseUrl = window.location.origin + window.location.pathname;
         return baseUrl + '?post=' + currentSharePostKey;
     }
     
-    function getShareText() {
-        if(!currentSharePostData) return 'Check out this post on Radio Bingo Live!';
-        
-        const author = currentSharePostData.authorName || 'Someone';
-        const content = currentSharePostData.content || 'this post';
+    function getShareText(postData) {
+        if(!postData) return 'Check out this post on Radio Bingo Live!';
+        const author = postData.authorName || 'Someone';
+        const content = postData.content || 'this post';
         const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
-        
         return `${author} shared: "${preview}" - Radio Bingo Live`;
     }
     
     function shareViaFacebook() {
+        if(!currentSharePostKey) return;
         const url = encodeURIComponent(getShareUrl());
         const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
         window.open(shareUrl, '_blank', 'width=600,height=400');
         closeShareModal();
         showToast('✓ Shared to Facebook!');
-        incrementShareCount();
     }
     
     function shareViaTwitter() {
-        const url = encodeURIComponent(getShareUrl());
-        const text = encodeURIComponent(getShareText());
-        const shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
-        window.open(shareUrl, '_blank', 'width=600,height=400');
-        closeShareModal();
-        showToast('✓ Shared to Twitter!');
-        incrementShareCount();
+        if(!currentSharePostKey) return;
+        db.ref('socialPosts/' + currentSharePostKey).once('value', s => {
+            const post = s.val();
+            const url = encodeURIComponent(getShareUrl());
+            const text = encodeURIComponent(getShareText(post));
+            const shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+            window.open(shareUrl, '_blank', 'width=600,height=400');
+            closeShareModal();
+            showToast('✓ Shared to Twitter!');
+        });
     }
     
     function shareViaWhatsApp() {
-        const url = encodeURIComponent(getShareUrl());
-        const text = encodeURIComponent(getShareText() + ' ');
-        const shareUrl = `https://wa.me/?text=${text}${url}`;
-        window.open(shareUrl, '_blank');
-        closeShareModal();
-        showToast('✓ Shared to WhatsApp!');
-        incrementShareCount();
+        if(!currentSharePostKey) return;
+        db.ref('socialPosts/' + currentSharePostKey).once('value', s => {
+            const post = s.val();
+            const url = encodeURIComponent(getShareUrl());
+            const text = encodeURIComponent(getShareText(post) + ' ');
+            const shareUrl = `https://wa.me/?text=${text}${url}`;
+            window.open(shareUrl, '_blank');
+            closeShareModal();
+            showToast('✓ Shared to WhatsApp!');
+        });
     }
     
     function shareViaTelegram() {
-        const url = encodeURIComponent(getShareUrl());
-        const text = encodeURIComponent(getShareText());
-        const shareUrl = `https://t.me/share/url?url=${url}&text=${text}`;
-        window.open(shareUrl, '_blank');
-        closeShareModal();
-        showToast('✓ Shared to Telegram!');
-        incrementShareCount();
+        if(!currentSharePostKey) return;
+        db.ref('socialPosts/' + currentSharePostKey).once('value', s => {
+            const post = s.val();
+            const url = encodeURIComponent(getShareUrl());
+            const text = encodeURIComponent(getShareText(post));
+            const shareUrl = `https://t.me/share/url?url=${url}&text=${text}`;
+            window.open(shareUrl, '_blank');
+            closeShareModal();
+            showToast('✓ Shared to Telegram!');
+        });
     }
     
     function shareViaMessenger() {
+        if(!currentSharePostKey) return;
         const url = encodeURIComponent(getShareUrl());
-        
-        // Check if mobile
         const isMobile = /mobile/i.test(navigator.userAgent);
         
         if(isMobile) {
-            // Try to open Messenger app
             window.location.href = `fb-messenger://share/?link=${url}`;
         } else {
-            // Open Facebook share dialog for desktop
-            const shareUrl = `https://www.facebook.com/dialog/send?link=${url}&app_id=YOUR_APP_ID&redirect_uri=${url}`;
+            const shareUrl = `https://www.facebook.com/dialog/send?link=${url}&redirect_uri=${url}`;
             window.open(shareUrl, '_blank', 'width=600,height=400');
         }
         
         closeShareModal();
         showToast('✓ Shared to Messenger!');
-        incrementShareCount();
-    }
-    
-    function copyShareLink() {
-        const url = getShareUrl();
-        
-        // Try modern clipboard API first
-        if(navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(url).then(() => {
-                showToast('✓ Link copied to clipboard!');
-                closeShareModal();
-                incrementShareCount();
-            }).catch(err => {
-                // Fallback
-                fallbackCopyToClipboard(url);
-            });
-        } else {
-            // Fallback for older browsers
-            fallbackCopyToClipboard(url);
-        }
-    }
-    
-    function fallbackCopyToClipboard(text) {
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        try {
-            document.execCommand('copy');
-            showToast('✓ Link copied to clipboard!');
-            closeShareModal();
-            incrementShareCount();
-        } catch(err) {
-            showToast('❌ Failed to copy link');
-        }
-        
-        document.body.removeChild(textArea);
-    }
-    
-    function incrementShareCount() {
-        if(!currentSharePostKey) return;
-        
-        // Increment share count in database
-        db.ref('socialPosts/' + currentSharePostKey + '/shares').transaction(count => {
-            return (count || 0) + 1;
-        });
-        
-        // Reward the post author
-        if(currentSharePostData && currentSharePostData.uid !== auth.currentUser.uid) {
-            db.ref('users/' + currentSharePostData.uid + '/points').transaction(p => (p || 0) + 5);
-            
-            // Send notification
-            db.ref('notifications/' + currentSharePostData.uid).push({
-                msg: `${userData.name} shared your post`,
-                time: Date.now(),
-                type: 'share',
-                from: auth.currentUser.uid,
-                postId: currentSharePostKey,
-                image: userData.photo
-            });
-        }
     }
     
 </script>
