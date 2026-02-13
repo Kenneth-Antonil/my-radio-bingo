@@ -487,9 +487,8 @@
                 ${item.featured ? '<div class="item-badge">Featured</div>' : ''}
                 <div class="item-image">${item.emoji}</div>
                 <div class="item-name">${item.name}</div>
-                <div class="item-price">
-                    <i data-lucide="coins"></i>
-                    ${item.price.toLocaleString()}
+                <div class="item-price" style="color:var(--gold); font-weight:900;">
+                    ${formatCurrency(item.price)}
                 </div>
             `;
             
@@ -522,7 +521,8 @@
         
         db.ref('users/' + auth.currentUser.uid + '/points').on('value', snapshot => {
             const points = snapshot.val() || 0;
-            document.getElementById('user-points-display').textContent = points.toLocaleString();
+            // UPDATED: Use formatCurrency
+            document.getElementById('user-points-display').textContent = formatCurrency(points);
         });
     }
 
@@ -543,20 +543,19 @@
                 <div class="purchase-item-price">
                     <span class="purchase-price-label">Price:</span>
                     <span class="purchase-price-value">
-                        <i data-lucide="coins"></i>
-                        ${item.price.toLocaleString()}
+                        ${formatCurrency(item.price)}
                     </span>
                 </div>
                 
                 <button class="purchase-btn" 
                         ${!canAfford ? 'disabled' : ''}
                         onclick="confirmPurchase('${item.id}', ${item.price})">
-                    ${canAfford ? '✓ Confirm Purchase' : '⚠️ Insufficient Points'}
+                    ${canAfford ? '✓ Confirm Purchase' : '⚠️ Insufficient Balance'}
                 </button>
                 
                 ${!canAfford ? `
                     <p style="text-align:center; color:rgba(255,255,255,0.5); font-size:12px; margin-top:12px;">
-                        You need ${(item.price - userPoints).toLocaleString()} more points
+                        You need ${formatCurrency(item.price - userPoints)} more
                     </p>
                 ` : ''}
             `;
@@ -615,7 +614,7 @@
     }
 
     function showEarnPointsInfo() {
-        alert('Earn points by:\n\n' +
+        alert('Earn balance by:\n\n' +
               '• Posting on the feed\n' +
               '• Getting likes on your posts\n' +
               '• Commenting on posts\n' +
