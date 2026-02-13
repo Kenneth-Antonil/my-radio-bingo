@@ -241,6 +241,12 @@ function getBadgeHtml(wins) {
     return ""; 
 }
 
+// Helper to get verification badge HTML
+function getVerificationBadgeHtml(verified) {
+    if(!verified) return "";
+    return `<i data-lucide="badge-check" style="width:14px; height:14px; fill:#3b82f6; color:#3b82f6; margin-left:4px;" title="Verified Account"></i>`;
+}
+
 // === UTILITY: TEXT SANITIZATION ===
 function escapeHtml(text) {
     if (!text) return '';
@@ -1354,6 +1360,7 @@ function createPost() {
         authorPhoto: userData.photo,
         authorPoints: userData.points,
         authorWins: userData.bingoWins || 0,
+        authorVerified: userData.verified || false,
         content: txt,
         mood: selectedMood,
         image: selectedImageBase64,
@@ -1449,9 +1456,14 @@ function openUserProfile(uid) {
     db.ref('users/' + uid).once('value', s => {
         const u = s.val();
         // Inject avatar with badge
-        document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.bingoWins || 0, 140, uid);
+        document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.bingoWins || 0, 140, uid, u.verified || false);
         
         document.getElementById('pageProfileName').textContent = u.name;
+        // Add verification badge if verified
+        if(u.verified) {
+            document.getElementById('pageProfileName').innerHTML = u.name + ' ' + getVerificationBadgeHtml(true);
+            setTimeout(() => lucide.createIcons(), 50);
+        }
         document.getElementById('pageProfileBio').innerText = u.bio || "Radio Bingo Player";
         
         if(u.cover) {
@@ -2258,7 +2270,7 @@ function createPostElement(post, isFriend) {
         <div class="post-header">
             <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
             <div class="post-meta">
-                <div class="post-author">${post.authorName} ${getBadgeHtml(post.authorWins || 0)} ${friendBadge}</div>
+                <div class="post-author">${post.authorName} ${getBadgeHtml(post.authorWins || 0)} ${getVerificationBadgeHtml(post.authorVerified)} ${friendBadge}</div>
                 <div class="post-time">${fixDate(post.timestamp)} ${visibilityBadge}</div>
                 ${moodHtml}
             </div>
