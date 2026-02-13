@@ -2338,10 +2338,10 @@ function loadReactionSummary(postKey) {
 
         // Sort by count descending
         const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-        sorted.forEach(([emoji, count]) => {
+        sorted.forEach(([emoji]) => {
             const span = document.createElement('span');
             span.className = 'reaction-summary-item';
-            span.innerHTML = emoji + ' ' + count;
+            span.textContent = emoji;
             bar.appendChild(span);
         });
         
@@ -2349,8 +2349,8 @@ function loadReactionSummary(postKey) {
         const totalReactions = Object.values(counts).reduce((a, b) => a + b, 0);
         if (totalReactions > 0) {
             const totalSpan = document.createElement('span');
-            totalSpan.style.cssText = 'font-size:12px; color:#94a3b8; margin-left:4px;';
-            totalSpan.textContent = totalReactions.toString();
+            totalSpan.style.cssText = 'font-size:12px; color:#94a3b8; margin-left:8px;';
+            totalSpan.textContent = totalReactions + ' reaction' + (totalReactions !== 1 ? 's' : '');
             bar.appendChild(totalSpan);
         }
     });
