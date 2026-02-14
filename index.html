@@ -896,6 +896,68 @@
         .profile-nav-back:hover { background: rgba(0,0,0,0.6); transform: scale(1.05); }
         .profile-nav-back:active { transform: scale(0.95); }
         
+        /* Profile Menu Button (3-dot) */
+        .profile-menu-btn {
+            position: absolute; top: 15px; right: 15px; z-index: 20;
+            width: 44px; height: 44px; border-radius: 50%; background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.15);
+            color: white; display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .profile-menu-btn:hover { background: rgba(0,0,0,0.6); transform: scale(1.05); }
+        .profile-menu-btn:active { transform: scale(0.95); }
+        
+        /* Dropdown Menu */
+        .profile-dropdown {
+            position: absolute; top: 65px; right: 15px; z-index: 30;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            display: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            min-width: 240px;
+        }
+        .profile-dropdown.show { display: block; animation: slideIn 0.2s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .dropdown-item {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .dropdown-item:last-child { border-bottom: none; }
+        .dropdown-item:hover { background: rgba(255,255,255,0.08); }
+        .dropdown-item:active { background: rgba(255,255,255,0.12); transform: scale(0.98); }
+        .dropdown-item i { width: 18px; height: 18px; }
+        
+        /* Verification Badge (Blue Checkmark) */
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border-radius: 50%;
+            margin-left: 4px;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+        .verified-badge i {
+            width: 10px;
+            height: 10px;
+            color: white;
+        }
+        
         .profile-info-section {
             padding: 0 20px;
             margin-top: -80px; /* Elegant avatar overlap with cover photo */
@@ -2158,6 +2220,23 @@
         <i data-lucide="arrow-left"></i>
     </button>
     
+    <!-- 3-Dot Menu Button (Only shown for own profile) -->
+    <button id="profileMenuBtn" class="profile-menu-btn" style="display:none;" onclick="toggleProfileMenu(event)">
+        <i data-lucide="more-vertical"></i>
+    </button>
+    
+    <!-- Dropdown Menu -->
+    <div id="profileDropdown" class="profile-dropdown">
+        <div class="dropdown-item" onclick="requestVerificationBadge()">
+            <i data-lucide="shield-check"></i>
+            <span>Request Verification Badge</span>
+        </div>
+        <div class="dropdown-item" onclick="openSettings()">
+            <i data-lucide="settings"></i>
+            <span>Settings</span>
+        </div>
+    </div>
+    
     <div class="profile-cover" id="pageProfileCover"></div>
     
     <div class="profile-info-section">
@@ -2632,14 +2711,6 @@
     });
     // === BADGE & AVATAR SYSTEM ===
     function renderAvatarWithBadge(photoUrl, wins, size, uid = null) {
-        let tierClass = "tier-bronze-bg";
-        let tierIcon = ""; // Default empty
-        if(wins >= 30) { tierClass = "tier-diamond-bg"; tierIcon = '<i data-lucide="diamond" style="width:50%; height:50%;"></i>'; }
-        else if(wins >= 15) { tierClass = "tier-platinum-bg"; tierIcon = '<i data-lucide="shield" style="width:50%; height:50%;"></i>'; }
-        else if(wins >= 5) { tierClass = "tier-gold-bg"; tierIcon = '<i data-lucide="crown" style="width:50%; height:50%;"></i>'; }
-        else if(wins >= 1) { tierClass = "tier-silver-bg"; tierIcon = '<i data-lucide="star" style="width:50%; height:50%;"></i>'; }
-        else { tierIcon = '<i data-lucide="circle-dot" style="width:50%; height:50%;"></i>'; }
-
         // Data attribute for online status updates - only if uid is provided
         const uidAttr = uid ? `data-uid="${uid}"` : '';
         
@@ -2652,9 +2723,6 @@
         return `
             <div class="avatar-frame" style="width:${size}px; height:${size}px;" ${uidAttr}>
                 <img src="${photoUrl}" style="width:100%; height:100%; border-radius:50%; border:2px solid var(--glass-border); object-fit:cover;">
-                <div class="avatar-badge-icon ${tierClass}">
-                    ${tierIcon}
-                </div>
                 <div class="online-indicator ${onlineClass}"></div>
             </div>
         `;
@@ -2671,12 +2739,28 @@
         });
     }
 
-    // Helper to get simple HTML badge string for text
-    function getBadgeHtml(wins) {
-        // Just returns empty or simple icon for text-flow
-        if(wins >= 30) return `<i data-lucide="diamond" style="width:12px; height:12px; fill:#06b6d4; color:#06b6d4; margin-left:4px;"></i>`;
-        if(wins >= 5) return `<i data-lucide="crown" style="width:12px; height:12px; fill:#fbbf24; color:#fbbf24; margin-left:4px;"></i>`;
+    // Helper to get verification badge HTML for text
+    function getBadgeHtml(wins, userData = null) {
+        // Check if user is verified - this will be populated from Firebase
+        if (userData && userData.verified) {
+            return `<span class="verified-badge"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>`;
+        }
         return ""; 
+    }
+    
+    // Async version that fetches user data to check verification
+    async function getVerificationBadge(uid) {
+        if (!uid) return '';
+        try {
+            const snapshot = await firebase.database().ref(`users/${uid}`).once('value');
+            const userData = snapshot.val();
+            if (userData && userData.verified) {
+                return `<span class="verified-badge"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>`;
+            }
+        } catch(err) {
+            console.error('Error fetching verification status:', err);
+        }
+        return '';
     }
 
     // === UTILITY: TEXT SANITIZATION ===
@@ -3730,6 +3814,7 @@
             authorPhoto: userData.photo,
             authorPoints: userData.points,
             authorWins: userData.bingoWins || 0,
+            authorVerified: userData.verified || false,
             content: txt,
             mood: selectedMood,
             image: selectedImageBase64,
@@ -3821,10 +3906,12 @@
 
         db.ref('users/' + uid).once('value', s => {
             const u = s.val();
-            // Inject avatar with badge
+            // Inject avatar (without ranking badge)
             document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.bingoWins || 0, 140, uid);
             
-            document.getElementById('pageProfileName').textContent = u.name;
+            // Set name with verification badge if verified
+            const verificationBadge = u.verified ? `<span class="verified-badge"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>` : '';
+            document.getElementById('pageProfileName').innerHTML = `${escapeHtml(u.name)}${verificationBadge}`;
             document.getElementById('pageProfileBio').innerText = u.bio || "Radio Bingo Player";
             
             if(u.cover) {
@@ -3849,21 +3936,105 @@
         document.getElementById('userProfilePage').style.display = 'none';
         currentProfileUid = null;
     }
+    
+    // Toggle profile dropdown menu
+    function toggleProfileMenu(event) {
+        event.stopPropagation();
+        const dropdown = document.getElementById('profileDropdown');
+        dropdown.classList.toggle('show');
+        
+        // Close menu when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', closeProfileMenuOnClickOutside);
+        }, 10);
+    }
+    
+    function closeProfileMenuOnClickOutside(event) {
+        const dropdown = document.getElementById('profileDropdown');
+        const menuBtn = document.getElementById('profileMenuBtn');
+        
+        if (!dropdown.contains(event.target) && event.target !== menuBtn) {
+            dropdown.classList.remove('show');
+            document.removeEventListener('click', closeProfileMenuOnClickOutside);
+        }
+    }
+    
+    // Request verification badge
+    async function requestVerificationBadge() {
+        const dropdown = document.getElementById('profileDropdown');
+        dropdown.classList.remove('show');
+        
+        const user = auth.currentUser;
+        if (!user) return;
+        
+        try {
+            // Check if user already has verification
+            const userSnapshot = await db.ref(`users/${user.uid}`).once('value');
+            const userData = userSnapshot.val();
+            
+            if (userData.verified) {
+                showToast('✓ You already have a verification badge!');
+                return;
+            }
+            
+            if (userData.verificationStatus === 'pending') {
+                showToast('⏳ Your verification request is pending review');
+                return;
+            }
+            
+            // Submit verification request
+            showCustomConfirm(
+                'REQUEST VERIFICATION BADGE',
+                'Do you want to request a verification badge? This will be reviewed by administrators.',
+                async () => {
+                    try {
+                        await db.ref(`users/${user.uid}`).update({
+                            verificationStatus: 'pending',
+                            verificationReason: 'User requested verification badge',
+                            verificationRequestedAt: Date.now()
+                        });
+                        
+                        showToast('✓ Verification request submitted! Please wait for admin approval.');
+                    } catch (err) {
+                        console.error('Error submitting verification request:', err);
+                        showToast('✗ Failed to submit request. Please try again.');
+                    }
+                }
+            );
+        } catch (err) {
+            console.error('Error requesting verification:', err);
+            showToast('✗ Error processing request');
+        }
+    }
+    
+    // Open settings (placeholder - you can implement later)
+    function openSettings() {
+        const dropdown = document.getElementById('profileDropdown');
+        dropdown.classList.remove('show');
+        
+        // For now, just open edit profile
+        openEditProfile();
+    }
 
     function updateProfileButtonState(uid) {
         const btn = document.getElementById('profileMainActionBtn');
         const unfriendBtn = document.getElementById('unfriendBtn');
         const giftSkinBtn = document.getElementById('giftSkinBtn');
+        const menuBtn = document.getElementById('profileMenuBtn');
         const myUid = auth.currentUser.uid;
         
         unfriendBtn.style.display = 'none';
         giftSkinBtn.style.display = 'none';
+        menuBtn.style.display = 'none';
         
         if(uid === myUid) {
             btn.innerText = "Edit Profile";
             btn.className = "profile-action-btn secondary";
             btn.onclick = openEditProfile;
             btn.style.display = 'block';
+            
+            // Show 3-dot menu button for own profile
+            menuBtn.style.display = 'flex';
         } else {
             // Show Gift Skin button for other users
             giftSkinBtn.style.display = 'block';
@@ -4368,6 +4539,7 @@
                 authorPhoto: userData.photo,
                 authorPoints: userData.points,
                 authorWins: userData.bingoWins || 0,
+                authorVerified: userData.verified || false,
                 content: '', // Empty content for pure share
                 timestamp: Date.now(),
                 likes: 0,
@@ -4629,7 +4801,7 @@
             <div class="post-header">
                 <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
                 <div class="post-meta">
-                    <div class="post-author">${post.authorName} ${getBadgeHtml(post.authorWins || 0)} ${friendBadge}</div>
+                    <div class="post-author">${post.authorName} ${post.authorVerified ? '<span class="verified-badge"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>' : ''} ${friendBadge}</div>
                     <div class="post-time">${fixDate(post.timestamp)} ${visibilityBadge}</div>
                     ${moodHtml}
                 </div>
