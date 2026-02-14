@@ -190,14 +190,6 @@ auth.onAuthStateChanged(u => {
 });
 // === BADGE & AVATAR SYSTEM ===
 function renderAvatarWithBadge(photoUrl, wins, size, uid = null, verified = false) {
-    let tierClass = "tier-bronze-bg";
-    let tierIcon = ""; // Default empty
-    if(wins >= 30) { tierClass = "tier-diamond-bg"; tierIcon = '<i data-lucide="diamond" style="width:50%; height:50%;"></i>'; }
-    else if(wins >= 15) { tierClass = "tier-platinum-bg"; tierIcon = '<i data-lucide="shield" style="width:50%; height:50%;"></i>'; }
-    else if(wins >= 5) { tierClass = "tier-gold-bg"; tierIcon = '<i data-lucide="crown" style="width:50%; height:50%;"></i>'; }
-    else if(wins >= 1) { tierClass = "tier-silver-bg"; tierIcon = '<i data-lucide="star" style="width:50%; height:50%;"></i>'; }
-    else { tierIcon = '<i data-lucide="circle-dot" style="width:50%; height:50%;"></i>'; }
-
     // Data attribute for online status updates - only if uid is provided
     const uidAttr = uid ? `data-uid="${uid}"` : '';
     
@@ -213,9 +205,6 @@ function renderAvatarWithBadge(photoUrl, wins, size, uid = null, verified = fals
     return `
         <div class="avatar-frame" style="width:${size}px; height:${size}px;" ${uidAttr}>
             <img src="${photoUrl}" style="width:100%; height:100%; border-radius:50%; border:2px solid var(--glass-border); object-fit:cover;">
-            <div class="avatar-badge-icon ${tierClass}">
-                ${tierIcon}
-            </div>
             <div class="online-indicator ${onlineClass}"></div>
             ${verifiedBadge}
         </div>
@@ -231,14 +220,6 @@ function updateAllOnlineIndicators() {
             else if(dot) dot.classList.remove('is-online');
         }
     });
-}
-
-// Helper to get simple HTML badge string for text
-function getBadgeHtml(wins) {
-    // Just returns empty or simple icon for text-flow
-    if(wins >= 30) return `<i data-lucide="diamond" style="width:12px; height:12px; fill:#06b6d4; color:#06b6d4; margin-left:4px;"></i>`;
-    if(wins >= 5) return `<i data-lucide="crown" style="width:12px; height:12px; fill:#fbbf24; color:#fbbf24; margin-left:4px;"></i>`;
-    return ""; 
 }
 
 // Helper to get verification badge HTML
@@ -715,7 +696,7 @@ function loadInbox() {
                     div.className = 'pm-item'; 
                     div.onclick = () => openPrivateChat(partnerId, u.name, u.photo); 
                     const previewText = lastMsg.image ? 'Sent a photo' : lastMsg.text;
-                    div.innerHTML = `<img class="pm-avatar" src="${u.photo || 'https://via.placeholder.com/40'}"><div class="pm-info"><span class="pm-name">${u.name} ${getBadgeHtml(u.bingoWins || 0)}</span><span class="pm-preview">${lastMsg.from === uid ? 'You: ' : ''}${previewText}</span></div>`; 
+                    div.innerHTML = `<img class="pm-avatar" src="${u.photo || 'https://via.placeholder.com/40'}"><div class="pm-info"><span class="pm-name">${u.name} ${getVerificationBadgeHtml(u.verified)}</span><span class="pm-preview">${lastMsg.from === uid ? 'You: ' : ''}${previewText}</span></div>`; 
                     list.appendChild(div); 
                     lucide.createIcons();
                 }); 
@@ -1953,7 +1934,7 @@ function handleSearch() {
                     };
                     div.innerHTML = `
                         <img src="${u.photo || 'https://via.placeholder.com/40'}" class="search-res-img">
-                        <div style="font-size:14px; font-weight:700; color:white;">${u.name} ${getBadgeHtml(u.bingoWins || 0)}</div>
+                        <div style="font-size:14px; font-weight:700; color:white;">${u.name} ${getVerificationBadgeHtml(u.verified)}</div>
                     `;
                     resDiv.appendChild(div);
                 }
@@ -1987,7 +1968,7 @@ function openComments(postKey) {
                 <img class="comment-avatar" src="${com.uPhoto}">
                 <div class="comment-content-block">
                     <div class="comment-bubble">
-                        <div class="comment-author">${com.uName} ${getBadgeHtml(com.uWins || 0)}</div>
+                        <div class="comment-author">${com.uName} ${getVerificationBadgeHtml(com.uVerified)}</div>
                         <div class="comment-text">${com.text}</div>
                     </div>
                     <div class="comment-actions">
@@ -2023,6 +2004,7 @@ function sendComment() {
         uPhoto: userData.photo,
         uPoints: userData.points,
         uWins: userData.bingoWins || 0,
+        uVerified: userData.verified || false,
         text: txt,
         time: Date.now()
     });
@@ -2434,7 +2416,7 @@ function createPostElement(post, isFriend) {
         <div class="post-header">
             <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
             <div class="post-meta">
-                <div class="post-author">${post.authorName} ${getBadgeHtml(post.authorWins || 0)} ${getVerificationBadgeHtml(post.authorVerified)} ${friendBadge}</div>
+                <div class="post-author">${post.authorName} ${getVerificationBadgeHtml(post.authorVerified)} ${friendBadge}</div>
                 <div class="post-time">${fixDate(post.timestamp)} ${visibilityBadge}</div>
                 ${moodHtml}
             </div>
