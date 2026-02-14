@@ -826,7 +826,7 @@
         #customConfirmModal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100000; display: none; align-items: center; justify-content: center; padding: var(--spacing-lg); backdrop-filter: blur(10px); }
         .conf-content { background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 24px; padding: 25px; width: 100%; max-width: 320px; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.8); transform: scale(0.9); animation: popScale 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         .conf-title { font-size: 18px; font-weight: 900; color: white; margin: 0 0 10px 0; }
-        .conf-msg { font-size: 13px; color: #cbd5e1; margin-bottom: 25px; line-height: 1.5; }
+        .conf-msg { font-size: 13px; color: #cbd5e1; margin-bottom: 25px; line-height: 1.5; white-space: pre-wrap; }
         .conf-actions { display: flex; gap: var(--spacing-sm); justify-content: center; }
         .btn-conf-yes { background: var(--accent); color: white; flex: 1; padding: var(--spacing-sm); border: none; border-radius: var(--radius-md); font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
         .btn-conf-no { background: rgba(255,255,255,0.1); color: #94a3b8; flex: 1; padding: var(--spacing-sm); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); font-weight: 800; cursor: pointer; }
@@ -2559,9 +2559,33 @@
     function showToast(msg) { const toast = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; toast.classList.add('show'); playSound('click'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
 
     let confirmCallback = null;
-    function showCustomConfirm(title, msg, onYes) { document.getElementById('confTitle').innerText = title; document.getElementById('confMsg').innerText = msg; document.getElementById('customConfirmModal').style.display = 'flex'; confirmCallback = onYes; playSound('click'); }
+    function showCustomConfirm(title, msg, onYes, yesText = 'CONFIRM', noText = 'CANCEL', singleButton = false) { 
+        document.getElementById('confTitle').innerText = title; 
+        document.getElementById('confMsg').innerText = msg; 
+        document.getElementById('customConfirmModal').style.display = 'flex'; 
+        
+        const yesBtn = document.getElementById('confYesBtn');
+        const noBtn = document.querySelector('.btn-conf-no');
+        
+        yesBtn.innerText = yesText;
+        noBtn.innerText = noText;
+        
+        // Single button mode - hide cancel and make confirm act as close
+        if (singleButton) {
+            noBtn.style.display = 'none';
+            yesBtn.onclick = closeCustomConfirm;
+        } else {
+            noBtn.style.display = 'block';
+            yesBtn.onclick = () => {
+                if (onYes) onYes();
+                closeCustomConfirm();
+            };
+        }
+        
+        confirmCallback = onYes; 
+        playSound('click'); 
+    }
     function closeCustomConfirm() { document.getElementById('customConfirmModal').style.display = 'none'; confirmCallback = null; }
-    document.getElementById('confYesBtn').addEventListener('click', () => { if(confirmCallback) confirmCallback(); closeCustomConfirm(); });
 
     let notifiedFiveMins = false; let lastCheckedSchedule = null;
     function checkFiveMinuteNotification(timeInput) { if(notifiedFiveMins && lastCheckedSchedule === timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 5) { if(Notification.permission === "granted") { new Notification("RB LIVE BINGO", { body: "Dali! 5 minutes na lang bola na! Buksan na ang app." }); } showToast("⚠️ 5 minutes na lang, bola na!"); notifiedFiveMins = true; lastCheckedSchedule = timeInput; } if(mins > 5) notifiedFiveMins = false; } }
@@ -3959,7 +3983,7 @@
         }
     }
     
-    // Request verification badge
+    // Request verification badge with requirements
     async function requestVerificationBadge() {
         const dropdown = document.getElementById('profileDropdown');
         dropdown.classList.remove('show');
@@ -3968,7 +3992,7 @@
         if (!user) return;
         
         try {
-            // Check if user already has verification
+            // Fetch user data to check requirements
             const userSnapshot = await db.ref(`users/${user.uid}`).once('value');
             const userData = userSnapshot.val();
             
@@ -3982,16 +4006,83 @@
                 return;
             }
             
-            // Submit verification request
+            // Check verification requirements
+            const accountAge = Date.now() - (userData.createdAt || 0);
+            const daysSinceCreation = Math.floor(accountAge / (1000 * 60 * 60 * 24));
+            
+            // Fetch friend count
+            const friendsSnapshot = await db.ref(`friends/${user.uid}`).once('value');
+            const friendCount = friendsSnapshot.numChildren();
+            
+            // Fetch post count
+            const postsSnapshot = await db.ref('posts').orderByChild('uid').equalTo(user.uid).once('value');
+            const postCount = postsSnapshot.numChildren();
+            
+            // Define requirements
+            const REQUIREMENTS = {
+                minFriends: 10,
+                minPosts: 5,
+                minAccountAgeDays: 7,
+                minBingoWins: 3
+            };
+            
+            // Check each requirement
+            const failedRequirements = [];
+            
+            if (friendCount < REQUIREMENTS.minFriends) {
+                failedRequirements.push(`✗ At least ${REQUIREMENTS.minFriends} friends (You have: ${friendCount})`);
+            }
+            
+            if (postCount < REQUIREMENTS.minPosts) {
+                failedRequirements.push(`✗ At least ${REQUIREMENTS.minPosts} posts (You have: ${postCount})`);
+            }
+            
+            if (daysSinceCreation < REQUIREMENTS.minAccountAgeDays) {
+                failedRequirements.push(`✗ Account at least ${REQUIREMENTS.minAccountAgeDays} days old (Yours: ${daysSinceCreation} days)`);
+            }
+            
+            if ((userData.bingoWins || 0) < REQUIREMENTS.minBingoWins) {
+                failedRequirements.push(`✗ At least ${REQUIREMENTS.minBingoWins} bingo wins (You have: ${userData.bingoWins || 0})`);
+            }
+            
+            // If requirements not met, show detailed message
+            if (failedRequirements.length > 0) {
+                const requirementsList = failedRequirements.join('\n');
+                showCustomConfirm(
+                    'VERIFICATION REQUIREMENTS NOT MET',
+                    `You need to meet these requirements to request verification:\n\n${requirementsList}\n\nKeep playing and growing your profile!`,
+                    null,
+                    'OK',
+                    null,
+                    true // Single button mode
+                );
+                return;
+            }
+            
+            // All requirements met - show confirmation
+            const meetsRequirements = `
+✓ ${friendCount} friends (Required: ${REQUIREMENTS.minFriends})
+✓ ${postCount} posts (Required: ${REQUIREMENTS.minPosts})
+✓ ${daysSinceCreation} days old (Required: ${REQUIREMENTS.minAccountAgeDays})
+✓ ${userData.bingoWins || 0} wins (Required: ${REQUIREMENTS.minBingoWins})
+
+Do you want to submit your verification request?`;
+            
             showCustomConfirm(
                 'REQUEST VERIFICATION BADGE',
-                'Do you want to request a verification badge? This will be reviewed by administrators.',
+                meetsRequirements,
                 async () => {
                     try {
                         await db.ref(`users/${user.uid}`).update({
                             verificationStatus: 'pending',
-                            verificationReason: 'User requested verification badge',
-                            verificationRequestedAt: Date.now()
+                            verificationReason: 'User meets all requirements and requested verification',
+                            verificationRequestedAt: Date.now(),
+                            verificationMetrics: {
+                                friendsAtRequest: friendCount,
+                                postsAtRequest: postCount,
+                                accountAgeDaysAtRequest: daysSinceCreation,
+                                winsAtRequest: userData.bingoWins || 0
+                            }
                         });
                         
                         showToast('✓ Verification request submitted! Please wait for admin approval.');
