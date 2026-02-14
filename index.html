@@ -951,11 +951,74 @@
             border-radius: 50%;
             margin-left: 4px;
             box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .verified-badge:hover {
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
         }
         .verified-badge i {
             width: 10px;
             height: 10px;
             color: white;
+        }
+        
+        /* Verification Badge Tooltip */
+        .verification-tooltip {
+            position: fixed;
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            max-width: 300px;
+            z-index: 10000;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            display: none;
+            animation: tooltipFadeIn 0.2s ease;
+        }
+        @keyframes tooltipFadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .verification-tooltip h4 {
+            margin: 0 0 10px 0;
+            color: #3b82f6;
+            font-size: 14px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .verification-tooltip p {
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+        
+        /* Textarea in confirmation modal */
+        .conf-textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            resize: vertical;
+            min-height: 80px;
+            margin-top: 15px;
+            outline: none;
+        }
+        .conf-textarea:focus {
+            border-color: var(--accent);
+            background: rgba(0, 0, 0, 0.6);
+        }
+        .conf-textarea::placeholder {
+            color: rgba(255, 255, 255, 0.4);
         }
         
         .profile-info-section {
@@ -1825,6 +1888,16 @@
         <i data-lucide="alert-circle" style="width: 40px; height: 40px; color: var(--gold); margin-bottom: var(--spacing-md);"></i>
         <h3 class="conf-title" id="confTitle">Confirm Action</h3>
         <p class="conf-msg" id="confMsg">Are you sure you want to proceed?</p>
+        
+        <!-- Optional textarea for verification reason -->
+        <div id="confTextareaContainer" style="display: none; width: 100%;">
+            <textarea id="confTextarea" class="conf-textarea" placeholder="Explain why you want a verification badge (e.g., active community member, content creator, streamer, etc.)"></textarea>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 8px; text-align: left;">
+                <i data-lucide="info" style="width: 12px; height: 12px; display: inline;"></i>
+                This helps admins review your request.
+            </div>
+        </div>
+        
         <div class="conf-actions">
             <button class="btn-conf-no" onclick="closeCustomConfirm()">CANCEL</button>
             <button class="btn-conf-yes" id="confYesBtn">CONFIRM</button>
@@ -2559,16 +2632,26 @@
     function showToast(msg) { const toast = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; toast.classList.add('show'); playSound('click'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
 
     let confirmCallback = null;
-    function showCustomConfirm(title, msg, onYes, yesText = 'CONFIRM', noText = 'CANCEL', singleButton = false) { 
+    function showCustomConfirm(title, msg, onYes, yesText = 'CONFIRM', noText = 'CANCEL', singleButton = false, showTextarea = false) { 
         document.getElementById('confTitle').innerText = title; 
         document.getElementById('confMsg').innerText = msg; 
         document.getElementById('customConfirmModal').style.display = 'flex'; 
         
         const yesBtn = document.getElementById('confYesBtn');
         const noBtn = document.querySelector('.btn-conf-no');
+        const textareaContainer = document.getElementById('confTextareaContainer');
+        const textarea = document.getElementById('confTextarea');
         
         yesBtn.innerText = yesText;
         noBtn.innerText = noText;
+        
+        // Show/hide textarea
+        if (showTextarea) {
+            textareaContainer.style.display = 'block';
+            textarea.value = ''; // Clear previous value
+        } else {
+            textareaContainer.style.display = 'none';
+        }
         
         // Single button mode - hide cancel and make confirm act as close
         if (singleButton) {
@@ -2577,15 +2660,35 @@
         } else {
             noBtn.style.display = 'block';
             yesBtn.onclick = () => {
-                if (onYes) onYes();
+                if (onYes) {
+                    // If textarea mode, pass the textarea value
+                    if (showTextarea) {
+                        const reason = textarea.value.trim();
+                        if (!reason) {
+                            showToast('⚠️ Please provide a reason for your verification request');
+                            return;
+                        }
+                        onYes(reason);
+                    } else {
+                        onYes();
+                    }
+                }
                 closeCustomConfirm();
             };
         }
         
         confirmCallback = onYes; 
-        playSound('click'); 
+        playSound('click');
+        
+        // Re-initialize lucide icons
+        setTimeout(() => lucide.createIcons(), 50);
     }
-    function closeCustomConfirm() { document.getElementById('customConfirmModal').style.display = 'none'; confirmCallback = null; }
+    function closeCustomConfirm() { 
+        document.getElementById('customConfirmModal').style.display = 'none'; 
+        document.getElementById('confTextareaContainer').style.display = 'none';
+        document.getElementById('confTextarea').value = '';
+        confirmCallback = null; 
+    }
 
     let notifiedFiveMins = false; let lastCheckedSchedule = null;
     function checkFiveMinuteNotification(timeInput) { if(notifiedFiveMins && lastCheckedSchedule === timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 5) { if(Notification.permission === "granted") { new Notification("RB LIVE BINGO", { body: "Dali! 5 minutes na lang bola na! Buksan na ang app." }); } showToast("⚠️ 5 minutes na lang, bola na!"); notifiedFiveMins = true; lastCheckedSchedule = timeInput; } if(mins > 5) notifiedFiveMins = false; } }
@@ -2767,7 +2870,7 @@
     function getBadgeHtml(wins, userData = null) {
         // Check if user is verified - this will be populated from Firebase
         if (userData && userData.verified) {
-            return `<span class="verified-badge"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>`;
+            return `<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>`;
         }
         return ""; 
     }
@@ -3934,7 +4037,7 @@
             document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.bingoWins || 0, 140, uid);
             
             // Set name with verification badge if verified
-            const verificationBadge = u.verified ? `<span class="verified-badge"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>` : '';
+            const verificationBadge = u.verified ? `<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>` : '';
             document.getElementById('pageProfileName').innerHTML = `${escapeHtml(u.name)}${verificationBadge}`;
             document.getElementById('pageProfileBio').innerText = u.bio || "Radio Bingo Player";
             
@@ -3959,6 +4062,34 @@
     function closeProfilePage() {
         document.getElementById('userProfilePage').style.display = 'none';
         currentProfileUid = null;
+    }
+    
+    // Show verification badge info tooltip
+    function showVerificationInfo(event) {
+        event.stopPropagation();
+        const tooltip = document.getElementById('verificationTooltip');
+        const rect = event.target.getBoundingClientRect();
+        
+        // Position tooltip near the badge
+        tooltip.style.left = rect.left + 'px';
+        tooltip.style.top = (rect.bottom + 10) + 'px';
+        tooltip.style.display = 'block';
+        
+        // Re-initialize lucide icons in tooltip
+        setTimeout(() => lucide.createIcons(), 10);
+        
+        // Hide tooltip when clicking anywhere else
+        setTimeout(() => {
+            document.addEventListener('click', hideVerificationTooltip);
+        }, 10);
+    }
+    
+    function hideVerificationTooltip(event) {
+        const tooltip = document.getElementById('verificationTooltip');
+        if (!tooltip.contains(event.target)) {
+            tooltip.style.display = 'none';
+            document.removeEventListener('click', hideVerificationTooltip);
+        }
     }
     
     // Toggle profile dropdown menu
@@ -4059,23 +4190,24 @@
                 return;
             }
             
-            // All requirements met - show confirmation
-            const meetsRequirements = `
+            // All requirements met - show confirmation with textarea for reason
+            const meetsRequirements = `You meet all requirements for verification:
+
 ✓ ${friendCount} friends (Required: ${REQUIREMENTS.minFriends})
 ✓ ${postCount} posts (Required: ${REQUIREMENTS.minPosts})
 ✓ ${daysSinceCreation} days old (Required: ${REQUIREMENTS.minAccountAgeDays})
 ✓ ${userData.bingoWins || 0} wins (Required: ${REQUIREMENTS.minBingoWins})
 
-Do you want to submit your verification request?`;
+Please explain why you want a verification badge:`;
             
             showCustomConfirm(
                 'REQUEST VERIFICATION BADGE',
                 meetsRequirements,
-                async () => {
+                async (reason) => {
                     try {
                         await db.ref(`users/${user.uid}`).update({
                             verificationStatus: 'pending',
-                            verificationReason: 'User meets all requirements and requested verification',
+                            verificationReason: reason,
                             verificationRequestedAt: Date.now(),
                             verificationMetrics: {
                                 friendsAtRequest: friendCount,
@@ -4090,7 +4222,11 @@ Do you want to submit your verification request?`;
                         console.error('Error submitting verification request:', err);
                         showToast('✗ Failed to submit request. Please try again.');
                     }
-                }
+                },
+                'SUBMIT REQUEST',
+                'CANCEL',
+                false,
+                true // Show textarea
             );
         } catch (err) {
             console.error('Error requesting verification:', err);
@@ -4892,7 +5028,7 @@ Do you want to submit your verification request?`;
             <div class="post-header">
                 <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
                 <div class="post-meta">
-                    <div class="post-author">${post.authorName} ${post.authorVerified ? '<span class="verified-badge"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>' : ''} ${friendBadge}</div>
+                    <div class="post-author">${post.authorName} ${post.authorVerified ? '<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>' : ''} ${friendBadge}</div>
                     <div class="post-time">${fixDate(post.timestamp)} ${visibilityBadge}</div>
                     ${moodHtml}
                 </div>
@@ -5129,6 +5265,18 @@ setTimeout(() => {
 }, 5000); // Mawawala after 5 seconds kahit anong mangyari
     
 </script>
+
+<!-- Verification Badge Tooltip -->
+<div id="verificationTooltip" class="verification-tooltip">
+    <h4>
+        <span class="verified-badge" style="cursor: default;">
+            <i data-lucide="check" style="width:10px; height:10px; color:white;"></i>
+        </span>
+        Verified Account
+    </h4>
+    <p>This account has been verified by administrators. Verified accounts have met community standards and are confirmed to be authentic active members of the Radio Bingo Live community.</p>
+</div>
+
 </body>
 </html>
 
