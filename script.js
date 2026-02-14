@@ -222,9 +222,6 @@ function updateAllOnlineIndicators() {
     });
 }
 
-// Helper to get simple HTML badge string for text
-
-
 // Helper to get verification badge HTML
 function getVerificationBadgeHtml(verified) {
     if(!verified) return "";
