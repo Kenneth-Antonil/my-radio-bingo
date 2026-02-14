@@ -198,7 +198,7 @@ function renderAvatarWithBadge(photoUrl, wins, size, uid = null, verified = fals
     const onlineClass = isOnline ? 'is-online' : '';
 
     // Verification badge - use helper function for consistency
-    const verifiedBadge = verified ? `<div class="verification-badge" title="Verified Account"><i data-lucide="check"></i></div>` : '';
+    const verifiedBadge = verified ? `<div class="verification-badge" title="Verified Account"><i data-lucide="badge-check" style="width:70%; height:70%;"></i></div>` : '';
 
     setTimeout(() => lucide.createIcons(), 50);
 
@@ -225,7 +225,7 @@ function updateAllOnlineIndicators() {
 // Helper to get verification badge HTML
 function getVerificationBadgeHtml(verified) {
     if(!verified) return "";
-    return `<i data-lucide="badge-check" style="width:14px; height:14px; fill:#3b82f6; color:white; margin-left:4px;" title="Verified Account"></i>`;
+    return `<i data-lucide="badge-check" style="width:14px; height:14px; fill:#3b82f6; color:#3b82f6; margin-left:4px;" title="Verified Account"></i>`;
 }
 
 // === UTILITY: TEXT SANITIZATION ===
@@ -517,8 +517,6 @@ function setupPresence(uid) {
         document.getElementById('onlineCount').innerText = s.numChildren() || 0; 
         updateAllOnlineIndicators();
     }); 
-    // Additional listener for user's own status
-    /* This was removed because the global listener above handles everything via updateAllOnlineIndicators */
 }
 
 function updatePresenceData(uid, name, points, photo) { db.ref('status/' + uid).update({ name: name, points: points, photo: photo }); }
@@ -530,324 +528,1459 @@ function listenNotifications(uid) {
         let count = 0;
         s.forEach(child => {
             const val = child.val();
-            if(!val.read) {
-                if(val.type === 'pm') unreadPMs++;
-                else count++;
+            if(val.type === 'pm') unreadPMs++;
+            else count++;
+        });
+        const dot = document.getElementById('notifDot'); 
+        const pmBadge = document.getElementById('pmBadge');
+        if(count > 0) { dot.style.display = 'block'; } else { dot.style.display = 'none'; }
+        if(unreadPMs > 0) { pmBadge.style.display = 'flex'; pmBadge.innerText = unreadPMs > 9 ? '9+' : unreadPMs; } else { pmBadge.style.display = 'none'; }
+    }); 
+}
+
+function openNotifs() { document.getElementById('notifModal').style.display='flex'; playSound('click'); renderNotifs(); }
+
+function renderNotifs() { 
+    const list = document.getElementById('notifList'); 
+    db.ref('notifications/' + auth.currentUser.uid).once('value', s => { 
+        list.innerHTML = ""; 
+        const notifs = [];
+        s.forEach(n => { if(n.val().type !== 'pm') notifs.push({ key: n.key, ...n.val() }); });
+        
+        notifs.sort((a,b) => b.time - a.time);
+
+        if(notifs.length === 0) {
+            list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:40px;'>No new notifications</div>";
+            return;
+        }
+
+        notifs.forEach(val => {
+            const div = document.createElement('div');
+            div.className = 'notif-card-grouped';
+            
+            let iconOrImg = `<i data-lucide="info" style="color:#64748b;"></i>`;
+            if(val.image) {
+                iconOrImg = `<img src="${val.image}" class="notif-img">`;
+            }
+            
+            div.innerHTML = `
+                ${iconOrImg}
+                <div class="notif-content-wrap">
+                    <div style="font-size:13px; color:white;">${val.msg}</div>
+                    <div style="font-size:10px; opacity:0.5; margin-top:5px;">${fixDate(val.time)}</div>
+                </div>
+                <button class="btn-delete-notif" onclick="deleteNotif('${val.key}', event)"><i data-lucide="x" style="width:14px;"></i></button>
+            `;
+            
+            // Click Nav Logic
+            div.onclick = (e) => {
+                if(e.target.closest('.btn-delete-notif')) return; 
+                if(val.postId) {
+                    document.getElementById('notifModal').style.display='none';
+                    // Switch to home and find post or open comments
+                    switchTab('home');
+                    const postEl = document.getElementById('post-' + val.postId);
+                    if(postEl) postEl.scrollIntoView({behavior: "smooth"});
+                    else openComments(val.postId);
+                }
+            };
+            
+            list.appendChild(div);
+        });
+        lucide.createIcons();
+    }); 
+}
+
+function deleteNotif(key, event) { 
+    event.stopPropagation();
+    db.ref('notifications/' + auth.currentUser.uid + '/' + key).remove(); 
+    renderNotifs(); 
+    showToast("Notification Deleted"); 
+}
+
+function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { const data = s.val(); const banner = document.getElementById('jackpotBanner'); if(data && data.active) { banner.style.display = 'block'; const rawAmount = parseInt(data.amount) || 0; document.getElementById('jackpotDisplayVal').innerText = formatCurrency(rawAmount); isJackpotActive = true; currentJackpotAmount = rawAmount; } else { banner.style.display = 'none'; isJackpotActive = false; currentJackpotAmount = 500; } }); }
+
+function listenVideoUpdate() { db.ref('gameState/videoSettings').on('value', s => { const v = s.val(); const iframe = document.getElementById('liveVideoFrame'); const offline = document.getElementById('videoOfflineState'); if (v && v.type === 'offline') { iframe.style.display = 'none'; iframe.src = ""; offline.style.display = 'flex'; } else if(v && v.url) { offline.style.display = 'none'; iframe.style.display = 'block'; const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/; const match = v.url.match(regExp); let videoId = (match && match[2].length === 11) ? match[2] : null; if(!videoId && v.url.length === 11) videoId = v.url; if (videoId) { const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1`; if(iframe.src !== embedUrl) { iframe.src = embedUrl; } } } }); }
+
+function listenForForNextDraw() { db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); }); db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); }); }
+function listenForNextDraw() { db.ref('gameState').on('value', s => { updateNextDrawDisplay(); }); }
+
+function updateNextDrawDisplay() { db.ref('gameState').on('value', s => { const gameData = s.val() || {}; const now = Date.now(); if(gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0) { const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const ndIcon = document.querySelector('.nd-icon'); banner.style.display = 'flex'; banner.style.background = 'rgba(71, 85, 105, 0.9)'; banner.style.borderColor = '#94a3b8'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; labelEl.innerText = "GAME STATUS"; labelEl.style.color = "#e2e8f0"; timeEl.innerText = "GAME ONGOING"; timeEl.style.fontSize = "20px"; timeEl.style.color = "#ffffff"; timeEl.style.fontWeight = "900"; if(ndIcon) { ndIcon.style.background = 'rgba(255,255,255,0.1)'; ndIcon.style.color = 'white'; ndIcon.style.borderColor = 'rgba(255,255,255,0.2)'; } return; } let displayTime = null; if(gameData.schedules) { const rawScheds = Object.values(gameData.schedules); const times = rawScheds.map(val => (typeof val === 'object' && val.time) ? val.time : val); const futureTimes = times.filter(t => t > now); const sorted = futureTimes.sort((a,b) => a - b); if(sorted.length > 0) { displayTime = sorted[0]; } } if(!displayTime && gameData.nextDraw) { if(gameData.nextDraw > now) { displayTime = gameData.nextDraw; } } const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const lateSched = document.getElementById('lateNextSched'); const ndIcon = document.querySelector('.nd-icon'); if(ndIcon) { ndIcon.style.background = ''; ndIcon.style.color = ''; ndIcon.style.borderColor = ''; } if(displayTime && displayTime > now) { banner.style.display = 'flex'; banner.style.background = 'rgba(15, 23, 42, 0.8)'; banner.style.borderColor = 'rgba(251, 191, 36, 0.4)'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; const formatted = fixDate(displayTime); timeEl.innerText = formatted; timeEl.style.fontSize = "18px"; timeEl.style.color = "white"; labelEl.innerText = "SUSUNOD NA BOLA"; labelEl.style.color = "var(--gold)"; lateSched.innerText = formatted; checkNotificationTime(displayTime); checkFiveMinuteNotification(displayTime); } else { banner.style.display = 'flex'; banner.style.background = 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))'; banner.style.borderColor = '#3b82f6'; banner.style.boxShadow = '0 10px 30px rgba(59, 130, 246, 0.2)'; labelEl.innerText = "WAITING FOR DRAW"; labelEl.style.color = "#93c5fd"; timeEl.innerText = "MAGHINTAY SA SUSUNOD NA DRAW."; timeEl.style.fontSize = "11px"; timeEl.style.fontWeight = "700"; timeEl.style.lineHeight = "1.4"; lateSched.innerText = "--:--"; } }); }
+function checkNotificationTime(timeInput) { if(lastNotifiedDraw == timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 10) { if(Notification.permission === "granted") new Notification("Radio Bingo", { body: "10 mins na lang, bola na!" }); lastNotifiedDraw = timeInput; } } }
+
+function initBingo() {
+    db.ref('gameState/latestWinner').on('value', s => { const win = s.val(); const banner = document.getElementById('winnerBanner'); const cardCont = document.getElementById('bingoCardContainer'); const gameOverlay = document.getElementById('gameOverOverlay'); cardCont.classList.remove('card-puro'); document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting')); if(win && win.name) { banner.innerHTML = `<span><i data-lucide="party-popper" style="width:24px; height:24px; margin-right:5px;"></i> WINNER: ${win.name.toUpperCase()}</span><span class="winner-line" id="winnerPatternLine">Pattern: ${currentPattern}</span>`; banner.style.display = 'block'; playSound('win'); lucide.createIcons(); if(win.uid === auth.currentUser.uid) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; spawnFlyingCoins(20); triggerScreenShake(); } else { cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; const nextTime = document.getElementById('nextDrawTime').innerText; document.getElementById('gameOverMsg').innerHTML = `Sayang! Si <b>${win.name.toUpperCase()}</b> ang nanalo.<br><br>Bawi tayo sa next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ${nextTime}</span>`; } } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); gameOverlay.style.display = 'none'; document.querySelectorAll('.cell').forEach(c => { c.classList.remove('win-glow', 'win-line-h', 'win-line-v', 'win-line-d1', 'win-line-d2'); }); } });
+    db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternName').innerText = currentPattern; checkWin(); });
+    db.ref('drawnNumbers').on('value', s => { const val = s.val(); const newGameDrawn = val ? Object.values(val).map(n => n.toString()) : []; if(newGameDrawn.length > 0 && gameDrawn.length > 0) { const newBalls = newGameDrawn.filter(x => !gameDrawn.includes(x)); if(newBalls.length > 0) { const latestBall = newBalls[newBalls.length - 1]; playSound('newBall'); showToast("BOLA: " + latestBall); } } gameDrawn = newGameDrawn; const btn = document.getElementById('newCardBtn'); if(gameDrawn.length > 0) { btn.disabled = true; btn.innerHTML = `<i data-lucide="lock" style="width:14px"></i> IN GAME`; } else { btn.disabled = false; btn.innerHTML = `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`; } lucide.createIcons(); checkLateJoiner(); updateGridHits(); renderPrevBalls(); checkWin(); checkPuroStatus(); });
+    db.ref('gameState/lastCalled').on('value', s => { if(s.exists()) { const num = s.val(); document.getElementById('currentBall').innerText = num; if (num !== lastSpokenNumber) { speakNumber(num); lastSpokenNumber = num; } } else { document.getElementById('currentBall').innerText = "--"; lastSpokenNumber = null; } });
+}
+let lastSpokenNumber = null;
+function speakNumber(num) { if ('speechSynthesis' in window) { let letter = "B"; if (num > 15) letter = "I"; if (num > 30) letter = "N"; if (num > 45) letter = "G"; if (num > 60) letter = "O"; const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 0.9; window.speechSynthesis.speak(msg); } }
+
+function checkWin() { if(userData.hasWonCurrent || gameDrawn.length === 0) return; db.ref('gameState/latestWinner').once('value', snap => { if(snap.exists()) return; let winningWays = []; if (currentPattern === "Blackout") { winningWays = [Array.from({length: 25}, (_, i) => i)]; } else if (currentPattern === "Letter X") { winningWays = [[0,4,6,8,12,16,18,20,24]]; } else if (currentPattern === "Four Corners") { winningWays = [[0,4,20,24]]; } else { winningWays = [ [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24], [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24], [0,6,12,18,24], [4,8,12,16,20] ]; } for(let i = 0; i < winningWays.length; i++) { let w = winningWays[i]; if(w.every(idx => marks.includes(idx))) { highlightWinningPattern(w, i); triggerWin(); break; } } }); }
+function checkPuroStatus() { if(userData.hasWonCurrent || gameDrawn.length === 0) return; document.getElementById('bingoCardContainer').classList.remove('card-puro'); document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting')); let winningWays = []; if (currentPattern === "Blackout") winningWays = [Array.from({length: 25}, (_, i) => i)]; else if (currentPattern === "Letter X") winningWays = [[0,4,6,8,12,16,18,20,24]]; else if (currentPattern === "Four Corners") winningWays = [[0,4,20,24]]; else winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; for (let i = 0; i < winningWays.length; i++) { let w = winningWays[i]; let missing = w.filter(idx => !marks.includes(idx)); if (missing.length === 1) { document.getElementById('bingoCardContainer').classList.add('card-puro'); const missingIdx = missing[0]; const cells = document.querySelectorAll('.cell'); if(cells[missingIdx]) cells[missingIdx].classList.add('cell-waiting'); break; } } }
+function highlightWinningPattern(indices, patternType) { const cells = document.querySelectorAll('.cell'); indices.forEach(idx => { const cell = cells[idx]; cell.classList.add('win-glow'); if (currentPattern === 'Normal Bingo') { if (patternType < 5) cell.classList.add('win-line-h'); else if (patternType < 10) cell.classList.add('win-line-v'); else if (patternType === 10) cell.classList.add('win-line-d1'); else cell.classList.add('win-line-d2'); } }); }
+
+function triggerWin() { const uid = auth.currentUser.uid; let winPrize = 500; if (isJackpotActive) winPrize = currentJackpotAmount; db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize }); db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize); db.ref('users/' + uid + '/bingoWins').transaction(w => (w || 0) + 1); db.ref('users/' + uid).update({ hasWonCurrent: true }); userData.hasWonCurrent = true; if (isJackpotActive) { const jpModal = document.getElementById('grandJackpotModal'); document.getElementById('grandPrizeAmount').innerText = formatCurrency(winPrize); document.getElementById('jpWinnerName').innerText = userData.name; jpModal.style.display = 'flex'; confetti({ particleCount: 500, spread: 120, startVelocity: 60 }); } }
+function generateNewCard() { if(gameDrawn.length > 0) return showToast("Bawal magpalit habang may laro!"); let card = []; let cols = [[1,15],[16,30],[31,45],[46,60],[61,75]]; cols.forEach(r => { let nums = []; while(nums.length < 5) { let n = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0]; if(!nums.includes(n)) nums.push(n); } card.push(...nums); }); let finalCard = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) { finalCard.push(card[c*5 + r]); } } finalCard[12] = "FREE"; db.ref('users/' + auth.currentUser.uid).update({ currentCard: finalCard, cardTimestamp: Date.now(), hasWonCurrent: false }); cardNumbers = finalCard; renderCard(); playSound('cardFlip'); }
+function renderCard() { const grid = document.getElementById('bingoGrid'); grid.innerHTML = ""; cardNumbers.forEach((n, i) => { const div = document.createElement('div'); div.className = 'cell'; div.innerText = n === "FREE" ? "★" : n; if(n === "FREE") { div.classList.add('hit'); if(!marks.includes(12)) marks.push(12); } grid.appendChild(div); }); updateGridHits(); applySkin(userData.equippedSkin || 'default'); }
+function updateGridHits() { marks = [12]; const cells = document.querySelectorAll('.cell'); cells.forEach((c, i) => { const val = c.innerText; if(gameDrawn.includes(val) || val === "★") { c.classList.add('hit'); if(!marks.includes(i)) marks.push(i); } }); }
+function renderPrevBalls() { const row = document.getElementById('ballRow'); row.innerHTML = ""; const last5 = gameDrawn.slice(-5).reverse(); last5.forEach(n => { let d = document.createElement('div'); d.className = 'ball-small'; d.innerText = n; row.appendChild(d); }); }
+function checkLateJoiner() { const overlay = document.getElementById('lateOverlay'); if(gameDrawn.length > 0 && !userData.currentCard) { overlay.style.display = 'flex'; } else if (gameDrawn.length > 0 && userData.cardTimestamp > db.ref('gameState/gameStartTime')) { overlay.style.display = 'none'; } else { overlay.style.display = 'none'; } }
+
+function setupChat() { 
+    const list = document.getElementById('chatList'); 
+    db.ref('chats').limitToLast(50).on('child_added', s => { 
+        const d = s.val(); const key = s.key; if(isUserMuted(d.uid)) return; 
+        const isMe = d.uid === auth.currentUser.uid; 
+        const div = document.createElement('div'); div.className = 'chat-row'; div.style.flexDirection = isMe ? 'row-reverse' : 'row'; 
+        let replyHtml = ''; if(d.replyTo && d.replyMsg) { replyHtml = `<div style="font-size:10px; opacity:0.7; border-left:2px solid var(--accent); padding-left:5px; margin-bottom:5px; background:rgba(0,0,0,0.2); padding:4px; border-radius:4px;">Replying to: ${d.replyMsg.substring(0, 30)}...</div>`; } 
+        
+        div.innerHTML = `<img class="chat-pfp" src="${d.pfp}" onclick="showUserOptions('${d.uid}', '${d.name.replace(/'/g, "\\'")}', '${d.pfp}')"><div class="chat-content"><div class="bubble">${!isMe ? `<div class="chat-name" onclick="replyTo('${key}', '${d.msg.replace(/'/g, "\\'")}')">${d.name}</div>` : ''}${replyHtml}<div class="chat-text">${d.msg}</div></div></div>`; 
+        list.appendChild(div); list.scrollTop = list.scrollHeight; lucide.createIcons(); 
+    }); 
+}
+
+function isUserMuted(uid) { const muted = localStorage.getItem('muted_users'); if(!muted) return false; return JSON.parse(muted).includes(uid); }
+function muteUser(uid) { let muted = JSON.parse(localStorage.getItem('muted_users') || "[]"); if(!muted.includes(uid)) { muted.push(uid); localStorage.setItem('muted_users', JSON.stringify(muted)); showToast("User muted locally."); } }
+function sendChat() { const inp = document.getElementById('chatIn'); const msg = inp.value.trim(); if(!msg) return; const payload = { name: userData.name, msg: msg, pfp: userData.photo, uid: userData.uid, time: Date.now() }; if(selectedReplyId) { payload.replyTo = selectedReplyId; payload.replyMsg = document.getElementById('replyText').innerText.replace("Replying to: ", ""); cancelReply(); } db.ref('chats').push(payload); inp.value = ""; }
+function replyTo(key, msg) { selectedReplyId = key; document.getElementById('replyText').innerText = "Replying to: " + msg.substring(0, 20) + "..."; document.getElementById('replyIndicator').style.display = 'flex'; document.getElementById('chatIn').focus(); }
+function cancelReply() { selectedReplyId = null; document.getElementById('replyIndicator').style.display = 'none'; }
+
+let currentChatPartner = null;
+let isGroupChat = false;
+
+function openMessenger() { document.getElementById('pmModal').style.display = 'flex'; document.getElementById('pmInboxView').style.display = 'flex'; document.getElementById('pmChatView').style.display = 'none'; loadInbox(); }
+function loadInbox() { 
+    const uid = auth.currentUser.uid; 
+    const list = document.getElementById('pmList'); 
+    list.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>Loading...</div>"; 
+    
+    renderActiveFriends();
+
+    // Load Groups
+    db.ref('groupMembers/' + uid).once('value', gSnap => {
+        const myGroups = gSnap.exists() ? Object.keys(gSnap.val()) : [];
+        
+        // Load PMs
+        db.ref('messages').once('value', s => { 
+            const conversations = {}; 
+            s.forEach(msgSnap => { const m = msgSnap.val(); if(m.from === uid || m.to === uid) { const partner = m.from === uid ? m.to : m.from; conversations[partner] = m; } }); 
+            
+            list.innerHTML = ""; 
+            
+            // Render Groups First
+            myGroups.forEach(groupId => {
+                db.ref('groups/' + groupId).once('value', groupSnap => {
+                    const grp = groupSnap.val();
+                    if(!grp) return;
+                    const div = document.createElement('div');
+                    div.className = 'pm-item';
+                    div.onclick = () => openGroupChat(groupId, grp.name);
+                    div.innerHTML = `
+                        <div style="width:55px; height:55px; border-radius:50%; background:#1e293b; display:flex; align-items:center; justify-content:center; color:white; border:1px solid rgba(255,255,255,0.1);"><i data-lucide="users"></i></div>
+                        <div class="pm-info"><span class="pm-name">${grp.name}</span><span class="pm-preview">Group Chat</span></div>
+                    `;
+                    list.appendChild(div);
+                    lucide.createIcons();
+                });
+            });
+
+            if(Object.keys(conversations).length === 0 && myGroups.length === 0) { list.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg);'>No messages yet.</div>"; return; } 
+            
+            Object.keys(conversations).forEach(partnerId => { 
+                db.ref('users/' + partnerId).once('value', uSnap => { 
+                    const u = uSnap.val(); 
+                    const lastMsg = conversations[partnerId]; 
+                    const div = document.createElement('div'); 
+                    div.className = 'pm-item'; 
+                    div.onclick = () => openPrivateChat(partnerId, u.name, u.photo); 
+                    const previewText = lastMsg.image ? 'Sent a photo' : lastMsg.text;
+                    div.innerHTML = `<img class="pm-avatar" src="${u.photo || 'https://via.placeholder.com/40'}"><div class="pm-info"><span class="pm-name">${u.name} ${getVerificationBadgeHtml(u.verified)}</span><span class="pm-preview">${lastMsg.from === uid ? 'You: ' : ''}${previewText}</span></div>`; 
+                    list.appendChild(div); 
+                    lucide.createIcons();
+                }); 
+            }); 
+        });
+    });
+}
+
+function renderActiveFriends() {
+    const bar = document.getElementById('activeFriendsBar');
+    bar.innerHTML = '';
+    db.ref('friends/' + auth.currentUser.uid).once('value', s => {
+        if(!s.exists()) return;
+        s.forEach(f => {
+            db.ref('users/' + f.key).once('value', uSnap => {
+                const u = uSnap.val();
+                const item = document.createElement('div');
+                item.className = 'active-friend-item';
+                item.onclick = () => openPrivateChat(f.key, u.name, u.photo); 
+                item.innerHTML = `
+                    <div class="active-img-wrap">
+                        <img src="${u.photo}" class="active-img">
+                        <div class="online-dot-large"></div>
+                    </div>
+                    <div class="active-name">${u.name.split(' ')[0]}</div>
+                `;
+                bar.appendChild(item);
+            });
+        });
+    });
+}
+
+// === GROUP CHAT LOGIC ===
+function startCreateGroup() {
+    document.getElementById('pmInboxView').style.display = 'none';
+    document.getElementById('pmCreateGroupView').style.display = 'flex';
+    const container = document.getElementById('friendSelectContainer');
+    container.innerHTML = "Loading friends...";
+    
+    db.ref('friends/' + auth.currentUser.uid).once('value', s => {
+        container.innerHTML = "";
+        if(!s.exists()) { container.innerHTML = "No friends found."; return; }
+        s.forEach(f => {
+             db.ref('users/' + f.key).once('value', uSnap => {
+                 const u = uSnap.val();
+                 const div = document.createElement('div');
+                 div.className = 'friend-select-item';
+                 div.onclick = () => { div.classList.toggle('selected'); };
+                 div.dataset.uid = f.key;
+                 div.innerHTML = `
+                    <div style="display:flex; align-items:center; gap: var(--spacing-sm);">
+                        <img src="${u.photo}" style="width:40px; height:40px; border-radius:50%;">
+                        <span>${u.name}</span>
+                    </div>
+                    <div class="checkbox-circle"><i data-lucide="check" style="width:12px;"></i></div>
+                 `;
+                 container.appendChild(div);
+                 lucide.createIcons();
+             });
+        });
+    });
+}
+
+function cancelCreateGroup() {
+    document.getElementById('pmCreateGroupView').style.display = 'none';
+    document.getElementById('pmInboxView').style.display = 'flex';
+}
+
+function finalizeCreateGroup() {
+    const name = document.getElementById('newGroupName').value.trim();
+    if(!name) return showToast("Enter Group Name");
+    
+    const selected = document.querySelectorAll('.friend-select-item.selected');
+    if(selected.length === 0) return showToast("Select at least 1 friend");
+    
+    const members = { [auth.currentUser.uid]: true };
+    selected.forEach(el => members[el.dataset.uid] = true);
+    
+    const groupRef = db.ref('groups').push();
+    groupRef.set({
+        name: name,
+        createdBy: auth.currentUser.uid,
+        members: members
+    }).then(() => {
+        // Index for each member
+        Object.keys(members).forEach(uid => {
+            db.ref('groupMembers/' + uid + '/' + groupRef.key).set(true);
+        });
+        showToast("Group Created!");
+        cancelCreateGroup();
+        loadInbox();
+    });
+}
+
+function openGroupChat(groupId, groupName) {
+    currentChatPartner = groupId;
+    isGroupChat = true;
+    document.getElementById('pmInboxView').style.display = 'none'; 
+    document.getElementById('pmChatView').style.display = 'flex'; 
+    document.getElementById('chatTargetName').innerText = groupName; 
+    document.getElementById('chatTargetStatus').innerText = "Group Chat";
+    document.getElementById('chatTargetAvatarCont').innerHTML = `<div style="width:100%; height:100%; border-radius:50%; background:#334155; display:flex; align-items:center; justify-content:center;"><i data-lucide="users"></i></div>`;
+    lucide.createIcons();
+    
+    listenGroupMessages(groupId);
+}
+
+function listenGroupMessages(groupId) {
+    const chatDiv = document.getElementById('pmMessages'); 
+    chatDiv.innerHTML = "";
+    if(pmListenerRef) db.ref('groupMessages').off(); // Clear old listener location logic if slightly diff
+
+    const gRef = db.ref('groupMessages/' + groupId).limitToLast(100);
+    gRef.on('child_added', s => {
+         const m = s.val();
+         const div = document.createElement('div'); 
+         div.className = `msg-bubble ${m.from === auth.currentUser.uid ? 'msg-me' : 'msg-them'}`;
+         let contentHtml = m.text;
+         if(m.image) contentHtml += `<br><img src="${m.image}" class="msg-image-preview">`;
+         
+         // Show name in group
+         if(m.from !== auth.currentUser.uid) {
+             contentHtml = `<span style="font-size:9px; color:#94a3b8; display:block; margin-bottom:2px;">${m.senderName}</span>` + contentHtml;
+         }
+
+         div.innerHTML = contentHtml;
+         chatDiv.appendChild(div); 
+         chatDiv.scrollTop = chatDiv.scrollHeight; 
+    });
+    pmListenerRef = gRef; // Hacky reference store
+}
+
+function openPrivateChat(uid, name, photo) { 
+    if(uid === auth.currentUser.uid) return showToast("Cant msg self"); 
+    currentChatPartner = uid; 
+    isGroupChat = false;
+    document.getElementById('pmModal').style.display = 'flex'; 
+    document.getElementById('pmInboxView').style.display = 'none'; 
+    document.getElementById('pmChatView').style.display = 'flex'; 
+    document.getElementById('chatTargetName').innerText = name; 
+    document.getElementById('chatTargetStatus').innerText = "Active now";
+    document.getElementById('chatTargetAvatarCont').innerHTML = `<img src="${photo}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+    
+    db.ref('notifications/' + auth.currentUser.uid).once('value', s => {
+        s.forEach(n => {
+            if(n.val().type === 'pm' && n.val().from === uid) {
+                db.ref('notifications/' + auth.currentUser.uid + '/' + n.key).remove();
             }
         });
-        
-        const badge = document.getElementById('notifBadge');
-        if(badge) {
-            if(count > 0) { badge.style.display = 'block'; badge.innerText = count > 99 ? '99+' : count; }
-            else badge.style.display = 'none';
-        }
-
-        // PM Badge logic if separate
-        const pmBadge = document.getElementById('pmBadge');
-        if(pmBadge) {
-             if(unreadPMs > 0) { pmBadge.style.display = 'block'; pmBadge.innerText = unreadPMs > 99 ? '99+' : unreadPMs; }
-             else pmBadge.style.display = 'none';
-        }
-        
-        renderNotifications(s);
     });
+
+    listenPrivateMessages(auth.currentUser.uid); 
 }
 
-function renderNotifications(snapshot) {
-    const list = document.getElementById('notifList');
-    if(!list) return;
-    list.innerHTML = "";
+function backToInbox() { 
+    currentChatPartner = null; 
+    isGroupChat = false;
+    document.getElementById('pmChatView').style.display = 'none'; 
+    document.getElementById('pmInboxView').style.display = 'flex'; 
+    if(pmListenerRef) pmListenerRef.off();
+    loadInbox(); 
+}
+
+let pmImageBase64 = null;
+function handlePmImage(input) {
+    if(input.files && input.files[0]) {
+        compressImage(input.files[0], 500, 0.7).then(base64 => {
+            pmImageBase64 = base64;
+            document.getElementById('pmImgPreviewCont').style.display = 'block';
+        });
+    }
+}
+
+function sendPrivateMessage() { 
+    const inp = document.getElementById('pmInput'); 
+    const text = inp.value.trim(); 
+    if((!text && !pmImageBase64) || !currentChatPartner) return; 
+    const myUid = auth.currentUser.uid; 
     
-    const notifs = [];
-    snapshot.forEach(c => notifs.push({key: c.key, ...c.val()}));
-    notifs.sort((a,b) => b.timestamp - a.timestamp);
-    
-    if(notifs.length === 0) {
-        list.innerHTML = "<div style='text-align:center; padding:20px; color:#64748b;'>No notifications yet</div>";
-        return;
+    if(isGroupChat) {
+        const msgData = { from: myUid, senderName: userData.name, text: text, image: pmImageBase64, timestamp: Date.now() };
+        db.ref('groupMessages/' + currentChatPartner).push(msgData);
+    } else {
+        const msgData = { from: myUid, to: currentChatPartner, text: text, image: pmImageBase64, timestamp: Date.now() }; 
+        db.ref('messages').push(msgData); 
+        const notifMsg = pmImageBase64 ? 'Sent a photo' : `New PM from ${userData.name}`;
+        db.ref('notifications/' + currentChatPartner).push({ msg: notifMsg, time: Date.now(), type: 'pm', from: myUid }); 
     }
 
-    notifs.forEach(n => {
-        const div = document.createElement('div');
-        div.className = `notif-card-new ${n.read ? 'read' : 'unread'}`;
+    inp.value = ""; 
+    pmImageBase64 = null;
+    document.getElementById('pmImgInput').value = "";
+    document.getElementById('pmImgPreviewCont').style.display = 'none';
+}
+
+let pmListenerRef = null;
+let isInitialLoad = true;
+function listenPrivateMessages(myUid) { 
+    const chatDiv = document.getElementById('pmMessages'); 
+    chatDiv.innerHTML = "";
+    if(pmListenerRef) db.ref('messages').off();
+    isInitialLoad = true;
+
+    pmListenerRef = db.ref('messages').limitToLast(100);
+    pmListenerRef.on('child_added', s => { 
+        const m = s.val(); 
+        const key = s.key;
         
-        let icon = "bell";
-        let color = "var(--accent)";
-        if(n.type === 'win') { icon = "trophy"; color = "var(--gold)"; }
-        if(n.type === 'admin') { icon = "shield-alert"; color = "#ef4444"; }
-        if(n.type === 'social_like') { icon = "heart"; color = "#ec4899"; }
-        if(n.type === 'social_comment') { icon = "message-circle"; color = "#3b82f6"; }
-        if(n.type === 'friend_req') { icon = "user-plus"; color = "#22c55e"; }
-
-        div.innerHTML = `
-            <div class="notif-header-new">
-                <div class="notif-title" style="color:${color}">
-                    <i data-lucide="${icon}" style="width:14px;"></i> ${escapeHtml(n.title)}
-                </div>
-                <div class="notif-time">${fixDate(n.timestamp)}</div>
-            </div>
-            <div class="notif-body">${escapeHtml(n.body)}</div>
-            <button class="btn-del-notif" onclick="deleteNotif('${n.key}')"><i data-lucide="trash-2" style="width:14px;"></i></button>
-        `;
-        
-        // Make whole card clickable for reading/navigation, except delete button
-        div.onclick = (e) => {
-            if(e.target.closest('.btn-del-notif')) return;
-            markNotifRead(n.key);
-            if(n.link) window.location.href = n.link;
-            else if(n.action === 'open_post' && n.postId) openPost(n.postId);
-            else if(n.action === 'view_profile' && n.uid) viewUserProfile(n.uid);
-        };
-        
-        list.appendChild(div);
-    });
-    lucide.createIcons();
-}
-
-function deleteNotif(key) {
-    if(!auth.currentUser) return;
-    db.ref('notifications/' + auth.currentUser.uid + '/' + key).remove();
-    playSound('click');
-}
-
-function markNotifRead(key) {
-    if(!auth.currentUser) return;
-    db.ref('notifications/' + auth.currentUser.uid + '/' + key).update({ read: true });
-}
-
-function listenPrivateMessages(uid) {
-    db.ref('chats').on('child_added', s => {
-        if(s.key.includes(uid)) {
-            // Logic to update PM list if needed
-        }
-    });
-}
-
-function listenVideoUpdate() {
-    db.ref('gameState/videoUrl').on('value', s => {
-        const url = s.val();
-        const frame = document.getElementById('ytFrame');
-        if(url && frame) {
-            // Extract ID if full URL
-            let vidId = url;
-            if(url.includes('v=')) vidId = url.split('v=')[1].split('&')[0];
-            else if(url.includes('youtu.be/')) vidId = url.split('youtu.be/')[1];
+        // Play sound for new incoming messages when not in initial load
+        if(!isInitialLoad && m.to === myUid && (m.timestamp > (Date.now() - 2000))) {
+            playSound('pop');
             
-            frame.src = `https://www.youtube.com/embed/${vidId}?autoplay=1&mute=1&playsinline=1`;
+            // Show toast notification if PM modal is closed or chat is with different user
+            const pmModal = document.getElementById('pmModal');
+            const isPMModalClosed = pmModal.style.display === 'none' || !pmModal.style.display;
+            const isDifferentChat = currentChatPartner !== m.from;
+            
+            if(isPMModalClosed || isDifferentChat) {
+                // Get sender name
+                db.ref('users/' + m.from).once('value', uSnap => {
+                    const sender = uSnap.val();
+                    if(sender) {
+                        const messagePreview = m.image ? '📷 Photo' : (m.text.length > 30 ? m.text.substring(0, 30) + '...' : m.text);
+                        const sanitizedName = escapeHtml(sender.name);
+                        const sanitizedPreview = escapeHtml(messagePreview);
+                        showToast(`💬 ${sanitizedName}: ${sanitizedPreview}`);
+                    }
+                });
+            }
         }
-    });
-}
 
-// === SOCIAL FEED SYSTEM ===
-function initSocialSystem(uid) {
-    // Listen for new posts globally
-    // Real implementation would likely use pagination
-}
+        if(!currentChatPartner) return; 
+        if( (m.from === myUid && m.to === currentChatPartner) || (m.from === currentChatPartner && m.to === myUid) ) { 
+            const div = document.createElement('div'); 
+            div.className = `msg-bubble ${m.from === myUid ? 'msg-me' : 'msg-them'}`; 
+            
+            let contentHtml = m.text;
+            if(m.image) {
+                contentHtml += `<br><img src="${m.image}" class="msg-image-preview">`;
+            }
+            
+            // Heart logic
+            let heartHtml = '';
+            if(m.hearted) {
+                heartHtml = `<div class="msg-heart-reaction">❤️</div>`;
+            }
 
-function loadSocialFeed() {
-    const feed = document.getElementById('socialFeed');
-    if(!feed) return;
-    feed.innerHTML = '<div style="text-align:center; padding:20px;"><div class="splash-loader" style="margin:0 auto;"></div></div>';
+            div.innerHTML = `${contentHtml}${heartHtml}`; 
+            
+            // Double click to heart
+            div.ondblclick = () => {
+                if(!m.hearted) {
+                    db.ref('messages/' + key).update({ hearted: true });
+                    showToast("Message hearted");
+                }
+            };
+
+            chatDiv.appendChild(div); 
+            chatDiv.scrollTop = chatDiv.scrollHeight; 
+        } 
+    }); 
     
-    db.ref('posts').limitToLast(50).once('value', s => {
-        feed.innerHTML = "";
-        const posts = [];
-        s.forEach(p => posts.push({key: p.key, ...p.val()}));
-        posts.sort((a,b) => b.timestamp - a.timestamp);
+    // Listen for changes (hearts)
+    pmListenerRef.on('child_changed', s => {
+         // In real app, find specific bubble and update. Here we just re-render or let it slide for simplicity in one-file
+    });
+
+    setTimeout(() => { isInitialLoad = false; }, 1500);
+}
+
+function deductPoints(amt) { db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) - amt); spawnLossAnimation(amt); }
+function addPoints(amt) { db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) + amt); }
+
+function verifyAdMath() { const ans = document.getElementById('mathAns').value; const corr = document.getElementById('mathQ').dataset.ans; if(ans === corr) { document.getElementById('adCaptchaOverlay').style.display = 'none'; addPoints(50); showToast("Reward: " + formatCurrency(50) + " Added!"); } else { showToast("Wrong Answer!"); } }
+
+function spawnFlyingCoins(amount) { const count = Math.min(amount, 15); const targetEl = document.querySelector('.points-badge') || document.querySelector('.game-balance-pill'); if(!targetEl) return; const rect = targetEl.getBoundingClientRect(); const targetX = rect.left + (rect.width / 2); const targetY = rect.top + (rect.height / 2); const startX = window.innerWidth / 2; const startY = window.innerHeight / 2; for(let i=0; i<count; i++) { setTimeout(() => { const coin = document.createElement('div'); coin.className = 'flying-coin'; coin.style.left = startX + 'px'; coin.style.top = startY + 'px'; document.body.appendChild(coin); const spread = 80; const randX = (Math.random() - 0.5) * spread; const randY = (Math.random() - 0.5) * spread; requestAnimationFrame(() => { coin.style.transition = 'transform 0.3s ease-out'; coin.style.transform = `translate(${randX}px, ${randY}px) scale(1.2)`; setTimeout(() => { coin.style.transition = 'transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.6s'; const moveX = targetX - startX; const moveY = targetY - startY; coin.style.transform = `translate(${moveX}px, ${moveY}px) scale(0.5)`; coin.style.opacity = '0'; }, 300); setTimeout(() => coin.remove(), 900); }); }, i * 30); } }
+function triggerScreenShake() { const activeGame = document.querySelector('.game-overlay-fs[style*="flex"]'); const target = activeGame ? activeGame.querySelector('.roulette-table, .slot-machine-frame, .hl-table, .color-table, .l9-table, .dice-table') : document.getElementById('bingoCardContainer'); if (target) { target.classList.add('shake-effect'); setTimeout(() => target.classList.remove('shake-effect'), 300); } if (navigator.vibrate) navigator.vibrate([30, 30, 30]); }
+function spawnLossAnimation(amount) { const activeGame = document.querySelector('.game-overlay-fs[style*="flex"]'); let startX, startY; if(activeGame) { startX = window.innerWidth / 2; startY = window.innerHeight / 2; } else { const badge = document.querySelector('.points-badge'); if(badge) { const rect = badge.getBoundingClientRect(); startX = rect.left + 20; startY = rect.top + 40; } else { startX = window.innerWidth / 2; startY = window.innerHeight / 2; } } const el = document.createElement('div'); el.className = 'float-loss'; el.innerText = "-" + amount; el.style.left = startX + 'px'; el.style.top = startY + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 1000); }
+
+function openMenuModal() { document.getElementById('menuModal').style.display='flex'; }
+function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length > 3) { db.ref('users/'+auth.currentUser.uid).update({ gcash: num }); showToast("Info Saved!"); } else showToast("Invalid Details"); }
+function redeemItem(name, cost) { if(userData.points >= cost) { if(!userData.gcash) return showToast("Save redemption info first!"); showCustomConfirm("REDEEM REWARD?", "Exchange " + formatCurrency(cost) + " for " + name + "?", () => { deductPoints(cost); db.ref('redemptions').push({ uid: userData.uid, name: userData.name, gcash: userData.gcash, item: name, cost: cost, status: 'pending', timestamp: Date.now() }); showToast("Request Sent!"); loadHistory(); }); } else { showToast("Insufficient Balance"); } }
+function loadHistory() { const list = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { list.innerHTML = ""; s.forEach(r => { const d = r.val(); let color = '#fbbf24'; if(d.status === 'sent') color = '#10b981'; if(d.status === 'denied') color = '#ef4444'; list.innerHTML += `<div class="history-item"><div><div style="font-weight:700; font-size:12px;">${d.item} (${formatCurrency(d.cost)})</div><div style="font-size:10px; opacity:0.6;">${fixDate(d.timestamp)}</div></div><div style="font-size:10px; font-weight:800; color:${color}; text-transform:uppercase; border:1px solid ${color}; padding:2px 6px; border-radius:4px;">${d.status}</div></div>`; }); }); }
+
+// === SUPPORT CONTACT FUNCTIONS ===
+function openSupportModal() {
+    document.getElementById('menuModal').style.display = 'none';
+    document.getElementById('supportModal').style.display = 'flex';
+    loadMyTickets(); // Load user's tickets when opening modal
+    setTimeout(() => lucide.createIcons(), 50);
+}
+
+function submitSupportRequest() {
+    const subject = document.getElementById('supportSubject').value.trim();
+    const message = document.getElementById('supportMessage').value.trim();
+    
+    if(!subject || !message) {
+        showToast("Please fill in all fields");
+        return;
+    }
+    
+    if(message.length < 10) {
+        showToast("Message too short. Please provide more details.");
+        return;
+    }
+    
+    // Save to Firebase
+    db.ref('supportMessages').push({
+        uid: auth.currentUser.uid,
+        userName: userData.name,
+        userEmail: userData.gcash || 'Not provided',
+        userPhoto: userData.photo,
+        subject: subject,
+        message: message,
+        timestamp: Date.now(),
+        status: 'open'
+    });
+    
+    showToast("Message sent! We'll respond soon.");
+    playSound('pop');
+    
+    // Clear form and refresh ticket list
+    document.getElementById('supportSubject').value = '';
+    document.getElementById('supportMessage').value = '';
+    loadMyTickets();
+}
+
+function loadMyTickets() {
+    const ticketsList = document.getElementById('ticketsList');
+    ticketsList.innerHTML = '<div style="text-align:center; padding: var(--spacing-md); opacity:0.5; font-size:11px;">Loading tickets...</div>';
+    
+    db.ref('supportMessages').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => {
+        ticketsList.innerHTML = '';
         
-        if(posts.length === 0) {
-            feed.innerHTML = "<div style='text-align:center; padding:40px; color:#64748b;'>No posts yet. Be the first!</div>";
+        if(!s.exists()) {
+            ticketsList.innerHTML = '<div style="text-align:center; padding: var(--spacing-md); opacity:0.5; font-size:11px;">No tickets yet</div>';
             return;
         }
         
-        posts.forEach(p => {
-            feed.appendChild(renderPost(p));
+        const tickets = [];
+        s.forEach(child => {
+            tickets.push({ key: child.key, ...child.val() });
         });
-        lucide.createIcons();
+        
+        // Sort by timestamp descending
+        tickets.sort((a, b) => b.timestamp - a.timestamp);
+        
+        tickets.forEach(ticket => {
+            // Count replies
+            db.ref('supportTicketReplies/' + ticket.key).once('value', rSnap => {
+                const replyCount = rSnap.numChildren();
+                
+                const ticketDiv = document.createElement('div');
+                ticketDiv.className = 'ticket-item';
+                ticketDiv.onclick = () => openTicketDetail(ticket.key);
+                
+                ticketDiv.innerHTML = `
+                    <div class="ticket-item-header">
+                        <div class="ticket-subject">${escapeHtml(ticket.subject)}</div>
+                        <div class="ticket-status ${ticket.status}">${ticket.status}</div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="ticket-time">${fixDate(ticket.timestamp)}</div>
+                        ${replyCount > 0 ? `<div class="ticket-reply-count"><i data-lucide="message-circle" style="width:12px;"></i> ${replyCount}</div>` : ''}
+                    </div>
+                `;
+                
+                ticketsList.appendChild(ticketDiv);
+                lucide.createIcons();
+            });
+        });
     });
 }
 
-function renderPost(post) {
-    const el = document.createElement('div');
-    el.className = 'post-card';
-    const isLiked = post.likes && post.likes[auth.currentUser.uid];
-    const likeCount = post.likes ? Object.keys(post.likes).length : 0;
-    const commentCount = post.commentCount || 0;
-    const isMine = post.uid === auth.currentUser.uid;
-    
-    // VERIFICATION BADGE CHECK: If post has authorVerified true, show badge
-    const verifiedBadge = post.authorVerified ? getVerificationBadgeHtml(true) : '';
+let currentTicketKey = null;
 
-    el.innerHTML = `
-        <div class="post-header">
-            <div class="avatar-frame" style="width:36px; height:36px; cursor:pointer;" onclick="viewUserProfile('${post.uid}')">
-                <img src="${sanitizeUrl(post.authorPhoto)}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">
-                ${post.authorVerified ? '<div class="verification-badge"><i data-lucide="check"></i></div>' : ''}
+function openTicketDetail(ticketKey) {
+    currentTicketKey = ticketKey;
+    
+    db.ref('supportMessages/' + ticketKey).once('value', s => {
+        const ticket = s.val();
+        if(!ticket) return;
+        
+        document.getElementById('ticketDetailSubject').innerText = ticket.subject;
+        document.getElementById('ticketDetailStatus').innerText = ticket.status.toUpperCase();
+        document.getElementById('ticketDetailStatus').style.color = ticket.status === 'open' ? 'var(--gold)' : '#94a3b8';
+        
+        const repliesContainer = document.getElementById('ticketRepliesContainer');
+        repliesContainer.innerHTML = `
+            <div class="ticket-original-message">
+                <div class="ticket-original-label">Original Message</div>
+                <div class="ticket-reply-content">${escapeHtml(ticket.message)}</div>
+                <div class="ticket-reply-time" style="margin-top:8px;">${fixDate(ticket.timestamp)}</div>
             </div>
-            <div class="post-meta">
-                <div class="post-author">${escapeHtml(post.authorName)} ${verifiedBadge}</div>
-                <div class="post-time">${fixDate(post.timestamp)}</div>
-            </div>
-            ${isMine ? `<button class="post-overflow-btn" onclick="deletePost('${post.key}')"><i data-lucide="trash-2" style="width:16px;"></i></button>` : ''}
-        </div>
-        <div class="post-content">${escapeHtml(post.content)}</div>
-        ${post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image" onclick="viewImage('${post.image}')"></div>` : ''}
-        <div class="post-actions">
-            <button class="action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike('${post.key}')">
-                <i data-lucide="heart" class="${isLiked ? 'fill-current' : ''}" style="width:18px;"></i> ${likeCount || 'Like'}
-            </button>
-            <button class="action-btn" onclick="openComments('${post.key}')">
-                <i data-lucide="message-circle" style="width:18px;"></i> ${commentCount || 'Comment'}
-            </button>
-            <button class="action-btn" onclick="sharePost('${post.key}')">
-                <i data-lucide="share-2" style="width:18px;"></i> Share
-            </button>
-        </div>
-    `;
-    return el;
+        `;
+        
+        // Load replies
+        db.ref('supportTicketReplies/' + ticketKey).orderByChild('timestamp').once('value', rSnap => {
+            // Clear only replies, keep original message
+            const existingOriginal = repliesContainer.querySelector('.ticket-original-message');
+            repliesContainer.innerHTML = '';
+            if(existingOriginal) {
+                repliesContainer.appendChild(existingOriginal);
+            }
+            
+            if(!rSnap.exists()) {
+                repliesContainer.innerHTML += '<div style="text-align:center; padding: var(--spacing-lg); opacity:0.5; font-size:11px;">No replies yet</div>';
+            } else {
+                rSnap.forEach(child => {
+                    const reply = child.val();
+                    const isAdmin = reply.isAdmin || false;
+                    const adminBadge = isAdmin ? '<span class="ticket-reply-admin-badge">Support Team</span>' : '';
+                    
+                    const replyDiv = document.createElement('div');
+                    replyDiv.className = 'ticket-reply-item';
+                    replyDiv.innerHTML = `
+                        <div class="ticket-reply-header">
+                            <img src="${reply.authorPhoto}" class="ticket-reply-avatar">
+                            <div>
+                                <div class="ticket-reply-author">${escapeHtml(reply.authorName)} ${adminBadge}</div>
+                            </div>
+                            <div class="ticket-reply-time">${fixDate(reply.timestamp)}</div>
+                        </div>
+                        <div class="ticket-reply-content">${escapeHtml(reply.message)}</div>
+                    `;
+                    repliesContainer.appendChild(replyDiv);
+                });
+                lucide.createIcons();
+            }
+        });
+        
+        document.getElementById('ticketDetailModal').style.display = 'flex';
+        setTimeout(() => lucide.createIcons(), 50);
+    });
 }
 
-function submitPost() {
-    const text = document.getElementById('postInput').value;
-    const imgPreview = document.getElementById('postImagePreview');
-    const hasImage = imgPreview.style.display !== 'none';
+function closeTicketDetail() {
+    document.getElementById('ticketDetailModal').style.display = 'none';
+    currentTicketKey = null;
+}
+
+function submitTicketReply() {
+    if(!currentTicketKey) return;
     
-    if(!text.trim() && !hasImage) { showToast("Please write something!"); return; }
+    const replyText = document.getElementById('ticketReplyInput').value.trim();
     
-    const postData = {
-        uid: auth.currentUser.uid,
-        authorName: userData.name || auth.currentUser.displayName,
-        authorPhoto: userData.photo || auth.currentUser.photoURL,
-        authorVerified: userData.verified || false, // Include verification status
-        content: text,
-        timestamp: firebase.database.ServerValue.TIMESTAMP,
-        likes: {},
-        commentCount: 0
-    };
-    
-    if(hasImage) {
-        postData.image = imgPreview.src; // Assuming base64 from preview
+    if(!replyText) {
+        showToast("Please enter a reply");
+        return;
     }
     
-    const btn = document.querySelector('.btn-post-modern');
-    btn.disabled = true;
-    btn.innerHTML = "POSTING...";
+    if(replyText.length < 5) {
+        showToast("Reply too short");
+        return;
+    }
     
-    db.ref('posts').push(postData).then(() => {
-        document.getElementById('postInput').value = "";
-        cancelPostImage();
-        showToast("Posted Successfully!");
-        btn.disabled = false;
-        btn.innerHTML = "POST UPDATE";
-        loadSocialFeed();
-        switchTab('home'); // Go back to feed
-    }).catch(e => {
-        showToast("Error posting: " + e.message);
-        btn.disabled = false;
-        btn.innerHTML = "POST UPDATE";
+    // Add reply to Firebase
+    db.ref('supportTicketReplies/' + currentTicketKey).push({
+        uid: auth.currentUser.uid,
+        authorName: userData.name,
+        authorPhoto: userData.photo,
+        message: replyText,
+        timestamp: Date.now(),
+        isAdmin: false
+    }).then(() => {
+        // Reload ticket detail to show new reply
+        openTicketDetail(currentTicketKey);
+        
+        // Clear input
+        document.getElementById('ticketReplyInput').value = '';
+        showToast("Reply sent!");
+        playSound('pop');
+    });
+    
+    // Get ticket owner to send notification
+    // Note: In a production environment, verify isAdmin flag before sending admin notifications
+    db.ref('supportMessages/' + currentTicketKey).once('value', ticketSnap => {
+        const ticket = ticketSnap.val();
+        if(ticket && ticket.uid !== auth.currentUser.uid) {
+            // Another user (likely admin/support) is replying, notify the ticket owner
+            db.ref('notifications/' + ticket.uid).push({
+                msg: `Support replied to your ticket: ${ticket.subject}`,
+                time: Date.now(),
+                type: 'support_reply',
+                from: auth.currentUser.uid,
+                ticketId: currentTicketKey,
+                image: userData.photo
+            });
+        }
+    });
+    
+    // Update ticket status to open if it was closed
+    db.ref('supportMessages/' + currentTicketKey + '/status').set('open');
+}
+
+let selectedMood = null; // UPDATED DEFAULT
+let targetUserForOpt = null;
+let selectedImageBase64 = null;
+
+function initSocialSystem(uid) {
+    db.ref('friendRequests/' + uid).on('value', s => {
+        const container = document.getElementById('friendRequestsSection');
+        container.innerHTML = "";
+        s.forEach(req => {
+            const requesterId = req.key;
+            db.ref('users/' + requesterId).once('value', u => {
+                const uData = u.val();
+                const div = document.createElement('div');
+                div.className = 'friend-req-card';
+                div.innerHTML = `<div class="req-info"><img src="${uData.photo}" style="width:30px;height:30px;border-radius:50%;"><span style="font-weight:700; font-size:12px; color:white;">${uData.name} wants to be friends</span></div><div class="req-actions"><button class="btn-accept" onclick="acceptFriend('${requesterId}')">Accept</button><button class="btn-decline" onclick="declineFriend('${requesterId}')">X</button></div>`;
+                container.appendChild(div);
+            });
+        });
     });
 }
+
+function showUserOptions(uid, name, photo) {
+    targetUserForOpt = { uid, name, photo };
+    document.getElementById('optUserAvatarCont').innerHTML = `<img src="${photo}" style="width:60px; height:60px; border-radius:50%; border:2px solid var(--accent); object-fit:cover;">`;
+    document.getElementById('optUserName').innerText = name;
+    document.getElementById('userOptionsModal').style.display = 'flex';
+}
+
+function optSendMessage() {
+    document.getElementById('userOptionsModal').style.display = 'none';
+    openPrivateChat(targetUserForOpt.uid, targetUserForOpt.name, targetUserForOpt.photo);
+}
+
+function optAddFriend() {
+    if(!targetUserForOpt) return;
+    const targetUid = targetUserForOpt.uid;
+    if(targetUid === auth.currentUser.uid) { showToast("That's you!"); return; }
+    
+    db.ref('friends/' + auth.currentUser.uid + '/' + targetUid).once('value', s => {
+        if(s.exists()) {
+            showToast("Already friends!");
+        } else {
+            db.ref('friendRequests/' + targetUid + '/' + auth.currentUser.uid).set(true);
+            showToast("Friend Request Sent!");
+        }
+        document.getElementById('userOptionsModal').style.display = 'none';
+    });
+}
+
+function acceptFriend(requesterUid) {
+    const myUid = auth.currentUser.uid;
+    db.ref('friends/' + myUid + '/' + requesterUid).set(true);
+    db.ref('friends/' + requesterUid + '/' + myUid).set(true);
+    db.ref('friendRequests/' + myUid + '/' + requesterUid).remove();
+    showToast("You are now friends!");
+    playSound('win');
+}
+
+function declineFriend(requesterUid) {
+    db.ref('friendRequests/' + auth.currentUser.uid + '/' + requesterUid).remove();
+}
+
+// UNFRIEND LOGIC (Modern)
+function unfriendUser() {
+    if(!currentProfileUid) return;
+    showCustomConfirm("Unfriend?", "Are you sure you want to remove this friend?", () => {
+         const myUid = auth.currentUser.uid;
+         db.ref('friends/' + myUid + '/' + currentProfileUid).remove();
+         db.ref('friends/' + currentProfileUid + '/' + myUid).remove();
+         showToast("Unfriended successfully.");
+         updateProfileButtonState(currentProfileUid);
+    });
+}
+
+function selectMood(el, mood) {
+    const isActive = el.classList.contains('active');
+    document.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('active'));
+    if(!isActive) { el.classList.add('active'); selectedMood = mood; } else { selectedMood = null; }
+}
+
+function toggleVisibilityDropdown() {
+    const menu = document.getElementById('visibilityMenu');
+    menu.classList.toggle('show');
+}
+
+function selectVisibility(value, icon, text) {
+    // Update hidden input
+    document.getElementById('postVisibility').value = value;
+    
+    // Update trigger button
+    document.getElementById('visibilityIcon').setAttribute('data-lucide', icon);
+    document.getElementById('visibilityText').textContent = text;
+    
+    // Update selected state in menu
+    document.querySelectorAll('.visibility-option').forEach(opt => {
+        opt.classList.remove('selected');
+        if (opt.getAttribute('data-value') === value) {
+            opt.classList.add('selected');
+        }
+    });
+    
+    // Close dropdown
+    document.getElementById('visibilityMenu').classList.remove('show');
+    
+    // Re-render icons
+    lucide.createIcons();
+}
+
+// Close dropdown when clicking outside
+(function() {
+    const dropdown = document.querySelector('.custom-visibility-dropdown');
+    const menu = document.getElementById('visibilityMenu');
+    if (dropdown && menu) {
+        document.addEventListener('click', function(event) {
+            if (!dropdown.contains(event.target)) {
+                menu.classList.remove('show');
+            }
+        });
+    }
+})();
 
 function handlePostImage(input) {
     if(input.files && input.files[0]) {
         compressImage(input.files[0], 800, 0.7).then(base64 => {
-            const img = document.getElementById('postImagePreview');
-            img.src = base64;
-            img.style.display = 'block';
-            document.getElementById('btnRemovePostImg').style.display = 'flex';
+            selectedImageBase64 = base64;
+            document.getElementById('postImgPreview').src = selectedImageBase64;
+            document.getElementById('imgPreviewCont').style.display = 'block';
         });
     }
 }
 
-function cancelPostImage() {
-    document.getElementById('postImagePreview').style.display = 'none';
-    document.getElementById('postImagePreview').src = "";
-    document.getElementById('btnRemovePostImg').style.display = 'none';
-    document.getElementById('filePostInput').value = "";
+function removePostImage() {
+    selectedImageBase64 = null;
+    document.getElementById('postImgInput').value = "";
+    document.getElementById('imgPreviewCont').style.display = 'none';
 }
 
-function toggleLike(postId) {
-    if(!auth.currentUser) return;
-    const uid = auth.currentUser.uid;
-    const ref = db.ref(`posts/${postId}/likes/${uid}`);
-    ref.once('value', s => {
-        if(s.exists()) {
-            ref.remove();
-        } else {
-            ref.set(true);
-            // Send notification to author if not self
-            db.ref('posts/' + postId).once('value', pSnap => {
-                const p = pSnap.val();
-                if(p.uid !== uid) {
-                    db.ref('notifications/' + p.uid).push({
-                        type: 'social_like',
-                        title: 'New Like',
-                        body: `${userData.name} liked your post.`,
-                        timestamp: firebase.database.ServerValue.TIMESTAMP,
-                        action: 'open_post',
-                        postId: postId,
-                        read: false
-                    });
-                }
-            });
+function createPost() {
+    const txt = document.getElementById('postInput').value.trim();
+    if(!txt && !selectedImageBase64) return showToast("Type something or add photo!");
+    
+    const visibility = document.getElementById('postVisibility').value || 'public';
+    
+    const postData = {
+        uid: auth.currentUser.uid,
+        authorName: userData.name,
+        authorPhoto: userData.photo,
+        authorPoints: userData.points,
+        authorWins: userData.bingoWins || 0,
+        authorVerified: userData.verified || false,
+        content: txt,
+        mood: selectedMood,
+        image: selectedImageBase64,
+        timestamp: Date.now(),
+        likes: 0,
+        visibility: visibility
+    };
+    
+    db.ref('socialPosts').push(postData);
+    document.getElementById('postInput').value = "";
+    
+    // Reset custom visibility dropdown to Public
+    selectVisibility('public', 'globe', 'Public');
+    
+    removePostImage();
+    document.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('active'));
+    selectedMood = null;
+    showToast("Posted!");
+    playSound('pop');
+}
+
+function togglePostMenu(postKey) {
+    const menu = document.getElementById('post-menu-' + postKey);
+    if (!menu) return;
+    
+    // Close all other menus
+    document.querySelectorAll('.post-overflow-menu').forEach(m => {
+        if (m.id !== 'post-menu-' + postKey) {
+            m.classList.remove('show');
         }
-        setTimeout(loadSocialFeed, 500); // Quick refresh or use realtime listener
+    });
+    
+    // Toggle current menu
+    menu.classList.toggle('show');
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.post-overflow-btn') && !e.target.closest('.post-overflow-menu')) {
+        document.querySelectorAll('.post-overflow-menu').forEach(m => {
+            m.classList.remove('show');
+        });
+    }
+});
+
+function deletePost(postKey) {
+    // Close the overflow menu
+    const menu = document.getElementById('post-menu-' + postKey);
+    if (menu) menu.classList.remove('show');
+    
+    if(!confirm("Are you sure you want to delete this post?")) {
+        return;
+    }
+    
+    const ANIMATION_DURATION = 300;
+    
+    // Soft delete: mark as deleted instead of removing
+    // Note: Firebase security rules should verify that auth.uid matches the post author's uid
+    db.ref('socialPosts/' + postKey).update({
+        deleted: true,
+        deletedAt: Date.now()
+    }).then(() => {
+        // Remove from DOM immediately
+        const postElement = document.getElementById('post-' + postKey);
+        if(postElement) {
+            postElement.style.transition = `opacity ${ANIMATION_DURATION}ms ease`;
+            postElement.style.opacity = '0';
+            setTimeout(() => postElement.remove(), ANIMATION_DURATION);
+        }
+        showToast("Post deleted");
+        playSound('pop');
+    }).catch(err => {
+        console.error("Error deleting post:", err);
+        showToast("Failed to delete post");
     });
 }
 
-function deletePost(postId) {
-    showCustomConfirm("Delete Post?", "Are you sure you want to delete this?", () => {
-        db.ref('posts/' + postId).remove().then(() => {
-            showToast("Post Deleted");
-            loadSocialFeed();
+let currentProfileUid = null;
+
+function openMyProfile() {
+    openUserProfile(auth.currentUser.uid);
+}
+
+function openUserProfile(uid) {
+    currentProfileUid = uid;
+    document.getElementById('userOptionsModal').style.display = 'none';
+    document.getElementById('userProfilePage').style.display = 'flex';
+    
+    document.getElementById('pageProfileFeed').innerHTML = "<div style='color:white; opacity:0.5; text-align:center; padding: var(--spacing-lg);'>Loading...</div>";
+    document.getElementById('profileMainActionBtn').style.display = 'none';
+    document.getElementById('unfriendBtn').style.display = 'none';
+    
+    // Show/hide settings menu button based on whether viewing own profile
+    const settingsBtn = document.getElementById('profileSettingsMenuBtn');
+    if(auth.currentUser && uid === auth.currentUser.uid) {
+        settingsBtn.style.display = 'flex';
+    } else {
+        settingsBtn.style.display = 'none';
+    }
+
+    db.ref('users/' + uid).once('value', s => {
+        const u = s.val();
+        // Inject avatar with badge
+        document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.bingoWins || 0, 140, uid, u.verified || false);
+        
+        document.getElementById('pageProfileName').textContent = u.name;
+        // Add verification badge if verified
+        if(u.verified) {
+            document.getElementById('pageProfileName').innerHTML = u.name + ' ' + getVerificationBadgeHtml(true);
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+        document.getElementById('pageProfileBio').innerText = u.bio || "Radio Bingo Player";
+        
+        if(u.cover) {
+            document.getElementById('pageProfileCover').style.backgroundImage = `url('${u.cover}')`;
+        } else {
+            document.getElementById('pageProfileCover').style.background = '#334155';
+            document.getElementById('pageProfileCover').style.backgroundImage = 'none';
+        }
+        
+        updateProfileButtonState(uid);
+        
+        db.ref('friends/' + uid).once('value', fSnap => {
+            document.getElementById('statFriends').innerText = fSnap.numChildren() || 0;
+        });
+        
+        loadProfilePosts(uid);
+        lucide.createIcons();
+    });
+}
+
+function closeProfilePage() {
+    document.getElementById('userProfilePage').style.display = 'none';
+    // Hide dropdown if open
+    const dropdown = document.getElementById('profileSettingsDropdown');
+    if(dropdown) dropdown.classList.remove('show');
+    currentProfileUid = null;
+}
+
+function updateProfileButtonState(uid) {
+    const btn = document.getElementById('profileMainActionBtn');
+    const unfriendBtn = document.getElementById('unfriendBtn');
+    const giftSkinBtn = document.getElementById('giftSkinBtn');
+    const myUid = auth.currentUser.uid;
+    
+    unfriendBtn.style.display = 'none';
+    giftSkinBtn.style.display = 'none';
+    
+    if(uid === myUid) {
+        btn.innerText = "Edit Profile";
+        btn.className = "profile-action-btn secondary";
+        btn.onclick = openEditProfile;
+        btn.style.display = 'block';
+    } else {
+        // Show Gift Skin button for other users
+        giftSkinBtn.style.display = 'block';
+        giftSkinBtn.onclick = () => openGiftModal(uid);
+        
+        db.ref('friends/' + myUid + '/' + uid).once('value', s => {
+            if(s.exists()) {
+                btn.innerText = "Message";
+                btn.className = "profile-action-btn";
+                btn.onclick = () => openPrivateChat(uid, document.getElementById('pageProfileName').innerText, document.getElementById('pageProfileImg').src); 
+                unfriendBtn.style.display = 'flex'; // Show modern unfriend
+            } else {
+                 db.ref('friendRequests/' + uid + '/' + myUid).once('value', reqSnap => {
+                     if(reqSnap.exists()) {
+                         btn.innerText = "Cancel Request";
+                         btn.className = "profile-action-btn secondary";
+                         btn.onclick = () => {
+                             db.ref('friendRequests/' + uid + '/' + myUid).remove();
+                             updateProfileButtonState(uid);
+                             showToast("Request Cancelled");
+                         };
+                     } else {
+                         btn.innerText = "Add Friend";
+                         btn.className = "profile-action-btn";
+                         btn.onclick = () => {
+                             db.ref('friendRequests/' + uid + '/' + myUid).set(true);
+                             updateProfileButtonState(uid);
+                             showToast("Request Sent!");
+                         };
+                     }
+                 });
+            }
+            btn.style.display = 'block';
+        });
+    }
+}
+
+function loadProfilePosts(uid) {
+    const container = document.getElementById('pageProfileFeed');
+    db.ref('socialPosts').orderByChild('uid').equalTo(uid).limitToLast(20).once('value', pSnap => {
+        container.innerHTML = "";
+        let count = 0;
+        let likes = 0;
+        const posts = [];
+        pSnap.forEach(c => {
+            const p = c.val();
+            if(!p.deleted) {
+                posts.push({ key: c.key, ...p });
+                count++;
+                likes += (p.likes || 0);
+            }
+        });
+        
+        document.getElementById('statPosts').innerText = count;
+        document.getElementById('statLikes').innerText = likes;
+        
+        posts.reverse().forEach(post => {
+            const div = createPostElement(post, false);
+            container.appendChild(div);
+            loadCommentPreview(post.key);
+            loadReactionSummary(post.key);
+            loadCommentCount(post.key);
+        });
+        
+        if(count === 0) container.innerHTML = "<div style='color:white; opacity:0.5; font-size:12px; text-align:center; padding: var(--spacing-lg);'>No posts yet</div>";
+        lucide.createIcons();
+    });
+}
+
+function openEditProfile() {
+    document.getElementById('editNameIn').value = userData.name;
+    document.getElementById('editBioIn').value = userData.bio || "";
+    document.getElementById('editProfileModal').style.display = 'flex';
+}
+
+function handleProfileUpload(input, type) {
+    if(input.files && input.files[0]) {
+        // Compress Image
+        const maxWidth = type === 'cover' ? 1200 : 500;
+        compressImage(input.files[0], maxWidth, 0.7).then(base64 => {
+            input.dataset.b64 = base64;
+            showToast("Image ready! Click Save.");
+        });
+    }
+}
+
+function saveProfileChanges() {
+    const newName = document.getElementById('editNameIn').value.trim();
+    const newBio = document.getElementById('editBioIn').value.trim();
+    
+    const pfpInput = document.getElementById('editProfilePicInput');
+    const coverInput = document.getElementById('editCoverPicInput');
+    
+    if(newName.length < 2) return showToast("Name too short");
+    
+    const updates = {
+        name: newName,
+        bio: newBio
+    };
+    
+    if(pfpInput.dataset.b64) updates.photo = pfpInput.dataset.b64;
+    if(coverInput.dataset.b64) updates.cover = coverInput.dataset.b64;
+    
+    db.ref('users/' + auth.currentUser.uid).update(updates).then(() => {
+        showToast("Profile Updated!");
+        document.getElementById('editProfileModal').style.display = 'none';
+        // Clear inputs
+        pfpInput.value = ""; delete pfpInput.dataset.b64;
+        coverInput.value = ""; delete coverInput.dataset.b64;
+        openMyProfile(); // Refresh
+    });
+}
+
+// Constants
+const MIN_VERIFICATION_REASON_LENGTH = 10;
+
+// === PROFILE SETTINGS FUNCTIONS ===
+function toggleProfileSettingsDropdown() {
+    const dropdown = document.getElementById('profileSettingsDropdown');
+    dropdown.classList.toggle('show');
+}
+
+// Close dropdown when clicking outside (executed once on load)
+(function() {
+    let profileDropdownListenerAdded = false;
+    if(!profileDropdownListenerAdded) {
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.profile-settings-menu-btn') && !e.target.closest('.profile-settings-dropdown')) {
+                const dropdown = document.getElementById('profileSettingsDropdown');
+                if(dropdown) dropdown.classList.remove('show');
+            }
+        });
+        profileDropdownListenerAdded = true;
+    }
+})();
+
+// Close profile modals with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const settingsModal = document.getElementById('profileAccountSettingsModal');
+        const verificationModal = document.getElementById('profileVerificationModal');
+        
+        if(settingsModal && settingsModal.style.display === 'flex') {
+            settingsModal.style.display = 'none';
+        }
+        if(verificationModal && verificationModal.style.display === 'flex') {
+            verificationModal.style.display = 'none';
+        }
+    }
+});
+
+function openProfileAccountSettings() {
+    // Close dropdown
+    document.getElementById('profileSettingsDropdown').classList.remove('show');
+    
+    // Update verification status display
+    if(auth.currentUser) {
+        db.ref('users/' + auth.currentUser.uid).once('value', s => {
+            const user = s.val();
+            if(user) {
+                updateProfileVerificationStatusDisplay(user);
+            }
+        });
+    }
+    
+    // Show modal
+    document.getElementById('profileAccountSettingsModal').style.display = 'flex';
+    setTimeout(() => lucide.createIcons(), 50);
+}
+
+function updateProfileVerificationStatusDisplay(user) {
+    const statusText = document.getElementById('profileVerificationStatusText');
+    if(!statusText) return;
+    
+    if(user.verified) {
+        statusText.innerHTML = '<span style="color:#10b981;">✓ Verified</span>';
+    } else if(user.verificationStatus === 'pending') {
+        statusText.innerHTML = '<span style="color:#f59e0b;">⏳ Pending review</span>';
+    } else if(user.verificationStatus === 'rejected') {
+        statusText.innerHTML = '<span style="color:#ef4444;">✗ Rejected - Request again</span>';
+    } else {
+        statusText.textContent = 'Request verification';
+    }
+}
+
+function openProfileVerificationModal() {
+    if(!auth.currentUser) return;
+    
+    // Close settings modal
+    document.getElementById('profileAccountSettingsModal').style.display = 'none';
+    
+    const uid = auth.currentUser.uid;
+    db.ref('users/' + uid).once('value', s => {
+        const user = s.val();
+        if(!user) return;
+        
+        const modal = document.getElementById('profileVerificationModal');
+        const formContainer = document.getElementById('profileVerificationFormContainer');
+        const statusContainer = document.getElementById('profileVerificationStatusContainer');
+        const statusMessage = document.getElementById('profileVerificationStatusMessage');
+        
+        if(user.verified) {
+            // Already verified
+            formContainer.style.display = 'none';
+            statusContainer.style.display = 'block';
+            statusMessage.style.background = 'rgba(16, 185, 129, 0.15)';
+            statusMessage.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+            statusMessage.style.color = '#10b981';
+            statusMessage.innerHTML = '<strong>✓ Account Verified!</strong><br>Your account already has a verification badge.';
+        } else if(user.verificationStatus === 'pending') {
+            // Pending request
+            formContainer.style.display = 'none';
+            statusContainer.style.display = 'block';
+            statusMessage.style.background = 'rgba(245, 158, 11, 0.15)';
+            statusMessage.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+            statusMessage.style.color = '#f59e0b';
+            statusMessage.innerHTML = '<strong>⏳ Request Pending</strong><br>Your verification request is being reviewed by admins.';
+        } else {
+            // Can request
+            formContainer.style.display = 'block';
+            statusContainer.style.display = 'none';
+            document.getElementById('profileVerificationReason').value = user.verificationReason || '';
+        }
+        
+        modal.style.display = 'flex';
+        setTimeout(() => lucide.createIcons(), 50);
+    });
+}
+
+function submitProfileVerificationRequest() {
+    if(!auth.currentUser) return;
+    
+    const reason = document.getElementById('profileVerificationReason').value.trim();
+    if(reason.length < MIN_VERIFICATION_REASON_LENGTH) {
+        showToast(`Please provide a reason (at least ${MIN_VERIFICATION_REASON_LENGTH} characters)`);
+        return;
+    }
+    
+    const uid = auth.currentUser.uid;
+    const updates = {
+        verificationStatus: 'pending',
+        verificationReason: reason,
+        verificationRequestedAt: Date.now()
+    };
+    
+    db.ref('users/' + uid).update(updates).then(() => {
+        showToast('✓ Verification request submitted!');
+        document.getElementById('profileVerificationModal').style.display = 'none';
+    }).catch(err => {
+        console.error('Error submitting verification request:', err);
+        showToast('Error submitting request. Please try again.');
+    });
+}
+
+function logoutFromProfile() {
+    // Close the modal
+    document.getElementById('profileAccountSettingsModal').style.display = 'none';
+    
+    // Show confirmation and logout
+    showCustomConfirm("Sign Out?", "Are you sure you want to log out?", () => {
+        auth.signOut().then(() => {
+            window.location.reload();
         });
     });
 }
 
-// === COMMENTS SYSTEM ===
-let currentPostId = null;
-
-function openComments(postId) {
-    currentPostId = postId;
-    const modal = document.getElementById('commentModal');
-    const backdrop = document.getElementById('commentModalBackdrop');
-    const list = document.getElementById('commentList');
-    
-    modal.style.display = 'flex';
-    backdrop.style.display = 'block';
-    list.innerHTML = '<div class="splash-loader" style="margin:20px auto;"></div>';
-    
-    db.ref(`post-comments/${postId}`).on('value', s => {
-        list.innerHTML = "";
-        if(!s.exists()) {
-            list.innerHTML = "<div style='text-align:center; padding:20px; color:#64748b;'>No comments yet.</div>";
+// === GIFT SKIN FUNCTIONS ===
+function openGiftModal(recipientId) {
+    // Fetch recipient data first
+    db.ref('users/' + recipientId).once('value', recipientSnap => {
+        const recipient = recipientSnap.val();
+        if(!recipient) {
+            showToast("User not found");
             return;
         }
         
-        const comments = [];
-        s.forEach(c => comments.push({key: c.key, ...c.val()}));
+        const recipientOwnedSkins = recipient.ownedSkins || ['default'];
+        const recipientName = recipient.name;
         
-        comments.forEach(c => {
+        // Update modal title
+        document.getElementById('giftModalTitle').innerText = `Gift a Skin to ${recipientName}`;
+        
+        // Populate skins list
+        const skinsList = document.getElementById('giftableSkinsList');
+        skinsList.innerHTML = '';
+        
+        Object.entries(skinShop).forEach(([skinId, skin]) => {
             const div = document.createElement('div');
-            div.className = 'comment-item';
+            div.className = 'skin-item';
             
-            // Comment verification badge
-            const verifiedHtml = c.authorVerified ? '<i data-lucide="check" style="width:10px; color:#3b82f6;"></i>' : '';
+            const isOwned = recipientOwnedSkins.includes(skinId);
             
             div.innerHTML = `
-                <img src="${sanitizeUrl(c.authorPhoto)}" class="comment-avatar">
+                <div class="skin-preview" style="${skin.preview}">B</div>
+                <div class="skin-name">${skin.name}</div>
+                <div class="skin-cost">${formatCurrency(skin.cost)}</div>
+                <button class="btn-buy-skin ${isOwned ? 'owned' : 'buy'}" ${isOwned ? 'disabled' : ''}>
+                    ${isOwned ? 'Already Owned' : 'GIFT'}
+                </button>
+            `;
+            
+            if(!isOwned) {
+                const btn = div.querySelector('button');
+                btn.onclick = () => confirmSkinGift(recipientId, skinId, recipientName);
+            }
+            
+            skinsList.appendChild(div);
+        });
+        
+        // Show modal
+        document.getElementById('giftSkinModal').style.display = 'flex';
+        lucide.createIcons();
+    });
+}
+
+function confirmSkinGift(recipientId, skinId, recipientName) {
+    const skin = skinShop[skinId];
+    if(!skin) {
+        showToast("Skin not found");
+        return;
+    }
+    
+    // Check if sender has enough points
+    if(userData.points < skin.cost) {
+        showToast("Insufficient Balance");
+        return;
+    }
+    
+    // Show confirmation dialog
+    showCustomConfirm(
+        "GIFT SKIN?",
+        `Gift the ${skin.name} skin to ${recipientName} for ${formatCurrency(skin.cost)}?`,
+        () => executeSkinGift(recipientId, skinId)
+    );
+}
+
+function executeSkinGift(recipientId, skinId) {
+    const skin = skinShop[skinId];
+    if(!skin) {
+        showToast("Skin not found");
+        return;
+    }
+    
+    const senderId = auth.currentUser.uid;
+    const senderName = userData.name;
+    
+    // 1. Deduct points from sender using transaction
+    db.ref('users/' + senderId + '/points').transaction(currentPoints => {
+        const points = currentPoints || 0;
+        if(points >= skin.cost) {
+            return points - skin.cost;
+        } else {
+            return undefined; // Abort transaction explicitly
+        }
+    }, (error, committed, snapshot) => {
+        if(error) {
+            showToast("Transaction failed");
+            console.error(error);
+            return;
+        }
+        
+        if(!committed) {
+            showToast("Insufficient Balance");
+            return;
+        }
+        
+        // 2. Add skin to recipient's ownedSkins array
+        db.ref('users/' + recipientId + '/ownedSkins').transaction(currentSkins => {
+            const skins = currentSkins || ['default'];
+            if(!skins.includes(skinId)) {
+                skins.push(skinId);
+            }
+            return skins;
+        }, (error2, committed2) => {
+            if(error2 || !committed2) {
+                console.error("Failed to add skin to recipient:", error2);
+                showToast("Gift failed! Contact support.");
+                // Note: In production, implement compensating transaction to refund sender
+                return;
+            }
+            
+            // 3. Create notification for recipient (only after successful skin transfer)
+            db.ref('notifications/' + recipientId).push({
+                msg: `${senderName} gifted you the ${skin.name} skin!`,
+                type: 'gift',
+                from: senderId,
+                time: Date.now()
+            });
+            
+            // 4. Log the transaction (only after successful completion)
+            db.ref('giftLogs').push({
+                from: senderId,
+                to: recipientId,
+                skinId: skinId,
+                cost: skin.cost,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+            
+            // 5. UI Feedback
+            document.getElementById('giftSkinModal').style.display = 'none';
+            showToast("Gift sent successfully!");
+            spawnFlyingCoins(10);
+            playSound('win');
+        });
+    });
+}
+
+function openSearch() {
+    document.getElementById('searchModal').style.display = 'flex';
+    document.getElementById('searchInput').focus();
+}
+
+let searchTimeout = null;
+function handleSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        const q = document.getElementById('searchInput').value.toLowerCase().trim();
+        const resDiv = document.getElementById('searchResults');
+        if(q.length < 2) {
+            resDiv.innerHTML = "<div style='text-align:center; opacity:0.5; padding: var(--spacing-lg);'>Type more to search...</div>";
+            return;
+        }
+        resDiv.innerHTML = "<div style='text-align:center; opacity:0.5; padding: var(--spacing-lg);'>Searching...</div>";
+        db.ref('users').once('value', s => {
+            resDiv.innerHTML = "";
+            let found = false;
+            s.forEach(uSnap => {
+                const u = uSnap.val();
+                const uid = uSnap.key;
+                if(u.name.toLowerCase().includes(q)) {
+                    found = true;
+                    const div = document.createElement('div');
+                    div.className = 'search-res-item';
+                    div.onclick = () => {
+                        document.getElementById('searchModal').style.display = 'none';
+                        openUserProfile(uid);
+                    };
+                    div.innerHTML = `
+                        <img src="${u.photo || 'https://via.placeholder.com/40'}" class="search-res-img">
+                        <div style="font-size:14px; font-weight:700; color:white;">${u.name} ${getVerificationBadgeHtml(u.verified)}</div>
+                    `;
+                    resDiv.appendChild(div);
+                }
+            });
+            if(!found) resDiv.innerHTML = "<div style='text-align:center; opacity:0.5; padding: var(--spacing-lg);'>No users found.</div>";
+            lucide.createIcons();
+        });
+    }, 500);
+}
+
+let currentOpenPostKey = null;
+
+function openComments(postKey) {
+    currentOpenPostKey = postKey;
+    const list = document.getElementById('commentList');
+    list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding: var(--spacing-lg);'>Loading...</div>";
+    document.getElementById('commentModal').style.display = 'flex';
+    document.getElementById('commentModalBackdrop').style.display = 'block';
+    
+    db.ref('postComments/' + postKey).on('value', s => {
+        list.innerHTML = "";
+        if(!s.exists()) {
+            list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding: var(--spacing-lg);'>No comments yet.</div>";
+            return;
+        }
+        s.forEach(c => {
+            const com = c.val();
+            const div = document.createElement('div');
+            div.className = 'comment-item';
+            div.innerHTML = `
+                <img class="comment-avatar" src="${com.uPhoto}">
                 <div class="comment-content-block">
                     <div class="comment-bubble">
-                        <div class="comment-author">${escapeHtml(c.authorName)} ${verifiedHtml}</div>
-                        <div class="comment-text">${escapeHtml(c.text)}</div>
+                        <div class="comment-author">${com.uName} ${getVerificationBadgeHtml(com.uVerified)}</div>
+                        <div class="comment-text">${com.text}</div>
                     </div>
                     <div class="comment-actions">
-                        <span>${fixDate(c.timestamp)}</span>
+                        <button class="cmt-action-btn" onclick="likeComment('${postKey}', '${c.key}')">Like</button>
+                        <button class="cmt-action-btn" onclick="replyComment('${com.uName}')">Reply</button>
+                        <span>${fixDate(com.time)}</span>
                     </div>
                 </div>
             `;
             list.appendChild(div);
         });
+        list.scrollTop = list.scrollHeight;
         lucide.createIcons();
     });
 }
@@ -855,299 +1988,721 @@ function openComments(postId) {
 function closeComments() {
     document.getElementById('commentModal').style.display = 'none';
     document.getElementById('commentModalBackdrop').style.display = 'none';
-    if(currentPostId) db.ref(`post-comments/${currentPostId}`).off();
-    currentPostId = null;
+    db.ref('postComments/' + currentOpenPostKey).off(); 
+    currentOpenPostKey = null;
+    document.getElementById('commentInput').value = '';
+    updateCommentPreview(); // Clear preview
 }
 
-function submitComment() {
-    if(!currentPostId) return;
-    const input = document.getElementById('commentInput');
-    const text = input.value.trim();
-    if(!text) return;
+function sendComment() {
+    const txt = document.getElementById('commentInput').value.trim();
+    if(!txt || !currentOpenPostKey) return;
     
-    const commentData = {
+    db.ref('postComments/' + currentOpenPostKey).push({
         uid: auth.currentUser.uid,
-        authorName: userData.name,
-        authorPhoto: userData.photo,
-        authorVerified: userData.verified || false,
-        text: text,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    };
+        uName: userData.name,
+        uPhoto: userData.photo,
+        uPoints: userData.points,
+        uWins: userData.bingoWins || 0,
+        uVerified: userData.verified || false,
+        text: txt,
+        time: Date.now()
+    });
     
-    db.ref(`post-comments/${currentPostId}`).push(commentData);
+    // Notify Author (Grouped logic handled in render but we push individual here)
+    db.ref('socialPosts/' + currentOpenPostKey).once('value', s => {
+         const p = s.val();
+         if(p.uid !== auth.currentUser.uid) {
+             db.ref('notifications/' + p.uid).push({
+                 msg: `${userData.name} commented on your post`,
+                 time: Date.now(),
+                 type: 'comment',
+                 from: auth.currentUser.uid,
+                 postId: currentOpenPostKey, // Link to post
+                 image: userData.photo
+             });
+         }
+    });
+
+    document.getElementById('commentInput').value = "";
+    updateCommentPreview(); // Clear preview
+}
+
+function updateCommentPreview() {
+    const input = document.getElementById('commentInput');
+    const previewBox = document.getElementById('commentPreviewBox');
+    const previewText = document.getElementById('commentPreviewText');
+    const previewAvatar = document.getElementById('commentPreviewAvatar');
     
-    // Increment comment count
-    db.ref(`posts/${currentPostId}/commentCount`).transaction(c => (c || 0) + 1);
+    const txt = input.value.trim();
     
-    // Notify author
-    db.ref('posts/' + currentPostId).once('value', pSnap => {
-        const p = pSnap.val();
-        if(p.uid !== auth.currentUser.uid) {
-            db.ref('notifications/' + p.uid).push({
-                type: 'social_comment',
-                title: 'New Comment',
-                body: `${userData.name} commented on your post.`,
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                action: 'open_post',
-                postId: currentPostId,
-                read: false
+    if(txt && userData) {
+        previewBox.style.display = 'block';
+        previewText.textContent = txt;
+        previewAvatar.src = userData.photo || 'https://via.placeholder.com/40';
+    } else {
+        previewBox.style.display = 'none';
+        previewText.textContent = '';
+    }
+}
+
+function likeComment(postKey, commentKey) {
+    showToast("Liked comment!");
+}
+
+function replyComment(name) {
+    document.getElementById('commentInput').value = `@${name} `;
+    document.getElementById('commentInput').focus();
+    updateCommentPreview(); // Show preview for reply
+}
+
+function loadCommentPreview(postKey) {
+    const previewContainer = document.getElementById('comment-preview-' + postKey);
+    const previewList = document.getElementById('preview-list-' + postKey);
+    
+    if(!previewContainer || !previewList) return;
+    
+    db.ref('postComments/' + postKey).limitToLast(2).once('value', s => {
+        if(!s.exists()) {
+            previewContainer.style.display = 'none';
+            return;
+        }
+        
+        previewContainer.style.display = 'block';
+        previewList.innerHTML = '';
+        
+        const comments = [];
+        s.forEach(c => {
+            comments.push({ key: c.key, ...c.val() });
+        });
+        
+        comments.forEach(com => {
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            div.style.marginBottom = '5px';
+            
+            const truncatedText = com.text.length > 50 ? com.text.substring(0, 50) + '...' : com.text;
+            const sanitizedText = escapeHtml(truncatedText);
+            const sanitizedName = escapeHtml(com.uName);
+            
+            div.innerHTML = `
+                <button class="preview-user" onclick="openUserProfile('${com.uid}')" style="background:none; border:none; padding:0; font:inherit; cursor:pointer;" aria-label="View ${sanitizedName}'s profile">${sanitizedName}</button>
+                <span class="preview-text">${sanitizedText}</span>
+            `;
+            
+            previewList.appendChild(div);
+        });
+    });
+}
+
+
+// === SHARE POST FUNCTIONS ===
+let currentSharePostKey = null;
+
+function openShareModal(postKey) {
+    currentSharePostKey = postKey;
+    
+    // Check if Web Share API is available
+    const nativeShareBtn = document.getElementById('nativeShareBtn');
+    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    
+    if (navigator.share) {
+        nativeShareBtn.style.display = 'flex';
+        copyLinkBtn.style.display = 'none';
+    } else {
+        nativeShareBtn.style.display = 'none';
+        copyLinkBtn.style.display = 'flex';
+    }
+    
+    // Get post data to show preview
+    db.ref('socialPosts/' + postKey).once('value', s => {
+        const post = s.val();
+        if(!post) return;
+        
+        const sanitizedAuthor = escapeHtml(post.authorName);
+        const sanitizedContent = escapeHtml(post.content || '');
+        const truncatedContent = sanitizedContent.length > 100 ? sanitizedContent.substring(0, 100) + '...' : sanitizedContent;
+        
+        document.getElementById('sharePreview').innerHTML = `
+            <div class="share-post-preview-author">${sanitizedAuthor}</div>
+            <div class="share-post-preview-content">${truncatedContent}</div>
+        `;
+        
+        document.getElementById('shareModal').style.display = 'flex';
+        document.getElementById('shareModalBackdrop').style.display = 'block';
+        setTimeout(() => lucide.createIcons(), 50);
+    });
+}
+
+function closeShareModal() {
+    document.getElementById('shareModal').style.display = 'none';
+    document.getElementById('shareModalBackdrop').style.display = 'none';
+    currentSharePostKey = null;
+}
+
+function shareToOwnProfile() {
+    if(!currentSharePostKey) return;
+    
+    db.ref('socialPosts/' + currentSharePostKey).once('value', s => {
+        const originalPost = s.val();
+        if(!originalPost) return;
+        
+        // Create a new post that references the original
+        const shareData = {
+            uid: auth.currentUser.uid,
+            authorName: userData.name,
+            authorPhoto: userData.photo,
+            authorPoints: userData.points,
+            authorWins: userData.bingoWins || 0,
+            content: '', // Empty content for pure share
+            timestamp: Date.now(),
+            likes: 0,
+            visibility: 'public', // Shared posts default to public
+            isShared: true,
+            sharedPostKey: currentSharePostKey,
+            sharedFrom: originalPost.uid,
+            sharedFromName: originalPost.authorName,
+            sharedFromPhoto: originalPost.authorPhoto,
+            sharedContent: originalPost.content,
+            sharedImage: originalPost.image,
+            sharedMood: originalPost.mood
+        };
+        
+        db.ref('socialPosts').push(shareData);
+        
+        // Notify original author
+        if(originalPost.uid !== auth.currentUser.uid) {
+            db.ref('notifications/' + originalPost.uid).push({
+                msg: `${userData.name} shared your post`,
+                time: Date.now(),
+                type: 'share',
+                from: auth.currentUser.uid,
+                postId: currentSharePostKey,
+                image: userData.photo
             });
         }
+        
+        showToast("Post shared!");
+        playSound('pop');
+        closeShareModal();
     });
-    
-    input.value = "";
 }
 
-// === BINGO GAME LOGIC ===
-function initBingo() {
-    generateNewCard();
-}
-
-function generateNewCard() {
-    cardNumbers = {
-        'B': getUniqueRandoms(1, 15, 5),
-        'I': getUniqueRandoms(16, 30, 5),
-        'N': getUniqueRandoms(31, 45, 4), // Free space
-        'G': getUniqueRandoms(46, 60, 5),
-        'O': getUniqueRandoms(61, 75, 5)
-    };
-    // Insert Free Space Placeholder
-    cardNumbers['N'].splice(2, 0, 'FREE');
-    marks = [12]; // Index 12 is center (2*5 + 2)
+function shareViaWebShare() {
+    if(!currentSharePostKey) return;
     
-    // Save to DB
-    if(auth.currentUser) {
-        db.ref('users/' + auth.currentUser.uid).update({ 
-            currentCard: cardNumbers, 
-            cardTimestamp: Date.now(),
-            markedIndices: marks
-        });
-    }
-    renderCard();
-}
-
-function getUniqueRandoms(min, max, count) {
-    const arr = [];
-    while(arr.length < count) {
-        const r = Math.floor(Math.random() * (max - min + 1)) + min;
-        if(arr.indexOf(r) === -1) arr.push(r);
-    }
-    return arr;
-}
-
-function renderCard() {
-    const grid = document.getElementById('bingoGrid');
-    if(!grid) return;
-    grid.innerHTML = "";
-    
-    const flatNums = [];
-    // Flatten Column-wise for rendering grid 5x5
-    for(let r=0; r<5; r++) {
-        flatNums.push(cardNumbers['B'][r]);
-        flatNums.push(cardNumbers['I'][r]);
-        flatNums.push(cardNumbers['N'][r]);
-        flatNums.push(cardNumbers['G'][r]);
-        flatNums.push(cardNumbers['O'][r]);
-    }
-    
-    flatNums.forEach((num, idx) => {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        if(num === 'FREE') {
-            cell.innerText = 'FREE';
-            cell.classList.add('hit');
+    db.ref('socialPosts/' + currentSharePostKey).once('value', s => {
+        const post = s.val();
+        if(!post) return;
+        
+        const shareData = {
+            title: 'Check out this post!',
+            text: `${post.authorName}: ${post.content || 'Shared a post'}`,
+            url: window.location.origin + '/?post=' + currentSharePostKey
+        };
+        
+        if (navigator.share) {
+            navigator.share(shareData)
+                .then(() => {
+                    showToast("Shared successfully!");
+                    playSound('pop');
+                    closeShareModal();
+                })
+                .catch((error) => {
+                    // Ignore user cancellations (AbortError, NotAllowedError)
+                    if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+                        console.error('Error sharing:', error);
+                        showToast("Failed to share");
+                    }
+                });
         } else {
-            cell.innerText = num;
-            if(marks.includes(idx)) cell.classList.add('hit');
-            if(gameDrawn.includes(num)) cell.classList.add('cell-waiting'); 
-            
-            cell.onclick = () => clickCell(idx, num, cell);
+            showToast("Sharing not supported");
         }
-        grid.appendChild(cell);
     });
 }
 
-function clickCell(idx, num, el) {
-    if(num === 'FREE') return;
-    // Check if number is actually drawn
-    if(!gameDrawn.includes(num)) {
-        showToast("Wait! Not drawn yet.");
+function copyPostLink() {
+    if(!currentSharePostKey) return;
+    
+    const postUrl = window.location.origin + '/?post=' + currentSharePostKey;
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(postUrl)
+            .then(() => {
+                showToast("Link copied to clipboard!");
+                playSound('pop');
+                closeShareModal();
+            })
+            .catch((error) => {
+                console.error('Error copying to clipboard:', error);
+                fallbackCopyToClipboard(postUrl);
+            });
+    } else {
+        fallbackCopyToClipboard(postUrl);
+    }
+}
+
+function fallbackCopyToClipboard(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    
+    try {
+        // Last-resort fallback using deprecated document.execCommand
+        // Required for Internet Explorer and Safari versions prior to 13.1
+        // This is only called after modern Clipboard API fails or is unavailable
+        document.execCommand('copy');
+        showToast("Link copied to clipboard!");
+        playSound('pop');
+        closeShareModal();
+    } catch (error) {
+        console.error('Fallback copy failed:', error);
+        showToast("Failed to copy link");
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+
+let postListener = null;
+let feedSortMethod = 'hype';
+
+function toggleFeedSort(method) {
+    feedSortMethod = method;
+    document.getElementById('sort-hype').classList.remove('active');
+    document.getElementById('sort-new').classList.remove('active');
+    document.getElementById('sort-' + method).classList.add('active');
+    loadSocialFeed(); // Reload with new sort
+}
+
+function loadSocialFeed() {
+    const feedContainer = document.getElementById('socialFeed');
+    if(postListener) db.ref('socialPosts').off(); // Clear old listener
+
+    feedContainer.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>Loading Feed...</div>";
+    
+    db.ref('friends/' + auth.currentUser.uid).once('value', fSnap => {
+        const myFriends = fSnap.exists() ? Object.keys(fSnap.val()) : [];
+        
+        postListener = db.ref('socialPosts').limitToLast(50);
+        postListener.on('value', pSnap => {
+            const allPosts = [];
+            pSnap.forEach(child => { 
+                const val = child.val();
+                if(typeof val === 'object' && val !== null && !val.deleted) {
+                    // === RANKING ALGORITHM ===
+                    // Hype Score = (Time Recency) + (Likes * Weight)
+                    // Time is normalized to hours since epoch to keep numbers manageable, then small weight
+                    // Actually easier: Score = Time + (Likes * 1000 * 60 * 60) -> 1 Like = 1 Hour of freshness
+                    const likeCount = val.likes || 0;
+                    const score = val.timestamp + (likeCount * 3600000); // Each like pushes it '1 hour' forward in timeline logic
+                    
+                    allPosts.push({ key: child.key, hypeScore: score, ...val }); 
+                }
+            });
+            
+            if(feedSortMethod === 'hype') {
+                allPosts.sort((a, b) => b.hypeScore - a.hypeScore);
+            } else {
+                allPosts.sort((a, b) => b.timestamp - a.timestamp);
+            }
+            
+            const scrollPos = window.scrollY; 
+            
+            feedContainer.innerHTML = "";
+            if(allPosts.length === 0) {
+                feedContainer.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>No posts yet. Be the first!</div>";
+                return;
+            }
+            
+            let adCounter = 0;
+            
+            allPosts.forEach(post => {
+                const isFriend = myFriends.includes(post.uid);
+                const isMe = post.uid === auth.currentUser.uid;
+                
+                // === VISIBILITY FILTERING ===
+                const visibility = post.visibility || 'public'; // Default to public for old posts
+                
+                // Only Me: only author can see
+                if(visibility === 'private' && !isMe) return;
+                
+                // Friends Only: only friends and author can see
+                if(visibility === 'friends' && !isMe && !isFriend) return;
+                
+                // Public: everyone can see (no filtering needed)
+                
+                const div = createPostElement(post, isFriend || isMe);
+                feedContainer.appendChild(div);
+                loadCommentPreview(post.key);
+                loadReactionSummary(post.key);
+                loadCommentCount(post.key);
+                
+                // === IN-FEED ADS INJECTION ===
+                adCounter++;
+                if(adCounter % 5 === 0) {
+                     const adDiv = document.createElement('div');
+                     adDiv.className = 'ad-container-global';
+                     adDiv.style.margin = '15px auto';
+                     adDiv.innerHTML = `
+                        <script type="text/javascript">
+                            atOptions = { 'key' : '59f94c5cb7bcd84edb277947774c3b9d', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                        <\/script>
+                        <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"><\/script>
+                     `;
+                     feedContainer.appendChild(adDiv);
+                }
+            });
+            lucide.createIcons();
+            
+            if(document.getElementById('view-home').style.display !== 'none' && window.scrollY > 200) {
+                 // Only restore scroll if we are down the page
+                 setTimeout(() => window.scrollTo(0, scrollPos), 10);
+            }
+        });
+    });
+}
+
+function createPostElement(post, isFriend) {
+    const postDiv = document.createElement('div');
+    postDiv.className = 'post-card';
+    postDiv.id = 'post-' + post.key;
+    
+    const friendBadge = isFriend ? `<span class="friend-badge">${post.uid === auth.currentUser.uid ? 'YOU' : 'FRIEND'}</span>` : '';
+    const moodHtml = post.mood ? `<div class="mood-display">Feeling ${post.mood}</div>` : '';
+    const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
+    
+    // Visibility indicator
+    const visibility = post.visibility || 'public';
+    let visibilityIconName = 'globe'; // public
+    let visibilityText = 'Public';
+    if(visibility === 'friends') {
+        visibilityIconName = 'users';
+        visibilityText = 'Friends';
+    } else if(visibility === 'private') {
+        visibilityIconName = 'lock';
+        visibilityText = 'Only Me';
+    }
+    const visibilityBadge = `<span class="visibility-badge" title="${visibilityText}"><i data-lucide="${visibilityIconName}" style="width:10px; height:10px;"></i></span>`;
+    
+    // Check if this is a shared post
+    let sharedPostHtml = '';
+    if(post.isShared && post.sharedContent !== undefined) {
+        const sharedImgHtml = post.sharedImage ? `<div class="post-image-container"><img src="${post.sharedImage}" class="post-image"></div>` : '';
+        const sharedMoodHtml = post.sharedMood ? `<div class="mood-display">Feeling ${post.sharedMood}</div>` : '';
+        sharedPostHtml = `
+            <div class="shared-post-container">
+                <div style="font-size:10px; color:#94a3b8; margin-bottom: var(--spacing-xs); display:flex; align-items:center; gap:5px;">
+                    <i data-lucide="share-2" style="width:12px;"></i>
+                    <span>Shared from ${escapeHtml(post.sharedFromName)}</span>
+                </div>
+                <div style="display:flex; gap: var(--spacing-sm); align-items:flex-start;">
+                    <img src="${post.sharedFromPhoto}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" onclick="openUserProfile('${post.sharedFrom}')">
+                    <div style="flex:1;">
+                        <div style="font-weight:700; font-size:11px; color:white; margin-bottom:3px;">${escapeHtml(post.sharedFromName)}</div>
+                        ${sharedMoodHtml}
+                        <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">${escapeHtml(post.sharedContent || '')}</div>
+                        ${sharedImgHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    postDiv.innerHTML = `
+        <div class="post-header">
+            <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
+            <div class="post-meta">
+                <div class="post-author">${post.authorName} ${getVerificationBadgeHtml(post.authorVerified)} ${friendBadge}</div>
+                <div class="post-time">${fixDate(post.timestamp)} ${visibilityBadge}</div>
+                ${moodHtml}
+            </div>
+            ${post.uid === auth.currentUser.uid ? `
+            <div style="position: relative;">
+                <button class="post-overflow-btn" onclick="togglePostMenu('${post.key}')" aria-label="Post options">
+                    <i data-lucide="more-vertical" style="width:18px; height:18px;"></i>
+                </button>
+                <div class="post-overflow-menu" id="post-menu-${post.key}">
+                    <button class="overflow-menu-item delete-item" onclick="deletePost('${post.key}')">
+                        <i data-lucide="trash-2" style="width:14px;"></i>
+                        Delete Post
+                    </button>
+                </div>
+            </div>
+            ` : ''}
+        </div>
+        <div class="post-content">${escapeHtml(post.content || '')}</div>
+        ${imgHtml}
+        ${sharedPostHtml}
+        <div class="post-engagement-bar" id="engagement-bar-${post.key}">
+            <div class="reaction-summary-bar" id="reaction-summary-${post.key}" onclick="openReactionViewer('${post.key}')"></div>
+            <div class="comment-count-bar" id="comment-count-${post.key}" onclick="openComments('${post.key}')" style="cursor:pointer;"></div>
+        </div>
+        <div class="post-actions" style="position:relative;">
+            <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
+                <i data-lucide="heart" id="like-icon-${post.key}" style="width:14px;"></i> 
+                <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post">
+                    <span id="like-count-${post.key}">${post.likes || 0}</span>
+                </span>
+            </button>
+            <div id="react-pop-${post.key}" class="reaction-popup" onmouseleave="this.style.display='none'">
+                <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '❤️')">❤️</span>
+                <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😂')">😂</span>
+                <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😮')">😮</span>
+                <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😢')">😢</span>
+            </div>
+            <button class="action-btn" onclick="openComments('${post.key}')">
+                <i data-lucide="message-circle" style="width:14px"></i> Comment
+            </button>
+            <button class="action-btn" onclick="openShareModal('${post.key}')">
+                <i data-lucide="share-2" style="width:14px"></i> Share
+            </button>
+        </div>
+        <div id="comment-preview-${post.key}" class="comment-preview-area" style="display:none;">
+            <div id="preview-list-${post.key}" style="margin-bottom: var(--spacing-xs);"></div>
+            <button onclick="openComments('${post.key}')" style="background:none; border:none; color:var(--accent); font-size:11px; font-weight:700; cursor:pointer; padding:0;" aria-label="View all comments for this post">View all comments</button>
+        </div>
+    `;
+    
+    // Load initial state (simple check if liked)
+    db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
+        if(lSnap.exists()) {
+            const btn = postDiv.querySelector('#like-btn-' + post.key);
+            const reaction = lSnap.val(); // Get stored emoji
+            const sanitizedReaction = reaction === true ? '❤️' : escapeHtml(reaction);
+            if(btn) {
+                btn.classList.add('liked');
+                btn.innerHTML = `<span style="font-size:16px;">${sanitizedReaction}</span> <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post"><span id="like-count-${post.key}">${post.likes || 0}</span></span>`;
+            }
+        }
+    });
+    
+    return postDiv;
+}
+
+function loadReactionSummary(postKey) {
+    db.ref('postLikes/' + postKey).on('value', s => {
+        const bar = document.getElementById('reaction-summary-' + postKey);
+        if (!bar) return;
+        bar.innerHTML = '';
+        if (!s.exists()) return;
+
+        const counts = {};
+        s.forEach(child => {
+            let emoji = child.val();
+            // Legacy compatibility: old reactions stored as boolean true, convert to heart emoji
+            if (emoji === true) emoji = '❤️';
+            counts[emoji] = (counts[emoji] || 0) + 1;
+        });
+
+        // Sort by count descending
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        
+        // Render only the emoji icons (no per-emoji counts)
+        sorted.forEach(([emoji]) => {
+            const span = document.createElement('span');
+            span.className = 'reaction-summary-item';
+            span.textContent = emoji;
+            bar.appendChild(span);
+        });
+        
+        // Add total reactions text
+        const totalReactions = Object.values(counts).reduce((a, b) => a + b, 0);
+        if (totalReactions > 0) {
+            const totalSpan = document.createElement('span');
+            totalSpan.style.cssText = 'font-size:12px; color:#94a3b8; margin-left:8px;';
+            totalSpan.textContent = totalReactions + ' reaction' + (totalReactions !== 1 ? 's' : '');
+            bar.appendChild(totalSpan);
+        }
+    });
+}
+
+function loadCommentCount(postKey) {
+    db.ref('postComments/' + postKey).once('value', s => {
+        const countEl = document.getElementById('comment-count-' + postKey);
+        if (!countEl) return;
+        const count = s.numChildren();
+        if (count > 0) {
+            countEl.textContent = count + ' comment' + (count !== 1 ? 's' : '');
+        } else {
+            countEl.textContent = '';
+        }
+    });
+}
+
+function showReactionPopup(postKey) {
+    const pop = document.getElementById('react-pop-' + postKey);
+    // Toggle
+    if(pop.style.display === 'flex') pop.style.display = 'none';
+    else {
+        pop.style.display = 'flex';
+        setTimeout(() => { 
+            document.addEventListener('click', function close(e) {
+                if(!e.target.closest('#like-btn-'+postKey) && !e.target.closest('#react-pop-'+postKey)) {
+                    pop.style.display = 'none';
+                    document.removeEventListener('click', close);
+                }
+            });
+        }, 100);
+    }
+}
+
+function submitReaction(postKey, authorUid, emoji) {
+    const myUid = auth.currentUser.uid;
+    const likeRef = db.ref('postLikes/' + postKey + '/' + myUid);
+    const pop = document.getElementById('react-pop-' + postKey);
+    
+    pop.style.display = 'none'; // Hide popup
+
+    likeRef.once('value', s => {
+        if(s.exists() && s.val() === emoji) {
+            // Remove reaction if same clicked
+            likeRef.remove();
+            db.ref('socialPosts/' + postKey + '/likes').transaction(l => (l || 1) - 1);
+        } else {
+            // New or Change reaction
+            if(!s.exists()) {
+                db.ref('socialPosts/' + postKey + '/likes').transaction(l => (l || 0) + 1);
+                 // Reward only on first interaction
+                const rewardHistoryRef = db.ref('rewardHistory/' + postKey + '/' + myUid);
+                rewardHistoryRef.once('value', histSnap => {
+                    if(!histSnap.exists()) {
+                        if(authorUid !== myUid) {
+                            db.ref('users/' + authorUid + '/points').transaction(p => (p || 0) + 10);
+                            db.ref('notifications/' + authorUid).push({
+                                msg: `${userData.name} reacted ${emoji} to your post`,
+                                time: Date.now(),
+                                type: 'like',
+                                from: myUid,
+                                postId: postKey,
+                                image: userData.photo
+                            });
+                        }
+                        rewardHistoryRef.set(true); 
+                    }
+                });
+            }
+            likeRef.set(emoji);
+        }
+    });
+}
+
+let currentReactionPostKey = null;
+
+function openReactionViewer(postKey) {
+    currentReactionPostKey = postKey;
+    const modal = document.getElementById('reactionViewerModal');
+    const backdrop = document.getElementById('reactionViewerBackdrop');
+    const list = document.getElementById('reactionViewerList');
+    
+    modal.style.display = 'flex';
+    backdrop.style.display = 'block';
+    list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding: var(--spacing-lg);'>Loading...</div>";
+    
+    // Fetch all reactions for this post
+    db.ref('postLikes/' + postKey).once('value', s => {
+        list.innerHTML = "";
+        
+        if(!s.exists()) {
+            list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding: var(--spacing-lg);'>No reactions yet</div>";
+            return;
+        }
+        
+        const reactions = [];
+        s.forEach(child => {
+            reactions.push({
+                uid: child.key,
+                emoji: child.val()
+            });
+        });
+        
+        // Fetch user details for each reactor
+        let processed = 0;
+        reactions.forEach(reaction => {
+            db.ref('users/' + reaction.uid).once('value', uSnap => {
+                const user = uSnap.val();
+                if(user) {
+                    const div = document.createElement('div');
+                    div.className = 'reaction-viewer-item';
+                    div.onclick = () => {
+                        closeReactionViewer();
+                        openUserProfile(reaction.uid);
+                    };
+                    div.setAttribute('role', 'button');
+                    div.setAttribute('tabindex', '0');
+                    div.onkeypress = (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            closeReactionViewer();
+                            openUserProfile(reaction.uid);
+                        }
+                    };
+                    
+                    const sanitizedName = escapeHtml(user.name);
+                    const sanitizedPhoto = sanitizeUrl(user.photo || 'https://via.placeholder.com/40');
+                    
+                    div.innerHTML = `
+                        <img class="reaction-viewer-avatar" src="${sanitizedPhoto}" alt="${sanitizedName}'s profile picture">
+                        <div class="reaction-viewer-info">
+                            <div class="reaction-viewer-name">${sanitizedName}</div>
+                        </div>
+                        <div class="reaction-viewer-emoji">${reaction.emoji === true ? '❤️' : escapeHtml(reaction.emoji)}</div>
+                    `;
+                    
+                    list.appendChild(div);
+                }
+                
+                processed++;
+                if(processed === reactions.length) {
+                    lucide.createIcons();
+                }
+            });
+        });
+    });
+}
+
+function closeReactionViewer() {
+    document.getElementById('reactionViewerModal').style.display = 'none';
+    document.getElementById('reactionViewerBackdrop').style.display = 'none';
+    currentReactionPostKey = null;
+}
+
+// Ilagay ito sa pinakababa ng iyong script
+setTimeout(() => {
+const ss = document.getElementById('splash-screen');
+if (ss) {
+    ss.style.opacity = '0';
+    setTimeout(() => ss.style.display = 'none', 800);
+}
+}, 5000); // Mawawala after 5 seconds kahit anong mangyari
+
+// === MOBILE MENU TOGGLE FUNCTION ===
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobileMenu');
+    const overlay = document.getElementById('mobileMenuOverlay');
+    const hamburger = document.getElementById('hamburgerBtn');
+    
+    if (!menu || !overlay || !hamburger) {
+        console.warn('Mobile menu elements not found. Ensure mobileMenu, mobileMenuOverlay, and hamburgerBtn elements exist in the DOM.');
         return;
     }
     
-    if(marks.includes(idx)) return; // Already marked
+    menu.classList.toggle('active');
+    overlay.classList.toggle('active');
+    hamburger.classList.toggle('active');
     
-    marks.push(idx);
-    el.classList.add('hit');
-    playSound('pop');
-    
-    // Save progress
-    if(auth.currentUser) {
-        db.ref('users/' + auth.currentUser.uid + '/markedIndices').set(marks);
+    // Prevent body scroll when menu is open
+    if (menu.classList.contains('active')) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
     }
     
-    checkWin();
-}
-
-function checkWin() {
-    // Standard Patterns Logic Here (Row, Col, Diagonal)
-    // For visual confirmation only in this snippet
-}
-
-function claimBingo() {
-    showCustomConfirm("BINGO!", "Submit your card for verification?", () => {
-        // Send to server/DB for validation
-        const winRef = db.ref('winners').push();
-        winRef.set({
-            uid: auth.currentUser.uid,
-            name: userData.name,
-            photo: userData.photo,
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            card: cardNumbers,
-            marks: marks
-        });
-        showToast("Validating...");
-        // Simulation of win verification
-        setTimeout(() => {
-            showToast("BINGO VERIFIED! YOU WIN!");
-            playSound('win');
-            spawnFlyingCoins(50);
-            db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p||0) + 500);
-            db.ref('users/' + auth.currentUser.uid + '/bingoWins').transaction(w => (w||0) + 1);
-        }, 2000);
-    });
-}
-
-function listenForNextDraw() {
-    db.ref('gameState/drawnNumbers').on('value', s => {
-        const nums = s.val() || [];
-        gameDrawn = nums;
-        
-        // Update Recent Balls UI
-        const panel = document.getElementById('prevBalls');
-        if(panel) {
-            panel.innerHTML = "";
-            // Show last 5
-            const last5 = nums.slice(-5).reverse();
-            last5.forEach(n => {
-                const b = document.createElement('div');
-                b.className = 'ball-small';
-                b.innerText = n;
-                panel.appendChild(b);
-            });
-        }
-        
-        // Update Current Ball
-        const current = nums[nums.length-1];
-        if(current) {
-            document.getElementById('currentBallDisplay').innerText = current;
-            document.getElementById('currentBallDisplay').classList.add('shake-effect');
-            setTimeout(()=>document.getElementById('currentBallDisplay').classList.remove('shake-effect'), 500);
-            playSound('newBall');
-        }
-    });
-}
-
-function listenJackpot() {
-    db.ref('gameState/jackpot').on('value', s => {
-        const val = s.val() || 5000;
-        document.getElementById('jackpotDisplay').innerText = formatCurrency(val);
-    });
-}
-
-// === CHAT SYSTEM ===
-function setupChat() {
-    const list = document.getElementById('chatList');
-    db.ref('chat_public').limitToLast(50).on('child_added', s => {
-        const m = s.val();
-        const row = document.createElement('div');
-        row.className = 'chat-row';
-        const isMe = m.uid === auth.currentUser.uid;
-        if(isMe) row.style.flexDirection = 'row-reverse';
-        
-        row.innerHTML = `
-            <img src="${sanitizeUrl(m.photo)}" class="chat-pfp" onclick="viewUserProfile('${m.uid}')">
-            <div class="chat-content">
-                <div class="chat-name" style="${isMe?'text-align:right':''}">${escapeHtml(m.name)}</div>
-                <div class="bubble">${escapeHtml(m.text)}</div>
-            </div>
-        `;
-        list.appendChild(row);
-        list.scrollTop = list.scrollHeight;
-    });
-}
-
-function sendChat() {
-    const input = document.getElementById('chatInput');
-    const txt = input.value.trim();
-    if(!txt) return;
-    
-    db.ref('chat_public').push({
-        uid: auth.currentUser.uid,
-        name: userData.name,
-        photo: userData.photo,
-        text: txt,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    });
-    input.value = "";
-    playSound('pop');
-}
-
-// === HELPER: FLYING COINS ANIMATION ===
-function spawnFlyingCoins(amount) {
-    for(let i=0; i<Math.min(amount, 20); i++) {
-        setTimeout(() => {
-            const coin = document.createElement('div');
-            coin.className = 'flying-coin';
-            coin.style.left = (Math.random() * 80 + 10) + 'vw';
-            coin.style.top = (Math.random() * 80 + 10) + 'vh';
-            document.body.appendChild(coin);
-            
-            // Animate to point balance or store icon
-            const dest = document.getElementById('storePoints') || document.body;
-            const rect = dest.getBoundingClientRect();
-            
-            coin.animate([
-                { transform: 'scale(1)', opacity: 1 },
-                { transform: `translate(${rect.left - parseFloat(coin.style.left)}px, ${rect.top - parseFloat(coin.style.top)}px) scale(0.5)`, opacity: 0 }
-            ], {
-                duration: 1000 + Math.random() * 500,
-                easing: 'ease-in'
-            }).onfinish = () => coin.remove();
-        }, i * 100);
+    // Re-init lucide icons for the menu
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
     }
 }
-
-// === PROFILE VIEWER ===
-function viewUserProfile(uid) {
-    // Show modal with profile details
-    const modal = document.getElementById('profilePageContainer');
-    if(!modal) return;
-    
-    db.ref('users/' + uid).once('value', s => {
-        const u = s.val();
-        if(!u) return;
-        
-        document.getElementById('profilePageName').innerText = u.name;
-        document.getElementById('profilePageUid').innerText = "ID: " + uid.substring(0,8);
-        document.getElementById('profilePageImg').src = sanitizeUrl(u.photo);
-        
-        // Render large avatar with verification badge
-        const container = document.getElementById('profileAvatarContainer');
-        if(container) {
-            container.innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo), u.bingoWins||0, 120, uid, u.verified || false);
-        }
-        
-        modal.style.display = 'flex';
-    });
-}
-
-function closeProfilePage() {
-    document.getElementById('profilePageContainer').style.display = 'none';
-}
-
-// === SYSTEM INIT ===
-// Icons are re-initialized often to ensure dynamic content gets them
-setInterval(() => {
-    if(window.lucide) lucide.createIcons();
-}, 2000);
