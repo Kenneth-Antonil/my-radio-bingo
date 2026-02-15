@@ -5869,50 +5869,25 @@ Please explain why you want a verification badge:`;
     }
 
     function shareToOwnProfile() {
-        alert('Share button clicked!'); // TEST
+        // Simple share - like Facebook
+        const postKey = currentSharePostKey;
         
-        if(!currentSharePostKey) {
-            alert('Error: No post key');
-            return;
-        }
-        if(!auth.currentUser) {
-            alert('Error: Not logged in');
-            return showToast("Please login first");
-        }
-        if(!userData || !userData.name) {
-            alert('Error: userData not loaded');
-            showToast("Loading profile...");
-            return;
-        }
-        
-        alert('All checks passed, attempting to share...');
-        
-        const caption = document.getElementById('shareCaption').value.trim();
-        
-        db.ref('socialPosts/' + currentSharePostKey).once('value', s => {
-            const originalPost = s.val();
-            if(!originalPost) {
-                alert('Error: Original post not found');
-                showToast("Post not found");
-                return;
-            }
+        db.ref('socialPosts/' + postKey).once('value').then(snapshot => {
+            const originalPost = snapshot.val();
             
-            alert('Original post found, creating share data...');
-            
-            // Create a new post that references the original
-            const shareData = {
+            // Create shared post
+            const newPost = {
                 uid: auth.currentUser.uid,
                 authorName: userData.name,
-                authorPhoto: userData.photo || 'https://via.placeholder.com/40',
+                authorPhoto: userData.photo,
                 authorPoints: userData.points || 0,
                 authorWins: userData.bingoWins || 0,
                 authorVerified: userData.verified || false,
-                content: caption, // User's caption
+                content: document.getElementById('shareCaption').value.trim(),
                 timestamp: Date.now(),
                 likes: 0,
-                visibility: 'public', // Shared posts default to public
+                visibility: 'public',
                 isShared: true,
-                sharedPostKey: currentSharePostKey,
                 sharedFrom: originalPost.uid,
                 sharedFromName: originalPost.authorName,
                 sharedFromPhoto: originalPost.authorPhoto,
@@ -5922,31 +5897,24 @@ Please explain why you want a verification badge:`;
                 sharedMood: originalPost.mood
             };
             
-            alert('Saving to database...');
-            
-            db.ref('socialPosts').push(shareData).then(() => {
-                alert('Share successful!');
+            // Save to database
+            db.ref('socialPosts').push(newPost).then(() => {
+                // Success!
+                document.getElementById('shareCaption').value = '';
+                closeShareModal();
+                showToast("Shared to your profile!");
+                playSound('pop');
                 
                 // Notify original author
                 if(originalPost.uid !== auth.currentUser.uid) {
                     db.ref('notifications/' + originalPost.uid).push({
-                        msg: `${userData.name} shared your post`,
+                        msg: userData.name + ' shared your post',
                         time: Date.now(),
                         type: 'share',
                         from: auth.currentUser.uid,
-                        postId: currentSharePostKey,
                         image: userData.photo
                     });
                 }
-                
-                document.getElementById('shareCaption').value = ''; // Clear caption
-                showToast("Post shared successfully!");
-                playSound('pop');
-                closeShareModal();
-            }).catch(err => {
-                alert('Database error: ' + err.message);
-                console.error("Share error:", err);
-                showToast("Failed to share. Try again.");
             });
         });
     }
