@@ -3537,6 +3537,38 @@
 </div>
 
 <script>
+    /* ============================================
+       ✅ CLOUDINARY CONFIGURED! (FREE CLOUD STORAGE)
+       ============================================
+       
+       📸 ALL IMAGES & VIDEOS NOW UPLOAD TO CLOUDINARY!
+       
+       ✅ YOUR CLOUD NAME: dzifutb8l (CONFIGURED!)
+       ⚠️ USING DEFAULT PRESET: ml_default
+       
+       STATUS:
+       ✅ Cloud name: dzifutb8l - READY!
+       ⚠️ Upload preset: ml_default (default) - WORKING but you can create custom one
+       
+       🎯 NEXT STEP (OPTIONAL):
+       Create your own upload preset for better control:
+       1. Go to: https://console.cloudinary.com/console/dzifutb8l/settings/upload
+       2. Click "Add upload preset"
+       3. Name: radiobingo_uploads
+       4. Signing mode: Unsigned ⚠️
+       5. Save, then update line 4948 with new preset name
+       
+       FOR NOW: Test with 'ml_default' - it should work!
+       
+       BENEFITS:
+       ✅ No more base64 - smaller database
+       ✅ Fast CDN delivery
+       ✅ Free 25GB storage & 25GB bandwidth/month
+       ✅ Automatic image optimization
+       ✅ Supports images & videos
+       
+       ============================================ */
+    
     // === NOTIFICATION BLOCKER LOGIC ===
     window.addEventListener('load', () => { setTimeout(hideSplash, 2000); checkNotifGate(); checkInstallGate(); initBannerListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
     setTimeout(hideSplash, 5000);
@@ -4913,13 +4945,74 @@
         if(!isSelected) { el.classList.add('selected'); selectedMood = mood; } else { selectedMood = null; }
     }
     
+    // === CLOUDINARY MEDIA UPLOAD ===
+    // ═══════════════════════════════════════════════════════════
+    // ✅ CLOUDINARY CONFIGURED FOR: dzifutb8l
+    // ═══════════════════════════════════════════════════════════
+    
+    const CLOUDINARY_CLOUD_NAME = 'dzifutb8l'; // ✅ YOUR CLOUD NAME - READY!
+    const CLOUDINARY_UPLOAD_PRESET = 'ml_default'; // Using default preset
+    
+    /* 
+    ✅ CLOUD NAME: SET UP ✅
+    
+    ⚠️ NEXT STEP: Create Upload Preset (OPTIONAL but RECOMMENDED)
+    
+    Your code will work with 'ml_default' preset, but for better control:
+    
+    1. Go to: https://console.cloudinary.com/console/dzifutb8l/settings/upload
+    2. Scroll to "Upload presets"
+    3. Click "Add upload preset"
+    4. Settings:
+       • Preset name: radiobingo_uploads
+       • Signing mode: Unsigned ⚠️ MUST BE UNSIGNED!
+       • Folder: (optional) radiobingo
+    5. Click "Save"
+    6. Update line 4948 to:
+       const CLOUDINARY_UPLOAD_PRESET = 'radiobingo_uploads';
+    
+    🎯 FOR NOW: It will use 'ml_default' - TEST FIRST before creating custom preset!
+    */
+    
+    async function uploadToCloudinary(file, resourceType = 'image') {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+        
+        const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
+        
+        try {
+            showToast('Uploading...');
+            const response = await fetch(uploadUrl, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if(data.secure_url) {
+                return data.secure_url; // Return the Cloudinary URL
+            } else {
+                throw new Error('Upload failed');
+            }
+        } catch(error) {
+            console.error('Cloudinary upload error:', error);
+            showToast('Upload failed. Try again.');
+            return null;
+        }
+    }
+    
     function handlePostImage(input) {
         if(input.files && input.files[0]) {
             removePostVideo(); // Clear video if image is selected
-            compressImage(input.files[0], 800, 0.7).then(base64 => {
-                selectedImageBase64 = base64;
-                document.getElementById('postImgPreview').src = selectedImageBase64;
-                document.getElementById('imgPreviewCont').style.display = 'block';
+            
+            // Upload to Cloudinary instead of base64
+            uploadToCloudinary(input.files[0], 'image').then(url => {
+                if(url) {
+                    selectedImageBase64 = url; // Store URL instead of base64
+                    document.getElementById('postImgPreview').src = url;
+                    document.getElementById('imgPreviewCont').style.display = 'block';
+                    showToast('Image uploaded!');
+                }
             });
         }
     }
@@ -4928,9 +5021,9 @@
         if(input.files && input.files[0]) {
             const videoFile = input.files[0];
             
-            // Check file size (approx 10MB max for 1 minute)
-            if(videoFile.size > 10 * 1024 * 1024) {
-                showToast("Video too large! Max 10MB");
+            // Check file size (50MB max for Cloudinary free)
+            if(videoFile.size > 50 * 1024 * 1024) {
+                showToast("Video too large! Max 50MB");
                 input.value = "";
                 return;
             }
@@ -4951,14 +5044,15 @@
                 
                 removePostImage(); // Clear image if video is selected
                 
-                // Convert to base64
-                const reader = new FileReader();
-                reader.onloadend = function() {
-                    selectedVideoBase64 = reader.result;
-                    document.getElementById('postVideoPreview').src = selectedVideoBase64;
-                    document.getElementById('videoPreviewCont').style.display = 'block';
-                };
-                reader.readAsDataURL(videoFile);
+                // Upload to Cloudinary
+                uploadToCloudinary(videoFile, 'video').then(url => {
+                    if(url) {
+                        selectedVideoBase64 = url; // Store URL instead of base64
+                        document.getElementById('postVideoPreview').src = url;
+                        document.getElementById('videoPreviewCont').style.display = 'block';
+                        showToast('Video uploaded!');
+                    }
+                });
             };
             
             video.src = URL.createObjectURL(videoFile);
@@ -5004,9 +5098,13 @@
         
         const visibility = document.getElementById('postVisibility').value || 'public';
         
-        // NORMALIZED DATA - Only save uid, fetch user data when displaying
         const postData = {
-            uid: auth.currentUser.uid, // Single source of truth!
+            uid: auth.currentUser.uid,
+            authorName: userData.name,
+            authorPhoto: userData.photo,
+            authorPoints: userData.points,
+            authorWins: userData.bingoWins || 0,
+            authorVerified: userData.verified || false,
             content: txt,
             mood: selectedMood,
             image: selectedImageBase64,
@@ -5018,7 +5116,7 @@
         
         db.ref('socialPosts').push(postData);
         document.getElementById('postInput').value = "";
-        document.getElementById('postVisibility').value = 'public';
+        document.getElementById('postVisibility').value = 'public'; // Reset to default
         removePostImage();
         removePostVideo();
         document.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('active'));
@@ -5412,11 +5510,12 @@ Please explain why you want a verification badge:`;
 
     function handleProfileUpload(input, type) {
         if(input.files && input.files[0]) {
-            // Compress Image
-            const maxWidth = type === 'cover' ? 1200 : 500;
-            compressImage(input.files[0], maxWidth, 0.7).then(base64 => {
-                input.dataset.b64 = base64;
-                showToast("Image ready! Click Save.");
+            // Upload to Cloudinary
+            uploadToCloudinary(input.files[0], 'image').then(url => {
+                if(url) {
+                    input.dataset.cloudinaryUrl = url;
+                    showToast("Image uploaded! Click Save.");
+                }
             });
         }
     }
@@ -5435,8 +5534,8 @@ Please explain why you want a verification badge:`;
             bio: newBio
         };
         
-        if(pfpInput.dataset.b64) updates.photo = pfpInput.dataset.b64;
-        if(coverInput.dataset.b64) updates.cover = coverInput.dataset.b64;
+        if(pfpInput.dataset.cloudinaryUrl) updates.photo = pfpInput.dataset.cloudinaryUrl;
+        if(coverInput.dataset.cloudinaryUrl) updates.cover = coverInput.dataset.cloudinaryUrl;
         
         // Update user profile
         db.ref('users/' + auth.currentUser.uid).update(updates).then(() => {
@@ -5477,8 +5576,8 @@ Please explain why you want a verification badge:`;
                         showToast("Profile & All Posts Updated!");
                         document.getElementById('editProfileModal').style.display = 'none';
                         // Clear inputs
-                        pfpInput.value = ""; delete pfpInput.dataset.b64;
-                        coverInput.value = ""; delete coverInput.dataset.b64;
+                        pfpInput.value = ""; delete pfpInput.dataset.cloudinaryUrl;
+                        coverInput.value = ""; delete coverInput.dataset.cloudinaryUrl;
                         openMyProfile(); // Refresh
                     });
                 });
@@ -5865,45 +5964,65 @@ Please explain why you want a verification badge:`;
     }
 
     function shareToOwnProfile() {
-        // NORMALIZED SHARE - Only save uid references!
-        const postKey = currentSharePostKey;
+        if(!currentSharePostKey) return;
+        if(!auth.currentUser) return showToast("Please login first");
+        if(!userData || !userData.name) {
+            showToast("Loading profile...");
+            return;
+        }
         
-        db.ref('socialPosts/' + postKey).once('value').then(snapshot => {
-            const originalPost = snapshot.val();
+        const caption = document.getElementById('shareCaption').value.trim();
+        
+        db.ref('socialPosts/' + currentSharePostKey).once('value', s => {
+            const originalPost = s.val();
+            if(!originalPost) {
+                showToast("Post not found");
+                return;
+            }
             
-            // Create shared post with ONLY references
-            const newPost = {
-                uid: auth.currentUser.uid, // Who is sharing (Single Source of Truth)
-                content: document.getElementById('shareCaption').value.trim(), // Optional caption
+            // Create a new post that references the original
+            const shareData = {
+                uid: auth.currentUser.uid,
+                authorName: userData.name,
+                authorPhoto: userData.photo || 'https://via.placeholder.com/40',
+                authorPoints: userData.points || 0,
+                authorWins: userData.bingoWins || 0,
+                authorVerified: userData.verified || false,
+                content: caption, // User's caption
                 timestamp: Date.now(),
                 likes: 0,
-                visibility: 'public',
+                visibility: 'public', // Shared posts default to public
                 isShared: true,
-                sharedFrom: originalPost.uid, // Reference to original author (Single Source of Truth)
+                sharedPostKey: currentSharePostKey,
+                sharedFrom: originalPost.uid,
+                sharedFromName: originalPost.authorName,
+                sharedFromPhoto: originalPost.authorPhoto,
                 sharedContent: originalPost.content,
                 sharedImage: originalPost.image,
                 sharedVideo: originalPost.video,
                 sharedMood: originalPost.mood
             };
             
-            // Save to database
-            db.ref('socialPosts').push(newPost).then(() => {
-                // Success!
-                document.getElementById('shareCaption').value = '';
-                closeShareModal();
-                showToast("Shared to your profile!");
-                playSound('pop');
-                
+            db.ref('socialPosts').push(shareData).then(() => {
                 // Notify original author
                 if(originalPost.uid !== auth.currentUser.uid) {
                     db.ref('notifications/' + originalPost.uid).push({
-                        msg: userData.name + ' shared your post',
+                        msg: `${userData.name} shared your post`,
                         time: Date.now(),
                         type: 'share',
                         from: auth.currentUser.uid,
+                        postId: currentSharePostKey,
                         image: userData.photo
                     });
                 }
+                
+                document.getElementById('shareCaption').value = ''; // Clear caption
+                showToast("Post shared successfully!");
+                playSound('pop');
+                closeShareModal();
+            }).catch(err => {
+                console.error("Share error:", err);
+                showToast("Failed to share. Try again.");
             });
         });
     }
@@ -6088,29 +6207,12 @@ Please explain why you want a verification badge:`;
     // === UNIVERSAL POST RENDERER ===
     // This function is used by BOTH main feed and profile pages
     // All post styling updates should be made here for consistency
-    // NORMALIZED VERSION - Fetch user data from Single Source of Truth
     function createPostElement(post, isFriend) {
         const postDiv = document.createElement('div');
         postDiv.className = 'post-card';
         postDiv.id = 'post-' + post.key;
-        postDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8;">Loading...</div>';
         
-        // Fetch author data from users table (Single Source of Truth!)
-        db.ref('users/' + post.uid).once('value').then(userSnap => {
-            const author = userSnap.val();
-            if(!author) {
-                postDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8;">User not found</div>';
-                return;
-            }
-            
-            // Now render with fresh user data
-            renderPostContent(postDiv, post, author, isFriend);
-        });
-        
-        return postDiv;
-    }
-    
-    function renderPostContent(postDiv, post, author, isFriend) {
+        // Add Friend Icon Button (only show if not friend and not own post)
         const isOwnPost = post.uid === auth.currentUser.uid;
         const addFriendBtn = (!isFriend && !isOwnPost) ? `<button class="add-friend-icon-btn" onclick="event.stopPropagation(); sendFriendRequest('${post.uid}')" title="Add Friend"><i data-lucide="user-plus"></i></button>` : '';
         
@@ -6118,8 +6220,9 @@ Please explain why you want a verification badge:`;
         const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
         const videoHtml = post.video ? `<div class="post-image-container"><video src="${post.video}" class="post-image" controls style="width:100%; max-height:400px;"></video></div>` : '';
         
+        // Visibility indicator
         const visibility = post.visibility || 'public';
-        let visibilityIconName = 'globe';
+        let visibilityIconName = 'globe'; // public
         let visibilityText = 'Public';
         if(visibility === 'friends') {
             visibilityIconName = 'users';
@@ -6130,50 +6233,39 @@ Please explain why you want a verification badge:`;
         }
         const visibilityBadge = `<span class="visibility-badge" title="${visibilityText}" style="margin-left:4px;"><i data-lucide="${visibilityIconName}" style="width:11px; height:11px;"></i></span>`;
         
-        // Handle shared posts
+        // Check if this is a shared post
         let sharedPostHtml = '';
-        if(post.isShared && post.sharedFrom) {
-            // Fetch shared author data dynamically
-            db.ref('users/' + post.sharedFrom).once('value').then(sharedUserSnap => {
-                const sharedAuthor = sharedUserSnap.val();
-                if(sharedAuthor) {
-                    const sharedImgHtml = post.sharedImage ? `<div class="post-image-container"><img src="${post.sharedImage}" class="post-image"></div>` : '';
-                    const sharedVideoHtml = post.sharedVideo ? `<div class="post-image-container"><video src="${post.sharedVideo}" class="post-image" controls style="width:100%; max-height:300px;"></video></div>` : '';
-                    const sharedMoodHtml = post.sharedMood ? `<div class="mood-display">Feeling ${post.sharedMood}</div>` : '';
-                    
-                    const sharedContainer = postDiv.querySelector('#shared-container-' + post.key);
-                    if(sharedContainer) {
-                        sharedContainer.innerHTML = `
-                            <div class="shared-post-container">
-                                <div style="font-size:10px; color:#94a3b8; margin-bottom: var(--spacing-xs); display:flex; align-items:center; gap:5px;">
-                                    <i data-lucide="share-2" style="width:12px;"></i>
-                                    <span>Shared from ${escapeHtml(sharedAuthor.name)}</span>
-                                </div>
-                                <div style="display:flex; gap: var(--spacing-sm); align-items:flex-start;">
-                                    <img src="${sharedAuthor.photo || 'https://via.placeholder.com/30'}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" onclick="openUserProfile('${post.sharedFrom}')">
-                                    <div style="flex:1;">
-                                        <div style="font-weight:700; font-size:11px; color:white; margin-bottom:3px;">${escapeHtml(sharedAuthor.name)}</div>
-                                        ${sharedMoodHtml}
-                                        <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">${escapeHtml(post.sharedContent || '')}</div>
-                                        ${sharedImgHtml}
-                                        ${sharedVideoHtml}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        lucide.createIcons();
-                    }
-                }
-            });
+        if(post.isShared && post.sharedContent !== undefined) {
+            const sharedImgHtml = post.sharedImage ? `<div class="post-image-container"><img src="${post.sharedImage}" class="post-image"></div>` : '';
+            const sharedVideoHtml = post.sharedVideo ? `<div class="post-image-container"><video src="${post.sharedVideo}" class="post-image" controls style="width:100%; max-height:300px;"></video></div>` : '';
+            const sharedMoodHtml = post.sharedMood ? `<div class="mood-display">Feeling ${post.sharedMood}</div>` : '';
+            sharedPostHtml = `
+                <div class="shared-post-container">
+                    <div style="font-size:10px; color:#94a3b8; margin-bottom: var(--spacing-xs); display:flex; align-items:center; gap:5px;">
+                        <i data-lucide="share-2" style="width:12px;"></i>
+                        <span>Shared from ${escapeHtml(post.sharedFromName)}</span>
+                    </div>
+                    <div style="display:flex; gap: var(--spacing-sm); align-items:flex-start;">
+                        <img src="${post.sharedFromPhoto}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" onclick="openUserProfile('${post.sharedFrom}')">
+                        <div style="flex:1;">
+                            <div style="font-weight:700; font-size:11px; color:white; margin-bottom:3px;">${escapeHtml(post.sharedFromName)}</div>
+                            ${sharedMoodHtml}
+                            <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">${escapeHtml(post.sharedContent || '')}</div>
+                            ${sharedImgHtml}
+                            ${sharedVideoHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
         }
         
         postDiv.innerHTML = `
             <div class="post-header">
-                <img class="post-avatar" src="${author.photo || 'https://via.placeholder.com/40'}" onclick="openUserProfile('${post.uid}')">
+                <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
                 <div class="post-meta">
                     <div class="post-author">
-                        ${escapeHtml(author.name)} 
-                        ${author.verified ? '<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>' : ''} 
+                        ${post.authorName} 
+                        ${post.authorVerified ? '<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>' : ''} 
                         ${addFriendBtn}
                     </div>
                     <div class="post-time" style="display:flex; align-items:center;">${fixDate(post.timestamp)}${visibilityBadge}</div>
@@ -6196,7 +6288,7 @@ Please explain why you want a verification badge:`;
             <div class="post-content">${escapeHtml(post.content || '')}</div>
             ${imgHtml}
             ${videoHtml}
-            <div id="shared-container-${post.key}"></div>
+            ${sharedPostHtml}
             <div class="reaction-summary-bar" id="reaction-summary-${post.key}" onclick="openReactionViewer('${post.key}')"></div>
             <div class="post-actions" style="position:relative;">
                 <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
@@ -6224,13 +6316,11 @@ Please explain why you want a verification badge:`;
             </div>
         `;
         
-        lucide.createIcons();
-        
-        // Load like state
+        // Load initial state (simple check if liked)
         db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
             if(lSnap.exists()) {
                 const btn = postDiv.querySelector('#like-btn-' + post.key);
-                const reaction = lSnap.val();
+                const reaction = lSnap.val(); // Get stored emoji
                 const sanitizedReaction = reaction === true ? '❤️' : escapeHtml(reaction);
                 if(btn) {
                     btn.classList.add('liked');
@@ -6247,6 +6337,8 @@ Please explain why you want a verification badge:`;
                 btnText.textContent = `${count}`;
             }
         });
+        
+        return postDiv;
     }
 
     function loadReactionSummary(postKey) {
