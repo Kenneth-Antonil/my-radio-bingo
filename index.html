@@ -3950,12 +3950,14 @@
                 <p style="font-size:13px; opacity:0.6;">Sandali lang...</p>
             </div>
         `;
+        setTimeout(() => lucide.createIcons(), 50);
         
-        // Fetch all posts with videos from Firebase
-        db.ref('socialPosts').orderByChild('timestamp').limitToLast(50).once('value', snapshot => {
+        // Fetch ALL posts from Firebase and filter for videos
+        db.ref('socialPosts').once('value', snapshot => {
             beatsVideoPosts = [];
             
             if(!snapshot.exists()) {
+                console.log('No posts found in database');
                 container.innerHTML = `
                     <div class="beats-placeholder">
                         <i data-lucide="video-off" style="width:60px; height:60px; color:rgba(255,255,255,0.3);"></i>
@@ -3967,10 +3969,11 @@
                 return;
             }
             
-            // Filter posts that have videos
+            // Collect ALL posts that have videos
             snapshot.forEach(child => {
                 const post = child.val();
-                if(post.videoUrl) {
+                // Check if post has video URL (any field that contains video)
+                if(post && (post.videoUrl || post.video)) {
                     beatsVideoPosts.push({
                         key: child.key,
                         ...post
@@ -3978,8 +3981,7 @@
                 }
             });
             
-            // Reverse to show newest first
-            beatsVideoPosts.reverse();
+            console.log('Found ' + beatsVideoPosts.length + ' video posts');
             
             if(beatsVideoPosts.length === 0) {
                 container.innerHTML = `
@@ -3993,38 +3995,57 @@
                 return;
             }
             
+            // Sort by timestamp (newest first)
+            beatsVideoPosts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            
             // Render beats videos
             container.innerHTML = '';
-            beatsVideoPosts.forEach((post, index) => {
-                renderBeatVideo(post, index);
-            });
+            let renderedCount = 0;
             
-            // Initialize video controls after rendering
-            setTimeout(() => {
-                initBeatsScrolling();
-                lucide.createIcons();
-            }, 100);
+            beatsVideoPosts.forEach((post, index) => {
+                renderBeatVideo(post, index, () => {
+                    renderedCount++;
+                    if(renderedCount === beatsVideoPosts.length) {
+                        // All videos rendered, initialize scrolling
+                        setTimeout(() => {
+                            initBeatsScrolling();
+                            lucide.createIcons();
+                        }, 100);
+                    }
+                });
+            });
         });
     }
 
-    function renderBeatVideo(post, index) {
+    function renderBeatVideo(post, index, callback) {
         const container = document.getElementById('beatsContainer');
         const videoDiv = document.createElement('div');
         videoDiv.className = 'beats-video-container';
         videoDiv.setAttribute('data-post-key', post.key);
         
+        // Get the video URL (check both videoUrl and video fields)
+        const videoUrl = post.videoUrl || post.video;
+        
+        if(!videoUrl) {
+            if(callback) callback();
+            return;
+        }
+        
         // Get user info
         db.ref('users/' + post.uid).once('value', userSnap => {
             const user = userSnap.val();
-            if(!user) return;
+            if(!user) {
+                if(callback) callback();
+                return;
+            }
             
             const isFollowing = userData?.following && userData.following[post.uid];
             const isOwnPost = auth.currentUser && auth.currentUser.uid === post.uid;
             
             const sanitizedName = escapeHtml(user.name || 'Anonymous');
             const sanitizedPhoto = sanitizeUrl(user.photo || 'https://via.placeholder.com/42');
-            const sanitizedContent = escapeHtml(post.content || '');
-            const sanitizedVideo = sanitizeUrl(post.videoUrl);
+            const sanitizedContent = escapeHtml(post.content || 'Watch this amazing video! 🎥');
+            const sanitizedVideo = sanitizeUrl(videoUrl);
             
             videoDiv.innerHTML = `
                 <video class="beats-video" loop playsinline preload="metadata">
@@ -4086,6 +4107,8 @@
             });
             
             setTimeout(() => lucide.createIcons(), 50);
+            
+            if(callback) callback();
         });
     }
 
@@ -4093,40 +4116,54 @@
         const beatsContainer = document.getElementById('view-beats');
         const videos = beatsContainer.querySelectorAll('.beats-video');
         
+        console.log('Initializing beats scrolling with ' + videos.length + ' videos');
+        
+        if(videos.length === 0) return;
+        
         // Play first video
-        if(videos.length > 0) {
-            currentBeatsVideo = videos[0];
-            currentBeatsVideo.play().catch(e => console.log('Autoplay prevented:', e));
-        }
+        currentBeatsVideo = videos[0];
+        currentBeatsVideo.play().catch(e => {
+            console.log('Autoplay prevented:', e);
+            // Add play button overlay if autoplay fails
+            showPlayButton(currentBeatsVideo);
+        });
 
         // Handle scroll to play/pause videos
+        let scrollTimeout;
         beatsContainer.addEventListener('scroll', function() {
-            let closestVideo = null;
-            let minDistance = Infinity;
+            clearTimeout(scrollTimeout);
+            
+            scrollTimeout = setTimeout(() => {
+                let closestVideo = null;
+                let minDistance = Infinity;
 
-            videos.forEach(video => {
-                const rect = video.getBoundingClientRect();
-                const distance = Math.abs(rect.top);
-                
-                if(distance < minDistance) {
-                    minDistance = distance;
-                    closestVideo = video;
-                }
-            });
+                videos.forEach(video => {
+                    const rect = video.getBoundingClientRect();
+                    const distance = Math.abs(rect.top);
+                    
+                    if(distance < minDistance) {
+                        minDistance = distance;
+                        closestVideo = video;
+                    }
+                });
 
-            videos.forEach(video => {
-                if(video === closestVideo) {
-                    video.play().catch(e => {});
-                    currentBeatsVideo = video;
-                } else {
-                    video.pause();
-                }
-            });
+                videos.forEach(video => {
+                    if(video === closestVideo) {
+                        video.play().catch(e => {
+                            showPlayButton(video);
+                        });
+                        currentBeatsVideo = video;
+                    } else {
+                        video.pause();
+                    }
+                });
+            }, 100);
         });
 
         // Tap to play/pause
         videos.forEach(video => {
-            video.addEventListener('click', function() {
+            video.addEventListener('click', function(e) {
+                e.stopPropagation();
                 if(this.paused) {
                     this.play();
                 } else {
@@ -4134,6 +4171,37 @@
                 }
             });
         });
+    }
+
+    function showPlayButton(video) {
+        // Helper function to show play button if autoplay is blocked
+        const container = video.parentElement;
+        if(container.querySelector('.beats-play-overlay')) return;
+        
+        const playOverlay = document.createElement('div');
+        playOverlay.className = 'beats-play-overlay';
+        playOverlay.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.9);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+        `;
+        playOverlay.innerHTML = '<i data-lucide="play" style="width:32px; height:32px; color:#000; margin-left:4px;"></i>';
+        playOverlay.onclick = () => {
+            video.play();
+            playOverlay.remove();
+        };
+        container.appendChild(playOverlay);
+        setTimeout(() => lucide.createIcons(), 10);
     }
 
     function handleBeatsLike(postKey, index) {
@@ -4204,6 +4272,8 @@
                 // Trigger comment section
                 const commentBtn = postElement.querySelector('.action-btn[onclick*="toggleComments"]');
                 if(commentBtn) commentBtn.click();
+            } else {
+                showToast("Opening comments...");
             }
         }, 300);
     }
