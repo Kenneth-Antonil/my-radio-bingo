@@ -923,7 +923,11 @@
         return '₱' + pesoVal.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
-    function cleanName(name) { if(!name) return "Unknown"; let cleaned = name.replace(/[\u4E00-\u9FFF\u3400-\u4DBF\u2000-\u206F]/g, '').trim(); return cleaned || name; }
+    function cleanName(name) { 
+        if(!name || name === 'Unknown') return "Guest"; 
+        let cleaned = name.replace(/[\u4E00-\u9FFF\u3400-\u4DBF\u2000-\u206F]/g, '').trim(); 
+        return cleaned || name || "Guest"; 
+    }
     function openTab(tabId, btn) { document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(tabId).classList.add('active'); btn.classList.add('active'); }
     for(let i=1; i<=75; i++) { let b = document.createElement('div'); b.className = 'ball'; b.id = 'ball-'+i; b.innerText = i; b.onclick = () => toggleBall(i); document.getElementById('ballGrid').appendChild(b); }
     
@@ -1003,7 +1007,21 @@
 
     // --- USERS & LIVE ACTIVITY SPY ---
     db.ref('status').on('value', s => { globalStatusData = s.val() || {}; document.getElementById('countOnline').innerText = Object.keys(globalStatusData).length; renderActiveUserList(); updateMonitorCards(); });
-    function renderActiveUserList() { const list = document.getElementById('activeUsersList'); list.innerHTML = ""; Object.entries(globalStatusData).forEach(([uid, data]) => { let name = "Unknown"; if(allUsersData[uid] && allUsersData[uid].name) name = allUsersData[uid].name; else if(data.name) name = data.name; const safeName = cleanName(name); list.innerHTML += `<div style="padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px;"><span class="online-dot"></span> ${safeName}</div>`; }); }
+    function renderActiveUserList() { 
+        const list = document.getElementById('activeUsersList'); 
+        list.innerHTML = ""; 
+        Object.entries(globalStatusData).forEach(([uid, data]) => { 
+            let displayName = "Guest"; 
+            if(allUsersData[uid]) {
+                // Try multiple possible name fields
+                displayName = allUsersData[uid].name || allUsersData[uid].username || allUsersData[uid].displayName || allUsersData[uid].email || uid.substring(0, 10);
+            } else if(data.name) {
+                displayName = data.name;
+            }
+            const safeName = cleanName(displayName); 
+            list.innerHTML += `<div style="padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px;"><span class="online-dot"></span> ${safeName}</div>`; 
+        }); 
+    }
     
     // THE GLOBAL SPY MONITOR
     db.ref('users').on('value', s => { 
@@ -1114,7 +1132,12 @@
         Object.entries(allUsersData).forEach(([key, user]) => { if(user.card || user.currentCard) { usersArray.push({ ...user, uid: key }); } });
         usersArray.sort((a, b) => { const aOnline = globalStatusData[a.uid] ? 1 : 0; const bOnline = globalStatusData[b.uid] ? 1 : 0; return bOnline - aOnline; });
         usersArray.forEach(user => {
-            const card = user.currentCard || user.card; const check = checkCardStatus(card, currentPattern, drawnNumbers); const isOnline = globalStatusData[user.uid] ? true : false; const safeName = cleanName(user.name);
+            const card = user.currentCard || user.card; 
+            const check = checkCardStatus(card, currentPattern, drawnNumbers); 
+            const isOnline = globalStatusData[user.uid] ? true : false; 
+            // Try multiple possible name fields
+            const displayName = user.name || user.username || user.displayName || user.email || user.uid.substring(0, 10);
+            const safeName = cleanName(displayName);
             let isBingo = check.isBingo; let isPuro = check.isPuro; if(!isOnline) { isBingo = false; isPuro = false; } else { if(user.hasWonCurrent && drawnNumbers.length > 0) isBingo = true; if(isBingo) isPuro = false; }
             const cardDiv = document.createElement('div'); cardDiv.className = `user-card-monitor ${!isOnline ? 'offline' : ''} ${isBingo ? 'bingo' : ''} ${isPuro ? 'puro' : ''}`;
             let gridHtml = '<div class="mini-bingo-grid">'; card.forEach((n, idx) => { const marked = drawnNumbers.includes(n) || n === "FREE"; const isWinningCell = check.winningCells.includes(idx); const visualHit = isOnline && isWinningCell; gridHtml += `<div class="mini-cell ${marked ? 'marked' : ''} ${visualHit ? 'hit' : ''}">${n === "FREE" ? '★' : n}</div>`; }); gridHtml += '</div>';
@@ -1439,9 +1462,12 @@
                 const uid = userSnap.key;
                 
                 if (user.verificationStatus || user.verified) {
+                    // Try multiple possible name fields
+                    const displayName = user.name || user.username || user.displayName || user.email || uid.substring(0, 12);
+                    
                     requests.push({
                         uid: uid,
-                        name: user.name || 'Unknown',
+                        name: displayName,
                         photo: user.photo || 'https://via.placeholder.com/60',
                         reason: user.verificationReason || 'No reason provided',
                         status: user.verified ? 'approved' : (user.verificationStatus || 'none'),
@@ -1668,10 +1694,12 @@
             }
             
             Object.entries(users).forEach(([uid, user]) => {
-                const username = (user.username || '').toLowerCase();
+                // Try multiple possible username fields
+                const displayName = user.username || user.displayName || user.name || user.email || uid;
+                const searchableText = displayName.toLowerCase();
                 
                 // Show all users if search is empty, otherwise filter
-                if (!searchTerm || username.includes(searchTerm)) {
+                if (!searchTerm || searchableText.includes(searchTerm)) {
                     found = true;
                     const div = document.createElement('div');
                     div.className = 'user-option';
@@ -1680,10 +1708,18 @@
                     const verifiedBadge = user.verified ? '<span class="verified-badge-inline"><i data-lucide="check-circle" style="width:10px;height:10px;"></i> Verified</span>' : '';
                     const statusDot = user.online ? '<span class="online-dot"></span>' : '<span class="offline-dot"></span>';
                     
+                    // Show UID in small text if no proper name
+                    const uidText = (!user.username && !user.displayName && !user.name && !user.email) 
+                        ? `<br><span style="font-size: 9px; color: var(--text-muted);">ID: ${uid.substring(0, 12)}...</span>` 
+                        : '';
+                    
                     div.innerHTML = `
                         <div style="display: flex; align-items: center; gap: 8px;">
                             ${statusDot}
-                            <strong>${user.username || 'User'}</strong>
+                            <div style="flex: 1;">
+                                <strong>${displayName}</strong>
+                                ${uidText}
+                            </div>
                             ${verifiedBadge}
                         </div>
                     `;
