@@ -5004,13 +5004,9 @@
         
         const visibility = document.getElementById('postVisibility').value || 'public';
         
+        // NORMALIZED DATA - Only save uid, fetch user data when displaying
         const postData = {
-            uid: auth.currentUser.uid,
-            authorName: userData.name,
-            authorPhoto: userData.photo,
-            authorPoints: userData.points,
-            authorWins: userData.bingoWins || 0,
-            authorVerified: userData.verified || false,
+            uid: auth.currentUser.uid, // Single source of truth!
             content: txt,
             mood: selectedMood,
             image: selectedImageBase64,
@@ -5022,7 +5018,7 @@
         
         db.ref('socialPosts').push(postData);
         document.getElementById('postInput').value = "";
-        document.getElementById('postVisibility').value = 'public'; // Reset to default
+        document.getElementById('postVisibility').value = 'public';
         removePostImage();
         removePostVideo();
         document.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('active'));
@@ -5869,28 +5865,21 @@ Please explain why you want a verification badge:`;
     }
 
     function shareToOwnProfile() {
-        // Simple share - like Facebook
+        // NORMALIZED SHARE - Only save uid references!
         const postKey = currentSharePostKey;
         
         db.ref('socialPosts/' + postKey).once('value').then(snapshot => {
             const originalPost = snapshot.val();
             
-            // Create shared post
+            // Create shared post with ONLY references
             const newPost = {
-                uid: auth.currentUser.uid,
-                authorName: userData.name,
-                authorPhoto: userData.photo,
-                authorPoints: userData.points || 0,
-                authorWins: userData.bingoWins || 0,
-                authorVerified: userData.verified || false,
-                content: document.getElementById('shareCaption').value.trim(),
+                uid: auth.currentUser.uid, // Who is sharing (Single Source of Truth)
+                content: document.getElementById('shareCaption').value.trim(), // Optional caption
                 timestamp: Date.now(),
                 likes: 0,
                 visibility: 'public',
                 isShared: true,
-                sharedFrom: originalPost.uid,
-                sharedFromName: originalPost.authorName,
-                sharedFromPhoto: originalPost.authorPhoto,
+                sharedFrom: originalPost.uid, // Reference to original author (Single Source of Truth)
                 sharedContent: originalPost.content,
                 sharedImage: originalPost.image,
                 sharedVideo: originalPost.video,
@@ -6099,12 +6088,29 @@ Please explain why you want a verification badge:`;
     // === UNIVERSAL POST RENDERER ===
     // This function is used by BOTH main feed and profile pages
     // All post styling updates should be made here for consistency
+    // NORMALIZED VERSION - Fetch user data from Single Source of Truth
     function createPostElement(post, isFriend) {
         const postDiv = document.createElement('div');
         postDiv.className = 'post-card';
         postDiv.id = 'post-' + post.key;
+        postDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8;">Loading...</div>';
         
-        // Add Friend Icon Button (only show if not friend and not own post)
+        // Fetch author data from users table (Single Source of Truth!)
+        db.ref('users/' + post.uid).once('value').then(userSnap => {
+            const author = userSnap.val();
+            if(!author) {
+                postDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8;">User not found</div>';
+                return;
+            }
+            
+            // Now render with fresh user data
+            renderPostContent(postDiv, post, author, isFriend);
+        });
+        
+        return postDiv;
+    }
+    
+    function renderPostContent(postDiv, post, author, isFriend) {
         const isOwnPost = post.uid === auth.currentUser.uid;
         const addFriendBtn = (!isFriend && !isOwnPost) ? `<button class="add-friend-icon-btn" onclick="event.stopPropagation(); sendFriendRequest('${post.uid}')" title="Add Friend"><i data-lucide="user-plus"></i></button>` : '';
         
@@ -6112,9 +6118,8 @@ Please explain why you want a verification badge:`;
         const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
         const videoHtml = post.video ? `<div class="post-image-container"><video src="${post.video}" class="post-image" controls style="width:100%; max-height:400px;"></video></div>` : '';
         
-        // Visibility indicator
         const visibility = post.visibility || 'public';
-        let visibilityIconName = 'globe'; // public
+        let visibilityIconName = 'globe';
         let visibilityText = 'Public';
         if(visibility === 'friends') {
             visibilityIconName = 'users';
@@ -6125,39 +6130,50 @@ Please explain why you want a verification badge:`;
         }
         const visibilityBadge = `<span class="visibility-badge" title="${visibilityText}" style="margin-left:4px;"><i data-lucide="${visibilityIconName}" style="width:11px; height:11px;"></i></span>`;
         
-        // Check if this is a shared post
+        // Handle shared posts
         let sharedPostHtml = '';
-        if(post.isShared && post.sharedContent !== undefined) {
-            const sharedImgHtml = post.sharedImage ? `<div class="post-image-container"><img src="${post.sharedImage}" class="post-image"></div>` : '';
-            const sharedVideoHtml = post.sharedVideo ? `<div class="post-image-container"><video src="${post.sharedVideo}" class="post-image" controls style="width:100%; max-height:300px;"></video></div>` : '';
-            const sharedMoodHtml = post.sharedMood ? `<div class="mood-display">Feeling ${post.sharedMood}</div>` : '';
-            sharedPostHtml = `
-                <div class="shared-post-container">
-                    <div style="font-size:10px; color:#94a3b8; margin-bottom: var(--spacing-xs); display:flex; align-items:center; gap:5px;">
-                        <i data-lucide="share-2" style="width:12px;"></i>
-                        <span>Shared from ${escapeHtml(post.sharedFromName)}</span>
-                    </div>
-                    <div style="display:flex; gap: var(--spacing-sm); align-items:flex-start;">
-                        <img src="${post.sharedFromPhoto}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" onclick="openUserProfile('${post.sharedFrom}')">
-                        <div style="flex:1;">
-                            <div style="font-weight:700; font-size:11px; color:white; margin-bottom:3px;">${escapeHtml(post.sharedFromName)}</div>
-                            ${sharedMoodHtml}
-                            <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">${escapeHtml(post.sharedContent || '')}</div>
-                            ${sharedImgHtml}
-                            ${sharedVideoHtml}
-                        </div>
-                    </div>
-                </div>
-            `;
+        if(post.isShared && post.sharedFrom) {
+            // Fetch shared author data dynamically
+            db.ref('users/' + post.sharedFrom).once('value').then(sharedUserSnap => {
+                const sharedAuthor = sharedUserSnap.val();
+                if(sharedAuthor) {
+                    const sharedImgHtml = post.sharedImage ? `<div class="post-image-container"><img src="${post.sharedImage}" class="post-image"></div>` : '';
+                    const sharedVideoHtml = post.sharedVideo ? `<div class="post-image-container"><video src="${post.sharedVideo}" class="post-image" controls style="width:100%; max-height:300px;"></video></div>` : '';
+                    const sharedMoodHtml = post.sharedMood ? `<div class="mood-display">Feeling ${post.sharedMood}</div>` : '';
+                    
+                    const sharedContainer = postDiv.querySelector('#shared-container-' + post.key);
+                    if(sharedContainer) {
+                        sharedContainer.innerHTML = `
+                            <div class="shared-post-container">
+                                <div style="font-size:10px; color:#94a3b8; margin-bottom: var(--spacing-xs); display:flex; align-items:center; gap:5px;">
+                                    <i data-lucide="share-2" style="width:12px;"></i>
+                                    <span>Shared from ${escapeHtml(sharedAuthor.name)}</span>
+                                </div>
+                                <div style="display:flex; gap: var(--spacing-sm); align-items:flex-start;">
+                                    <img src="${sharedAuthor.photo || 'https://via.placeholder.com/30'}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" onclick="openUserProfile('${post.sharedFrom}')">
+                                    <div style="flex:1;">
+                                        <div style="font-weight:700; font-size:11px; color:white; margin-bottom:3px;">${escapeHtml(sharedAuthor.name)}</div>
+                                        ${sharedMoodHtml}
+                                        <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">${escapeHtml(post.sharedContent || '')}</div>
+                                        ${sharedImgHtml}
+                                        ${sharedVideoHtml}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        lucide.createIcons();
+                    }
+                }
+            });
         }
         
         postDiv.innerHTML = `
             <div class="post-header">
-                <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
+                <img class="post-avatar" src="${author.photo || 'https://via.placeholder.com/40'}" onclick="openUserProfile('${post.uid}')">
                 <div class="post-meta">
                     <div class="post-author">
-                        ${post.authorName} 
-                        ${post.authorVerified ? '<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>' : ''} 
+                        ${escapeHtml(author.name)} 
+                        ${author.verified ? '<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>' : ''} 
                         ${addFriendBtn}
                     </div>
                     <div class="post-time" style="display:flex; align-items:center;">${fixDate(post.timestamp)}${visibilityBadge}</div>
@@ -6180,7 +6196,7 @@ Please explain why you want a verification badge:`;
             <div class="post-content">${escapeHtml(post.content || '')}</div>
             ${imgHtml}
             ${videoHtml}
-            ${sharedPostHtml}
+            <div id="shared-container-${post.key}"></div>
             <div class="reaction-summary-bar" id="reaction-summary-${post.key}" onclick="openReactionViewer('${post.key}')"></div>
             <div class="post-actions" style="position:relative;">
                 <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
@@ -6208,11 +6224,13 @@ Please explain why you want a verification badge:`;
             </div>
         `;
         
-        // Load initial state (simple check if liked)
+        lucide.createIcons();
+        
+        // Load like state
         db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
             if(lSnap.exists()) {
                 const btn = postDiv.querySelector('#like-btn-' + post.key);
-                const reaction = lSnap.val(); // Get stored emoji
+                const reaction = lSnap.val();
                 const sanitizedReaction = reaction === true ? '❤️' : escapeHtml(reaction);
                 if(btn) {
                     btn.classList.add('liked');
@@ -6229,8 +6247,6 @@ Please explain why you want a verification badge:`;
                 btnText.textContent = `${count}`;
             }
         });
-        
-        return postDiv;
     }
 
     function loadReactionSummary(postKey) {
