@@ -98,6 +98,13 @@
         .status-badge { padding: 4px var(--spacing-sm); border-radius: var(--radius-xl); font-size: 10px; font-weight: 800; text-transform: uppercase; }
         .status-active { background: var(--success); color: white; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
         .status-off { background: var(--danger); color: white; opacity: 0.8; }
+        .search-box { position: relative; margin-bottom: var(--spacing-md); }
+        .search-box input { padding-right: 40px; }
+        .search-icon { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+        .verified-badge-inline { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; border-radius: 12px; font-size: 9px; font-weight: 700; color: #3b82f6; }
+        .btn-verified { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4); }
+        .btn-verified:hover { filter: brightness(1.1); }
+        .grant-section { background: rgba(0,0,0,0.2); border-radius: var(--radius-md); padding: var(--spacing-lg); margin-bottom: var(--spacing-lg); border: 1px solid var(--glass-border); }
         .card { padding: var(--spacing-xl); border-radius: var(--radius-lg); margin-bottom: var(--spacing-xl); }
         h2 { margin-top: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: var(--spacing-xs); margin-bottom: var(--spacing-lg); color: white; }
         .user-select-list { max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: var(--radius-md); padding: 5px; border: 1px solid var(--glass-border); }
@@ -311,6 +318,28 @@
     </div>
 
     <div id="verification-tab" class="tab-content">
+        <!-- MANUAL GRANT SECTION -->
+        <div class="card grant-section">
+            <h2><i data-lucide="award"></i> Grant Verification Badge</h2>
+            <div style="font-size:11px; opacity:0.6; margin-bottom:15px;">Manually grant verified badge to any user instantly</div>
+            
+            <div class="search-box">
+                <input type="text" id="grant-user-search" placeholder="Search users by username..." oninput="searchUsersForGrant()">
+                <i data-lucide="search" class="search-icon" style="width:16px;height:16px;"></i>
+            </div>
+            
+            <div class="user-select-list" id="grant-user-list" style="max-height: 200px; margin-bottom: var(--spacing-md);">
+                <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">
+                    Type to search for users...
+                </div>
+            </div>
+            
+            <button class="btn btn-verified" onclick="grantVerificationBadge()" id="grant-verify-btn" disabled>
+                <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
+                GRANT VERIFIED BADGE
+            </button>
+        </div>
+        
         <div class="card">
             <h2><i data-lucide="shield-check"></i> Verification Requests</h2>
             <div style="font-size:11px; opacity:0.6; margin-bottom:15px;">Review and manage user verification badge requests</div>
@@ -1133,6 +1162,114 @@
         }).catch(err => {
             console.error('Error revoking verification:', err);
             alert('Failed to revoke verification');
+        });
+    }
+    
+    // MANUAL GRANT FUNCTIONS
+    let selectedGrantUser = null;
+    
+    function searchUsersForGrant() {
+        const searchTerm = document.getElementById('grant-user-search').value.toLowerCase().trim();
+        const list = document.getElementById('grant-user-list');
+        const grantBtn = document.getElementById('grant-verify-btn');
+        
+        if (!searchTerm || searchTerm.length < 2) {
+            list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">Type at least 2 characters to search...</div>';
+            selectedGrantUser = null;
+            grantBtn.disabled = true;
+            return;
+        }
+        
+        db.ref('users').once('value').then(snap => {
+            const users = snap.val() || {};
+            list.innerHTML = '';
+            let found = false;
+            
+            Object.entries(users).forEach(([uid, user]) => {
+                const username = (user.username || '').toLowerCase();
+                
+                if (username.includes(searchTerm)) {
+                    found = true;
+                    const div = document.createElement('div');
+                    div.className = 'user-option';
+                    if (selectedGrantUser === uid) div.classList.add('selected');
+                    
+                    const verifiedBadge = user.verified ? '<span class="verified-badge-inline"><i data-lucide="check-circle" style="width:10px;height:10px;"></i> Verified</span>' : '';
+                    const statusDot = user.online ? '<span class="online-dot"></span>' : '<span class="offline-dot"></span>';
+                    
+                    div.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            ${statusDot}
+                            <strong>${user.username || 'User'}</strong>
+                            ${verifiedBadge}
+                        </div>
+                    `;
+                    
+                    div.onclick = () => {
+                        selectedGrantUser = uid;
+                        grantBtn.disabled = false;
+                        searchUsersForGrant();
+                    };
+                    
+                    list.appendChild(div);
+                }
+            });
+            
+            if (!found) {
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">No users found matching "' + searchTerm + '"</div>';
+                selectedGrantUser = null;
+                grantBtn.disabled = true;
+            }
+            
+            lucide.createIcons();
+        });
+    }
+    
+    function grantVerificationBadge() {
+        if (!selectedGrantUser) {
+            alert('Please select a user first');
+            return;
+        }
+        
+        db.ref('users/' + selectedGrantUser).once('value').then(snap => {
+            const user = snap.val();
+            
+            if (user.verified) {
+                if (!confirm(`${user.username || 'This user'} is already verified. Grant again anyway?`)) {
+                    return;
+                }
+            }
+            
+            if (!confirm(`Grant verified badge to ${user.username || 'this user'}?`)) {
+                return;
+            }
+            
+            db.ref('users/' + selectedGrantUser).update({
+                verified: true,
+                verificationStatus: 'admin_granted',
+                verificationApprovedAt: Date.now()
+            }).then(() => {
+                // Send notification to user
+                db.ref('notifications/' + selectedGrantUser).push({
+                    msg: '🌟 You have been granted a verification badge by an admin!',
+                    time: Date.now(),
+                    type: 'verification_granted'
+                });
+                
+                alert('✅ Verification badge granted successfully!');
+                
+                // Reset the form
+                document.getElementById('grant-user-search').value = '';
+                document.getElementById('grant-user-list').innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">Type to search for users...</div>';
+                selectedGrantUser = null;
+                document.getElementById('grant-verify-btn').disabled = true;
+                
+                // Refresh verification requests list
+                loadVerificationRequests();
+            }).catch(err => {
+                console.error('Error granting verification:', err);
+                alert('❌ Failed to grant verification badge');
+            });
         });
     }
     
