@@ -5869,21 +5869,35 @@ Please explain why you want a verification badge:`;
     }
 
     function shareToOwnProfile() {
-        if(!currentSharePostKey) return;
-        if(!auth.currentUser) return showToast("Please login first");
+        alert('Share button clicked!'); // TEST
+        
+        if(!currentSharePostKey) {
+            alert('Error: No post key');
+            return;
+        }
+        if(!auth.currentUser) {
+            alert('Error: Not logged in');
+            return showToast("Please login first");
+        }
         if(!userData || !userData.name) {
+            alert('Error: userData not loaded');
             showToast("Loading profile...");
             return;
         }
+        
+        alert('All checks passed, attempting to share...');
         
         const caption = document.getElementById('shareCaption').value.trim();
         
         db.ref('socialPosts/' + currentSharePostKey).once('value', s => {
             const originalPost = s.val();
             if(!originalPost) {
+                alert('Error: Original post not found');
                 showToast("Post not found");
                 return;
             }
+            
+            alert('Original post found, creating share data...');
             
             // Create a new post that references the original
             const shareData = {
@@ -5908,7 +5922,11 @@ Please explain why you want a verification badge:`;
                 sharedMood: originalPost.mood
             };
             
+            alert('Saving to database...');
+            
             db.ref('socialPosts').push(shareData).then(() => {
+                alert('Share successful!');
+                
                 // Notify original author
                 if(originalPost.uid !== auth.currentUser.uid) {
                     db.ref('notifications/' + originalPost.uid).push({
@@ -5926,6 +5944,7 @@ Please explain why you want a verification badge:`;
                 playSound('pop');
                 closeShareModal();
             }).catch(err => {
+                alert('Database error: ' + err.message);
                 console.error("Share error:", err);
                 showToast("Failed to share. Try again.");
             });
