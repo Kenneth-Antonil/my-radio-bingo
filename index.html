@@ -245,6 +245,13 @@
             border-radius: var(--radius-md);
         }
         
+        .fullscreen-photo-container video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: var(--radius-md);
+        }
+        
         .fullscreen-footer {
             position: absolute;
             bottom: 0;
@@ -8246,16 +8253,17 @@ Please explain why you want a verification badge:`;
         <button class="fullscreen-menu-btn" onclick="togglePhotoMenu(event)">
             <i data-lucide="more-vertical"></i>
             <div class="photo-menu-dropdown" id="photoMenuDropdown">
-                <div class="photo-menu-item" onclick="downloadCurrentPhoto()">
+                <div class="photo-menu-item" onclick="downloadCurrentMedia()">
                     <i data-lucide="download"></i>
-                    <span>Download Photo</span>
+                    <span id="downloadMenuText">Download</span>
                 </div>
             </div>
         </button>
     </div>
     
-    <div class="fullscreen-photo-container">
-        <img id="fullscreenPhotoImg" src="" alt="Fullscreen Photo">
+    <div class="fullscreen-photo-container" id="fullscreenMediaContainer">
+        <img id="fullscreenPhotoImg" src="" alt="Fullscreen Photo" style="display:none;">
+        <video id="fullscreenVideoPlayer" controls style="display:none;"></video>
     </div>
     
     <div class="fullscreen-footer">
@@ -8286,16 +8294,36 @@ Please explain why you want a verification badge:`;
 </div>
 
 <script>
-    // === FULLSCREEN PHOTO VIEWER FUNCTIONS ===
+    // === FULLSCREEN PHOTO/VIDEO VIEWER FUNCTIONS ===
     let currentPhotoPostKey = null;
     let currentPhotoData = null;
+    let currentMediaType = 'image'; // 'image' or 'video'
+    let currentMediaUrl = '';
     
-    function openFullscreenPhoto(imageUrl, postKey) {
+    function openFullscreenPhoto(mediaUrl, postKey, mediaType = 'image') {
         currentPhotoPostKey = postKey;
+        currentMediaType = mediaType;
+        currentMediaUrl = mediaUrl;
+        
         const viewer = document.getElementById('fullscreenPhotoViewer');
         const img = document.getElementById('fullscreenPhotoImg');
+        const video = document.getElementById('fullscreenVideoPlayer');
+        const downloadText = document.getElementById('downloadMenuText');
         
-        img.src = imageUrl;
+        // Show appropriate media element
+        if (mediaType === 'video') {
+            img.style.display = 'none';
+            video.style.display = 'block';
+            video.src = mediaUrl;
+            video.load();
+            downloadText.textContent = 'Download Video';
+        } else {
+            video.style.display = 'none';
+            img.style.display = 'block';
+            img.src = mediaUrl;
+            downloadText.textContent = 'Download Photo';
+        }
+        
         viewer.classList.add('active');
         document.body.style.overflow = 'hidden';
         
@@ -8307,10 +8335,21 @@ Please explain why you want a verification badge:`;
     
     function closeFullscreenPhoto() {
         const viewer = document.getElementById('fullscreenPhotoViewer');
+        const video = document.getElementById('fullscreenVideoPlayer');
+        
         viewer.classList.remove('active');
         document.body.style.overflow = '';
+        
+        // Stop video if playing
+        if (video) {
+            video.pause();
+            video.src = '';
+        }
+        
         currentPhotoPostKey = null;
         currentPhotoData = null;
+        currentMediaType = 'image';
+        currentMediaUrl = '';
         
         // Close dropdown if open
         document.getElementById('photoMenuDropdown').classList.remove('show');
@@ -8333,22 +8372,30 @@ Please explain why you want a verification badge:`;
         }
     }
     
-    function downloadCurrentPhoto() {
-        const img = document.getElementById('fullscreenPhotoImg');
-        const imageUrl = img.src;
-        
-        // Create temporary link
+    function downloadCurrentMedia() {
         const link = document.createElement('a');
-        link.href = imageUrl;
-        link.download = `radio-bingo-photo-${Date.now()}.jpg`;
+        link.href = currentMediaUrl;
+        
+        if (currentMediaType === 'video') {
+            link.download = `radio-bingo-video-${Date.now()}.mp4`;
+            showToast('📥 Downloading video...');
+        } else {
+            link.download = `radio-bingo-photo-${Date.now()}.jpg`;
+            showToast('📥 Downloading photo...');
+        }
+        
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         
-        showToast('📥 Downloading photo...');
         document.getElementById('photoMenuDropdown').classList.remove('show');
+    }
+    
+    // Legacy function name support
+    function downloadCurrentPhoto() {
+        downloadCurrentMedia();
     }
     
     function loadFullscreenPostData(postKey) {
@@ -8419,7 +8466,7 @@ Please explain why you want a verification badge:`;
                         if (!histSnap.exists() && userData && userData.name) {
                             db.ref('users/' + currentPhotoData.uid + '/points').transaction(p => (p || 0) + 10);
                             db.ref('notifications/' + currentPhotoData.uid).push({
-                                msg: `${userData.name} liked your photo`,
+                                msg: `${userData.name} liked your ${currentMediaType === 'video' ? 'video' : 'photo'}`,
                                 time: Date.now(),
                                 type: 'like',
                                 from: myUid,
@@ -8451,10 +8498,9 @@ Please explain why you want a verification badge:`;
     function handleFullscreenShare() {
         if (!currentPhotoPostKey) return;
         
-        const img = document.getElementById('fullscreenPhotoImg');
         const shareData = {
             title: 'Radio Bingo Live',
-            text: 'Check out this photo on Radio Bingo Live!',
+            text: `Check out this ${currentMediaType === 'video' ? 'video' : 'photo'} on Radio Bingo Live!`,
             url: window.location.href
         };
         
@@ -8476,8 +8522,9 @@ Please explain why you want a verification badge:`;
         window.renderPosts = function(...args) {
             originalRenderPosts.apply(this, args);
             
-            // Add click handlers to all post images
+            // Add click handlers after posts render
             setTimeout(() => {
+                // Handle images
                 document.querySelectorAll('.post-card img[src*="http"]').forEach(img => {
                     if (!img.dataset.fullscreenEnabled && img.closest('.post-content, .post-media')) {
                         img.dataset.fullscreenEnabled = 'true';
@@ -8489,8 +8536,46 @@ Please explain why you want a verification badge:`;
                         img.addEventListener('click', function(e) {
                             e.preventDefault();
                             e.stopPropagation();
-                            openFullscreenPhoto(img.src, postKey);
+                            openFullscreenPhoto(img.src, postKey, 'image');
                         });
+                    }
+                });
+                
+                // Handle videos
+                document.querySelectorAll('.post-card video').forEach(video => {
+                    if (!video.dataset.fullscreenEnabled) {
+                        video.dataset.fullscreenEnabled = 'true';
+                        
+                        const postCard = video.closest('.post-card');
+                        const postKey = postCard ? postCard.dataset.postKey : null;
+                        
+                        // Add double-click handler for fullscreen
+                        video.addEventListener('dblclick', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openFullscreenPhoto(video.src || video.currentSrc, postKey, 'video');
+                        });
+                        
+                        // Add fullscreen button overlay
+                        const wrapper = video.parentElement;
+                        if (wrapper && !wrapper.querySelector('.video-fullscreen-overlay')) {
+                            const overlay = document.createElement('div');
+                            overlay.className = 'video-fullscreen-overlay';
+                            overlay.style.cssText = 'position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.7); padding:8px; border-radius:8px; cursor:pointer; z-index:10; backdrop-filter:blur(10px);';
+                            overlay.innerHTML = '<i data-lucide="maximize-2" style="width:20px; height:20px; color:white;"></i>';
+                            overlay.onclick = function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                openFullscreenPhoto(video.src || video.currentSrc, postKey, 'video');
+                            };
+                            
+                            if (wrapper.style.position !== 'relative' && wrapper.style.position !== 'absolute') {
+                                wrapper.style.position = 'relative';
+                            }
+                            wrapper.appendChild(overlay);
+                            
+                            setTimeout(() => lucide.createIcons(), 100);
+                        }
                     }
                 });
             }, 500);
