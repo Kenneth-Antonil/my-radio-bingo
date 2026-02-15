@@ -1173,22 +1173,25 @@
         const list = document.getElementById('grant-user-list');
         const grantBtn = document.getElementById('grant-verify-btn');
         
-        if (!searchTerm || searchTerm.length < 2) {
-            list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">Type at least 2 characters to search...</div>';
-            selectedGrantUser = null;
-            grantBtn.disabled = true;
-            return;
-        }
+        // Show loading indicator
+        list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">🔍 Loading users...</div>';
         
         db.ref('users').once('value').then(snap => {
             const users = snap.val() || {};
             list.innerHTML = '';
             let found = false;
             
+            // Check if database has users
+            if (Object.keys(users).length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">No users found in database</div>';
+                return;
+            }
+            
             Object.entries(users).forEach(([uid, user]) => {
                 const username = (user.username || '').toLowerCase();
                 
-                if (username.includes(searchTerm)) {
+                // Show all users if search is empty, otherwise filter
+                if (!searchTerm || username.includes(searchTerm)) {
                     found = true;
                     const div = document.createElement('div');
                     div.className = 'user-option';
@@ -1216,12 +1219,18 @@
             });
             
             if (!found) {
-                list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">No users found matching "' + searchTerm + '"</div>';
+                const message = searchTerm 
+                    ? 'No users found matching "' + searchTerm + '"'
+                    : 'No users found in database';
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">' + message + '</div>';
                 selectedGrantUser = null;
                 grantBtn.disabled = true;
             }
             
             lucide.createIcons();
+        }).catch(err => {
+            console.error('Error loading users:', err);
+            list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--danger); font-size: 11px;">❌ Error loading users. Check console.</div>';
         });
     }
     
@@ -1280,6 +1289,7 @@
             mutations.forEach((mutation) => {
                 if (mutation.target.classList.contains('active') && mutation.target.id === 'verification-tab') {
                     loadVerificationRequests();
+                    searchUsersForGrant(); // Load all users in grant section
                 }
             });
         });
