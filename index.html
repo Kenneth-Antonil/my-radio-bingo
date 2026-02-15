@@ -137,6 +137,156 @@
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
         }
 
+        /* === FULLSCREEN PHOTO VIEWER === */
+        .fullscreen-photo-viewer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.98);
+            z-index: 99999;
+            flex-direction: column;
+        }
+        .fullscreen-photo-viewer.active { display: flex; }
+        
+        .fullscreen-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: var(--spacing-md);
+            padding-top: max(var(--spacing-md), env(safe-area-inset-top));
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        .fullscreen-close-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .fullscreen-menu-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+        
+        .photo-menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: rgba(30, 41, 59, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-md);
+            min-width: 200px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+            z-index: 100;
+        }
+        .photo-menu-dropdown.show { display: block; }
+        
+        .photo-menu-item {
+            padding: var(--spacing-md);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .photo-menu-item:hover { background: rgba(255, 255, 255, 0.1); }
+        .photo-menu-item i { width: 20px; height: 20px; }
+        
+        .fullscreen-photo-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 80px var(--spacing-xl) 120px;
+            overflow: hidden;
+        }
+        
+        .fullscreen-photo-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            user-select: none;
+            border-radius: var(--radius-md);
+        }
+        
+        .fullscreen-photo-container video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: var(--radius-md);
+        }
+        
+        .fullscreen-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: var(--spacing-lg);
+            padding-bottom: max(var(--spacing-lg), env(safe-area-inset-bottom));
+            background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            z-index: 10;
+        }
+        
+        .fullscreen-action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            transition: all 0.2s;
+        }
+        .fullscreen-action-btn:hover { transform: scale(1.1); }
+        .fullscreen-action-btn i { width: 32px; height: 32px; }
+        .fullscreen-action-btn.liked i { color: #ef4444; fill: #ef4444; }
+        .fullscreen-action-btn span {
+            font-size: 13px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
         /* === BADGE & ONLINE SYSTEM === */
         .avatar-frame {
             position: relative;
@@ -5081,10 +5231,7 @@
             }
         }
     }
-                });
-            }
-        }
-    }
+            
     
     function switchStoreTab(tab) {
         document.querySelectorAll('.store-tab-btn').forEach(b => b.classList.remove('active'));
@@ -8082,16 +8229,55 @@ Please explain why you want a verification badge:`;
         currentReactionPostKey = null;
     }
 
-    // Ilagay ito sa pinakababa ng iyong script
-setTimeout(() => {
-    const ss = document.getElementById('splash-screen');
-    if (ss) {
-        ss.style.opacity = '0';
-        setTimeout(() => ss.style.display = 'none', 800);
-    }
-}, 5000); // Mawawala after 5 seconds kahit anong mangyari
+    // Remove splash screen immediately
+    setTimeout(() => {
+        const ss = document.getElementById('splash-screen');
+        if (ss) {
+            ss.style.opacity = '0';
+            setTimeout(() => ss.style.display = 'none', 500);
+        }
+    }, 1500); // Remove after 1.5 seconds
     
 </script>
+
+<!-- Fullscreen Photo Viewer -->
+<div class="fullscreen-photo-viewer" id="fullscreenPhotoViewer">
+    <div class="fullscreen-header">
+        <button class="fullscreen-close-btn" onclick="closeFullscreenPhoto()">
+            <i data-lucide="x"></i>
+        </button>
+        <div style="flex: 1;"></div>
+        <button class="fullscreen-menu-btn" onclick="togglePhotoMenu(event)">
+            <i data-lucide="more-vertical"></i>
+            <div class="photo-menu-dropdown" id="photoMenuDropdown">
+                <div class="photo-menu-item" onclick="downloadCurrentMedia()">
+                    <i data-lucide="download"></i>
+                    <span id="downloadMenuText">Download</span>
+                </div>
+            </div>
+        </button>
+    </div>
+    
+    <div class="fullscreen-photo-container" id="fullscreenMediaContainer">
+        <img id="fullscreenPhotoImg" src="" alt="Fullscreen Photo" style="display:none;">
+        <video id="fullscreenVideoPlayer" controls style="display:none;"></video>
+    </div>
+    
+    <div class="fullscreen-footer">
+        <button class="fullscreen-action-btn" id="fullscreenLikeBtn" onclick="handleFullscreenLike()">
+            <i data-lucide="heart"></i>
+            <span id="fullscreenLikeCount">Like</span>
+        </button>
+        <button class="fullscreen-action-btn" onclick="handleFullscreenComment()">
+            <i data-lucide="message-circle"></i>
+            <span id="fullscreenCommentCount">Comment</span>
+        </button>
+        <button class="fullscreen-action-btn" onclick="handleFullscreenShare()">
+            <i data-lucide="share-2"></i>
+            <span>Share</span>
+        </button>
+    </div>
+</div>
 
 <!-- Verification Badge Tooltip -->
 <div id="verificationTooltip" class="verification-tooltip">
@@ -8103,6 +8289,296 @@ setTimeout(() => {
     </h4>
     <p>This account has been verified by administrators. Verified accounts have met community standards and are confirmed to be authentic active members of the Radio Bingo Live community.</p>
 </div>
+
+<script>
+    // === FULLSCREEN PHOTO/VIDEO VIEWER FUNCTIONS ===
+    let currentPhotoPostKey = null;
+    let currentPhotoData = null;
+    let currentMediaType = 'image'; // 'image' or 'video'
+    let currentMediaUrl = '';
+    
+    function openFullscreenPhoto(mediaUrl, postKey, mediaType = 'image') {
+        currentPhotoPostKey = postKey;
+        currentMediaType = mediaType;
+        currentMediaUrl = mediaUrl;
+        
+        const viewer = document.getElementById('fullscreenPhotoViewer');
+        const img = document.getElementById('fullscreenPhotoImg');
+        const video = document.getElementById('fullscreenVideoPlayer');
+        const downloadText = document.getElementById('downloadMenuText');
+        
+        // Show appropriate media element
+        if (mediaType === 'video') {
+            img.style.display = 'none';
+            video.style.display = 'block';
+            video.src = mediaUrl;
+            video.load();
+            downloadText.textContent = 'Download Video';
+        } else {
+            video.style.display = 'none';
+            img.style.display = 'block';
+            img.src = mediaUrl;
+            downloadText.textContent = 'Download Photo';
+        }
+        
+        viewer.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        
+        // Load post data
+        loadFullscreenPostData(postKey);
+        
+        setTimeout(() => lucide.createIcons(), 100);
+    }
+    
+    function closeFullscreenPhoto() {
+        const viewer = document.getElementById('fullscreenPhotoViewer');
+        const video = document.getElementById('fullscreenVideoPlayer');
+        
+        viewer.classList.remove('active');
+        document.body.style.overflow = '';
+        
+        // Stop video if playing
+        if (video) {
+            video.pause();
+            video.src = '';
+        }
+        
+        currentPhotoPostKey = null;
+        currentPhotoData = null;
+        currentMediaType = 'image';
+        currentMediaUrl = '';
+        
+        // Close dropdown if open
+        document.getElementById('photoMenuDropdown').classList.remove('show');
+    }
+    
+    function togglePhotoMenu(event) {
+        event.stopPropagation();
+        const dropdown = document.getElementById('photoMenuDropdown');
+        dropdown.classList.toggle('show');
+        
+        if (dropdown.classList.contains('show')) {
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu(e) {
+                    if (!e.target.closest('.photo-menu-dropdown') && !e.target.closest('.fullscreen-menu-btn')) {
+                        dropdown.classList.remove('show');
+                        document.removeEventListener('click', closeMenu);
+                    }
+                });
+            }, 100);
+        }
+    }
+    
+    function downloadCurrentMedia() {
+        const link = document.createElement('a');
+        link.href = currentMediaUrl;
+        
+        if (currentMediaType === 'video') {
+            link.download = `radio-bingo-video-${Date.now()}.mp4`;
+            showToast('📥 Downloading video...');
+        } else {
+            link.download = `radio-bingo-photo-${Date.now()}.jpg`;
+            showToast('📥 Downloading photo...');
+        }
+        
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        document.getElementById('photoMenuDropdown').classList.remove('show');
+    }
+    
+    // Legacy function name support
+    function downloadCurrentPhoto() {
+        downloadCurrentMedia();
+    }
+    
+    function loadFullscreenPostData(postKey) {
+        if (!postKey) return;
+        
+        // Fetch post data from Firebase
+        db.ref('socialPosts/' + postKey).once('value', snap => {
+            if (!snap.exists()) return;
+            
+            currentPhotoData = snap.val();
+            const likeCount = currentPhotoData.likes || 0;
+            
+            // Update like count display
+            document.getElementById('fullscreenLikeCount').textContent = likeCount > 0 ? likeCount : 'Like';
+            
+            // Check if current user liked this
+            if (auth.currentUser) {
+                db.ref('postLikes/' + postKey + '/' + auth.currentUser.uid).once('value', likeSnap => {
+                    const likeBtn = document.getElementById('fullscreenLikeBtn');
+                    if (likeSnap.exists()) {
+                        likeBtn.classList.add('liked');
+                    } else {
+                        likeBtn.classList.remove('liked');
+                    }
+                    lucide.createIcons();
+                });
+            }
+            
+            // Load comment count
+            db.ref('postComments/' + postKey).once('value', commentSnap => {
+                const commentCount = commentSnap.numChildren();
+                document.getElementById('fullscreenCommentCount').textContent = commentCount > 0 ? commentCount : 'Comment';
+            });
+        });
+    }
+    
+    function handleFullscreenLike() {
+        if (!auth.currentUser) {
+            closeFullscreenPhoto();
+            return showToast("Please login first");
+        }
+        
+        if (!currentPhotoPostKey) return;
+        
+        const myUid = auth.currentUser.uid;
+        const likeRef = db.ref('postLikes/' + currentPhotoPostKey + '/' + myUid);
+        const likeBtn = document.getElementById('fullscreenLikeBtn');
+        const countSpan = document.getElementById('fullscreenLikeCount');
+        
+        likeRef.once('value', s => {
+            if (s.exists()) {
+                // Unlike
+                likeRef.remove();
+                db.ref('socialPosts/' + currentPhotoPostKey + '/likes').transaction(l => Math.max(0, (l || 1) - 1));
+                likeBtn.classList.remove('liked');
+                showToast('Like removed');
+            } else {
+                // Like
+                likeRef.set('❤️');
+                db.ref('socialPosts/' + currentPhotoPostKey + '/likes').transaction(l => (l || 0) + 1);
+                likeBtn.classList.add('liked');
+                showToast('❤️ Liked!');
+                
+                // Reward post author
+                if (currentPhotoData && currentPhotoData.uid !== myUid) {
+                    const rewardHistoryRef = db.ref('rewardHistory/' + currentPhotoPostKey + '/' + myUid);
+                    rewardHistoryRef.once('value', histSnap => {
+                        if (!histSnap.exists() && userData && userData.name) {
+                            db.ref('users/' + currentPhotoData.uid + '/points').transaction(p => (p || 0) + 10);
+                            db.ref('notifications/' + currentPhotoData.uid).push({
+                                msg: `${userData.name} liked your ${currentMediaType === 'video' ? 'video' : 'photo'}`,
+                                time: Date.now(),
+                                type: 'like',
+                                from: myUid,
+                                postId: currentPhotoPostKey,
+                                image: userData.photo || 'https://via.placeholder.com/40'
+                            });
+                            rewardHistoryRef.set(true);
+                        }
+                    });
+                }
+            }
+            
+            // Reload data
+            loadFullscreenPostData(currentPhotoPostKey);
+            lucide.createIcons();
+        });
+    }
+    
+    function handleFullscreenComment() {
+        if (!currentPhotoPostKey) return;
+        closeFullscreenPhoto();
+        
+        // Open comment modal for this post
+        setTimeout(() => {
+            openComments(currentPhotoPostKey);
+        }, 300);
+    }
+    
+    function handleFullscreenShare() {
+        if (!currentPhotoPostKey) return;
+        
+        const shareData = {
+            title: 'Radio Bingo Live',
+            text: `Check out this ${currentMediaType === 'video' ? 'video' : 'photo'} on Radio Bingo Live!`,
+            url: window.location.href
+        };
+        
+        if (navigator.share) {
+            navigator.share(shareData)
+                .then(() => showToast('📤 Shared successfully!'))
+                .catch(() => {});
+        } else {
+            // Fallback: copy link
+            navigator.clipboard.writeText(window.location.href)
+                .then(() => showToast('🔗 Link copied to clipboard!'))
+                .catch(() => showToast('❌ Unable to share'));
+        }
+    }
+    
+    // Add click handler to post images - wrap existing renderPosts function
+    const originalRenderPosts = window.renderPosts;
+    if (originalRenderPosts) {
+        window.renderPosts = function(...args) {
+            originalRenderPosts.apply(this, args);
+            
+            // Add click handlers after posts render
+            setTimeout(() => {
+                // Handle images
+                document.querySelectorAll('.post-card img[src*="http"]').forEach(img => {
+                    if (!img.dataset.fullscreenEnabled && img.closest('.post-content, .post-media')) {
+                        img.dataset.fullscreenEnabled = 'true';
+                        img.style.cursor = 'pointer';
+                        
+                        const postCard = img.closest('.post-card');
+                        const postKey = postCard ? postCard.dataset.postKey : null;
+                        
+                        img.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openFullscreenPhoto(img.src, postKey, 'image');
+                        });
+                    }
+                });
+                
+                // Handle videos
+                document.querySelectorAll('.post-card video').forEach(video => {
+                    if (!video.dataset.fullscreenEnabled) {
+                        video.dataset.fullscreenEnabled = 'true';
+                        
+                        const postCard = video.closest('.post-card');
+                        const postKey = postCard ? postCard.dataset.postKey : null;
+                        
+                        // Add double-click handler for fullscreen
+                        video.addEventListener('dblclick', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openFullscreenPhoto(video.src || video.currentSrc, postKey, 'video');
+                        });
+                        
+                        // Add fullscreen button overlay
+                        const wrapper = video.parentElement;
+                        if (wrapper && !wrapper.querySelector('.video-fullscreen-overlay')) {
+                            const overlay = document.createElement('div');
+                            overlay.className = 'video-fullscreen-overlay';
+                            overlay.style.cssText = 'position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.7); padding:8px; border-radius:8px; cursor:pointer; z-index:10; backdrop-filter:blur(10px);';
+                            overlay.innerHTML = '<i data-lucide="maximize-2" style="width:20px; height:20px; color:white;"></i>';
+                            overlay.onclick = function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                openFullscreenPhoto(video.src || video.currentSrc, postKey, 'video');
+                            };
+                            
+                            if (wrapper.style.position !== 'relative' && wrapper.style.position !== 'absolute') {
+                                wrapper.style.position = 'relative';
+                            }
+                            wrapper.appendChild(overlay);
+                            
+                            setTimeout(() => lucide.createIcons(), 100);
+                        }
+                    }
+                });
+            }, 500);
+        };
+    }
+</script>
 
 </body>
 </html>
