@@ -5442,13 +5442,51 @@ Please explain why you want a verification badge:`;
         if(pfpInput.dataset.b64) updates.photo = pfpInput.dataset.b64;
         if(coverInput.dataset.b64) updates.cover = coverInput.dataset.b64;
         
+        // Update user profile
         db.ref('users/' + auth.currentUser.uid).update(updates).then(() => {
-            showToast("Profile Updated!");
-            document.getElementById('editProfileModal').style.display = 'none';
-            // Clear inputs
-            pfpInput.value = ""; delete pfpInput.dataset.b64;
-            coverInput.value = ""; delete coverInput.dataset.b64;
-            openMyProfile(); // Refresh
+            // Update userData object
+            userData.name = newName;
+            userData.bio = newBio;
+            if(updates.photo) userData.photo = updates.photo;
+            if(updates.cover) userData.cover = updates.cover;
+            
+            // Update ALL posts by this user
+            db.ref('socialPosts').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', postsSnapshot => {
+                const updatePromises = [];
+                postsSnapshot.forEach(postSnap => {
+                    const postUpdates = {
+                        authorName: newName
+                    };
+                    if(updates.photo) postUpdates.authorPhoto = updates.photo;
+                    
+                    updatePromises.push(
+                        db.ref('socialPosts/' + postSnap.key).update(postUpdates)
+                    );
+                });
+                
+                // Also update shared posts that reference this user
+                db.ref('socialPosts').orderByChild('sharedFrom').equalTo(auth.currentUser.uid).once('value', sharedSnapshot => {
+                    sharedSnapshot.forEach(sharedSnap => {
+                        const sharedUpdates = {
+                            sharedFromName: newName
+                        };
+                        if(updates.photo) sharedUpdates.sharedFromPhoto = updates.photo;
+                        
+                        updatePromises.push(
+                            db.ref('socialPosts/' + sharedSnap.key).update(sharedUpdates)
+                        );
+                    });
+                    
+                    Promise.all(updatePromises).then(() => {
+                        showToast("Profile & All Posts Updated!");
+                        document.getElementById('editProfileModal').style.display = 'none';
+                        // Clear inputs
+                        pfpInput.value = ""; delete pfpInput.dataset.b64;
+                        coverInput.value = ""; delete coverInput.dataset.b64;
+                        openMyProfile(); // Refresh
+                    });
+                });
+            });
         });
     }
 
@@ -5832,19 +5870,27 @@ Please explain why you want a verification badge:`;
 
     function shareToOwnProfile() {
         if(!currentSharePostKey) return;
+        if(!auth.currentUser) return showToast("Please login first");
+        if(!userData || !userData.name) {
+            showToast("Loading profile...");
+            return;
+        }
         
         const caption = document.getElementById('shareCaption').value.trim();
         
         db.ref('socialPosts/' + currentSharePostKey).once('value', s => {
             const originalPost = s.val();
-            if(!originalPost) return;
+            if(!originalPost) {
+                showToast("Post not found");
+                return;
+            }
             
             // Create a new post that references the original
             const shareData = {
                 uid: auth.currentUser.uid,
                 authorName: userData.name,
-                authorPhoto: userData.photo,
-                authorPoints: userData.points,
+                authorPhoto: userData.photo || 'https://via.placeholder.com/40',
+                authorPoints: userData.points || 0,
                 authorWins: userData.bingoWins || 0,
                 authorVerified: userData.verified || false,
                 content: caption, // User's caption
@@ -5862,24 +5908,27 @@ Please explain why you want a verification badge:`;
                 sharedMood: originalPost.mood
             };
             
-            db.ref('socialPosts').push(shareData);
-            
-            // Notify original author
-            if(originalPost.uid !== auth.currentUser.uid) {
-                db.ref('notifications/' + originalPost.uid).push({
-                    msg: `${userData.name} shared your post`,
-                    time: Date.now(),
-                    type: 'share',
-                    from: auth.currentUser.uid,
-                    postId: currentSharePostKey,
-                    image: userData.photo
-                });
-            }
-            
-            document.getElementById('shareCaption').value = ''; // Clear caption
-            showToast("Post shared!");
-            playSound('pop');
-            closeShareModal();
+            db.ref('socialPosts').push(shareData).then(() => {
+                // Notify original author
+                if(originalPost.uid !== auth.currentUser.uid) {
+                    db.ref('notifications/' + originalPost.uid).push({
+                        msg: `${userData.name} shared your post`,
+                        time: Date.now(),
+                        type: 'share',
+                        from: auth.currentUser.uid,
+                        postId: currentSharePostKey,
+                        image: userData.photo
+                    });
+                }
+                
+                document.getElementById('shareCaption').value = ''; // Clear caption
+                showToast("Post shared successfully!");
+                playSound('pop');
+                closeShareModal();
+            }).catch(err => {
+                console.error("Share error:", err);
+                showToast("Failed to share. Try again.");
+            });
         });
     }
 
@@ -6243,6 +6292,10 @@ Please explain why you want a verification badge:`;
 
     function showReactionPopup(postKey) {
         const pop = document.getElementById('react-pop-' + postKey);
+        if(!pop) {
+            console.error('Reaction popup not found for post:', postKey);
+            return;
+        }
         // Toggle
         if(pop.style.display === 'flex') pop.style.display = 'none';
         else {
@@ -6259,11 +6312,13 @@ Please explain why you want a verification badge:`;
     }
 
     function submitReaction(postKey, authorUid, emoji) {
+        if(!auth.currentUser) return showToast("Please login first");
+        
         const myUid = auth.currentUser.uid;
         const likeRef = db.ref('postLikes/' + postKey + '/' + myUid);
         const pop = document.getElementById('react-pop-' + postKey);
         
-        pop.style.display = 'none'; // Hide popup
+        if(pop) pop.style.display = 'none'; // Hide popup
 
         likeRef.once('value', s => {
             if(s.exists() && s.val() === emoji) {
@@ -6278,7 +6333,7 @@ Please explain why you want a verification badge:`;
                     const rewardHistoryRef = db.ref('rewardHistory/' + postKey + '/' + myUid);
                     rewardHistoryRef.once('value', histSnap => {
                         if(!histSnap.exists()) {
-                            if(authorUid !== myUid) {
+                            if(authorUid !== myUid && userData && userData.name) {
                                 db.ref('users/' + authorUid + '/points').transaction(p => (p || 0) + 10);
                                 db.ref('notifications/' + authorUid).push({
                                     msg: `${userData.name} reacted ${emoji} to your post`,
@@ -6286,7 +6341,7 @@ Please explain why you want a verification badge:`;
                                     type: 'like',
                                     from: myUid,
                                     postId: postKey,
-                                    image: userData.photo
+                                    image: userData.photo || 'https://via.placeholder.com/40'
                                 });
                             }
                             rewardHistoryRef.set(true); 
