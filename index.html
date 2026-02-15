@@ -838,6 +838,43 @@
             color: rgba(255,255,255,0.8);
         }
 
+        .beats-comments-preview {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .beats-view-comments {
+            color: rgba(255,255,255,0.6);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
+        .beats-view-comments:active {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .beats-preview-comment {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .beats-preview-comment-author {
+            color: white;
+            font-weight: 700;
+        }
+
+        .beats-preview-comment-text {
+            color: rgba(255,255,255,0.9);
+            flex: 1;
+        }
+
         .beats-actions {
             position: absolute;
             right: 15px;
@@ -4250,6 +4287,13 @@
                         <i data-lucide="music" style="width:14px;"></i>
                         <span>Original Audio</span>
                     </div>
+                    
+                    <div class="beats-comments-preview" id="beats-preview-${index}">
+                        <div class="beats-view-comments" onclick="handleBeatsComment('${post.key}')">
+                            <span id="beats-comment-preview-text-${index}">Loading comments...</span>
+                        </div>
+                        <div id="beats-preview-list-${index}"></div>
+                    </div>
                 </div>
 
                 <div class="beats-actions">
@@ -4284,11 +4328,57 @@
                 });
             }
             
-            // Get comment count
-            db.ref('postComments/' + post.key).once('value', commSnap => {
+            // Get comments and display preview
+            db.ref('postComments/' + post.key).limitToLast(2).once('value', commSnap => {
                 const commentCount = commSnap.numChildren();
                 const countEl = document.getElementById('beats-comment-count-' + index);
-                if(countEl) countEl.textContent = commentCount;
+                const previewTextEl = document.getElementById('beats-comment-preview-text-' + index);
+                const previewListEl = document.getElementById('beats-preview-list-' + index);
+                
+                // Get total comment count
+                db.ref('postComments/' + post.key).once('value', totalSnap => {
+                    const totalCount = totalSnap.numChildren();
+                    
+                    if(countEl) countEl.textContent = totalCount;
+                    
+                    if(totalCount === 0) {
+                        if(previewTextEl) previewTextEl.textContent = 'Be the first to comment';
+                    } else if(totalCount === 1) {
+                        if(previewTextEl) previewTextEl.textContent = 'View 1 comment';
+                    } else {
+                        if(previewTextEl) previewTextEl.textContent = `View all ${totalCount} comments`;
+                    }
+                    
+                    // Display preview of latest comments
+                    if(commSnap.exists() && previewListEl) {
+                        const comments = [];
+                        commSnap.forEach(child => {
+                            comments.push(child.val());
+                        });
+                        
+                        // Show up to 2 latest comments
+                        comments.slice(-2).forEach(comment => {
+                            db.ref('users/' + comment.uid).once('value', userSnap => {
+                                const commentUser = userSnap.val();
+                                if(!commentUser) return;
+                                
+                                const commentDiv = document.createElement('div');
+                                commentDiv.className = 'beats-preview-comment';
+                                commentDiv.onclick = () => handleBeatsComment(post.key);
+                                
+                                const sanitizedCommentName = escapeHtml(commentUser.name || 'Anonymous');
+                                const sanitizedCommentText = escapeHtml(comment.text || '');
+                                
+                                commentDiv.innerHTML = `
+                                    <span class="beats-preview-comment-author">${sanitizedCommentName}</span>
+                                    <span class="beats-preview-comment-text">${sanitizedCommentText}</span>
+                                `;
+                                
+                                previewListEl.appendChild(commentDiv);
+                            });
+                        });
+                    }
+                });
             });
             
             setTimeout(() => lucide.createIcons(), 50);
@@ -4572,17 +4662,55 @@
         db.ref('postComments/' + currentBeatsCommentPostKey).push(commentData).then(() => {
             input.value = '';
             
-            // Reload comments
+            // Reload comments in modal
             loadBeatsComments(currentBeatsCommentPostKey);
             
-            // Update comment count in beats UI
+            // Find the post and update UI
             const post = beatsVideoPosts.find(p => p.key === currentBeatsCommentPostKey);
             if(post) {
                 const index = beatsVideoPosts.indexOf(post);
+                
+                // Update comment count
                 const countEl = document.getElementById('beats-comment-count-' + index);
                 if(countEl) {
                     const currentCount = parseInt(countEl.textContent) || 0;
                     countEl.textContent = currentCount + 1;
+                }
+                
+                // Update preview text
+                const previewTextEl = document.getElementById('beats-comment-preview-text-' + index);
+                if(previewTextEl) {
+                    const newCount = (parseInt(countEl?.textContent) || 0);
+                    if(newCount === 1) {
+                        previewTextEl.textContent = 'View 1 comment';
+                    } else {
+                        previewTextEl.textContent = `View all ${newCount} comments`;
+                    }
+                }
+                
+                // Update preview list - show latest comment
+                const previewListEl = document.getElementById('beats-preview-list-' + index);
+                if(previewListEl && userData) {
+                    // Add new comment to preview
+                    const commentDiv = document.createElement('div');
+                    commentDiv.className = 'beats-preview-comment';
+                    commentDiv.onclick = () => handleBeatsComment(currentBeatsCommentPostKey);
+                    
+                    const sanitizedName = escapeHtml(userData.name || 'You');
+                    const sanitizedText = escapeHtml(text);
+                    
+                    commentDiv.innerHTML = `
+                        <span class="beats-preview-comment-author">${sanitizedName}</span>
+                        <span class="beats-preview-comment-text">${sanitizedText}</span>
+                    `;
+                    
+                    // Keep only 2 latest
+                    const existingComments = previewListEl.querySelectorAll('.beats-preview-comment');
+                    if(existingComments.length >= 2) {
+                        existingComments[0].remove();
+                    }
+                    
+                    previewListEl.appendChild(commentDiv);
                 }
             }
             
