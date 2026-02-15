@@ -167,6 +167,41 @@
         }
         .online-indicator.is-online { display: block; }
 
+        /* Inline Follow Button - for Beats tab */
+        .inline-follow-btn {
+            padding: 4px 12px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: 8px;
+            transition: all 0.2s;
+        }
+        .inline-follow-btn:hover {
+            background: var(--accent-glow);
+            transform: scale(1.05);
+        }
+        .inline-follow-btn.following {
+            background: var(--glass-surface);
+            border: 1px solid var(--glass-border);
+        }
+        .inline-follow-btn.following:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+        }
+
+        /* Inline Verification Badge */
+        .inline-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+
         .avatar-badge-icon {
             position: absolute;
             bottom: -2px;
@@ -3667,11 +3702,9 @@
     <div class="pm-container">
         <div id="pmInboxView" style="display:flex; flex-direction:column; height:100%;">
             <div class="pm-header">
-                <div style="display:flex; align-items:center; gap: var(--spacing-sm);">
+                <div style="display:flex; align-items:center; gap: var(--spacing-sm); flex:1;">
                     <h3>Chats</h3>
-                </div>
-                <div style="display:flex; justify-content:center; flex:1;">
-                    <button class="group-create-btn" onclick="startCreateGroup()"><i data-lucide="users" style="width:14px"></i> + Group</button>
+                    <button class="group-create-btn" onclick="startCreateGroup()"><i data-lucide="users" style="width:14px"></i> Group</button>
                 </div>
                 <div style="display:flex; gap: var(--spacing-sm);">
                     <button onclick="document.getElementById('pmModal').style.display='none'" style="background:rgba(255,255,255,0.1); border:none; width:30px; height:30px; border-radius:50%; color:white; display:flex; align-items:center; justify-content:center;"><i data-lucide="x" style="width:16px;"></i></button>
@@ -3684,13 +3717,14 @@
         <div id="pmChatView" class="pm-chat-view">
             <div class="pm-chat-header">
                 <button onclick="backToInbox()" style="background:none; border:none; color:var(--messenger-blue);"><i data-lucide="arrow-left"></i></button>
-                <div style="display:flex; align-items:center;">
+                <div style="display:flex; align-items:center; flex:1;">
                      <div id="chatTargetAvatarCont" style="width:36px; height:36px; margin-left:5px;"></div>
                      <div style="display:flex; flex-direction:column; margin-left:10px;">
                         <span id="chatTargetName" style="font-weight:700; font-size:15px; color:white;">User</span>
                         <span id="chatTargetStatus" style="font-size:11px; color:#b0b3b8;">Active now</span>
                      </div>
                 </div>
+                <button onclick="deleteConversation()" style="background:none; border:none; color:var(--danger); margin-left:auto;"><i data-lucide="trash-2"></i></button>
             </div>
             <div id="pmMessages" class="pm-messages"></div>
             
@@ -4462,6 +4496,10 @@
             const sanitizedContent = escapeHtml(post.content || 'Watch this amazing video! 🎥');
             const sanitizedVideo = sanitizeUrl(videoUrl);
             
+            // Check if verified
+            const isVerified = user.verified === true;
+            const verifiedBadgeHTML = isVerified ? `<span class="verified-badge inline-badge" onmouseenter="showVerificationTooltip(event)" onmouseleave="hideVerificationTooltip()" style="margin-left:4px;"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>` : '';
+            
             videoDiv.innerHTML = `
                 <video class="beats-video" loop playsinline preload="metadata">
                     <source src="${sanitizedVideo}" type="video/mp4">
@@ -4470,7 +4508,7 @@
                 <div class="beats-overlay">
                     <div class="beats-user-info">
                         <img class="beats-avatar" src="${sanitizedPhoto}" alt="${sanitizedName}" onclick="openUserProfile('${post.uid}')">
-                        <div class="beats-username">@${sanitizedName}</div>
+                        <div class="beats-username">@${sanitizedName}${verifiedBadgeHTML}</div>
                         ${!isOwnPost ? `<button class="beats-follow-btn ${isFollowing ? 'following' : ''}" onclick="handleBeatsFollow('${post.uid}', this)">
                             ${isFollowing ? 'Following' : 'Follow'}
                         </button>` : ''}
@@ -4822,16 +4860,21 @@
             const sanitizedText = escapeHtml(comment.text || '');
             const timeAgo = getTimeAgo(comment.time);
             
+            // Check if verified
+            const isVerified = user.verified === true;
+            const verifiedBadgeHTML = isVerified ? `<span class="verified-badge inline-badge" onmouseenter="showVerificationTooltip(event)" onmouseleave="hideVerificationTooltip()" style="margin-left:4px;"><i data-lucide="check" style="width:8px; height:8px; color:white;"></i></span>` : '';
+            
             div.innerHTML = `
                 <img class="beats-comment-avatar" src="${sanitizedPhoto}" alt="${sanitizedName}" onclick="closeBeatsComments(); openUserProfile('${comment.uid}')">
                 <div class="beats-comment-content">
-                    <div class="beats-comment-author">${sanitizedName}</div>
+                    <div class="beats-comment-author">${sanitizedName}${verifiedBadgeHTML}</div>
                     <div class="beats-comment-text">${sanitizedText}</div>
                     <div class="beats-comment-time">${timeAgo}</div>
                 </div>
             `;
             
             list.appendChild(div);
+            lucide.createIcons();
         });
     }
 
@@ -4999,6 +5042,50 @@
         }
     }
     
+    // Toggle follow function for inline buttons (used in Beats marketplace)
+    function toggleFollow(targetUid, btnId) {
+        if(!auth.currentUser) return showToast("Please login first");
+        
+        const myUid = auth.currentUser.uid;
+        if(myUid === targetUid) return;
+        
+        const btn = document.getElementById(btnId);
+        if(!btn) return;
+        
+        const isFollowing = btn.classList.contains('following');
+        
+        if(isFollowing) {
+            // Unfollow
+            db.ref('users/' + myUid + '/following/' + targetUid).remove();
+            db.ref('users/' + targetUid + '/followers/' + myUid).remove();
+            btn.classList.remove('following');
+            btn.textContent = 'Follow';
+            showToast('Unfollowed');
+        } else {
+            // Follow
+            db.ref('users/' + myUid + '/following/' + targetUid).set(true);
+            db.ref('users/' + targetUid + '/followers/' + myUid).set(true);
+            btn.classList.add('following');
+            btn.textContent = 'Following';
+            showToast('Following!');
+            
+            // Send notification
+            if(userData && userData.name) {
+                db.ref('notifications/' + targetUid).push({
+                    msg: `${userData.name} started following you`,
+                    time: Date.now(),
+                    type: 'follow',
+                    from: myUid,
+                    image: userData.photo || 'https://via.placeholder.com/40'
+                });
+            }
+        }
+    }
+                });
+            }
+        }
+    }
+    
     function switchStoreTab(tab) {
         document.querySelectorAll('.store-tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('storeSection-cashout').style.display = 'none';
@@ -5115,7 +5202,7 @@
     
     // Helper function to format "last seen" time
     function formatLastSeen(timestamp) {
-        if(!timestamp) return 'Recently';
+        if(!timestamp) return 'recently';
         
         const now = Date.now();
         const diffMs = now - timestamp;
@@ -5123,10 +5210,10 @@
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
         
-        if(diffMins < 1) return 'Just now';
-        if(diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+        if(diffMins < 1) return 'just now';
+        if(diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''}. ago`;
         if(diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-        if(diffDays === 1) return 'Yesterday';
+        if(diffDays === 1) return 'yesterday';
         if(diffDays < 7) return `${diffDays} days ago`;
         
         // Format as date for older
@@ -5664,7 +5751,12 @@
 
                 if(Object.keys(conversations).length === 0 && myGroups.length === 0) { list.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg);'>No messages yet.</div>"; return; } 
                 
-                Object.keys(conversations).forEach(partnerId => { 
+                // Collect all conversation data with status
+                const conversationDataList = [];
+                const partnerIds = Object.keys(conversations);
+                let processed = 0;
+                
+                partnerIds.forEach(partnerId => { 
                     db.ref('users/' + partnerId).once('value', uSnap => { 
                         const u = uSnap.val(); 
                         const lastMsg = conversations[partnerId]; 
@@ -5677,36 +5769,96 @@
                                 ? formatLastSeen(status.last_seen) 
                                 : '';
                             
-                            const div = document.createElement('div'); 
-                            div.className = 'pm-item'; 
-                            div.onclick = () => openPrivateChat(partnerId, u.name, u.photo); 
-                            const previewText = lastMsg.image ? 'Sent a photo' : lastMsg.text;
+                            conversationDataList.push({
+                                partnerId,
+                                userData: u,
+                                lastMsg,
+                                isOnline,
+                                lastSeenText,
+                                timestamp: status?.last_seen || 0
+                            });
                             
-                            // Add online indicator wrapper to avatar
-                            const onlineDot = isOnline ? '<div class="online-indicator is-online"></div>' : '';
-                            const statusInfo = isOnline ? '<span style="color: #22c55e; font-size: 12px; font-weight: 500;">● Online</span>' : 
-                                               (lastSeenText ? `<span style="color: rgba(255,255,255,0.4); font-size: 11px;">Last seen ${lastSeenText}</span>` : '');
+                            processed++;
                             
-                            div.innerHTML = `
-                                <div class="avatar-frame" data-uid="${partnerId}" style="position: relative; flex-shrink: 0;">
-                                    <img class="pm-avatar" src="${u.photo || 'https://via.placeholder.com/40'}">
-                                    ${onlineDot}
-                                </div>
-                                <div class="pm-info">
-                                    <div style="display: flex; align-items: center; gap: 6px;">
-                                        <span class="pm-name">${u.name} ${getBadgeHtml(u.bingoWins || 0)}</span>
-                                    </div>
-                                    <span class="pm-preview">${lastMsg.from === uid ? 'You: ' : ''}${previewText}</span>
-                                    ${statusInfo}
-                                </div>
-                            `; 
-                            list.appendChild(div); 
-                            lucide.createIcons();
+                            // When all conversations are loaded, sort and render
+                            if(processed === partnerIds.length) {
+                                // Sort: Active users first, then by last seen
+                                conversationDataList.sort((a, b) => {
+                                    if(a.isOnline && !b.isOnline) return -1;
+                                    if(!a.isOnline && b.isOnline) return 1;
+                                    return b.timestamp - a.timestamp;
+                                });
+                                
+                                // Render sorted conversations
+                                conversationDataList.forEach(data => {
+                                    const div = document.createElement('div'); 
+                                    div.className = 'pm-item'; 
+                                    div.onclick = () => openPrivateChat(data.partnerId, data.userData.name, data.userData.photo); 
+                                    const previewText = data.lastMsg.image ? 'Sent a photo' : data.lastMsg.text;
+                                    
+                                    // Check if user is verified
+                                    const isVerified = data.userData.verified === true;
+                                    const verifiedBadgeHTML = isVerified ? `<span class="verified-badge inline-badge" onmouseenter="showVerificationTooltip(event)" onmouseleave="hideVerificationTooltip()"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>` : '';
+                                    
+                                    // Add online indicator wrapper to avatar
+                                    const onlineDot = data.isOnline ? '<div class="online-indicator is-online"></div>' : '';
+                                    const statusInfo = data.isOnline ? '<span style="color: #22c55e; font-size: 12px; font-weight: 500;">Active now</span>' : 
+                                                       (data.lastSeenText ? `<span style="color: rgba(255,255,255,0.4); font-size: 11px;">Active ${data.lastSeenText}</span>` : '');
+                                    
+                                    div.innerHTML = `
+                                        <div class="avatar-frame" data-uid="${data.partnerId}" style="position: relative; flex-shrink: 0;">
+                                            <img class="pm-avatar" src="${data.userData.photo || 'https://via.placeholder.com/40'}">
+                                            ${onlineDot}
+                                        </div>
+                                        <div class="pm-info">
+                                            <div style="display: flex; align-items: center; gap: 6px;">
+                                                <span class="pm-name">${data.userData.name}${verifiedBadgeHTML}</span>
+                                            </div>
+                                            <span class="pm-preview">${data.lastMsg.from === uid ? 'You: ' : ''}${previewText}</span>
+                                            ${statusInfo}
+                                        </div>
+                                    `; 
+                                    list.appendChild(div); 
+                                    lucide.createIcons();
+                                });
+                            }
                         });
                     }); 
                 }); 
             });
         });
+    }
+    
+    function deleteConversation() {
+        if(!currentChatPartner) return;
+        
+        const confirmMsg = isGroupChat ? "Delete this group chat? This will remove you from the group." : "Delete this conversation? All messages will be removed.";
+        
+        if(!confirm(confirmMsg)) return;
+        
+        const myUid = auth.currentUser.uid;
+        
+        if(isGroupChat) {
+            // Remove user from group
+            db.ref('groups/' + currentChatPartner + '/members/' + myUid).remove();
+            db.ref('groupMembers/' + myUid + '/' + currentChatPartner).remove();
+            showToast("Left group chat");
+        } else {
+            // Delete all messages between users
+            db.ref('messages').once('value', s => {
+                const updates = {};
+                s.forEach(msgSnap => {
+                    const m = msgSnap.val();
+                    if((m.from === myUid && m.to === currentChatPartner) || (m.from === currentChatPartner && m.to === myUid)) {
+                        updates['messages/' + msgSnap.key] = null;
+                    }
+                });
+                db.ref().update(updates);
+                showToast("Conversation deleted");
+            });
+        }
+        
+        backToInbox();
     }
     
     function renderActiveFriends() {
@@ -5875,11 +6027,11 @@
             const statusElement = document.getElementById('chatTargetStatus');
             
             if(status && status.state === 'online') {
-                statusElement.innerText = "Online";
+                statusElement.innerText = "Active now";
                 statusElement.style.color = "#22c55e";
             } else if(status && status.last_seen) {
                 const lastSeenText = formatLastSeen(status.last_seen);
-                statusElement.innerText = `Last seen ${lastSeenText}`;
+                statusElement.innerText = `Active ${lastSeenText}`;
                 statusElement.style.color = "rgba(255,255,255,0.5)";
             } else {
                 statusElement.innerText = "Offline";
