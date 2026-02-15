@@ -33,6 +33,64 @@
     <style>
         /* === CORE VARIABLES === */
         :root { 
+    
+    <!-- 
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║  DATABASE NORMALIZATION - PROPER 3NF STRUCTURE                   ║
+    ╠══════════════════════════════════════════════════════════════════╣
+    ║                                                                   ║
+    ║  ALL DATA IS PROPERLY NORMALIZED - NO REDUNDANCY!                ║
+    ║                                                                   ║
+    ║  ✓ socialPosts: Only stores UID (no name, photo, etc)           ║
+    ║  ✓ postComments: Only stores UID (no name, photo, etc)          ║
+    ║  ✓ supportTicketReplies: Only stores UID                        ║
+    ║  ✓ User data fetched from users/{uid} when displaying           ║
+    ║                                                                   ║
+    ║  BENEFITS:                                                       ║
+    ║  • No data duplication                                           ║
+    ║  • Profile updates automatically reflect everywhere              ║
+    ║  • Smaller database size                                         ║
+    ║  • Easier maintenance                                            ║
+    ║  • Single source of truth for user data                          ║
+    ║                                                                   ║
+    ║  DATABASE STRUCTURE:                                             ║
+    ║                                                                   ║
+    ║  socialPosts/{postKey}                                           ║
+    ║    ├─ uid (REFERENCE to users/{uid})                             ║
+    ║    ├─ content                                                    ║
+    ║    ├─ mood                                                       ║
+    ║    ├─ image                                                      ║
+    ║    ├─ video                                                      ║
+    ║    ├─ timestamp                                                  ║
+    ║    ├─ likes                                                      ║
+    ║    ├─ visibility                                                 ║
+    ║    ├─ isShared (if shared)                                      ║
+    ║    ├─ sharedFrom (UID REFERENCE, if shared)                      ║
+    ║    └─ sharedPostKey (if shared)                                  ║
+    ║                                                                   ║
+    ║  postComments/{postKey}/{commentKey}                             ║
+    ║    ├─ uid (REFERENCE to users/{uid})                             ║
+    ║    ├─ text                                                       ║
+    ║    └─ time                                                       ║
+    ║                                                                   ║
+    ║  supportTicketReplies/{ticketKey}/{replyKey}                     ║
+    ║    ├─ uid (REFERENCE to users/{uid})                             ║
+    ║    ├─ message                                                    ║
+    ║    ├─ timestamp                                                  ║
+    ║    └─ isAdmin                                                    ║
+    ║                                                                   ║
+    ║  users/{uid}                                                     ║
+    ║    ├─ name                                                       ║
+    ║    ├─ photo                                                      ║
+    ║    ├─ bio                                                        ║
+    ║    ├─ verified                                                   ║
+    ║    ├─ points                                                     ║
+    ║    ├─ bingoWins                                                  ║
+    ║    └─ ... (all user data)                                        ║
+    ║                                                                   ║
+    ╚══════════════════════════════════════════════════════════════════╝
+    -->
+
             --bg-overlay: rgba(15, 23, 42, 0.95); 
             --glass-surface: rgba(30, 41, 59, 0.75);
             --glass-border: rgba(255, 255, 255, 0.1);
@@ -681,240 +739,12 @@
         .btn-allow-notif { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; border: none; padding: var(--spacing-md) 30px; border-radius: var(--radius-lg); font-weight: 800; font-size: 16px; cursor: pointer; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4); transition: 0.3s; width: 100%; max-width: 250px; display: flex; align-items: center; justify-content: center; gap: var(--spacing-sm); }
         .btn-allow-notif:hover { transform: translateY(-3px); }
         .blocked-help { display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: var(--spacing-md); border-radius: var(--radius-md); margin-top: var(--spacing-lg); font-size: 12px; text-align: left; }
-        /* === PREMIUM SPLASH SCREEN === */
-        #splash-screen { 
-            position: fixed; 
-            inset: 0; 
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-            z-index: 99999; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            transition: opacity 0.8s ease, visibility 0.8s;
-            overflow: hidden;
-        }
-        
-        /* Animated Background Particles */
-        #splash-screen::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: 
-                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(14, 165, 233, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.05) 0%, transparent 70%);
-            animation: pulseBackground 8s ease-in-out infinite;
-        }
-        
-        @keyframes pulseBackground {
-            0%, 100% { opacity: 0.5; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.05); }
-        }
-        
-        /* Logo Container */
-        .splash-logo-container {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 1;
-        }
-        
-        /* Main Logo Image */
-        .splash-logo-image {
-            width: 140px;
-            height: 140px;
-            border-radius: 30px;
-            box-shadow: 
-                0 20px 60px rgba(0, 0, 0, 0.6),
-                0 0 0 8px rgba(59, 130, 246, 0.1),
-                0 0 0 16px rgba(59, 130, 246, 0.05);
-            animation: logoFloat 3s ease-in-out infinite, logoGlow 2s ease-in-out infinite alternate;
-            object-fit: cover;
-            border: 3px solid rgba(59, 130, 246, 0.3);
-        }
-        
-        @keyframes logoFloat {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-15px); }
-        }
-        
-        @keyframes logoGlow {
-            0% { 
-                box-shadow: 
-                    0 20px 60px rgba(0, 0, 0, 0.6),
-                    0 0 0 8px rgba(59, 130, 246, 0.1),
-                    0 0 40px rgba(59, 130, 246, 0.3);
-            }
-            100% { 
-                box-shadow: 
-                    0 25px 80px rgba(59, 130, 246, 0.4),
-                    0 0 0 8px rgba(59, 130, 246, 0.2),
-                    0 0 60px rgba(59, 130, 246, 0.6);
-            }
-        }
-        
-        /* Brand Text */
-        .splash-brand {
-            margin-top: 30px;
-            font-size: 48px;
-            font-weight: 900;
-            letter-spacing: -2px;
-            color: white;
-            text-shadow: 
-                0 2px 10px rgba(0, 0, 0, 0.5),
-                0 0 40px rgba(59, 130, 246, 0.3);
-            animation: brandFadeIn 1s ease-out 0.3s both;
-        }
-        
-        .splash-brand span {
-            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: shimmerText 3s ease-in-out infinite;
-        }
-        
-        @keyframes brandFadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes shimmerText {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        
-        /* Tagline */
-        .splash-tagline {
-            margin-top: 12px;
-            font-size: 15px;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.6);
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            animation: taglineFadeIn 1s ease-out 0.6s both;
-        }
-        
-        @keyframes taglineFadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Modern Loader */
-        .splash-loader {
-            margin-top: 50px;
-            position: relative;
-            width: 60px;
-            height: 60px;
-            animation: loaderFadeIn 1s ease-out 0.9s both;
-        }
-        
-        @keyframes loaderFadeIn {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        
-        .splash-loader::before,
-        .splash-loader::after {
-            content: '';
-            position: absolute;
-            border-radius: 50%;
-        }
-        
-        .splash-loader::before {
-            inset: 0;
-            border: 3px solid rgba(59, 130, 246, 0.2);
-        }
-        
-        .splash-loader::after {
-            inset: 0;
-            border: 3px solid transparent;
-            border-top-color: #3b82f6;
-            border-right-color: #3b82f6;
-            animation: spinLoader 1s linear infinite;
-        }
-        
-        @keyframes spinLoader {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Loading Progress Bar */
-        .splash-progress {
-            margin-top: 30px;
-            width: 200px;
-            height: 3px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            overflow: hidden;
-            animation: progressFadeIn 1s ease-out 1.2s both;
-        }
-        
-        @keyframes progressFadeIn {
-            from { opacity: 0; width: 0; }
-            to { opacity: 1; width: 200px; }
-        }
-        
-        .splash-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
-            background-size: 200% 100%;
-            border-radius: 10px;
-            animation: progressMove 2s ease-in-out infinite;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-        }
-        
-        @keyframes progressMove {
-            0% { width: 0%; background-position: 0% 50%; }
-            50% { width: 70%; background-position: 100% 50%; }
-            100% { width: 100%; background-position: 200% 50%; }
-        }
-        
-        /* Loading Text */
-        .splash-loading-text {
-            margin-top: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.5);
-            letter-spacing: 2px;
-            animation: loadingTextFade 1s ease-out 1.5s both, loadingTextPulse 2s ease-in-out 2s infinite;
-        }
-        
-        @keyframes loadingTextFade {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        @keyframes loadingTextPulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-        
-        /* Floating Particles Effect */
-        .splash-particle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: rgba(59, 130, 246, 0.4);
-            border-radius: 50%;
-            pointer-events: none;
-            animation: particleFloat 8s ease-in-out infinite;
-        }
-        
-        .splash-particle:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; animation-duration: 7s; }
-        .splash-particle:nth-child(2) { left: 20%; top: 80%; animation-delay: 1s; animation-duration: 9s; }
-        .splash-particle:nth-child(3) { left: 80%; top: 30%; animation-delay: 2s; animation-duration: 6s; }
-        .splash-particle:nth-child(4) { left: 70%; top: 70%; animation-delay: 1.5s; animation-duration: 8s; }
-        .splash-particle:nth-child(5) { left: 40%; top: 15%; animation-delay: 0.5s; animation-duration: 7.5s; }
-        
-        @keyframes particleFloat {
-            0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(-100vh) translateX(20px); opacity: 0; }
-        }
+        #splash-screen { position: fixed; inset: 0; background: #0f172a; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.8s ease, visibility 0.8s; }
+        .splash-logo { font-size: 60px; font-weight: 900; letter-spacing: -3px; color: white; animation: pulseLogo 2s infinite ease-in-out; text-shadow: 0 0 30px rgba(14, 165, 233, 0.5); }
+        .splash-logo span { color: var(--accent-glow); }
+        .splash-loader { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent); border-radius: 50%; margin-top: var(--spacing-lg); animation: spin 1s linear infinite; }
+        @keyframes pulseLogo { 0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(56,189,248,0.2)); } 50% { transform: scale(1.1); filter: drop-shadow(0 0 30px rgba(56,189,248,0.8)); } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
         #customToast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%); background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 16px 24px; border-radius: var(--radius-lg); z-index: 100000; display: flex; align-items: center; justify-content: center; text-align: center; gap: var(--spacing-sm); box-shadow: 0 10px 40px rgba(0,0,0,0.8); backdrop-filter: blur(12px); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 280px; max-width: 90%; }
         #customToast.show { transform: translateX(-50%) translateY(0); }
         .toast-icon { color: var(--gold); flex-shrink: 0; }
@@ -3380,35 +3210,8 @@
 </div>
 
 <div id="splash-screen">
-    <!-- Floating Particles -->
-    <div class="splash-particle"></div>
-    <div class="splash-particle"></div>
-    <div class="splash-particle"></div>
-    <div class="splash-particle"></div>
-    <div class="splash-particle"></div>
-    
-    <!-- Main Content -->
-    <div class="splash-logo-container">
-        <!-- Logo Image -->
-        <img src="https://i.imgur.com/7D8u8h6.png" alt="Radio Bingo Live Logo" class="splash-logo-image">
-        
-        <!-- Brand Name -->
-        <div class="splash-brand">Radio Bingo <span>LIVE</span></div>
-        
-        <!-- Tagline -->
-        <div class="splash-tagline">Social Ecosystem</div>
-    </div>
-    
-    <!-- Modern Loader -->
+    <div class="splash-logo">RB<span>LIVE</span></div>
     <div class="splash-loader"></div>
-    
-    <!-- Progress Bar -->
-    <div class="splash-progress">
-        <div class="splash-progress-bar"></div>
-    </div>
-    
-    <!-- Loading Text -->
-    <div class="splash-loading-text">LOADING...</div>
 </div>
 
 <div id="customToast">
@@ -6108,26 +5911,33 @@
                 if(!rSnap.exists()) {
                     repliesContainer.innerHTML += '<div style="text-align:center; padding: var(--spacing-lg); opacity:0.5; font-size:11px;">No replies yet</div>';
                 } else {
+                    // NORMALIZED: Fetch user data for each reply
                     rSnap.forEach(child => {
                         const reply = child.val();
                         const isAdmin = reply.isAdmin || false;
                         const adminBadge = isAdmin ? '<span class="ticket-reply-admin-badge">Support Team</span>' : '';
                         
-                        const replyDiv = document.createElement('div');
-                        replyDiv.className = 'ticket-reply-item';
-                        replyDiv.innerHTML = `
-                            <div class="ticket-reply-header">
-                                <img src="${reply.authorPhoto}" class="ticket-reply-avatar">
-                                <div>
-                                    <div class="ticket-reply-author">${escapeHtml(reply.authorName)} ${adminBadge}</div>
+                        // Fetch user data from users table
+                        db.ref('users/' + reply.uid).once('value', userSnap => {
+                            const user = userSnap.val();
+                            if(!user) return;
+                            
+                            const replyDiv = document.createElement('div');
+                            replyDiv.className = 'ticket-reply-item';
+                            replyDiv.innerHTML = `
+                                <div class="ticket-reply-header">
+                                    <img src="${user.photo || 'https://via.placeholder.com/40'}" class="ticket-reply-avatar">
+                                    <div>
+                                        <div class="ticket-reply-author">${escapeHtml(user.name)} ${adminBadge}</div>
+                                    </div>
+                                    <div class="ticket-reply-time">${fixDate(reply.timestamp)}</div>
                                 </div>
-                                <div class="ticket-reply-time">${fixDate(reply.timestamp)}</div>
-                            </div>
-                            <div class="ticket-reply-content">${escapeHtml(reply.message)}</div>
-                        `;
-                        repliesContainer.appendChild(replyDiv);
+                                <div class="ticket-reply-content">${escapeHtml(reply.message)}</div>
+                            `;
+                            repliesContainer.appendChild(replyDiv);
+                            lucide.createIcons();
+                        });
                     });
-                    lucide.createIcons();
                 }
             });
             
@@ -6156,11 +5966,9 @@
             return;
         }
         
-        // Add reply to Firebase
+        // NORMALIZED: Add reply to Firebase with only UID
         db.ref('supportTicketReplies/' + currentTicketKey).push({
-            uid: auth.currentUser.uid,
-            authorName: userData.name,
-            authorPhoto: userData.photo,
+            uid: auth.currentUser.uid, // ONLY user reference
             message: replyText,
             timestamp: Date.now(),
             isAdmin: false
@@ -6451,13 +6259,9 @@
         
         const visibility = document.getElementById('postVisibility').value || 'public';
         
+        // NORMALIZED: Only store UID, fetch user data when displaying
         const postData = {
-            uid: auth.currentUser.uid,
-            authorName: userData.name,
-            authorPhoto: userData.photo,
-            authorPoints: userData.points,
-            authorWins: userData.bingoWins || 0,
-            authorVerified: userData.verified || false,
+            uid: auth.currentUser.uid, // ONLY user reference
             content: txt,
             mood: selectedMood,
             image: selectedImageBase64,
@@ -6898,43 +6702,14 @@ Please explain why you want a verification badge:`;
             if(updates.photo) userData.photo = updates.photo;
             if(updates.cover) userData.cover = updates.cover;
             
-            // Update ALL posts by this user
-            db.ref('socialPosts').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', postsSnapshot => {
-                const updatePromises = [];
-                postsSnapshot.forEach(postSnap => {
-                    const postUpdates = {
-                        authorName: newName
-                    };
-                    if(updates.photo) postUpdates.authorPhoto = updates.photo;
-                    
-                    updatePromises.push(
-                        db.ref('socialPosts/' + postSnap.key).update(postUpdates)
-                    );
-                });
-                
-                // Also update shared posts that reference this user
-                db.ref('socialPosts').orderByChild('sharedFrom').equalTo(auth.currentUser.uid).once('value', sharedSnapshot => {
-                    sharedSnapshot.forEach(sharedSnap => {
-                        const sharedUpdates = {
-                            sharedFromName: newName
-                        };
-                        if(updates.photo) sharedUpdates.sharedFromPhoto = updates.photo;
-                        
-                        updatePromises.push(
-                            db.ref('socialPosts/' + sharedSnap.key).update(sharedUpdates)
-                        );
-                    });
-                    
-                    Promise.all(updatePromises).then(() => {
-                        showToast("Profile & All Posts Updated!");
-                        document.getElementById('editProfileModal').style.display = 'none';
-                        // Clear inputs
-                        pfpInput.value = ""; delete pfpInput.dataset.cloudinaryUrl;
-                        coverInput.value = ""; delete coverInput.dataset.cloudinaryUrl;
-                        openMyProfile(); // Refresh
-                    });
-                });
-            });
+            // NORMALIZED: No need to update posts! User data is fetched from users table.
+            // When posts are displayed, they will automatically show the updated name/photo.
+            showToast("Profile Updated!");
+            document.getElementById('editProfileModal').style.display = 'none';
+            // Clear inputs
+            pfpInput.value = ""; delete pfpInput.dataset.cloudinaryUrl;
+            coverInput.value = ""; delete coverInput.dataset.cloudinaryUrl;
+            openMyProfile(); // Refresh
         });
     }
 
@@ -7137,28 +6912,36 @@ Please explain why you want a verification badge:`;
                 list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding: var(--spacing-lg);'>No comments yet.</div>";
                 return;
             }
+            
+            // NORMALIZED: Fetch user data for each comment
             s.forEach(c => {
                 const com = c.val();
-                const div = document.createElement('div');
-                div.className = 'comment-item';
-                div.innerHTML = `
-                    <img class="comment-avatar" src="${com.uPhoto}">
-                    <div class="comment-content-block">
-                        <div class="comment-bubble">
-                            <div class="comment-author">${com.uName} ${getBadgeHtml(com.uWins || 0)}</div>
-                            <div class="comment-text">${com.text}</div>
+                
+                db.ref('users/' + com.uid).once('value', userSnap => {
+                    const user = userSnap.val();
+                    if(!user) return;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'comment-item';
+                    div.innerHTML = `
+                        <img class="comment-avatar" src="${user.photo || 'https://via.placeholder.com/40'}">
+                        <div class="comment-content-block">
+                            <div class="comment-bubble">
+                                <div class="comment-author">${escapeHtml(user.name)} ${getBadgeHtml(user.bingoWins || 0)}</div>
+                                <div class="comment-text">${escapeHtml(com.text)}</div>
+                            </div>
+                            <div class="comment-actions">
+                                <button class="cmt-action-btn" onclick="likeComment('${postKey}', '${c.key}')">Like</button>
+                                <button class="cmt-action-btn" onclick="replyComment('${escapeHtml(user.name)}')">Reply</button>
+                                <span>${fixDate(com.time)}</span>
+                            </div>
                         </div>
-                        <div class="comment-actions">
-                            <button class="cmt-action-btn" onclick="likeComment('${postKey}', '${c.key}')">Like</button>
-                            <button class="cmt-action-btn" onclick="replyComment('${com.uName}')">Reply</button>
-                            <span>${fixDate(com.time)}</span>
-                        </div>
-                    </div>
-                `;
-                list.appendChild(div);
+                    `;
+                    list.appendChild(div);
+                    list.scrollTop = list.scrollHeight;
+                    lucide.createIcons();
+                });
             });
-            list.scrollTop = list.scrollHeight;
-            lucide.createIcons();
         });
     }
     
@@ -7175,12 +6958,9 @@ Please explain why you want a verification badge:`;
         const txt = document.getElementById('commentInput').value.trim();
         if(!txt || !currentOpenPostKey) return;
         
+        // NORMALIZED: Only store UID, fetch user data when displaying
         db.ref('postComments/' + currentOpenPostKey).push({
-            uid: auth.currentUser.uid,
-            uName: userData.name,
-            uPhoto: userData.photo,
-            uPoints: userData.points,
-            uWins: userData.bingoWins || 0,
+            uid: auth.currentUser.uid, // ONLY user reference
             text: txt,
             time: Date.now()
         });
@@ -7252,21 +7032,27 @@ Please explain why you want a verification badge:`;
                 comments.push({ key: c.key, ...c.val() });
             });
             
+            // NORMALIZED: Fetch user data for each comment
             comments.forEach(com => {
-                const div = document.createElement('div');
-                div.className = 'preview-item';
-                div.style.marginBottom = '5px';
-                
-                const truncatedText = com.text.length > 50 ? com.text.substring(0, 50) + '...' : com.text;
-                const sanitizedText = escapeHtml(truncatedText);
-                const sanitizedName = escapeHtml(com.uName);
-                
-                div.innerHTML = `
-                    <button class="preview-user" onclick="openUserProfile('${com.uid}')" style="background:none; border:none; padding:0; font:inherit; cursor:pointer;" aria-label="View ${sanitizedName}'s profile">${sanitizedName}</button>
-                    <span class="preview-text">${sanitizedText}</span>
-                `;
-                
-                previewList.appendChild(div);
+                db.ref('users/' + com.uid).once('value', userSnap => {
+                    const user = userSnap.val();
+                    if(!user) return;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'preview-item';
+                    div.style.marginBottom = '5px';
+                    
+                    const truncatedText = com.text.length > 50 ? com.text.substring(0, 50) + '...' : com.text;
+                    const sanitizedText = escapeHtml(truncatedText);
+                    const sanitizedName = escapeHtml(user.name);
+                    
+                    div.innerHTML = `
+                        <button class="preview-user" onclick="openUserProfile('${com.uid}')" style="background:none; border:none; padding:0; font:inherit; cursor:pointer;" aria-label="View ${sanitizedName}'s profile">${sanitizedName}</button>
+                        <span class="preview-text">${sanitizedText}</span>
+                    `;
+                    
+                    previewList.appendChild(div);
+                });
             });
         });
     }
@@ -7333,23 +7119,16 @@ Please explain why you want a verification badge:`;
                 return;
             }
             
-            // Create a new post that references the original
+            // NORMALIZED: Create a new post that references the original
             const shareData = {
-                uid: auth.currentUser.uid,
-                authorName: userData.name,
-                authorPhoto: userData.photo || 'https://via.placeholder.com/40',
-                authorPoints: userData.points || 0,
-                authorWins: userData.bingoWins || 0,
-                authorVerified: userData.verified || false,
+                uid: auth.currentUser.uid, // ONLY sharer's UID
                 content: caption, // User's caption
                 timestamp: Date.now(),
                 likes: 0,
                 visibility: 'public', // Shared posts default to public
                 isShared: true,
                 sharedPostKey: currentSharePostKey,
-                sharedFrom: originalPost.uid,
-                sharedFromName: originalPost.authorName,
-                sharedFromPhoto: originalPost.authorPhoto,
+                sharedFrom: originalPost.uid, // ONLY original author's UID
                 sharedContent: originalPost.content,
                 sharedImage: originalPost.image,
                 sharedVideo: originalPost.video,
@@ -7565,130 +7344,152 @@ Please explain why you want a verification badge:`;
         postDiv.className = 'post-card';
         postDiv.id = 'post-' + post.key;
         
-        // Add Friend Icon Button (only show if not friend and not own post)
-        const isOwnPost = post.uid === auth.currentUser.uid;
-        const addFriendBtn = (!isFriend && !isOwnPost) ? `<button class="add-friend-icon-btn" onclick="event.stopPropagation(); sendFriendRequest('${post.uid}')" title="Add Friend"><i data-lucide="user-plus"></i></button>` : '';
-        
-        const moodHtml = post.mood ? `<div class="mood-display">Feeling ${post.mood}</div>` : '';
-        const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
-        const videoHtml = post.video ? `<div class="post-image-container"><video src="${post.video}" class="post-image" controls style="width:100%; max-height:400px;"></video></div>` : '';
-        
-        // Visibility indicator
-        const visibility = post.visibility || 'public';
-        let visibilityIconName = 'globe'; // public
-        let visibilityText = 'Public';
-        if(visibility === 'friends') {
-            visibilityIconName = 'users';
-            visibilityText = 'Friends';
-        } else if(visibility === 'private') {
-            visibilityIconName = 'lock';
-            visibilityText = 'Only Me';
-        }
-        const visibilityBadge = `<span class="visibility-badge" title="${visibilityText}" style="margin-left:4px;"><i data-lucide="${visibilityIconName}" style="width:11px; height:11px;"></i></span>`;
-        
-        // Check if this is a shared post
-        let sharedPostHtml = '';
-        if(post.isShared && post.sharedContent !== undefined) {
-            const sharedImgHtml = post.sharedImage ? `<div class="post-image-container"><img src="${post.sharedImage}" class="post-image"></div>` : '';
-            const sharedVideoHtml = post.sharedVideo ? `<div class="post-image-container"><video src="${post.sharedVideo}" class="post-image" controls style="width:100%; max-height:300px;"></video></div>` : '';
-            const sharedMoodHtml = post.sharedMood ? `<div class="mood-display">Feeling ${post.sharedMood}</div>` : '';
-            sharedPostHtml = `
-                <div class="shared-post-container">
-                    <div style="font-size:10px; color:#94a3b8; margin-bottom: var(--spacing-xs); display:flex; align-items:center; gap:5px;">
-                        <i data-lucide="share-2" style="width:12px;"></i>
-                        <span>Shared from ${escapeHtml(post.sharedFromName)}</span>
+        // NORMALIZED: Fetch user data from users/{uid} instead of from post
+        db.ref('users/' + post.uid).once('value', authorSnap => {
+            const author = authorSnap.val();
+            if (!author) {
+                console.error('Author not found:', post.uid);
+                return;
+            }
+            
+            // Add Friend Icon Button (only show if not friend and not own post)
+            const isOwnPost = post.uid === auth.currentUser.uid;
+            const addFriendBtn = (!isFriend && !isOwnPost) ? `<button class="add-friend-icon-btn" onclick="event.stopPropagation(); sendFriendRequest('${post.uid}')" title="Add Friend"><i data-lucide="user-plus"></i></button>` : '';
+            
+            const moodHtml = post.mood ? `<div class="mood-display">Feeling ${post.mood}</div>` : '';
+            const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
+            const videoHtml = post.video ? `<div class="post-image-container"><video src="${post.video}" class="post-image" controls style="width:100%; max-height:400px;"></video></div>` : '';
+            
+            // Visibility indicator
+            const visibility = post.visibility || 'public';
+            let visibilityIconName = 'globe'; // public
+            let visibilityText = 'Public';
+            if(visibility === 'friends') {
+                visibilityIconName = 'users';
+                visibilityText = 'Friends';
+            } else if(visibility === 'private') {
+                visibilityIconName = 'lock';
+                visibilityText = 'Only Me';
+            }
+            const visibilityBadge = `<span class="visibility-badge" title="${visibilityText}" style="margin-left:4px;"><i data-lucide="${visibilityIconName}" style="width:11px; height:11px;"></i></span>`;
+            
+            // NORMALIZED: Check if this is a shared post - fetch shared author data
+            let sharedPostHtml = '';
+            if(post.isShared && post.sharedContent !== undefined && post.sharedFrom) {
+                // Fetch shared author data
+                db.ref('users/' + post.sharedFrom).once('value', sharedAuthorSnap => {
+                    const sharedAuthor = sharedAuthorSnap.val();
+                    if(sharedAuthor) {
+                        const sharedImgHtml = post.sharedImage ? `<div class="post-image-container"><img src="${post.sharedImage}" class="post-image"></div>` : '';
+                        const sharedVideoHtml = post.sharedVideo ? `<div class="post-image-container"><video src="${post.sharedVideo}" class="post-image" controls style="width:100%; max-height:300px;"></video></div>` : '';
+                        const sharedMoodHtml = post.sharedMood ? `<div class="mood-display">Feeling ${post.sharedMood}</div>` : '';
+                        
+                        const sharedPostContainer = postDiv.querySelector('.shared-post-placeholder');
+                        if(sharedPostContainer) {
+                            sharedPostContainer.innerHTML = `
+                                <div class="shared-post-container">
+                                    <div style="font-size:10px; color:#94a3b8; margin-bottom: var(--spacing-xs); display:flex; align-items:center; gap:5px;">
+                                        <i data-lucide="share-2" style="width:12px;"></i>
+                                        <span>Shared from ${escapeHtml(sharedAuthor.name)}</span>
+                                    </div>
+                                    <div style="display:flex; gap: var(--spacing-sm); align-items:flex-start;">
+                                        <img src="${sharedAuthor.photo || 'https://via.placeholder.com/30'}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" onclick="openUserProfile('${post.sharedFrom}')">
+                                        <div style="flex:1;">
+                                            <div style="font-weight:700; font-size:11px; color:white; margin-bottom:3px;">${escapeHtml(sharedAuthor.name)}</div>
+                                            ${sharedMoodHtml}
+                                            <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">${escapeHtml(post.sharedContent || '')}</div>
+                                            ${sharedImgHtml}
+                                            ${sharedVideoHtml}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            lucide.createIcons();
+                        }
+                    }
+                });
+            }
+            
+            postDiv.innerHTML = `
+                <div class="post-header">
+                    <img class="post-avatar" src="${author.photo || 'https://via.placeholder.com/40'}" onclick="openUserProfile('${post.uid}')">
+                    <div class="post-meta">
+                        <div class="post-author">
+                            ${escapeHtml(author.name)} 
+                            ${author.verified ? '<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>' : ''} 
+                            ${addFriendBtn}
+                        </div>
+                        <div class="post-time" style="display:flex; align-items:center;">${fixDate(post.timestamp)}${visibilityBadge}</div>
+                        ${moodHtml}
                     </div>
-                    <div style="display:flex; gap: var(--spacing-sm); align-items:flex-start;">
-                        <img src="${post.sharedFromPhoto}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" onclick="openUserProfile('${post.sharedFrom}')">
-                        <div style="flex:1;">
-                            <div style="font-weight:700; font-size:11px; color:white; margin-bottom:3px;">${escapeHtml(post.sharedFromName)}</div>
-                            ${sharedMoodHtml}
-                            <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">${escapeHtml(post.sharedContent || '')}</div>
-                            ${sharedImgHtml}
-                            ${sharedVideoHtml}
+                    ${isOwnPost ? `
+                    <div style="position: relative;">
+                        <button class="post-overflow-btn" onclick="togglePostMenu('${post.key}')" aria-label="Post options">
+                            <i data-lucide="more-vertical" style="width:18px; height:18px;"></i>
+                        </button>
+                        <div class="post-overflow-menu" id="post-menu-${post.key}">
+                            <button class="overflow-menu-item delete-item" onclick="deletePost('${post.key}')">
+                                <i data-lucide="trash-2" style="width:14px;"></i>
+                                Delete Post
+                            </button>
                         </div>
                     </div>
+                    ` : ''}
+                </div>
+                <div class="post-content">${escapeHtml(post.content || '')}</div>
+                ${imgHtml}
+                ${videoHtml}
+                <div class="shared-post-placeholder"></div>
+                <div class="reaction-summary-bar" id="reaction-summary-${post.key}" onclick="openReactionViewer('${post.key}')"></div>
+                <div class="post-actions" style="position:relative;">
+                    <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
+                        <i data-lucide="heart" id="like-icon-${post.key}" style="width:14px;"></i> 
+                        <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post">
+                            <span id="like-count-${post.key}">${post.likes || 0}</span>
+                        </span>
+                    </button>
+                    <div id="react-pop-${post.key}" class="reaction-popup" onmouseleave="this.style.display='none'">
+                        <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '❤️')">❤️</span>
+                        <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😂')">😂</span>
+                        <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😮')">😮</span>
+                        <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😢')">😢</span>
+                    </div>
+                    <button class="action-btn" onclick="openComments('${post.key}')">
+                        <i data-lucide="message-circle" style="width:14px"></i> <span id="comment-btn-text-${post.key}">Comment</span>
+                    </button>
+                    <button class="action-btn" onclick="openShareModal('${post.key}')">
+                        <i data-lucide="share-2" style="width:14px"></i> Share
+                    </button>
+                </div>
+                <div id="comment-preview-${post.key}" class="comment-preview-area" style="display:none;">
+                    <div id="preview-list-${post.key}" style="margin-bottom: var(--spacing-xs);"></div>
+                    <button onclick="openComments('${post.key}')" style="background:none; border:none; color:var(--accent); font-size:11px; font-weight:700; cursor:pointer; padding:0;" aria-label="View all comments for this post">View all comments</button>
                 </div>
             `;
-        }
-        
-        postDiv.innerHTML = `
-            <div class="post-header">
-                <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
-                <div class="post-meta">
-                    <div class="post-author">
-                        ${post.authorName} 
-                        ${post.authorVerified ? '<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>' : ''} 
-                        ${addFriendBtn}
-                    </div>
-                    <div class="post-time" style="display:flex; align-items:center;">${fixDate(post.timestamp)}${visibilityBadge}</div>
-                    ${moodHtml}
-                </div>
-                ${isOwnPost ? `
-                <div style="position: relative;">
-                    <button class="post-overflow-btn" onclick="togglePostMenu('${post.key}')" aria-label="Post options">
-                        <i data-lucide="more-vertical" style="width:18px; height:18px;"></i>
-                    </button>
-                    <div class="post-overflow-menu" id="post-menu-${post.key}">
-                        <button class="overflow-menu-item delete-item" onclick="deletePost('${post.key}')">
-                            <i data-lucide="trash-2" style="width:14px;"></i>
-                            Delete Post
-                        </button>
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-            <div class="post-content">${escapeHtml(post.content || '')}</div>
-            ${imgHtml}
-            ${videoHtml}
-            ${sharedPostHtml}
-            <div class="reaction-summary-bar" id="reaction-summary-${post.key}" onclick="openReactionViewer('${post.key}')"></div>
-            <div class="post-actions" style="position:relative;">
-                <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
-                    <i data-lucide="heart" id="like-icon-${post.key}" style="width:14px;"></i> 
-                    <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post">
-                        <span id="like-count-${post.key}">${post.likes || 0}</span>
-                    </span>
-                </button>
-                <div id="react-pop-${post.key}" class="reaction-popup" onmouseleave="this.style.display='none'">
-                    <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '❤️')">❤️</span>
-                    <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😂')">😂</span>
-                    <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😮')">😮</span>
-                    <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😢')">😢</span>
-                </div>
-                <button class="action-btn" onclick="openComments('${post.key}')">
-                    <i data-lucide="message-circle" style="width:14px"></i> <span id="comment-btn-text-${post.key}">Comment</span>
-                </button>
-                <button class="action-btn" onclick="openShareModal('${post.key}')">
-                    <i data-lucide="share-2" style="width:14px"></i> Share
-                </button>
-            </div>
-            <div id="comment-preview-${post.key}" class="comment-preview-area" style="display:none;">
-                <div id="preview-list-${post.key}" style="margin-bottom: var(--spacing-xs);"></div>
-                <button onclick="openComments('${post.key}')" style="background:none; border:none; color:var(--accent); font-size:11px; font-weight:700; cursor:pointer; padding:0;" aria-label="View all comments for this post">View all comments</button>
-            </div>
-        `;
-        
-        // Load initial state (simple check if liked)
-        db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
-            if(lSnap.exists()) {
-                const btn = postDiv.querySelector('#like-btn-' + post.key);
-                const reaction = lSnap.val(); // Get stored emoji
-                const sanitizedReaction = reaction === true ? '❤️' : escapeHtml(reaction);
-                if(btn) {
-                    btn.classList.add('liked');
-                    btn.innerHTML = `<span style="font-size:16px;">${sanitizedReaction}</span> <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post"><span id="like-count-${post.key}">${post.likes || 0}</span></span>`;
+            
+            lucide.createIcons();
+            
+            // Load initial state (simple check if liked)
+            db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
+                if(lSnap.exists()) {
+                    const btn = postDiv.querySelector('#like-btn-' + post.key);
+                    const reaction = lSnap.val(); // Get stored emoji
+                    const sanitizedReaction = reaction === true ? '❤️' : escapeHtml(reaction);
+                    if(btn) {
+                        btn.classList.add('liked');
+                        btn.innerHTML = `<span style="font-size:16px;">${sanitizedReaction}</span> <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post"><span id="like-count-${post.key}">${post.likes || 0}</span></span>`;
+                    }
                 }
-            }
-        });
-        
-        // Load comment count
-        db.ref('postComments/' + post.key).on('value', snapshot => {
-            const count = snapshot.numChildren();
-            const btnText = postDiv.querySelector('#comment-btn-text-' + post.key);
-            if (btnText && count > 0) {
-                btnText.textContent = `${count}`;
-            }
+            });
+            
+            // Load comment count
+            db.ref('postComments/' + post.key).on('value', snapshot => {
+                const count = snapshot.numChildren();
+                const btnText = postDiv.querySelector('#comment-btn-text-' + post.key);
+                if (btnText && count > 0) {
+                    btnText.textContent = `${count}`;
+                }
+            });
         });
         
         return postDiv;
