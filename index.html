@@ -1405,8 +1405,8 @@
         .pm-item { display: flex; align-items: center; gap: var(--spacing-sm); padding: var(--spacing-md) 15px; transition: 0.2s; cursor: pointer; border-bottom: 1px solid #111; }
         .pm-item:hover { background: #111; }
         .pm-avatar { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; }
-        .pm-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-        .pm-name { font-size: 16px; font-weight: 700; color: white; }
+        .pm-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .pm-name { font-size: 16px; font-weight: 700; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .pm-preview { font-size: 14px; color: #909090; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; }
         
         .pm-chat-view { display: none; flex-direction: column; height: 100%; background: #000000; position: absolute; inset: 0; z-index: 60; }
@@ -5103,10 +5103,35 @@
             const uid = el.dataset.uid;
             if(uid) {
                 const dot = el.querySelector('.online-indicator');
-                if(onlineUsers[uid] && dot) dot.classList.add('is-online');
-                else if(dot) dot.classList.remove('is-online');
+                // Only show online indicator if user is truly online
+                if(onlineUsers[uid] && onlineUsers[uid].state === 'online' && dot) {
+                    dot.classList.add('is-online');
+                } else if(dot) {
+                    dot.classList.remove('is-online');
+                }
             }
         });
+    }
+    
+    // Helper function to format "last seen" time
+    function formatLastSeen(timestamp) {
+        if(!timestamp) return 'Recently';
+        
+        const now = Date.now();
+        const diffMs = now - timestamp;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if(diffMins < 1) return 'Just now';
+        if(diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+        if(diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        if(diffDays === 1) return 'Yesterday';
+        if(diffDays < 7) return `${diffDays} days ago`;
+        
+        // Format as date for older
+        const date = new Date(timestamp);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
 
     // Helper to get verification badge HTML for text
@@ -5448,14 +5473,24 @@
         const userStatusRef = db.ref('status/' + uid); 
         onlineRef.on('value', (snapshot) => { 
             if (snapshot.val() === false) return; 
-            userStatusRef.onDisconnect().remove().then(() => { 
-                userStatusRef.set({ state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP }); 
+            // When user disconnects, update status to offline with timestamp
+            userStatusRef.onDisconnect().set({ 
+                state: 'offline', 
+                last_seen: firebase.database.ServerValue.TIMESTAMP 
+            }).then(() => { 
+                // While online, set status to online
+                userStatusRef.set({ 
+                    state: 'online', 
+                    last_seen: firebase.database.ServerValue.TIMESTAMP 
+                }); 
             }); 
         }); 
         // Global Presence Listener
         db.ref('status').on('value', (s) => { 
             onlineUsers = s.val() || {};
-            document.getElementById('onlineCount').innerText = s.numChildren() || 0; 
+            // Count only truly online users
+            const onlineCount = Object.values(onlineUsers).filter(status => status.state === 'online').length;
+            document.getElementById('onlineCount').innerText = onlineCount || 0; 
             updateAllOnlineIndicators();
         }); 
     }
@@ -5633,13 +5668,41 @@
                     db.ref('users/' + partnerId).once('value', uSnap => { 
                         const u = uSnap.val(); 
                         const lastMsg = conversations[partnerId]; 
-                        const div = document.createElement('div'); 
-                        div.className = 'pm-item'; 
-                        div.onclick = () => openPrivateChat(partnerId, u.name, u.photo); 
-                        const previewText = lastMsg.image ? 'Sent a photo' : lastMsg.text;
-                        div.innerHTML = `<img class="pm-avatar" src="${u.photo || 'https://via.placeholder.com/40'}"><div class="pm-info"><span class="pm-name">${u.name} ${getBadgeHtml(u.bingoWins || 0)}</span><span class="pm-preview">${lastMsg.from === uid ? 'You: ' : ''}${previewText}</span></div>`; 
-                        list.appendChild(div); 
-                        lucide.createIcons();
+                        
+                        // Check online status
+                        db.ref('status/' + partnerId).once('value', statusSnap => {
+                            const status = statusSnap.val();
+                            const isOnline = status && status.state === 'online';
+                            const lastSeenText = !isOnline && status && status.last_seen 
+                                ? formatLastSeen(status.last_seen) 
+                                : '';
+                            
+                            const div = document.createElement('div'); 
+                            div.className = 'pm-item'; 
+                            div.onclick = () => openPrivateChat(partnerId, u.name, u.photo); 
+                            const previewText = lastMsg.image ? 'Sent a photo' : lastMsg.text;
+                            
+                            // Add online indicator wrapper to avatar
+                            const onlineDot = isOnline ? '<div class="online-indicator is-online"></div>' : '';
+                            const statusInfo = isOnline ? '<span style="color: #22c55e; font-size: 12px; font-weight: 500;">● Online</span>' : 
+                                               (lastSeenText ? `<span style="color: rgba(255,255,255,0.4); font-size: 11px;">Last seen ${lastSeenText}</span>` : '');
+                            
+                            div.innerHTML = `
+                                <div class="avatar-frame" data-uid="${partnerId}" style="position: relative; flex-shrink: 0;">
+                                    <img class="pm-avatar" src="${u.photo || 'https://via.placeholder.com/40'}">
+                                    ${onlineDot}
+                                </div>
+                                <div class="pm-info">
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span class="pm-name">${u.name} ${getBadgeHtml(u.bingoWins || 0)}</span>
+                                    </div>
+                                    <span class="pm-preview">${lastMsg.from === uid ? 'You: ' : ''}${previewText}</span>
+                                    ${statusInfo}
+                                </div>
+                            `; 
+                            list.appendChild(div); 
+                            lucide.createIcons();
+                        });
                     }); 
                 }); 
             });
@@ -5649,22 +5712,48 @@
     function renderActiveFriends() {
         const bar = document.getElementById('activeFriendsBar');
         bar.innerHTML = '';
+        
+        if(!auth.currentUser) return;
+        
         db.ref('friends/' + auth.currentUser.uid).once('value', s => {
             if(!s.exists()) return;
-            s.forEach(f => {
-                db.ref('users/' + f.key).once('value', uSnap => {
-                    const u = uSnap.val();
-                    const item = document.createElement('div');
-                    item.className = 'active-friend-item';
-                    item.onclick = () => openPrivateChat(f.key, u.name, u.photo); 
-                    item.innerHTML = `
-                        <div class="active-img-wrap">
-                            <img src="${u.photo}" class="active-img">
-                            <div class="online-dot-large"></div>
-                        </div>
-                        <div class="active-name">${u.name.split(' ')[0]}</div>
-                    `;
-                    bar.appendChild(item);
+            
+            const friendsList = [];
+            s.forEach(f => friendsList.push(f.key));
+            
+            // Check each friend's online status
+            friendsList.forEach(friendId => {
+                db.ref('status/' + friendId).on('value', statusSnap => {
+                    const status = statusSnap.val();
+                    
+                    // Only show if truly online
+                    if(status && status.state === 'online') {
+                        db.ref('users/' + friendId).once('value', uSnap => {
+                            const u = uSnap.val();
+                            if(!u) return;
+                            
+                            // Remove existing item if present
+                            const existingItem = bar.querySelector(`[data-friend-id="${friendId}"]`);
+                            if(existingItem) existingItem.remove();
+                            
+                            const item = document.createElement('div');
+                            item.className = 'active-friend-item';
+                            item.dataset.friendId = friendId;
+                            item.onclick = () => openPrivateChat(friendId, u.name, u.photo); 
+                            item.innerHTML = `
+                                <div class="active-img-wrap">
+                                    <img src="${u.photo}" class="active-img">
+                                    <div class="online-dot-large"></div>
+                                </div>
+                                <div class="active-name">${u.name.split(' ')[0]}</div>
+                            `;
+                            bar.appendChild(item);
+                        });
+                    } else {
+                        // Remove from active bar if user went offline
+                        const existingItem = bar.querySelector(`[data-friend-id="${friendId}"]`);
+                        if(existingItem) existingItem.remove();
+                    }
                 });
             });
         });
@@ -5778,7 +5867,26 @@
         document.getElementById('pmInboxView').style.display = 'none'; 
         document.getElementById('pmChatView').style.display = 'flex'; 
         document.getElementById('chatTargetName').innerText = name; 
-        document.getElementById('chatTargetStatus').innerText = "Active now";
+        
+        // Real-time status monitoring
+        const statusRef = db.ref('status/' + uid);
+        statusRef.on('value', statusSnap => {
+            const status = statusSnap.val();
+            const statusElement = document.getElementById('chatTargetStatus');
+            
+            if(status && status.state === 'online') {
+                statusElement.innerText = "Online";
+                statusElement.style.color = "#22c55e";
+            } else if(status && status.last_seen) {
+                const lastSeenText = formatLastSeen(status.last_seen);
+                statusElement.innerText = `Last seen ${lastSeenText}`;
+                statusElement.style.color = "rgba(255,255,255,0.5)";
+            } else {
+                statusElement.innerText = "Offline";
+                statusElement.style.color = "rgba(255,255,255,0.4)";
+            }
+        });
+        
         document.getElementById('chatTargetAvatarCont').innerHTML = `<img src="${photo}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
         
         db.ref('notifications/' + auth.currentUser.uid).once('value', s => {
@@ -5793,6 +5901,11 @@
     }
     
     function backToInbox() { 
+        // Clean up status listener
+        if(currentChatPartner) {
+            db.ref('status/' + currentChatPartner).off();
+        }
+        
         currentChatPartner = null; 
         isGroupChat = false;
         document.getElementById('pmChatView').style.display = 'none'; 
