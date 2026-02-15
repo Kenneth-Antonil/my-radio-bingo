@@ -5228,7 +5228,13 @@
                     from: myUid,
                     image: userData.photo || 'https://via.placeholder.com/40'
                 });
-
+            }
+        }
+    }
+                });
+            }
+        }
+    }
     
     function switchStoreTab(tab) {
         document.querySelectorAll('.store-tab-btn').forEach(b => b.classList.remove('active'));
@@ -8574,6 +8580,70 @@ Please explain why you want a verification badge:`;
                 });
             }, 500);
         };
+    }
+
+    // ============================================
+    // FIREBASE INITIALIZATION & APP STARTUP
+    // ============================================
+    
+    const firebaseConfig = {
+        apiKey: "AIzaSyDxkT6NmNLgQ8lG7RW-nlVOkbPC4i6Gaqg",
+        authDomain: "bingo-b494f.firebaseapp.com",
+        databaseURL: "https://bingo-b494f-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "bingo-b494f",
+        storageBucket: "bingo-b494f.appspot.com",
+        messagingSenderId: "544310995892",
+        appId: "1:544310995892:web:8c9b4f90906d4d2b40f15b"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+    
+    // Remove splash screen after Firebase is ready
+    auth.onAuthStateChanged(function(user) {
+        // Hide splash screen
+        setTimeout(function() {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                splash.style.opacity = '0';
+                setTimeout(function() {
+                    splash.style.display = 'none';
+                }, 300);
+            }
+        }, 1000);
+        
+        if (user) {
+            // User is logged in
+            loadUserData(user.uid);
+            initializeApp();
+        } else {
+            // User is not logged in
+            showLoginScreen();
+        }
+    });
+    
+    function initializeApp() {
+        // Initialize all app features
+        if (typeof loadPosts === 'function') loadPosts();
+        if (typeof loadNotifications === 'function') loadNotifications();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    
+    function showLoginScreen() {
+        // Show login UI if exists
+        const loginScreen = document.getElementById('login-screen');
+        if (loginScreen) {
+            loginScreen.style.display = 'flex';
+        }
+    }
+    
+    function loadUserData(uid) {
+        db.ref('users/' + uid).once('value', function(snapshot) {
+            if (snapshot.exists()) {
+                window.userData = snapshot.val();
+            }
+        });
     }
 </script>
 
