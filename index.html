@@ -399,38 +399,6 @@
             display: none; /* Hide text labels, show only icons */
         }
 
-        /* Visibility selector as clean button */
-        .visibility-selector {
-            background: transparent;
-            border: none;
-            border-radius: 50%;
-            color: #60a5fa;
-            padding: 8px 12px;
-            height: 40px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            outline: none;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            appearance: none;
-            -webkit-appearance: none;
-            border-radius: 20px;
-        }
-        .visibility-selector:hover {
-            background: rgba(59, 130, 246, 0.12);
-            color: #3b82f6;
-        }
-        .visibility-selector:active {
-            transform: scale(0.95);
-        }
-        .visibility-selector option {
-            background: #1e293b;
-            color: white;
-            padding: 8px;
-        }
 
         .btn-post-modern {
             background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -1977,7 +1945,7 @@
                 flex-wrap: wrap;
                 gap: var(--spacing-sm);
             }
-            .tool-btn, .visibility-selector, .btn-post-modern {
+            .tool-btn, .btn-post-modern {
                 flex: 1 1 calc(50% - 4px);
                 min-width: calc(50% - 4px);
                 justify-content: center;
@@ -2191,11 +2159,10 @@
                         </label>
                         <input type="file" id="postImgInput" accept="image/*" style="display:none" onchange="handlePostImage(this)">
                         
-                        <select id="postVisibility" class="visibility-selector" aria-label="Post visibility">
-                            <option value="public">Public</option>
-                            <option value="friends">Friends</option>
-                            <option value="private">Private</option>
-                        </select>
+                        <button class="tool-btn" id="visibilityBtn" onclick="toggleVisibility()" title="Post visibility">
+                            <i data-lucide="globe" id="visibilityIcon"></i>
+                        </button>
+                        <input type="hidden" id="postVisibility" value="public">
                     </div>
                     
                     <button class="btn-post-modern" onclick="createPost()">
@@ -4118,6 +4085,27 @@
         selectedImageBase64 = null;
         document.getElementById('postImgInput').value = "";
         document.getElementById('imgPreviewCont').style.display = 'none';
+    }
+
+    function toggleVisibility() {
+        const visibilityInput = document.getElementById('postVisibility');
+        const visibilityIcon = document.getElementById('visibilityIcon');
+        const currentValue = visibilityInput.value;
+        
+        // Cycle through: public -> friends -> private -> public
+        if (currentValue === 'public') {
+            visibilityInput.value = 'friends';
+            visibilityIcon.setAttribute('data-lucide', 'users');
+        } else if (currentValue === 'friends') {
+            visibilityInput.value = 'private';
+            visibilityIcon.setAttribute('data-lucide', 'lock');
+        } else {
+            visibilityInput.value = 'public';
+            visibilityIcon.setAttribute('data-lucide', 'globe');
+        }
+        
+        // Re-render the icon
+        lucide.createIcons();
     }
 
     function createPost() {
