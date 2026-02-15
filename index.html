@@ -33,6 +33,64 @@
     <style>
         /* === CORE VARIABLES === */
         :root { 
+    
+    <!-- 
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║  DATABASE NORMALIZATION - PROPER 3NF STRUCTURE                   ║
+    ╠══════════════════════════════════════════════════════════════════╣
+    ║                                                                   ║
+    ║  ALL DATA IS PROPERLY NORMALIZED - NO REDUNDANCY!                ║
+    ║                                                                   ║
+    ║  ✓ socialPosts: Only stores UID (no name, photo, etc)           ║
+    ║  ✓ postComments: Only stores UID (no name, photo, etc)          ║
+    ║  ✓ supportTicketReplies: Only stores UID                        ║
+    ║  ✓ User data fetched from users/{uid} when displaying           ║
+    ║                                                                   ║
+    ║  BENEFITS:                                                       ║
+    ║  • No data duplication                                           ║
+    ║  • Profile updates automatically reflect everywhere              ║
+    ║  • Smaller database size                                         ║
+    ║  • Easier maintenance                                            ║
+    ║  • Single source of truth for user data                          ║
+    ║                                                                   ║
+    ║  DATABASE STRUCTURE:                                             ║
+    ║                                                                   ║
+    ║  socialPosts/{postKey}                                           ║
+    ║    ├─ uid (REFERENCE to users/{uid})                             ║
+    ║    ├─ content                                                    ║
+    ║    ├─ mood                                                       ║
+    ║    ├─ image                                                      ║
+    ║    ├─ video                                                      ║
+    ║    ├─ timestamp                                                  ║
+    ║    ├─ likes                                                      ║
+    ║    ├─ visibility                                                 ║
+    ║    ├─ isShared (if shared)                                      ║
+    ║    ├─ sharedFrom (UID REFERENCE, if shared)                      ║
+    ║    └─ sharedPostKey (if shared)                                  ║
+    ║                                                                   ║
+    ║  postComments/{postKey}/{commentKey}                             ║
+    ║    ├─ uid (REFERENCE to users/{uid})                             ║
+    ║    ├─ text                                                       ║
+    ║    └─ time                                                       ║
+    ║                                                                   ║
+    ║  supportTicketReplies/{ticketKey}/{replyKey}                     ║
+    ║    ├─ uid (REFERENCE to users/{uid})                             ║
+    ║    ├─ message                                                    ║
+    ║    ├─ timestamp                                                  ║
+    ║    └─ isAdmin                                                    ║
+    ║                                                                   ║
+    ║  users/{uid}                                                     ║
+    ║    ├─ name                                                       ║
+    ║    ├─ photo                                                      ║
+    ║    ├─ bio                                                        ║
+    ║    ├─ verified                                                   ║
+    ║    ├─ points                                                     ║
+    ║    ├─ bingoWins                                                  ║
+    ║    └─ ... (all user data)                                        ║
+    ║                                                                   ║
+    ╚══════════════════════════════════════════════════════════════════╝
+    -->
+
             --bg-overlay: rgba(15, 23, 42, 0.95); 
             --glass-surface: rgba(30, 41, 59, 0.75);
             --glass-border: rgba(255, 255, 255, 0.1);
@@ -1534,75 +1592,28 @@
         .dropdown-item:active { background: rgba(255,255,255,0.12); transform: scale(0.98); }
         .dropdown-item i { width: 18px; height: 18px; }
         
-        /* Verification Badge (Blue Checkmark) - PREMIUM DESIGN */
+        /* Verification Badge (Blue Checkmark) */
         .verified-badge {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 18px;
-            height: 18px;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
             border-radius: 50%;
             margin-left: 4px;
-            flex-shrink: 0;
-            position: relative;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4),
-                        0 0 0 2px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: verifiedPulse 2s ease-in-out infinite;
+            transition: all 0.2s ease;
         }
-        
-        .verified-badge::before {
-            content: '';
-            position: absolute;
-            inset: -2px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #60a5fa, #3b82f6);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: -1;
-        }
-        
         .verified-badge:hover {
-            transform: scale(1.15) rotate(10deg);
-            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.6),
-                        0 0 0 3px rgba(59, 130, 246, 0.3);
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
         }
-        
-        .verified-badge:hover::before {
-            opacity: 1;
-            animation: verifiedGlow 1.5s ease-in-out infinite;
-        }
-        
         .verified-badge i {
-            width: 11px !important;
-            height: 11px !important;
+            width: 10px;
+            height: 10px;
             color: white;
-            stroke-width: 3.5;
-            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-        }
-        
-        @keyframes verifiedPulse {
-            0%, 100% {
-                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4),
-                            0 0 0 2px rgba(59, 130, 246, 0.2);
-            }
-            50% {
-                box-shadow: 0 2px 12px rgba(59, 130, 246, 0.6),
-                            0 0 0 3px rgba(59, 130, 246, 0.3);
-            }
-        }
-        
-        @keyframes verifiedGlow {
-            0%, 100% {
-                transform: scale(1);
-                opacity: 0.5;
-            }
-            50% {
-                transform: scale(1.2);
-                opacity: 0.8;
-            }
         }
         
         /* Verification Badge Tooltip */
@@ -5900,26 +5911,33 @@
                 if(!rSnap.exists()) {
                     repliesContainer.innerHTML += '<div style="text-align:center; padding: var(--spacing-lg); opacity:0.5; font-size:11px;">No replies yet</div>';
                 } else {
+                    // NORMALIZED: Fetch user data for each reply
                     rSnap.forEach(child => {
                         const reply = child.val();
                         const isAdmin = reply.isAdmin || false;
                         const adminBadge = isAdmin ? '<span class="ticket-reply-admin-badge">Support Team</span>' : '';
                         
-                        const replyDiv = document.createElement('div');
-                        replyDiv.className = 'ticket-reply-item';
-                        replyDiv.innerHTML = `
-                            <div class="ticket-reply-header">
-                                <img src="${reply.authorPhoto}" class="ticket-reply-avatar">
-                                <div>
-                                    <div class="ticket-reply-author">${escapeHtml(reply.authorName)} ${adminBadge}</div>
+                        // Fetch user data from users table
+                        db.ref('users/' + reply.uid).once('value', userSnap => {
+                            const user = userSnap.val();
+                            if(!user) return;
+                            
+                            const replyDiv = document.createElement('div');
+                            replyDiv.className = 'ticket-reply-item';
+                            replyDiv.innerHTML = `
+                                <div class="ticket-reply-header">
+                                    <img src="${user.photo || 'https://via.placeholder.com/40'}" class="ticket-reply-avatar">
+                                    <div>
+                                        <div class="ticket-reply-author">${escapeHtml(user.name)} ${adminBadge}</div>
+                                    </div>
+                                    <div class="ticket-reply-time">${fixDate(reply.timestamp)}</div>
                                 </div>
-                                <div class="ticket-reply-time">${fixDate(reply.timestamp)}</div>
-                            </div>
-                            <div class="ticket-reply-content">${escapeHtml(reply.message)}</div>
-                        `;
-                        repliesContainer.appendChild(replyDiv);
+                                <div class="ticket-reply-content">${escapeHtml(reply.message)}</div>
+                            `;
+                            repliesContainer.appendChild(replyDiv);
+                            lucide.createIcons();
+                        });
                     });
-                    lucide.createIcons();
                 }
             });
             
@@ -5948,11 +5966,9 @@
             return;
         }
         
-        // Add reply to Firebase
+        // NORMALIZED: Add reply to Firebase with only UID
         db.ref('supportTicketReplies/' + currentTicketKey).push({
-            uid: auth.currentUser.uid,
-            authorName: userData.name,
-            authorPhoto: userData.photo,
+            uid: auth.currentUser.uid, // ONLY user reference
             message: replyText,
             timestamp: Date.now(),
             isAdmin: false
@@ -6243,13 +6259,9 @@
         
         const visibility = document.getElementById('postVisibility').value || 'public';
         
+        // NORMALIZED: Only store UID, fetch user data when displaying
         const postData = {
-            uid: auth.currentUser.uid,
-            authorName: userData.name,
-            authorPhoto: userData.photo,
-            authorPoints: userData.points,
-            authorWins: userData.bingoWins || 0,
-            authorVerified: userData.verified || false,
+            uid: auth.currentUser.uid, // ONLY user reference
             content: txt,
             mood: selectedMood,
             image: selectedImageBase64,
@@ -6690,43 +6702,14 @@ Please explain why you want a verification badge:`;
             if(updates.photo) userData.photo = updates.photo;
             if(updates.cover) userData.cover = updates.cover;
             
-            // Update ALL posts by this user
-            db.ref('socialPosts').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', postsSnapshot => {
-                const updatePromises = [];
-                postsSnapshot.forEach(postSnap => {
-                    const postUpdates = {
-                        authorName: newName
-                    };
-                    if(updates.photo) postUpdates.authorPhoto = updates.photo;
-                    
-                    updatePromises.push(
-                        db.ref('socialPosts/' + postSnap.key).update(postUpdates)
-                    );
-                });
-                
-                // Also update shared posts that reference this user
-                db.ref('socialPosts').orderByChild('sharedFrom').equalTo(auth.currentUser.uid).once('value', sharedSnapshot => {
-                    sharedSnapshot.forEach(sharedSnap => {
-                        const sharedUpdates = {
-                            sharedFromName: newName
-                        };
-                        if(updates.photo) sharedUpdates.sharedFromPhoto = updates.photo;
-                        
-                        updatePromises.push(
-                            db.ref('socialPosts/' + sharedSnap.key).update(sharedUpdates)
-                        );
-                    });
-                    
-                    Promise.all(updatePromises).then(() => {
-                        showToast("Profile & All Posts Updated!");
-                        document.getElementById('editProfileModal').style.display = 'none';
-                        // Clear inputs
-                        pfpInput.value = ""; delete pfpInput.dataset.cloudinaryUrl;
-                        coverInput.value = ""; delete coverInput.dataset.cloudinaryUrl;
-                        openMyProfile(); // Refresh
-                    });
-                });
-            });
+            // NORMALIZED: No need to update posts! User data is fetched from users table.
+            // When posts are displayed, they will automatically show the updated name/photo.
+            showToast("Profile Updated!");
+            document.getElementById('editProfileModal').style.display = 'none';
+            // Clear inputs
+            pfpInput.value = ""; delete pfpInput.dataset.cloudinaryUrl;
+            coverInput.value = ""; delete coverInput.dataset.cloudinaryUrl;
+            openMyProfile(); // Refresh
         });
     }
 
@@ -6929,28 +6912,36 @@ Please explain why you want a verification badge:`;
                 list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding: var(--spacing-lg);'>No comments yet.</div>";
                 return;
             }
+            
+            // NORMALIZED: Fetch user data for each comment
             s.forEach(c => {
                 const com = c.val();
-                const div = document.createElement('div');
-                div.className = 'comment-item';
-                div.innerHTML = `
-                    <img class="comment-avatar" src="${com.uPhoto}">
-                    <div class="comment-content-block">
-                        <div class="comment-bubble">
-                            <div class="comment-author">${com.uName} ${getBadgeHtml(com.uWins || 0)}</div>
-                            <div class="comment-text">${com.text}</div>
+                
+                db.ref('users/' + com.uid).once('value', userSnap => {
+                    const user = userSnap.val();
+                    if(!user) return;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'comment-item';
+                    div.innerHTML = `
+                        <img class="comment-avatar" src="${user.photo || 'https://via.placeholder.com/40'}">
+                        <div class="comment-content-block">
+                            <div class="comment-bubble">
+                                <div class="comment-author">${escapeHtml(user.name)} ${getBadgeHtml(user.bingoWins || 0)}</div>
+                                <div class="comment-text">${escapeHtml(com.text)}</div>
+                            </div>
+                            <div class="comment-actions">
+                                <button class="cmt-action-btn" onclick="likeComment('${postKey}', '${c.key}')">Like</button>
+                                <button class="cmt-action-btn" onclick="replyComment('${escapeHtml(user.name)}')">Reply</button>
+                                <span>${fixDate(com.time)}</span>
+                            </div>
                         </div>
-                        <div class="comment-actions">
-                            <button class="cmt-action-btn" onclick="likeComment('${postKey}', '${c.key}')">Like</button>
-                            <button class="cmt-action-btn" onclick="replyComment('${com.uName}')">Reply</button>
-                            <span>${fixDate(com.time)}</span>
-                        </div>
-                    </div>
-                `;
-                list.appendChild(div);
+                    `;
+                    list.appendChild(div);
+                    list.scrollTop = list.scrollHeight;
+                    lucide.createIcons();
+                });
             });
-            list.scrollTop = list.scrollHeight;
-            lucide.createIcons();
         });
     }
     
@@ -6967,12 +6958,9 @@ Please explain why you want a verification badge:`;
         const txt = document.getElementById('commentInput').value.trim();
         if(!txt || !currentOpenPostKey) return;
         
+        // NORMALIZED: Only store UID, fetch user data when displaying
         db.ref('postComments/' + currentOpenPostKey).push({
-            uid: auth.currentUser.uid,
-            uName: userData.name,
-            uPhoto: userData.photo,
-            uPoints: userData.points,
-            uWins: userData.bingoWins || 0,
+            uid: auth.currentUser.uid, // ONLY user reference
             text: txt,
             time: Date.now()
         });
@@ -7044,21 +7032,27 @@ Please explain why you want a verification badge:`;
                 comments.push({ key: c.key, ...c.val() });
             });
             
+            // NORMALIZED: Fetch user data for each comment
             comments.forEach(com => {
-                const div = document.createElement('div');
-                div.className = 'preview-item';
-                div.style.marginBottom = '5px';
-                
-                const truncatedText = com.text.length > 50 ? com.text.substring(0, 50) + '...' : com.text;
-                const sanitizedText = escapeHtml(truncatedText);
-                const sanitizedName = escapeHtml(com.uName);
-                
-                div.innerHTML = `
-                    <button class="preview-user" onclick="openUserProfile('${com.uid}')" style="background:none; border:none; padding:0; font:inherit; cursor:pointer;" aria-label="View ${sanitizedName}'s profile">${sanitizedName}</button>
-                    <span class="preview-text">${sanitizedText}</span>
-                `;
-                
-                previewList.appendChild(div);
+                db.ref('users/' + com.uid).once('value', userSnap => {
+                    const user = userSnap.val();
+                    if(!user) return;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'preview-item';
+                    div.style.marginBottom = '5px';
+                    
+                    const truncatedText = com.text.length > 50 ? com.text.substring(0, 50) + '...' : com.text;
+                    const sanitizedText = escapeHtml(truncatedText);
+                    const sanitizedName = escapeHtml(user.name);
+                    
+                    div.innerHTML = `
+                        <button class="preview-user" onclick="openUserProfile('${com.uid}')" style="background:none; border:none; padding:0; font:inherit; cursor:pointer;" aria-label="View ${sanitizedName}'s profile">${sanitizedName}</button>
+                        <span class="preview-text">${sanitizedText}</span>
+                    `;
+                    
+                    previewList.appendChild(div);
+                });
             });
         });
     }
@@ -7125,23 +7119,16 @@ Please explain why you want a verification badge:`;
                 return;
             }
             
-            // Create a new post that references the original
+            // NORMALIZED: Create a new post that references the original
             const shareData = {
-                uid: auth.currentUser.uid,
-                authorName: userData.name,
-                authorPhoto: userData.photo || 'https://via.placeholder.com/40',
-                authorPoints: userData.points || 0,
-                authorWins: userData.bingoWins || 0,
-                authorVerified: userData.verified || false,
+                uid: auth.currentUser.uid, // ONLY sharer's UID
                 content: caption, // User's caption
                 timestamp: Date.now(),
                 likes: 0,
                 visibility: 'public', // Shared posts default to public
                 isShared: true,
                 sharedPostKey: currentSharePostKey,
-                sharedFrom: originalPost.uid,
-                sharedFromName: originalPost.authorName,
-                sharedFromPhoto: originalPost.authorPhoto,
+                sharedFrom: originalPost.uid, // ONLY original author's UID
                 sharedContent: originalPost.content,
                 sharedImage: originalPost.image,
                 sharedVideo: originalPost.video,
@@ -7357,130 +7344,152 @@ Please explain why you want a verification badge:`;
         postDiv.className = 'post-card';
         postDiv.id = 'post-' + post.key;
         
-        // Add Friend Icon Button (only show if not friend and not own post)
-        const isOwnPost = post.uid === auth.currentUser.uid;
-        const addFriendBtn = (!isFriend && !isOwnPost) ? `<button class="add-friend-icon-btn" onclick="event.stopPropagation(); sendFriendRequest('${post.uid}')" title="Add Friend"><i data-lucide="user-plus"></i></button>` : '';
-        
-        const moodHtml = post.mood ? `<div class="mood-display">Feeling ${post.mood}</div>` : '';
-        const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
-        const videoHtml = post.video ? `<div class="post-image-container"><video src="${post.video}" class="post-image" controls style="width:100%; max-height:400px;"></video></div>` : '';
-        
-        // Visibility indicator
-        const visibility = post.visibility || 'public';
-        let visibilityIconName = 'globe'; // public
-        let visibilityText = 'Public';
-        if(visibility === 'friends') {
-            visibilityIconName = 'users';
-            visibilityText = 'Friends';
-        } else if(visibility === 'private') {
-            visibilityIconName = 'lock';
-            visibilityText = 'Only Me';
-        }
-        const visibilityBadge = `<span class="visibility-badge" title="${visibilityText}" style="margin-left:4px;"><i data-lucide="${visibilityIconName}" style="width:11px; height:11px;"></i></span>`;
-        
-        // Check if this is a shared post
-        let sharedPostHtml = '';
-        if(post.isShared && post.sharedContent !== undefined) {
-            const sharedImgHtml = post.sharedImage ? `<div class="post-image-container"><img src="${post.sharedImage}" class="post-image"></div>` : '';
-            const sharedVideoHtml = post.sharedVideo ? `<div class="post-image-container"><video src="${post.sharedVideo}" class="post-image" controls style="width:100%; max-height:300px;"></video></div>` : '';
-            const sharedMoodHtml = post.sharedMood ? `<div class="mood-display">Feeling ${post.sharedMood}</div>` : '';
-            sharedPostHtml = `
-                <div class="shared-post-container">
-                    <div style="font-size:10px; color:#94a3b8; margin-bottom: var(--spacing-xs); display:flex; align-items:center; gap:5px;">
-                        <i data-lucide="share-2" style="width:12px;"></i>
-                        <span>Shared from ${escapeHtml(post.sharedFromName)}</span>
+        // NORMALIZED: Fetch user data from users/{uid} instead of from post
+        db.ref('users/' + post.uid).once('value', authorSnap => {
+            const author = authorSnap.val();
+            if (!author) {
+                console.error('Author not found:', post.uid);
+                return;
+            }
+            
+            // Add Friend Icon Button (only show if not friend and not own post)
+            const isOwnPost = post.uid === auth.currentUser.uid;
+            const addFriendBtn = (!isFriend && !isOwnPost) ? `<button class="add-friend-icon-btn" onclick="event.stopPropagation(); sendFriendRequest('${post.uid}')" title="Add Friend"><i data-lucide="user-plus"></i></button>` : '';
+            
+            const moodHtml = post.mood ? `<div class="mood-display">Feeling ${post.mood}</div>` : '';
+            const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
+            const videoHtml = post.video ? `<div class="post-image-container"><video src="${post.video}" class="post-image" controls style="width:100%; max-height:400px;"></video></div>` : '';
+            
+            // Visibility indicator
+            const visibility = post.visibility || 'public';
+            let visibilityIconName = 'globe'; // public
+            let visibilityText = 'Public';
+            if(visibility === 'friends') {
+                visibilityIconName = 'users';
+                visibilityText = 'Friends';
+            } else if(visibility === 'private') {
+                visibilityIconName = 'lock';
+                visibilityText = 'Only Me';
+            }
+            const visibilityBadge = `<span class="visibility-badge" title="${visibilityText}" style="margin-left:4px;"><i data-lucide="${visibilityIconName}" style="width:11px; height:11px;"></i></span>`;
+            
+            // NORMALIZED: Check if this is a shared post - fetch shared author data
+            let sharedPostHtml = '';
+            if(post.isShared && post.sharedContent !== undefined && post.sharedFrom) {
+                // Fetch shared author data
+                db.ref('users/' + post.sharedFrom).once('value', sharedAuthorSnap => {
+                    const sharedAuthor = sharedAuthorSnap.val();
+                    if(sharedAuthor) {
+                        const sharedImgHtml = post.sharedImage ? `<div class="post-image-container"><img src="${post.sharedImage}" class="post-image"></div>` : '';
+                        const sharedVideoHtml = post.sharedVideo ? `<div class="post-image-container"><video src="${post.sharedVideo}" class="post-image" controls style="width:100%; max-height:300px;"></video></div>` : '';
+                        const sharedMoodHtml = post.sharedMood ? `<div class="mood-display">Feeling ${post.sharedMood}</div>` : '';
+                        
+                        const sharedPostContainer = postDiv.querySelector('.shared-post-placeholder');
+                        if(sharedPostContainer) {
+                            sharedPostContainer.innerHTML = `
+                                <div class="shared-post-container">
+                                    <div style="font-size:10px; color:#94a3b8; margin-bottom: var(--spacing-xs); display:flex; align-items:center; gap:5px;">
+                                        <i data-lucide="share-2" style="width:12px;"></i>
+                                        <span>Shared from ${escapeHtml(sharedAuthor.name)}</span>
+                                    </div>
+                                    <div style="display:flex; gap: var(--spacing-sm); align-items:flex-start;">
+                                        <img src="${sharedAuthor.photo || 'https://via.placeholder.com/30'}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" onclick="openUserProfile('${post.sharedFrom}')">
+                                        <div style="flex:1;">
+                                            <div style="font-weight:700; font-size:11px; color:white; margin-bottom:3px;">${escapeHtml(sharedAuthor.name)}</div>
+                                            ${sharedMoodHtml}
+                                            <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">${escapeHtml(post.sharedContent || '')}</div>
+                                            ${sharedImgHtml}
+                                            ${sharedVideoHtml}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            lucide.createIcons();
+                        }
+                    }
+                });
+            }
+            
+            postDiv.innerHTML = `
+                <div class="post-header">
+                    <img class="post-avatar" src="${author.photo || 'https://via.placeholder.com/40'}" onclick="openUserProfile('${post.uid}')">
+                    <div class="post-meta">
+                        <div class="post-author">
+                            ${escapeHtml(author.name)} 
+                            ${author.verified ? '<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>' : ''} 
+                            ${addFriendBtn}
+                        </div>
+                        <div class="post-time" style="display:flex; align-items:center;">${fixDate(post.timestamp)}${visibilityBadge}</div>
+                        ${moodHtml}
                     </div>
-                    <div style="display:flex; gap: var(--spacing-sm); align-items:flex-start;">
-                        <img src="${post.sharedFromPhoto}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" onclick="openUserProfile('${post.sharedFrom}')">
-                        <div style="flex:1;">
-                            <div style="font-weight:700; font-size:11px; color:white; margin-bottom:3px;">${escapeHtml(post.sharedFromName)}</div>
-                            ${sharedMoodHtml}
-                            <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">${escapeHtml(post.sharedContent || '')}</div>
-                            ${sharedImgHtml}
-                            ${sharedVideoHtml}
+                    ${isOwnPost ? `
+                    <div style="position: relative;">
+                        <button class="post-overflow-btn" onclick="togglePostMenu('${post.key}')" aria-label="Post options">
+                            <i data-lucide="more-vertical" style="width:18px; height:18px;"></i>
+                        </button>
+                        <div class="post-overflow-menu" id="post-menu-${post.key}">
+                            <button class="overflow-menu-item delete-item" onclick="deletePost('${post.key}')">
+                                <i data-lucide="trash-2" style="width:14px;"></i>
+                                Delete Post
+                            </button>
                         </div>
                     </div>
+                    ` : ''}
+                </div>
+                <div class="post-content">${escapeHtml(post.content || '')}</div>
+                ${imgHtml}
+                ${videoHtml}
+                <div class="shared-post-placeholder"></div>
+                <div class="reaction-summary-bar" id="reaction-summary-${post.key}" onclick="openReactionViewer('${post.key}')"></div>
+                <div class="post-actions" style="position:relative;">
+                    <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
+                        <i data-lucide="heart" id="like-icon-${post.key}" style="width:14px;"></i> 
+                        <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post">
+                            <span id="like-count-${post.key}">${post.likes || 0}</span>
+                        </span>
+                    </button>
+                    <div id="react-pop-${post.key}" class="reaction-popup" onmouseleave="this.style.display='none'">
+                        <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '❤️')">❤️</span>
+                        <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😂')">😂</span>
+                        <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😮')">😮</span>
+                        <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😢')">😢</span>
+                    </div>
+                    <button class="action-btn" onclick="openComments('${post.key}')">
+                        <i data-lucide="message-circle" style="width:14px"></i> <span id="comment-btn-text-${post.key}">Comment</span>
+                    </button>
+                    <button class="action-btn" onclick="openShareModal('${post.key}')">
+                        <i data-lucide="share-2" style="width:14px"></i> Share
+                    </button>
+                </div>
+                <div id="comment-preview-${post.key}" class="comment-preview-area" style="display:none;">
+                    <div id="preview-list-${post.key}" style="margin-bottom: var(--spacing-xs);"></div>
+                    <button onclick="openComments('${post.key}')" style="background:none; border:none; color:var(--accent); font-size:11px; font-weight:700; cursor:pointer; padding:0;" aria-label="View all comments for this post">View all comments</button>
                 </div>
             `;
-        }
-        
-        postDiv.innerHTML = `
-            <div class="post-header">
-                <img class="post-avatar" src="${post.authorPhoto}" onclick="openUserProfile('${post.uid}')">
-                <div class="post-meta">
-                    <div class="post-author">
-                        ${post.authorName} 
-                        ${post.authorVerified ? '<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>' : ''} 
-                        ${addFriendBtn}
-                    </div>
-                    <div class="post-time" style="display:flex; align-items:center;">${fixDate(post.timestamp)}${visibilityBadge}</div>
-                    ${moodHtml}
-                </div>
-                ${isOwnPost ? `
-                <div style="position: relative;">
-                    <button class="post-overflow-btn" onclick="togglePostMenu('${post.key}')" aria-label="Post options">
-                        <i data-lucide="more-vertical" style="width:18px; height:18px;"></i>
-                    </button>
-                    <div class="post-overflow-menu" id="post-menu-${post.key}">
-                        <button class="overflow-menu-item delete-item" onclick="deletePost('${post.key}')">
-                            <i data-lucide="trash-2" style="width:14px;"></i>
-                            Delete Post
-                        </button>
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-            <div class="post-content">${escapeHtml(post.content || '')}</div>
-            ${imgHtml}
-            ${videoHtml}
-            ${sharedPostHtml}
-            <div class="reaction-summary-bar" id="reaction-summary-${post.key}" onclick="openReactionViewer('${post.key}')"></div>
-            <div class="post-actions" style="position:relative;">
-                <button class="action-btn" id="like-btn-${post.key}" onclick="showReactionPopup('${post.key}')">
-                    <i data-lucide="heart" id="like-icon-${post.key}" style="width:14px;"></i> 
-                    <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post">
-                        <span id="like-count-${post.key}">${post.likes || 0}</span>
-                    </span>
-                </button>
-                <div id="react-pop-${post.key}" class="reaction-popup" onmouseleave="this.style.display='none'">
-                    <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '❤️')">❤️</span>
-                    <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😂')">😂</span>
-                    <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😮')">😮</span>
-                    <span class="reaction-emoji" onclick="submitReaction('${post.key}', '${post.uid}', '😢')">😢</span>
-                </div>
-                <button class="action-btn" onclick="openComments('${post.key}')">
-                    <i data-lucide="message-circle" style="width:14px"></i> <span id="comment-btn-text-${post.key}">Comment</span>
-                </button>
-                <button class="action-btn" onclick="openShareModal('${post.key}')">
-                    <i data-lucide="share-2" style="width:14px"></i> Share
-                </button>
-            </div>
-            <div id="comment-preview-${post.key}" class="comment-preview-area" style="display:none;">
-                <div id="preview-list-${post.key}" style="margin-bottom: var(--spacing-xs);"></div>
-                <button onclick="openComments('${post.key}')" style="background:none; border:none; color:var(--accent); font-size:11px; font-weight:700; cursor:pointer; padding:0;" aria-label="View all comments for this post">View all comments</button>
-            </div>
-        `;
-        
-        // Load initial state (simple check if liked)
-        db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
-            if(lSnap.exists()) {
-                const btn = postDiv.querySelector('#like-btn-' + post.key);
-                const reaction = lSnap.val(); // Get stored emoji
-                const sanitizedReaction = reaction === true ? '❤️' : escapeHtml(reaction);
-                if(btn) {
-                    btn.classList.add('liked');
-                    btn.innerHTML = `<span style="font-size:16px;">${sanitizedReaction}</span> <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post"><span id="like-count-${post.key}">${post.likes || 0}</span></span>`;
+            
+            lucide.createIcons();
+            
+            // Load initial state (simple check if liked)
+            db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
+                if(lSnap.exists()) {
+                    const btn = postDiv.querySelector('#like-btn-' + post.key);
+                    const reaction = lSnap.val(); // Get stored emoji
+                    const sanitizedReaction = reaction === true ? '❤️' : escapeHtml(reaction);
+                    if(btn) {
+                        btn.classList.add('liked');
+                        btn.innerHTML = `<span style="font-size:16px;">${sanitizedReaction}</span> <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post"><span id="like-count-${post.key}">${post.likes || 0}</span></span>`;
+                    }
                 }
-            }
-        });
-        
-        // Load comment count
-        db.ref('postComments/' + post.key).on('value', snapshot => {
-            const count = snapshot.numChildren();
-            const btnText = postDiv.querySelector('#comment-btn-text-' + post.key);
-            if (btnText && count > 0) {
-                btnText.textContent = `${count}`;
-            }
+            });
+            
+            // Load comment count
+            db.ref('postComments/' + post.key).on('value', snapshot => {
+                const count = snapshot.numChildren();
+                const btnText = postDiv.querySelector('#comment-btn-text-' + post.key);
+                if (btnText && count > 0) {
+                    btnText.textContent = `${count}`;
+                }
+            });
         });
         
         return postDiv;
