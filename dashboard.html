@@ -1130,37 +1130,6 @@
         updateMonitorCards(); 
     });
     
-    // ENHANCED: Additional listener specifically for card changes to ensure real-time monitoring
-    db.ref('users').on('child_changed', snapshot => {
-        const uid = snapshot.key;
-        const userData = snapshot.val();
-        
-        // Update the allUsersData cache
-        if (allUsersData[uid]) {
-            allUsersData[uid] = userData;
-        }
-        
-        // Check if card-related data changed
-        if (userData.card || userData.currentCard || userData.hasWonCurrent !== undefined) {
-            // Force update of monitor cards
-            updateMonitorCards();
-        }
-    });
-    
-    // ENHANCED: Listen for new cards being generated
-    db.ref('users').on('child_added', snapshot => {
-        const uid = snapshot.key;
-        const userData = snapshot.val();
-        
-        // Add to cache
-        allUsersData[uid] = userData;
-        
-        // If user has a card, update monitors
-        if (userData.card || userData.currentCard) {
-            updateMonitorCards();
-        }
-    });
-    
     function logLiveActivity(name, oldVal, newVal, diff) {
         const feed = document.getElementById('liveActivityFeed');
         const item = document.createElement('div');
@@ -1225,76 +1194,23 @@
     }
 
     function updateMonitorCards() {
-        const container = document.getElementById('liveCardsContainer'); 
-        if (!container) return; // Safety check
-        
-        container.innerHTML = ""; 
-        let usersArray = [];
-        
-        Object.entries(allUsersData).forEach(([key, user]) => { 
-            if(user.card || user.currentCard) { 
-                usersArray.push({ ...user, uid: key }); 
-            } 
-        });
-        
-        usersArray.sort((a, b) => { 
-            const aOnline = globalStatusData[a.uid] ? 1 : 0; 
-            const bOnline = globalStatusData[b.uid] ? 1 : 0; 
-            return bOnline - aOnline; 
-        });
-        
+        const container = document.getElementById('liveCardsContainer'); container.innerHTML = ""; let usersArray = [];
+        Object.entries(allUsersData).forEach(([key, user]) => { if(user.card || user.currentCard) { usersArray.push({ ...user, uid: key }); } });
+        usersArray.sort((a, b) => { const aOnline = globalStatusData[a.uid] ? 1 : 0; const bOnline = globalStatusData[b.uid] ? 1 : 0; return bOnline - aOnline; });
         usersArray.forEach(user => {
             const card = user.currentCard || user.card; 
-            if (!card) return; // Safety check
-            
             const check = checkCardStatus(card, currentPattern, drawnNumbers); 
             const isOnline = globalStatusData[user.uid] ? true : false; 
-            
             // Try multiple possible name fields
             const displayName = user.name || user.username || user.displayName || user.email || user.uid.substring(0, 10);
             const safeName = cleanName(displayName);
-            
-            let isBingo = check.isBingo; 
-            let isPuro = check.isPuro; 
-            
-            if(!isOnline) { 
-                isBingo = false; 
-                isPuro = false; 
-            } else { 
-                if(user.hasWonCurrent && drawnNumbers.length > 0) isBingo = true; 
-                if(isBingo) isPuro = false; 
-            }
-            
-            const cardDiv = document.createElement('div'); 
-            cardDiv.className = `user-card-monitor ${!isOnline ? 'offline' : ''} ${isBingo ? 'bingo' : ''} ${isPuro ? 'puro' : ''}`;
-            
-            let gridHtml = '<div class="mini-bingo-grid">'; 
-            card.forEach((n, idx) => { 
-                const marked = drawnNumbers.includes(n) || n === "FREE"; 
-                const isWinningCell = check.winningCells.includes(idx); 
-                const visualHit = isOnline && isWinningCell; 
-                gridHtml += `<div class="mini-cell ${marked ? 'marked' : ''} ${visualHit ? 'hit' : ''}">${n === "FREE" ? '★' : n}</div>`; 
-            }); 
-            gridHtml += '</div>';
-            
+            let isBingo = check.isBingo; let isPuro = check.isPuro; if(!isOnline) { isBingo = false; isPuro = false; } else { if(user.hasWonCurrent && drawnNumbers.length > 0) isBingo = true; if(isBingo) isPuro = false; }
+            const cardDiv = document.createElement('div'); cardDiv.className = `user-card-monitor ${!isOnline ? 'offline' : ''} ${isBingo ? 'bingo' : ''} ${isPuro ? 'puro' : ''}`;
+            let gridHtml = '<div class="mini-bingo-grid">'; card.forEach((n, idx) => { const marked = drawnNumbers.includes(n) || n === "FREE"; const isWinningCell = check.winningCells.includes(idx); const visualHit = isOnline && isWinningCell; gridHtml += `<div class="mini-cell ${marked ? 'marked' : ''} ${visualHit ? 'hit' : ''}">${n === "FREE" ? '★' : n}</div>`; }); gridHtml += '</div>';
             cardDiv.innerHTML = `<div class="monitor-badge">${isBingo ? "BINGO!" : "PURO!"}</div><div style="font-size:12px; font-weight:800; display:flex; justify-content:space-between; color:white; align-items:center;"><span style="display:flex; align-items:center; gap:5px;"><span class="${isOnline ? 'online-dot' : 'offline-dot'}"></span>${safeName}</span><span style="font-size:9px; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">${user.points || 0} pts</span></div>${gridHtml}`;
-            
-            if(isBingo && isOnline) {
-                container.prepend(cardDiv); 
-            } else if(isPuro && isOnline) {
-                container.insertBefore(cardDiv, container.children[1] || null); 
-            } else {
-                container.appendChild(cardDiv);
-            }
+            if(isBingo && isOnline) container.prepend(cardDiv); else if(isPuro && isOnline) container.insertBefore(cardDiv, container.children[1] || null); else container.appendChild(cardDiv);
         });
     }
-    
-    // ENHANCED: Periodic failsafe refresh for card monitoring (every 2 seconds)
-    setInterval(() => {
-        if (document.getElementById('liveCardsContainer')) {
-            updateMonitorCards();
-        }
-    }, 2000);
 
     function checkCardStatus(card, pattern, drawn) {
         let markedIndices = [12]; card.forEach((val, idx) => { if(drawn.includes(val) && idx !== 12) markedIndices.push(idx); });
