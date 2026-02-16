@@ -2308,12 +2308,28 @@
             </div>
             <div class="reaction-control-panel">
                 <span style="font-size:11px; font-weight:700; color:var(--accent);"><i data-lucide="zap" style="width:14px; vertical-align:middle;"></i> Reactions:</span>
-                <input type="number" class="reaction-input" id="reaction-${post.key}" placeholder="0" min="0" value="0">
+                <select class="reaction-input" id="emoji-${post.key}" style="width:60px; padding:4px; font-size:16px; cursor:pointer;">
+                    <option value="❤️">❤️</option>
+                    <option value="😂">😂</option>
+                    <option value="😮">😮</option>
+                    <option value="😢">😢</option>
+                    <option value="👍">👍</option>
+                    <option value="🔥">🔥</option>
+                    <option value="😍">😍</option>
+                    <option value="💯">💯</option>
+                    <option value="🎉">🎉</option>
+                    <option value="👏">👏</option>
+                </select>
+                <input type="number" class="reaction-input" id="reaction-${post.key}" placeholder="0" min="0" value="0" style="width:70px;">
                 <button class="add-reaction-btn" onclick="addBulkReactions('${post.key}', '${creatorUid}')"><i data-lucide="plus-circle" style="width:14px; vertical-align:middle;"></i> ADD</button>
             </div>
             <div class="reaction-control-panel" style="background:rgba(6,182,212,0.05); border-color:rgba(6,182,212,0.2); margin-top:8px;">
                 <span style="font-size:11px; font-weight:700; color:var(--cyan);"><i data-lucide="message-square" style="width:14px; vertical-align:middle;"></i> Comments:</span>
-                <input type="number" class="reaction-input" id="comment-${post.key}" placeholder="0" min="0" value="0">
+                <label style="display:flex; align-items:center; gap:4px; font-size:10px; cursor:pointer;">
+                    <input type="checkbox" id="ai-comment-${post.key}" style="cursor:pointer;">
+                    <span style="color:var(--gold);">🤖 AI</span>
+                </label>
+                <input type="number" class="reaction-input" id="comment-${post.key}" placeholder="0" min="0" value="0" style="width:70px;">
                 <button class="add-reaction-btn" onclick="addBulkComments('${post.key}', '${creatorUid}')" style="background:linear-gradient(135deg, var(--cyan), #0891b2);"><i data-lucide="plus-circle" style="width:14px; vertical-align:middle;"></i> ADD</button>
             </div>
         `;
@@ -2329,10 +2345,13 @@
     // Add bulk reactions
     function addBulkReactions(postKey, creatorUid) {
         const input = document.getElementById('reaction-' + postKey);
+        const emojiSelect = document.getElementById('emoji-' + postKey);
+        const selectedEmoji = emojiSelect ? emojiSelect.value : '❤️';
         const amount = parseInt(input.value) || 0;
+        
         if (amount <= 0) { alert('Enter valid number'); return; }
         if (amount > 1000) { alert('Max 1000'); return; }
-        if (!confirm(`Add ${amount} real reactions?`)) return;
+        if (!confirm(`Add ${amount} ${selectedEmoji} reactions?`)) return;
         
         const btn = event.target;
         const orig = btn.innerHTML;
@@ -2351,14 +2370,12 @@
                 if (toAdd === 0) { alert('All users already reacted!'); btn.disabled = false; btn.innerHTML = orig; lucide.createIcons(); return; }
                 
                 const selected = available.sort(() => 0.5 - Math.random()).slice(0, toAdd);
-                const emojis = ['❤️', '😂', '😮', '😢', '👍', '🔥', '😍'];
                 const updates = {};
                 
                 selected.forEach(uid => {
-                    const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-                    updates[`postLikes/${postKey}/${uid}`] = emoji;
+                    updates[`postLikes/${postKey}/${uid}`] = selectedEmoji;
                     db.ref(`notifications/${creatorUid}`).push({
-                        msg: `${users[uid]?.name || 'Someone'} reacted ${emoji} to your post`,
+                        msg: `${users[uid]?.name || 'Someone'} reacted ${selectedEmoji} to your post`,
                         time: Date.now(),
                         type: 'post_reaction',
                         from: uid,
@@ -2383,26 +2400,160 @@
     // Add bulk comments
     function addBulkComments(postKey, creatorUid) {
         const input = document.getElementById('comment-' + postKey);
+        const aiCheckbox = document.getElementById('ai-comment-' + postKey);
+        const useAI = aiCheckbox ? aiCheckbox.checked : false;
         const amount = parseInt(input.value) || 0;
+        
         if (amount <= 0) { alert('Enter valid number'); return; }
         if (amount > 500) { alert('Max 500'); return; }
-        if (!confirm(`Add ${amount} real comments?`)) return;
+        
+        const confirmMsg = useAI ? `Generate ${amount} AI comments based on post content?` : `Add ${amount} random comments?`;
+        if (!confirm(confirmMsg)) return;
         
         const btn = event.target;
         const orig = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<i data-lucide="loader" style="width:14px; animation:spin 1s linear infinite;"></i> Wait...';
+        btn.innerHTML = '<i data-lucide="loader" style="width:14px; animation:spin 1s linear infinite;"></i> ' + (useAI ? 'AI Thinking...' : 'Wait...');
         
-        const templates = ["Nice post! 👍","Love this! ❤️","Amazing! 🔥","Keep it up! 💪","So cool! 😍","Great work! ⭐","Awesome! 🎉","Wow! 😮","Incredible! 👏","Perfect! 💯","Love your posts! 💖","You're the best! 🥇","Keep posting! 📸","More please! 🙏","So inspiring! ✨","Made my day! ☀️","Legend! 🔥","Pure gold! 💛"];
+        // Get post data first
+        db.ref('socialPosts/' + postKey).once('value').then(postSnap => {
+            const postData = postSnap.val();
+            if (!postData) {
+                alert('Post not found');
+                btn.disabled = false;
+                btn.innerHTML = orig;
+                lucide.createIcons();
+                return;
+            }
+            
+            if (useAI) {
+                // AI MODE: Generate contextual comments
+                generateAIComments(postData, amount).then(aiComments => {
+                    return addCommentsToPost(postKey, creatorUid, aiComments, btn, orig, input);
+                }).catch(err => {
+                    console.error('AI Error:', err);
+                    alert('AI generation failed. Using random templates instead.');
+                    // Fallback to templates
+                    const templates = getRandomCommentTemplates(amount);
+                    return addCommentsToPost(postKey, creatorUid, templates, btn, orig, input);
+                });
+            } else {
+                // TEMPLATE MODE: Use random templates
+                const templates = getRandomCommentTemplates(amount);
+                addCommentsToPost(postKey, creatorUid, templates, btn, orig, input);
+            }
+        });
+    }
+    
+    // Generate AI comments based on post content
+    async function generateAIComments(postData, count) {
+        const content = postData.content || '';
+        const hasImage = !!postData.image;
+        const hasVideo = !!postData.video;
+        const mood = postData.mood || '';
         
-        db.ref('users').once('value').then(usersSnap => {
+        // Detect language (simple check - if contains Filipino words)
+        const filipinoWords = ['ang', 'mga', 'sa', 'ng', 'na', 'ay', 'ko', 'mo', 'ka', 'yan', 'yung', 'lang'];
+        const isTagalog = filipinoWords.some(word => content.toLowerCase().includes(' ' + word + ' '));
+        
+        const language = isTagalog ? 'Tagalog' : 'English';
+        
+        // Create contextual prompt
+        let contextPrompt = `Generate ${count} authentic, natural ${language} social media comments for this post:\n\n`;
+        contextPrompt += `Post: "${content}"\n`;
+        if (mood) contextPrompt += `Mood: ${mood}\n`;
+        if (hasImage) contextPrompt += `Has image attached\n`;
+        if (hasVideo) contextPrompt += `Has video attached\n`;
+        contextPrompt += `\nGuidelines:\n`;
+        contextPrompt += `- Write in ${language} (${isTagalog ? 'casual Filipino/Taglish' : 'casual English'})\n`;
+        contextPrompt += `- Be natural, friendly, supportive\n`;
+        contextPrompt += `- Use emojis appropriately\n`;
+        contextPrompt += `- Keep comments 3-15 words\n`;
+        contextPrompt += `- Vary the reactions (likes, questions, excitement, support)\n`;
+        contextPrompt += `- Reference the post content naturally\n\n`;
+        contextPrompt += `Return ONLY a JSON array of comment strings, nothing else.`;
+        
+        try {
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 1000,
+                    messages: [{
+                        role: 'user',
+                        content: contextPrompt
+                    }]
+                })
+            });
+            
+            const data = await response.json();
+            const responseText = data.content[0].text;
+            
+            // Parse JSON response
+            const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                const comments = JSON.parse(jsonMatch[0]);
+                return comments.slice(0, count); // Ensure we get exactly count comments
+            } else {
+                throw new Error('Invalid response format');
+            }
+        } catch (error) {
+            console.error('AI API Error:', error);
+            // Fallback to contextual templates
+            return getContextualTemplates(content, isTagalog, count);
+        }
+    }
+    
+    // Contextual template fallback
+    function getContextualTemplates(content, isTagalog, count) {
+        const tagalogTemplates = [
+            "Ganda! 😍", "Nice! 👍", "Galing! 🔥", "Love it! ❤️", "Sobrang ganda! ✨",
+            "Ang ganda naman! 😊", "Ang cool! 🎉", "Wow! 😮", "Astig! 💯",
+            "Keep it up! 💪", "More pa! 🙏", "Grabe! 🔥🔥", "Idol! ⭐"
+        ];
+        
+        const englishTemplates = [
+            "Amazing! 🔥", "Love this! ❤️", "So good! 👍", "Awesome! 🎉",
+            "Beautiful! ✨", "Great post! 💯", "Incredible! 😮", "Perfect! 👌",
+            "Keep posting! 📸", "This is fire! 🔥", "So cool! 😍", "Legend! ⭐"
+        ];
+        
+        const templates = isTagalog ? tagalogTemplates : englishTemplates;
+        const result = [];
+        for (let i = 0; i < count; i++) {
+            result.push(templates[Math.floor(Math.random() * templates.length)]);
+        }
+        return result;
+    }
+    
+    // Random template generator (non-AI mode)
+    function getRandomCommentTemplates(count) {
+        const templates = [
+            "Nice post! 👍","Love this! ❤️","Amazing! 🔥","Keep it up! 💪","So cool! 😍",
+            "Great work! ⭐","Awesome! 🎉","Wow! 😮","Incredible! 👏","Perfect! 💯",
+            "Love your posts! 💖","You're the best! 🥇","Keep posting! 📸","More please! 🙏",
+            "So inspiring! ✨","Made my day! ☀️","Legend! 🔥","Pure gold! 💛"
+        ];
+        const result = [];
+        for (let i = 0; i < count; i++) {
+            result.push(templates[Math.floor(Math.random() * templates.length)]);
+        }
+        return result;
+    }
+    
+    // Add comments to post
+    function addCommentsToPost(postKey, creatorUid, comments, btn, orig, input) {
+        return db.ref('users').once('value').then(usersSnap => {
             const users = usersSnap.val() || {};
             const userIds = Object.keys(users);
             
             const promises = [];
-            for (let i = 0; i < amount; i++) {
+            comments.forEach(text => {
                 const uid = userIds[Math.floor(Math.random() * userIds.length)];
-                const text = templates[Math.floor(Math.random() * templates.length)];
                 const userName = users[uid]?.name || 'Someone';
                 
                 promises.push(
@@ -2417,17 +2568,29 @@
                         postKey: postKey
                     })
                 );
-            }
+            });
             
-            Promise.all(promises).then(() => {
-                db.ref('postComments/' + postKey).once('value').then(s => {
-                    document.getElementById('comments-' + postKey).textContent = s.numChildren();
-                    input.value = 0;
-                    btn.innerHTML = `<i data-lucide="check" style="width:14px;"></i> ${amount} ADDED!`;
-                    btn.style.background = 'var(--success)';
-                    setTimeout(() => { btn.disabled = false; btn.innerHTML = orig; btn.style.background = ''; lucide.createIcons(); }, 3000);
-                    lucide.createIcons();
-                });
+            return Promise.all(promises).then(() => {
+                return db.ref('postComments/' + postKey).once('value');
+            }).then(s => {
+                document.getElementById('comments-' + postKey).textContent = s.numChildren();
+                input.value = 0;
+                btn.innerHTML = `<i data-lucide="check" style="width:14px;"></i> ${comments.length} ADDED!`;
+                btn.style.background = 'var(--success)';
+                setTimeout(() => { 
+                    btn.disabled = false; 
+                    btn.innerHTML = orig; 
+                    btn.style.background = ''; 
+                    lucide.createIcons(); 
+                }, 3000);
+                lucide.createIcons();
+            }).catch(err => {
+                console.error('Error adding comments:', err);
+                alert('Failed to add comments');
+                btn.disabled = false;
+                btn.innerHTML = orig;
+                btn.style.background = '';
+                lucide.createIcons();
             });
         });
     }
