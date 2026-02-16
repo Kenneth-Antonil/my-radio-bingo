@@ -5608,6 +5608,22 @@
         div.textContent = text;
         return div.innerHTML;
     }
+    
+    // === UTILITY: FORMAT FOLLOWER COUNT ===
+    // Formats large numbers with K suffix
+    // Examples: 999 -> 999, 1000 -> 1K, 1500 -> 1.5K, 10000 -> 10K
+    function formatFollowerCount(count) {
+        if (count >= 1000000) {
+            // For millions
+            const mCount = (count / 1000000).toFixed(1);
+            return mCount.endsWith('.0') ? mCount.slice(0, -2) + 'M' : mCount + 'M';
+        } else if (count >= 1000) {
+            // For thousands
+            const kCount = (count / 1000).toFixed(1);
+            return kCount.endsWith('.0') ? kCount.slice(0, -2) + 'K' : kCount + 'K';
+        }
+        return count.toString();
+    }
 
     // === UTILITY: URL VALIDATION ===
     function sanitizeUrl(url) {
@@ -7146,7 +7162,8 @@
             if (isCreator) {
                 const realFollowers = u.followers ? Object.keys(u.followers).length : 0;
                 const fakeFollowers = u.fakeFollowers || 0;
-                document.getElementById('statFriends').innerText = realFollowers + fakeFollowers;
+                const totalFollowers = realFollowers + fakeFollowers;
+                document.getElementById('statFriends').innerText = formatFollowerCount(totalFollowers);
                 document.getElementById('statFriends').parentElement.querySelector('div:first-child').innerText = 'Followers';
             } else {
                 db.ref('friends/' + uid).once('value', fSnap => {
