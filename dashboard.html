@@ -1948,7 +1948,7 @@
             creatorPoints: 0,
             creatorVideoViews: 0,
             fakeFollowers: 0,
-            fakeReactions: 0
+            fakeReactionsPerPost: 0
         }).then(() => {
             // Send notification
             db.ref('notifications/' + uid).push({
@@ -1996,8 +1996,8 @@
                 const fakeFollowers = creator.fakeFollowers || 0;
                 const totalFollowers = realFollowers + fakeFollowers;
                 
-                // Calculate reactions
-                const fakeReactions = creator.fakeReactions || 0;
+                // Calculate fake reactions per post
+                const fakeReactionsPerPost = creator.fakeReactionsPerPost || 0;
                 
                 div.innerHTML = `
                     <div style="flex:1;">
@@ -2008,7 +2008,7 @@
                         </div>
                         <div style="font-size:10px;color:var(--text-muted);">
                             👥 ${totalFollowers} followers (${fakeFollowers} fake) • 
-                            ❤️ ${fakeReactions} fake reactions • 
+                            ❤️ ${fakeReactionsPerPost} fake reactions per post • 
                             👁️ ${creator.creatorVideoViews || 0} video views
                         </div>
                     </div>
@@ -2032,23 +2032,23 @@
         db.ref('users/' + uid).once('value').then(snap => {
             const user = snap.val();
             const fakeFollowers = user.fakeFollowers || 0;
-            const fakeReactions = user.fakeReactions || 0;
+            const fakeReactionsPerPost = user.fakeReactionsPerPost || 0;
             
             const modal = prompt(
                 `Adjust Fake Metrics for ${name}\n\n` +
                 `Current Fake Followers: ${fakeFollowers}\n` +
-                `Current Fake Reactions: ${fakeReactions}\n\n` +
-                `Enter new values separated by comma (followers,reactions):\n` +
-                `Example: 5000,1000`,
-                `${fakeFollowers},${fakeReactions}`
+                `Current Fake Reactions Per Post: ${fakeReactionsPerPost}\n\n` +
+                `Enter new values separated by comma (followers,reactions_per_post):\n` +
+                `Example: 5000,100`,
+                `${fakeFollowers},${fakeReactionsPerPost}`
             );
             
             if (modal !== null) {
-                const [newFollowers, newReactions] = modal.split(',').map(v => parseInt(v.trim()) || 0);
+                const [newFollowers, newReactionsPerPost] = modal.split(',').map(v => parseInt(v.trim()) || 0);
                 
                 db.ref('users/' + uid).update({
                     fakeFollowers: newFollowers,
-                    fakeReactions: newReactions
+                    fakeReactionsPerPost: newReactionsPerPost
                 }).then(() => {
                     alert('✅ Metrics updated!');
                     loadCreators();
