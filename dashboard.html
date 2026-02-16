@@ -32,6 +32,8 @@
             --bringme: #8b5cf6; 
             --cyan: #06b6d4;
             --cyan-glow: rgba(6, 182, 212, 0.4);
+            --creator: #f59e0b;
+            --creator-glow: rgba(245, 158, 11, 0.5);
             
             --spacing-xs: 8px;
             --spacing-sm: 12px;
@@ -598,6 +600,17 @@
         .log-pos { color: var(--success); font-weight: 700; }
         .log-neg { color: var(--danger); font-weight: 700; }
         
+        /* Content Creator Styles */
+        .creator-badge { display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg, var(--creator), #d97706); padding: 3px 10px; border-radius: 12px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 8px var(--creator-glow); color: white; }
+        .creator-badge i { width: 12px; height: 12px; }
+        .creator-card { border-left: 3px solid var(--creator) !important; background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(0, 0, 0, 0.3)); }
+        .btn-creator { border-color: var(--creator); background: linear-gradient(135deg, var(--creator), #d97706); box-shadow: 0 4px 12px var(--creator-glow); }
+        .btn-creator:hover { box-shadow: 0 8px 24px var(--creator-glow); }
+        .metric-control { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; margin-bottom: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .metric-control label { font-size: 12px; font-weight: 600; color: var(--text); }
+        .metric-control input { margin-bottom: 0; padding: 8px 12px; }
+        .metric-control button { padding: 8px 16px; font-size: 10px; white-space: nowrap; }
+        
         @media (max-width: 1100px) { body { grid-template-columns: 250px 1fr; overflow-y: auto; height: auto; } .activity-panel { display: none; } }
         @media (max-width: 900px) { body { grid-template-columns: 1fr; } .sidebar { height: auto; max-height: 500px; } .tab-content { height: auto; overflow: visible; } .main-section { padding-bottom: 50px; } }
     </style>
@@ -672,6 +685,7 @@
         <button class="tab-btn" onclick="openTab('settings-tab', this)"><i data-lucide="sliders" width="16"></i> SETTINGS</button>
         <button class="tab-btn" onclick="openTab('users-tab', this)"><i data-lucide="user-cog" width="16"></i> PLAYERS</button>
         <button class="tab-btn" onclick="openTab('verification-tab', this)"><i data-lucide="shield-check" width="16"></i> VERIFICATION</button>
+        <button class="tab-btn" onclick="openTab('creators-tab', this)"><i data-lucide="star" width="16"></i> CREATORS</button>
         <button class="tab-btn" onclick="openTab('cashout-tab', this)"><i data-lucide="wallet" width="16"></i> CASHOUTS</button>
         <button class="tab-btn" onclick="openTab('support-tab', this)"><i data-lucide="message-square" width="16"></i> SUPPORT</button>
     </div>
@@ -833,6 +847,58 @@
             
             <div id="verificationRequestsList" style="display:flex; flex-direction:column; gap:15px;">
                 <div style="opacity:0.5; text-align:center; padding:40px; font-size:12px;">Loading verification requests...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENT CREATORS TAB -->
+    <div id="creators-tab" class="tab-content">
+        <!-- Stats Overview -->
+        <div class="card">
+            <h2><i data-lucide="bar-chart"></i> Creator Stats Overview</h2>
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-val" id="totalCreatorsCount">0</div>
+                    <div class="stat-lbl">Active Creators</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="totalFollowers">0</div>
+                    <div class="stat-lbl">Total Followers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="totalVideoViews">0</div>
+                    <div class="stat-lbl">Video Views</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="totalCreatorPosts">0</div>
+                    <div class="stat-lbl">Creator Posts</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Promote to Creator -->
+        <div class="card">
+            <h2><i data-lucide="user-plus"></i> Promote User to Content Creator</h2>
+            <div style="font-size:11px; opacity:0.6; margin-bottom:15px;">Search and promote users to become content creators with 2x points and followers</div>
+            
+            <div class="search-box">
+                <input type="text" id="promote-search" placeholder="Search users by name..." oninput="searchUsersForPromotion()">
+                <i data-lucide="search" class="search-icon" style="width:16px;height:16px;"></i>
+            </div>
+            
+            <div class="user-select-list" id="promote-user-list" style="max-height: 300px;">
+                <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">
+                    Type to search for users...
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Content Creators -->
+        <div class="card">
+            <h2><i data-lucide="settings"></i> Manage Content Creators</h2>
+            <div style="font-size:11px; opacity:0.6; margin-bottom:15px;">Control fake followers, reactions, and creator status</div>
+            <div id="creator-list" style="display:flex; flex-direction:column; gap:15px;">
+                <div style="opacity:0.5; text-align:center; padding:40px; font-size:12px;">No content creators yet</div>
             </div>
         </div>
     </div>
@@ -1811,6 +1877,256 @@
         });
         
         observer.observe(verificationTab, { attributes: true, attributeFilter: ['class'] });
+    }
+    
+    // ===============================================
+    // CONTENT CREATOR MANAGEMENT FUNCTIONS
+    // ===============================================
+    
+    // Search users for promotion to content creator
+    function searchUsersForPromotion() {
+        const searchTerm = document.getElementById('promote-search').value.toLowerCase().trim();
+        const list = document.getElementById('promote-user-list');
+        
+        if (!searchTerm) {
+            list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">Type to search for users...</div>';
+            return;
+        }
+        
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:11px;">🔍 Searching...</div>';
+        
+        db.ref('users').once('value').then(snap => {
+            const users = snap.val() || {};
+            list.innerHTML = '';
+            let found = false;
+            
+            Object.entries(users).forEach(([uid, user]) => {
+                const displayName = user.name || user.username || user.displayName || uid;
+                const searchableText = displayName.toLowerCase();
+                
+                // Skip if already a content creator
+                if (user.isContentCreator) return;
+                
+                if (searchableText.includes(searchTerm)) {
+                    found = true;
+                    const div = document.createElement('div');
+                    div.className = 'user-option';
+                    
+                    const verifiedBadge = user.verified ? '✓ Verified' : '';
+                    
+                    div.innerHTML = `
+                        <div style="flex:1;">
+                            <strong>${displayName}</strong> ${verifiedBadge}
+                            <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">
+                                ${user.points || 0} points • ${user.bingoWins || 0} wins
+                            </div>
+                        </div>
+                        <button class="btn btn-creator" onclick="promoteToCreator('${uid}', '${displayName.replace(/'/g, "\\'")}')" style="padding:6px 12px;font-size:10px;">
+                            Promote
+                        </button>
+                    `;
+                    
+                    list.appendChild(div);
+                }
+            });
+            
+            if (!found) {
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">No users found</div>';
+            }
+        });
+    }
+    
+    // Promote user to content creator
+    function promoteToCreator(uid, name) {
+        if (!confirm(`Promote ${name} to Content Creator?\n\nThey will receive:\n• Follow/Followers system\n• 2x points multiplier\n• Points per video view\n• Creator badge`)) {
+            return;
+        }
+        
+        db.ref('users/' + uid).update({
+            isContentCreator: true,
+            creatorPromotedAt: Date.now(),
+            creatorPoints: 0,
+            creatorVideoViews: 0,
+            fakeFollowers: 0,
+            fakeReactions: 0
+        }).then(() => {
+            // Send notification
+            db.ref('notifications/' + uid).push({
+                msg: '🌟 Congratulations! You are now a Content Creator! You earn double points and can gain followers.',
+                time: Date.now(),
+                type: 'creator_promotion'
+            });
+            
+            alert('✅ User promoted to Content Creator!');
+            document.getElementById('promote-search').value = '';
+            searchUsersForPromotion();
+            loadCreators();
+            updateStats();
+        }).catch(err => {
+            console.error('Error promoting user:', err);
+            alert('❌ Failed to promote user');
+        });
+    }
+    
+    // Load content creators list
+    function loadCreators() {
+        const list = document.getElementById('creator-list');
+        list.innerHTML = '<div style="text-align:center;padding:20px;">Loading...</div>';
+        
+        db.ref('users').orderByChild('isContentCreator').equalTo(true).once('value').then(snap => {
+            const creators = snap.val() || {};
+            list.innerHTML = '';
+            
+            if (Object.keys(creators).length === 0) {
+                list.innerHTML = '<div style="opacity:0.5; text-align:center; padding:40px; font-size:12px;">No content creators yet</div>';
+                return;
+            }
+            
+            Object.entries(creators).forEach(([uid, creator]) => {
+                const div = document.createElement('div');
+                div.className = 'user-option creator-card';
+                div.style.padding = '15px';
+                div.style.border = '2px solid rgba(245, 158, 11, 0.2)';
+                
+                const displayName = creator.name || creator.username || creator.displayName || uid;
+                const verifiedBadge = creator.verified ? '✓ Verified' : '';
+                
+                // Calculate real followers
+                const realFollowers = creator.followers ? Object.keys(creator.followers).length : 0;
+                const fakeFollowers = creator.fakeFollowers || 0;
+                const totalFollowers = realFollowers + fakeFollowers;
+                
+                // Calculate reactions
+                const fakeReactions = creator.fakeReactions || 0;
+                
+                div.innerHTML = `
+                    <div style="flex:1;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            <strong>${displayName}</strong>
+                            ${verifiedBadge}
+                            <span class="creator-badge">★ Creator</span>
+                        </div>
+                        <div style="font-size:10px;color:var(--text-muted);">
+                            👥 ${totalFollowers} followers (${fakeFollowers} fake) • 
+                            ❤️ ${fakeReactions} fake reactions • 
+                            👁️ ${creator.creatorVideoViews || 0} video views
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-creator" onclick="openMetricsModal('${uid}', '${displayName.replace(/'/g, "\\'")}')" style="padding:6px 12px;font-size:10px;">
+                            Adjust
+                        </button>
+                        <button class="btn btn-danger" onclick="demoteCreator('${uid}', '${displayName.replace(/'/g, "\\'")}')" style="padding:6px 12px;font-size:10px;">
+                            Demote
+                        </button>
+                    </div>
+                `;
+                
+                list.appendChild(div);
+            });
+        });
+    }
+    
+    // Open metrics adjustment modal
+    function openMetricsModal(uid, name) {
+        db.ref('users/' + uid).once('value').then(snap => {
+            const user = snap.val();
+            const fakeFollowers = user.fakeFollowers || 0;
+            const fakeReactions = user.fakeReactions || 0;
+            
+            const modal = prompt(
+                `Adjust Fake Metrics for ${name}\n\n` +
+                `Current Fake Followers: ${fakeFollowers}\n` +
+                `Current Fake Reactions: ${fakeReactions}\n\n` +
+                `Enter new values separated by comma (followers,reactions):\n` +
+                `Example: 5000,1000`,
+                `${fakeFollowers},${fakeReactions}`
+            );
+            
+            if (modal !== null) {
+                const [newFollowers, newReactions] = modal.split(',').map(v => parseInt(v.trim()) || 0);
+                
+                db.ref('users/' + uid).update({
+                    fakeFollowers: newFollowers,
+                    fakeReactions: newReactions
+                }).then(() => {
+                    alert('✅ Metrics updated!');
+                    loadCreators();
+                    updateCreatorStats();
+                }).catch(err => {
+                    console.error('Error updating metrics:', err);
+                    alert('❌ Failed to update metrics');
+                });
+            }
+        });
+    }
+    
+    // Demote creator
+    function demoteCreator(uid, name) {
+        if (!confirm(`Remove Content Creator status from ${name}?`)) return;
+        
+        db.ref('users/' + uid).update({
+            isContentCreator: false,
+            creatorDemotedAt: Date.now()
+        }).then(() => {
+            db.ref('notifications/' + uid).push({
+                msg: '⚠️ Your Content Creator status has been removed by an admin.',
+                time: Date.now(),
+                type: 'creator_demotion'
+            });
+            
+            alert('✅ Creator demoted');
+            loadCreators();
+            updateStats();
+        }).catch(err => {
+            console.error('Error demoting creator:', err);
+            alert('❌ Failed to demote creator');
+        });
+    }
+    
+    // Update creator stats
+    function updateCreatorStats() {
+        db.ref('users').orderByChild('isContentCreator').equalTo(true).once('value').then(snap => {
+            const creators = snap.val() || {};
+            let totalFollowers = 0;
+            let totalVideoViews = 0;
+            
+            Object.values(creators).forEach(creator => {
+                const realFollowers = creator.followers ? Object.keys(creator.followers).length : 0;
+                const fakeFollowers = creator.fakeFollowers || 0;
+                totalFollowers += realFollowers + fakeFollowers;
+                totalVideoViews += creator.creatorVideoViews || 0;
+            });
+            
+            // Count creator posts
+            db.ref('socialPosts').once('value').then(postsSnap => {
+                const posts = postsSnap.val() || {};
+                let totalPosts = 0;
+                Object.values(posts).forEach(post => {
+                    if (creators[post.uid]) totalPosts++;
+                });
+                
+                document.getElementById('totalCreatorsCount').textContent = Object.keys(creators).length;
+                document.getElementById('totalFollowers').textContent = totalFollowers;
+                document.getElementById('totalVideoViews').textContent = totalVideoViews;
+                document.getElementById('totalCreatorPosts').textContent = totalPosts;
+            });
+        });
+    }
+    
+    // Load creators when creators tab is opened
+    const creatorsTab = document.getElementById('creators-tab');
+    if (creatorsTab) {
+        const tabObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.target.classList.contains('active') && mutation.target.id === 'creators-tab') {
+                    loadCreators();
+                    updateCreatorStats();
+                }
+            });
+        });
+        
+        tabObserver.observe(creatorsTab, { attributes: true, attributeFilter: ['class'] });
     }
 </script>
 
