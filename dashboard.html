@@ -699,6 +699,11 @@
             box-shadow: 0 4px 12px var(--accent-glow);
         }
         
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
         @media (max-width: 1100px) { body { grid-template-columns: 250px 1fr; overflow-y: auto; height: auto; } .activity-panel { display: none; } }
         @media (max-width: 900px) { body { grid-template-columns: 1fr; } .sidebar { height: auto; max-height: 500px; } .tab-content { height: auto; overflow: visible; } .main-section { padding-bottom: 50px; } }
     </style>
@@ -950,7 +955,13 @@
         <!-- Creator Posts Manager -->
         <div class="card">
             <h2><i data-lucide="image"></i> Creator Posts & Reactions</h2>
-            <div style="font-size:11px; opacity:0.6; margin-bottom:15px;">View and manage reactions on creator posts</div>
+            <div style="font-size:11px; opacity:0.6; margin-bottom:15px;">
+                View creator posts and add REAL reactions & comments from actual users
+            </div>
+            <div style="background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.3); border-radius:8px; padding:10px; margin-bottom:15px; font-size:11px; color:#10b981;">
+                <i data-lucide="info" style="width:14px; vertical-align:middle;"></i>
+                <strong>Real User Engagement:</strong> Random users from your platform will be selected to react and comment on posts. Comments are randomly generated from a pool of realistic templates. All engagement includes user IDs and sends notifications to creators!
+            </div>
             
             <div class="input-group">
                 <label>Select Creator</label>
@@ -2335,6 +2346,16 @@
                     <i data-lucide="plus-circle" style="width:14px; vertical-align:middle;"></i> ADD
                 </button>
             </div>
+            
+            <div class="reaction-control-panel" style="background:rgba(6, 182, 212, 0.05); border-color:rgba(6, 182, 212, 0.2); margin-top:8px;">
+                <span style="font-size:11px; font-weight:700; color:var(--cyan);">
+                    <i data-lucide="message-square" style="width:14px; vertical-align:middle;"></i> Add Comments:
+                </span>
+                <input type="number" class="reaction-input" id="comment-amount-${post.key}" placeholder="0" min="0" value="0">
+                <button class="add-reaction-btn" onclick="addBulkComments('${post.key}', '${creatorUid}')" style="background:linear-gradient(135deg, var(--cyan), #0891b2);">
+                    <i data-lucide="plus-circle" style="width:14px; vertical-align:middle;"></i> ADD
+                </button>
+            </div>
         `;
         
         // Load comment count
@@ -2357,42 +2378,136 @@
             return;
         }
         
-        if (amount > 10000) {
-            alert('Maximum 10,000 reactions at a time');
+        if (amount > 1000) {
+            alert('Maximum 1,000 reactions at a time (to avoid performance issues)');
             return;
         }
         
-        if (!confirm(`Add ${amount} reactions to this post?`)) return;
+        if (!confirm(`Add ${amount} REAL reactions from actual users to this post?\n\nThis will select ${amount} random users and record their reactions.`)) return;
         
-        // Get current likes count
-        db.ref('socialPosts/' + postKey + '/likes').once('value').then(snap => {
-            const currentLikes = snap.val() || 0;
-            const newLikes = currentLikes + amount;
+        const btn = event.target.closest('button');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader" style="width:14px; vertical-align:middle; animation:spin 1s linear infinite;"></i> Processing...';
+        btn.style.background = 'rgba(139, 92, 246, 0.5)';
+        
+        // Get all users
+        db.ref('users').once('value').then(usersSnap => {
+            const users = usersSnap.val() || {};
+            const userIds = Object.keys(users);
             
-            // Update the likes count
-            db.ref('socialPosts/' + postKey + '/likes').set(newLikes).then(() => {
-                // Update UI
-                document.getElementById('likes-' + postKey).textContent = newLikes;
-                input.value = 0;
+            if (userIds.length === 0) {
+                alert('No users found in the system');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                btn.style.background = 'linear-gradient(135deg, var(--accent), var(--accent-secondary))';
+                lucide.createIcons();
+                return;
+            }
+            
+            // Get existing reactions to avoid duplicates
+            db.ref('postLikes/' + postKey).once('value').then(likesSnap => {
+                const existingReactors = likesSnap.exists() ? Object.keys(likesSnap.val()) : [];
                 
-                // Show success message
-                const btn = event.target.closest('button');
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<i data-lucide="check" style="width:14px; vertical-align:middle;"></i> ADDED!';
-                btn.style.background = 'linear-gradient(135deg, var(--success), #059669)';
+                // Filter out users who already reacted
+                const availableUsers = userIds.filter(uid => !existingReactors.includes(uid));
                 
-                setTimeout(() => {
+                if (availableUsers.length === 0) {
+                    alert('All users have already reacted to this post!');
+                    btn.disabled = false;
                     btn.innerHTML = originalText;
                     btn.style.background = 'linear-gradient(135deg, var(--accent), var(--accent-secondary))';
                     lucide.createIcons();
-                }, 2000);
+                    return;
+                }
                 
-                lucide.createIcons();
-            }).catch(err => {
-                console.error('Error adding reactions:', err);
-                alert('Failed to add reactions. Please try again.');
+                // Limit amount to available users
+                const actualAmount = Math.min(amount, availableUsers.length);
+                
+                if (actualAmount < amount) {
+                    if (!confirm(`Only ${actualAmount} users available (${availableUsers.length} haven't reacted yet).\n\nContinue with ${actualAmount} reactions?`)) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        btn.style.background = 'linear-gradient(135deg, var(--accent), var(--accent-secondary))';
+                        lucide.createIcons();
+                        return;
+                    }
+                }
+                
+                // Randomly select users
+                const shuffled = availableUsers.sort(() => 0.5 - Math.random());
+                const selectedUsers = shuffled.slice(0, actualAmount);
+                
+                // Prepare reaction emojis
+                const emojis = ['❤️', '😂', '😮', '😢', '👍', '🔥', '😍'];
+                
+                // Add reactions from selected users
+                const updates = {};
+                let addedCount = 0;
+                const notificationPromises = [];
+                
+                selectedUsers.forEach(uid => {
+                    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+                    updates[`postLikes/${postKey}/${uid}`] = randomEmoji;
+                    addedCount++;
+                    
+                    // Send notification to creator for each reaction (batched)
+                    const userName = users[uid]?.name || users[uid]?.username || 'Someone';
+                    notificationPromises.push(
+                        db.ref(`notifications/${creatorUid}`).push({
+                            msg: `${userName} reacted ${randomEmoji} to your post`,
+                            time: Date.now(),
+                            type: 'post_reaction',
+                            from: uid,
+                            postKey: postKey
+                        })
+                    );
+                });
+                
+                // Update the database
+                db.ref().update(updates).then(() => {
+                    // Send all notifications
+                    return Promise.all(notificationPromises);
+                }).then(() => {
+                    // Update the likes count
+                    const newTotal = existingReactors.length + addedCount;
+                    return db.ref('socialPosts/' + postKey + '/likes').set(newTotal);
+                }).then(() => {
+                    // Update UI
+                    const newTotal = existingReactors.length + addedCount;
+                    document.getElementById('likes-' + postKey).textContent = newTotal;
+                    input.value = 0;
+                    
+                    // Show success message
+                    btn.innerHTML = `<i data-lucide="check" style="width:14px; vertical-align:middle;"></i> ${addedCount} ADDED!`;
+                    btn.style.background = 'linear-gradient(135deg, var(--success), #059669)';
+                    
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        btn.style.background = 'linear-gradient(135deg, var(--accent), var(--accent-secondary))';
+                        lucide.createIcons();
+                    }, 3000);
+                    
+                    lucide.createIcons();
+                }).catch(err => {
+                    console.error('Error adding reactions:', err);
+                    alert('Failed to add reactions. Please try again.');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    btn.style.background = 'linear-gradient(135deg, var(--accent), var(--accent-secondary))';
+                    lucide.createIcons();
+                });
             });
+        }).catch(err => {
+            console.error('Error fetching users:', err);
+            alert('Failed to fetch users. Please try again.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            btn.style.background = 'linear-gradient(135deg, var(--accent), var(--accent-secondary))';
+            lucide.createIcons();
         });
+    }
     }
     
     // Escape HTML for security
@@ -2401,6 +2516,172 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+    
+    // ===============================================
+    // BULK COMMENT GENERATOR
+    // ===============================================
+    
+    // Random comment templates
+    const commentTemplates = [
+        "Nice post! 👍",
+        "Love this! ❤️",
+        "Amazing content! 🔥",
+        "Keep it up! 💪",
+        "So cool! 😍",
+        "Great work! ⭐",
+        "Awesome! 🎉",
+        "This is fire! 🔥🔥",
+        "I love it! 💕",
+        "Beautiful! ✨",
+        "Wow! 😮",
+        "Incredible! 👏",
+        "So good! 👌",
+        "Perfect! 💯",
+        "Nailed it! 🎯",
+        "Superb! 🌟",
+        "Outstanding! 🏆",
+        "Fantastic! 🎊",
+        "Brilliant! 💡",
+        "Impressive! 👀",
+        "Love your posts! 💖",
+        "Always amazing content! ⭐⭐",
+        "You're the best! 🥇",
+        "Keep posting! 📸",
+        "More of this please! 🙏",
+        "Can't get enough! 😊",
+        "So inspiring! ✨✨",
+        "This made my day! ☀️",
+        "Legend! 🔥",
+        "Pure gold! 💛"
+    ];
+    
+    function addBulkComments(postKey, creatorUid) {
+        const input = document.getElementById('comment-amount-' + postKey);
+        const amount = parseInt(input.value) || 0;
+        
+        if (amount <= 0) {
+            alert('Please enter a valid number of comments (greater than 0)');
+            return;
+        }
+        
+        if (amount > 500) {
+            alert('Maximum 500 comments at a time (to avoid performance issues)');
+            return;
+        }
+        
+        if (!confirm(`Add ${amount} REAL comments from actual users to this post?\n\nRandom users will be selected and realistic comments will be generated.`)) return;
+        
+        const btn = event.target.closest('button');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader" style="width:14px; vertical-align:middle; animation:spin 1s linear infinite;"></i> Processing...';
+        btn.style.background = 'rgba(6, 182, 212, 0.5)';
+        
+        // Get all users
+        db.ref('users').once('value').then(usersSnap => {
+            const users = usersSnap.val() || {};
+            const userIds = Object.keys(users);
+            
+            if (userIds.length === 0) {
+                alert('No users found in the system');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                btn.style.background = 'linear-gradient(135deg, var(--cyan), #0891b2)';
+                lucide.createIcons();
+                return;
+            }
+            
+            // Limit amount to available users (can comment multiple times, but let's keep it reasonable)
+            const actualAmount = Math.min(amount, userIds.length * 2); // Each user can comment up to 2 times max
+            
+            if (actualAmount < amount) {
+                if (!confirm(`Adjusted to ${actualAmount} comments for better distribution.\n\nContinue?`)) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    btn.style.background = 'linear-gradient(135deg, var(--cyan), #0891b2)';
+                    lucide.createIcons();
+                    return;
+                }
+            }
+            
+            // Randomly select users with possible repeats
+            const selectedComments = [];
+            for (let i = 0; i < actualAmount; i++) {
+                const randomUserIndex = Math.floor(Math.random() * userIds.length);
+                const randomUid = userIds[randomUserIndex];
+                const randomComment = commentTemplates[Math.floor(Math.random() * commentTemplates.length)];
+                
+                selectedComments.push({
+                    uid: randomUid,
+                    text: randomComment,
+                    userName: users[randomUid]?.name || users[randomUid]?.username || 'Someone'
+                });
+            }
+            
+            // Add comments to database
+            const commentPromises = [];
+            const notificationPromises = [];
+            
+            selectedComments.forEach(comment => {
+                const commentRef = db.ref(`postComments/${postKey}`).push();
+                commentPromises.push(
+                    commentRef.set({
+                        uid: comment.uid,
+                        text: comment.text,
+                        time: Date.now()
+                    })
+                );
+                
+                // Send notification to creator
+                notificationPromises.push(
+                    db.ref(`notifications/${creatorUid}`).push({
+                        msg: `${comment.userName} commented on your post: "${comment.text}"`,
+                        time: Date.now(),
+                        type: 'post_comment',
+                        from: comment.uid,
+                        postKey: postKey
+                    })
+                );
+            });
+            
+            // Execute all promises
+            Promise.all([...commentPromises, ...notificationPromises]).then(() => {
+                // Update comment count in UI
+                return db.ref('postComments/' + postKey).once('value');
+            }).then(commentSnap => {
+                const newCommentCount = commentSnap.numChildren();
+                document.getElementById('comments-' + postKey).textContent = newCommentCount;
+                input.value = 0;
+                
+                // Show success message
+                btn.innerHTML = `<i data-lucide="check" style="width:14px; vertical-align:middle;"></i> ${actualAmount} ADDED!`;
+                btn.style.background = 'linear-gradient(135deg, var(--success), #059669)';
+                
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    btn.style.background = 'linear-gradient(135deg, var(--cyan), #0891b2)';
+                    lucide.createIcons();
+                }, 3000);
+                
+                lucide.createIcons();
+            }).catch(err => {
+                console.error('Error adding comments:', err);
+                alert('Failed to add comments. Please try again.');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                btn.style.background = 'linear-gradient(135deg, var(--cyan), #0891b2)';
+                lucide.createIcons();
+            });
+        }).catch(err => {
+            console.error('Error fetching users:', err);
+            alert('Failed to fetch users. Please try again.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            btn.style.background = 'linear-gradient(135deg, var(--cyan), #0891b2)';
+            lucide.createIcons();
+        });
     }
 </script>
 
