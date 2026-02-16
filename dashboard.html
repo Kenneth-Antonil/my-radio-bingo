@@ -627,6 +627,78 @@
             box-shadow: 0 8px 24px rgba(245, 158, 11, 0.6); 
         }
         
+        /* Creator Post Card Styles */
+        .creator-post-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            border: 2px solid rgba(245, 158, 11, 0.2);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            transition: all 0.3s ease;
+        }
+        .creator-post-card:hover {
+            border-color: rgba(245, 158, 11, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2);
+        }
+        .post-content-text {
+            color: var(--text);
+            margin: var(--spacing-sm) 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .post-image-preview {
+            width: 100%;
+            max-height: 300px;
+            object-fit: cover;
+            border-radius: var(--radius-md);
+            margin: var(--spacing-sm) 0;
+        }
+        .post-stats {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-sm);
+            padding-top: var(--spacing-sm);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .reaction-control-panel {
+            background: rgba(139, 92, 246, 0.05);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-sm);
+            margin-top: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        .reaction-input {
+            width: 80px;
+            padding: 6px 10px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(139,92,246,0.3);
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 700;
+        }
+        .add-reaction-btn {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            border: none;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+        .add-reaction-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+        
         @media (max-width: 1100px) { body { grid-template-columns: 250px 1fr; overflow-y: auto; height: auto; } .activity-panel { display: none; } }
         @media (max-width: 900px) { body { grid-template-columns: 1fr; } .sidebar { height: auto; max-height: 500px; } .tab-content { height: auto; overflow: visible; } .main-section { padding-bottom: 50px; } }
     </style>
@@ -872,6 +944,23 @@
             <h2><i data-lucide="users"></i> Manage Content Creators</h2>
             <div id="creator-list" style="max-height:500px; overflow-y:auto;">
                 <div style="opacity:0.5; text-align:center; padding:20px; font-size:12px;">Loading creators...</div>
+            </div>
+        </div>
+        
+        <!-- Creator Posts Manager -->
+        <div class="card">
+            <h2><i data-lucide="image"></i> Creator Posts & Reactions</h2>
+            <div style="font-size:11px; opacity:0.6; margin-bottom:15px;">View and manage reactions on creator posts</div>
+            
+            <div class="input-group">
+                <label>Select Creator</label>
+                <select id="post-creator-select" onchange="loadCreatorPosts(this.value)" style="padding:10px; background:rgba(0,0,0,0.3); border:1px solid rgba(139,92,246,0.3); color:white; border-radius:12px;">
+                    <option value="">-- Select a Creator --</option>
+                </select>
+            </div>
+            
+            <div id="creator-posts-container" style="max-height:600px; overflow-y:auto; margin-top:15px;">
+                <div style="opacity:0.5; text-align:center; padding:40px; font-size:12px;">Select a creator to view their posts</div>
             </div>
         </div>
     </div>
@@ -2127,11 +2216,191 @@
                 if (mutation.target.classList.contains('active') && mutation.target.id === 'creators-tab') {
                     loadCreators();
                     updateCreatorStats();
+                    populateCreatorSelect();
                 }
             });
         });
         
         tabObserver.observe(creatorsTab, { attributes: true, attributeFilter: ['class'] });
+    }
+    
+    // ===============================================
+    // CREATOR POSTS & REACTIONS MANAGEMENT
+    // ===============================================
+    
+    // Populate creator dropdown
+    function populateCreatorSelect() {
+        const select = document.getElementById('post-creator-select');
+        select.innerHTML = '<option value="">-- Select a Creator --</option>';
+        
+        db.ref('users').orderByChild('isContentCreator').equalTo(true).once('value').then(snap => {
+            const creators = snap.val() || {};
+            
+            Object.entries(creators).forEach(([uid, creator]) => {
+                const option = document.createElement('option');
+                option.value = uid;
+                option.textContent = creator.name || creator.username || creator.displayName || uid;
+                select.appendChild(option);
+            });
+        });
+    }
+    
+    // Load creator posts
+    function loadCreatorPosts(creatorUid) {
+        const container = document.getElementById('creator-posts-container');
+        
+        if (!creatorUid) {
+            container.innerHTML = '<div style="opacity:0.5; text-align:center; padding:40px; font-size:12px;">Select a creator to view their posts</div>';
+            return;
+        }
+        
+        container.innerHTML = '<div style="text-align:center; padding:40px;"><div class="loading-spinner"></div><div style="margin-top:10px; opacity:0.7;">Loading posts...</div></div>';
+        
+        db.ref('socialPosts').orderByChild('uid').equalTo(creatorUid).limitToLast(20).once('value').then(snap => {
+            if (!snap.exists()) {
+                container.innerHTML = '<div style="opacity:0.5; text-align:center; padding:40px; font-size:12px;">No posts yet from this creator</div>';
+                return;
+            }
+            
+            const posts = [];
+            snap.forEach(child => {
+                const post = child.val();
+                if (!post.deleted) {
+                    posts.push({ key: child.key, ...post });
+                }
+            });
+            
+            if (posts.length === 0) {
+                container.innerHTML = '<div style="opacity:0.5; text-align:center; padding:40px; font-size:12px;">No posts yet from this creator</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            posts.reverse().forEach(post => {
+                const postCard = createPostCard(post, creatorUid);
+                container.appendChild(postCard);
+            });
+            
+            lucide.createIcons();
+        }).catch(err => {
+            console.error('Error loading posts:', err);
+            container.innerHTML = '<div style="color:var(--danger); text-align:center; padding:40px; font-size:12px;">Error loading posts</div>';
+        });
+    }
+    
+    // Create post card
+    function createPostCard(post, creatorUid) {
+        const card = document.createElement('div');
+        card.className = 'creator-post-card';
+        card.id = 'post-card-' + post.key;
+        
+        const timestamp = new Date(post.timestamp).toLocaleString('en-PH', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const imageHtml = post.image ? `<img src="${post.image}" class="post-image-preview" alt="Post image">` : '';
+        const videoHtml = post.video ? `<video src="${post.video}" class="post-image-preview" controls></video>` : '';
+        
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div style="font-size:11px; color:var(--text-muted);">
+                    <i data-lucide="calendar" style="width:12px; vertical-align:middle;"></i> ${timestamp}
+                </div>
+                <div style="font-size:11px; color:#f59e0b; font-weight:700;">
+                    POST ID: ${post.key.substring(0, 8)}
+                </div>
+            </div>
+            
+            ${post.mood ? `<div style="font-size:11px; color:var(--accent-glow); margin-bottom:8px;">😊 Feeling ${post.mood}</div>` : ''}
+            
+            <div class="post-content-text">${escapeHtml(post.content || '')}</div>
+            
+            ${imageHtml}
+            ${videoHtml}
+            
+            <div class="post-stats">
+                <span><i data-lucide="heart" style="width:14px; vertical-align:middle;"></i> <strong id="likes-${post.key}">${post.likes || 0}</strong> reactions</span>
+                <span><i data-lucide="message-circle" style="width:14px; vertical-align:middle;"></i> <span id="comments-${post.key}">0</span> comments</span>
+            </div>
+            
+            <div class="reaction-control-panel">
+                <span style="font-size:11px; font-weight:700; color:var(--accent);">
+                    <i data-lucide="zap" style="width:14px; vertical-align:middle;"></i> Add Reactions:
+                </span>
+                <input type="number" class="reaction-input" id="reaction-amount-${post.key}" placeholder="0" min="0" value="0">
+                <button class="add-reaction-btn" onclick="addBulkReactions('${post.key}', '${creatorUid}')">
+                    <i data-lucide="plus-circle" style="width:14px; vertical-align:middle;"></i> ADD
+                </button>
+            </div>
+        `;
+        
+        // Load comment count
+        db.ref('postComments/' + post.key).once('value').then(commentSnap => {
+            const commentCount = commentSnap.numChildren();
+            const commentEl = card.querySelector('#comments-' + post.key);
+            if (commentEl) commentEl.textContent = commentCount;
+        });
+        
+        return card;
+    }
+    
+    // Add bulk reactions to a post
+    function addBulkReactions(postKey, creatorUid) {
+        const input = document.getElementById('reaction-amount-' + postKey);
+        const amount = parseInt(input.value) || 0;
+        
+        if (amount <= 0) {
+            alert('Please enter a valid number of reactions (greater than 0)');
+            return;
+        }
+        
+        if (amount > 10000) {
+            alert('Maximum 10,000 reactions at a time');
+            return;
+        }
+        
+        if (!confirm(`Add ${amount} reactions to this post?`)) return;
+        
+        // Get current likes count
+        db.ref('socialPosts/' + postKey + '/likes').once('value').then(snap => {
+            const currentLikes = snap.val() || 0;
+            const newLikes = currentLikes + amount;
+            
+            // Update the likes count
+            db.ref('socialPosts/' + postKey + '/likes').set(newLikes).then(() => {
+                // Update UI
+                document.getElementById('likes-' + postKey).textContent = newLikes;
+                input.value = 0;
+                
+                // Show success message
+                const btn = event.target.closest('button');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="check" style="width:14px; vertical-align:middle;"></i> ADDED!';
+                btn.style.background = 'linear-gradient(135deg, var(--success), #059669)';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = 'linear-gradient(135deg, var(--accent), var(--accent-secondary))';
+                    lucide.createIcons();
+                }, 2000);
+                
+                lucide.createIcons();
+            }).catch(err => {
+                console.error('Error adding reactions:', err);
+                alert('Failed to add reactions. Please try again.');
+            });
+        });
+    }
+    
+    // Escape HTML for security
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 </script>
 
