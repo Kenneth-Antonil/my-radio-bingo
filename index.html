@@ -3455,6 +3455,84 @@
             }
         }
         
+        /* ===================================== */
+        /* CONTENT CREATOR STYLES */
+        /* ===================================== */
+        
+        .creator-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.5);
+            color: white;
+        }
+        
+        .creator-badge i {
+            width: 12px;
+            height: 12px;
+        }
+        
+        .creator-profile-header {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1));
+            border: 2px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .follow-btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .follow-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+        }
+        
+        .follow-btn.following {
+            background: rgba(245, 158, 11, 0.2);
+            border: 2px solid #f59e0b;
+            color: #f59e0b;
+        }
+        
+        .follower-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 700;
+            color: #f59e0b;
+        }
+        
+        .points-multiplier-badge {
+            background: linear-gradient(135deg, #10b981, #059669);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            display: inline-block;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+            margin-top: 8px;
+        }
+        
+        .creator-post {
+            border-left: 3px solid #f59e0b !important;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(0, 0, 0, 0.1));
+        }
+        
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9712694598388252"
      crossorigin="anonymous"></script>
         
@@ -6902,12 +6980,15 @@
 
         db.ref('users/' + uid).once('value', s => {
             const u = s.val();
+            const isCreator = u.isContentCreator || false;
+            
             // Inject avatar (without ranking badge)
             document.getElementById('pageProfileAvatarContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photo || 'https://via.placeholder.com/100'), u.bingoWins || 0, 140, uid);
             
-            // Set name with verification badge if verified
+            // Set name with verification badge and creator badge if applicable
             const verificationBadge = u.verified ? `<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>` : '';
-            document.getElementById('pageProfileName').innerHTML = `${escapeHtml(u.name)}${verificationBadge}`;
+            const creatorBadge = isCreator ? `<span class="creator-badge" style="margin-left:8px;"><i data-lucide="star"></i> Creator</span>` : '';
+            document.getElementById('pageProfileName').innerHTML = `${escapeHtml(u.name)}${verificationBadge}${creatorBadge}`;
             document.getElementById('pageProfileBio').innerText = u.bio || "Radio Bingo Player";
             
             if(u.cover) {
@@ -6919,9 +7000,17 @@
             
             updateProfileButtonState(uid);
             
-            db.ref('friends/' + uid).once('value', fSnap => {
-                document.getElementById('statFriends').innerText = fSnap.numChildren() || 0;
-            });
+            // Show followers for creators, friends for regular users
+            if (isCreator) {
+                const realFollowers = u.followers ? Object.keys(u.followers).length : 0;
+                const fakeFollowers = u.fakeFollowers || 0;
+                document.getElementById('statFriends').innerText = realFollowers + fakeFollowers;
+                document.getElementById('statFriends').parentElement.querySelector('div:first-child').innerText = 'Followers';
+            } else {
+                db.ref('friends/' + uid).once('value', fSnap => {
+                    document.getElementById('statFriends').innerText = fSnap.numChildren() || 0;
+                });
+            }
             
             loadProfilePosts(uid);
             lucide.createIcons();
@@ -7132,38 +7221,67 @@ Please explain why you want a verification badge:`;
             // Show 3-dot menu button for own profile
             menuBtn.style.display = 'flex';
         } else {
-            // Show Gift Skin button for other users
-            giftSkinBtn.style.display = 'block';
-            giftSkinBtn.onclick = () => openGiftModal(uid);
-            
-            db.ref('friends/' + myUid + '/' + uid).once('value', s => {
-                if(s.exists()) {
-                    btn.innerText = "Message";
-                    btn.className = "profile-action-btn";
-                    btn.onclick = () => openPrivateChat(uid, document.getElementById('pageProfileName').innerText, document.getElementById('pageProfileImg').src); 
-                    unfriendBtn.style.display = 'flex'; // Show modern unfriend
+            // Check if target user is a content creator
+            db.ref('users/' + uid).once('value', userSnap => {
+                const targetUser = userSnap.val();
+                const isCreator = targetUser && targetUser.isContentCreator;
+                
+                // Show Gift Skin button for other users
+                giftSkinBtn.style.display = 'block';
+                giftSkinBtn.onclick = () => openGiftModal(uid);
+                
+                if (isCreator) {
+                    // For creators, show Follow/Following button
+                    db.ref('users/' + myUid + '/following/' + uid).once('value', followSnap => {
+                        if (followSnap.exists()) {
+                            btn.innerText = "Following";
+                            btn.className = "profile-action-btn follow-btn following";
+                            btn.onclick = () => {
+                                toggleFollow(uid);
+                                setTimeout(() => updateProfileButtonState(uid), 500);
+                            };
+                        } else {
+                            btn.innerText = "Follow";
+                            btn.className = "profile-action-btn follow-btn";
+                            btn.onclick = () => {
+                                toggleFollow(uid);
+                                setTimeout(() => updateProfileButtonState(uid), 500);
+                            };
+                        }
+                        btn.style.display = 'block';
+                    });
                 } else {
-                     db.ref('friendRequests/' + uid + '/' + myUid).once('value', reqSnap => {
-                         if(reqSnap.exists()) {
-                             btn.innerText = "Cancel Request";
-                             btn.className = "profile-action-btn secondary";
-                             btn.onclick = () => {
-                                 db.ref('friendRequests/' + uid + '/' + myUid).remove();
-                                 updateProfileButtonState(uid);
-                                 showToast("Request Cancelled");
-                             };
-                         } else {
-                             btn.innerText = "Add Friend";
-                             btn.className = "profile-action-btn";
-                             btn.onclick = () => {
-                                 db.ref('friendRequests/' + uid + '/' + myUid).set(true);
-                                 updateProfileButtonState(uid);
-                                 showToast("Request Sent!");
-                             };
-                         }
-                     });
+                    // For regular users, show friend system
+                    db.ref('friends/' + myUid + '/' + uid).once('value', s => {
+                        if(s.exists()) {
+                            btn.innerText = "Message";
+                            btn.className = "profile-action-btn";
+                            btn.onclick = () => openPrivateChat(uid, document.getElementById('pageProfileName').innerText, document.getElementById('pageProfileImg').src); 
+                            unfriendBtn.style.display = 'flex';
+                        } else {
+                             db.ref('friendRequests/' + uid + '/' + myUid).once('value', reqSnap => {
+                                 if(reqSnap.exists()) {
+                                     btn.innerText = "Cancel Request";
+                                     btn.className = "profile-action-btn secondary";
+                                     btn.onclick = () => {
+                                         db.ref('friendRequests/' + uid + '/' + myUid).remove();
+                                         updateProfileButtonState(uid);
+                                         showToast("Request Cancelled");
+                                     };
+                                 } else {
+                                     btn.innerText = "Add Friend";
+                                     btn.className = "profile-action-btn";
+                                     btn.onclick = () => {
+                                         db.ref('friendRequests/' + uid + '/' + myUid).set(true);
+                                         updateProfileButtonState(uid);
+                                         showToast("Request Sent!");
+                                     };
+                                 }
+                             });
+                        }
+                        btn.style.display = 'block';
+                    });
                 }
-                btn.style.display = 'block';
             });
         }
     }
@@ -7905,7 +8023,7 @@ Please explain why you want a verification badge:`;
             
             const moodHtml = post.mood ? `<div class="mood-display">Feeling ${post.mood}</div>` : '';
             const imgHtml = post.image ? `<div class="post-image-container"><img src="${post.image}" class="post-image"></div>` : '';
-            const videoHtml = post.video ? `<div class="post-image-container"><video src="${post.video}" class="post-image" controls style="width:100%; max-height:400px;"></video></div>` : '';
+            const videoHtml = post.video ? `<div class="post-image-container"><video src="${post.video}" class="post-image" controls style="width:100%; max-height:400px;" data-post-key="${post.key || ''}" data-owner-id="${post.uid || ''}"></video></div>` : '';
             
             // Visibility indicator
             const visibility = post.visibility || 'public';
@@ -8015,6 +8133,11 @@ Please explain why you want a verification badge:`;
             `;
             
             lucide.createIcons();
+            
+            // Setup video view tracking for content creators
+            if (typeof setupVideoTracking === 'function') {
+                setTimeout(() => setupVideoTracking(), 200);
+            }
             
             // Load initial state (simple check if liked)
             db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
@@ -8577,6 +8700,153 @@ Please explain why you want a verification badge:`;
                 });
             }, 500);
         };
+    }
+    
+    // ===============================================
+    // CONTENT CREATOR SYSTEM
+    // ===============================================
+    
+    // Follow/Unfollow System
+    function toggleFollow(targetUid) {
+        if (!auth.currentUser) {
+            showToast('Please login first');
+            return;
+        }
+        
+        const myUid = auth.currentUser.uid;
+        
+        if (myUid === targetUid) {
+            showToast('Cannot follow yourself');
+            return;
+        }
+        
+        db.ref(`users/${myUid}/following/${targetUid}`).once('value').then(snap => {
+            if (snap.exists()) {
+                // Unfollow
+                db.ref(`users/${myUid}/following/${targetUid}`).remove();
+                db.ref(`users/${targetUid}/followers/${myUid}`).remove();
+                showToast('Unfollowed');
+                
+                db.ref(`notifications/${targetUid}`).push({
+                    msg: `${auth.currentUser.displayName || 'Someone'} unfollowed you`,
+                    time: Date.now(),
+                    type: 'unfollow',
+                    from: myUid
+                });
+            } else {
+                // Follow
+                db.ref(`users/${myUid}/following/${targetUid}`).set(true);
+                db.ref(`users/${targetUid}/followers/${myUid}`).set(true);
+                showToast('Following!');
+                
+                db.ref(`notifications/${targetUid}`).push({
+                    msg: `${auth.currentUser.displayName || 'Someone'} started following you!`,
+                    time: Date.now(),
+                    type: 'new_follower',
+                    from: myUid
+                });
+            }
+            
+            if (typeof viewProfile === 'function') {
+                viewProfile(targetUid);
+            }
+        });
+    }
+    
+    // Award points with 2x creator multiplier
+    const originalAwardPoints = typeof awardPoints !== 'undefined' ? awardPoints : null;
+    function awardPoints(uid, basePoints, reason) {
+        if (!uid || basePoints <= 0) return;
+        
+        db.ref(`users/${uid}`).once('value').then(snap => {
+            const user = snap.val();
+            if (!user) return;
+            
+            const multiplier = user.isContentCreator ? 2 : 1;
+            const actualPoints = basePoints * multiplier;
+            
+            const currentPoints = user.points || 0;
+            const newPoints = currentPoints + actualPoints;
+            
+            const updates = { points: newPoints };
+            
+            if (user.isContentCreator) {
+                const creatorPoints = user.creatorPoints || 0;
+                updates.creatorPoints = creatorPoints + actualPoints;
+            }
+            
+            db.ref(`users/${uid}`).update(updates);
+            
+            const bonusText = multiplier > 1 ? ' (2x Creator Bonus!)' : '';
+            db.ref(`notifications/${uid}`).push({
+                msg: `+${actualPoints} points! ${reason}${bonusText}`,
+                time: Date.now(),
+                type: 'points_earned',
+                points: actualPoints
+            });
+        });
+    }
+    
+    // Award video view points
+    function awardVideoViewPoints(videoOwnerId, viewerId, videoId) {
+        if (videoOwnerId === viewerId) return;
+        
+        db.ref(`users/${videoOwnerId}`).once('value').then(snap => {
+            const user = snap.val();
+            if (!user || !user.isContentCreator) return;
+            
+            const viewId = `${videoId}_${viewerId}`;
+            
+            db.ref(`videoViews/${videoOwnerId}/${viewId}`).once('value').then(viewSnap => {
+                if (viewSnap.exists()) return;
+                
+                db.ref(`videoViews/${videoOwnerId}/${viewId}`).set({
+                    viewerId: viewerId,
+                    timestamp: Date.now(),
+                    videoId: videoId
+                });
+                
+                const currentViews = user.creatorVideoViews || 0;
+                db.ref(`users/${videoOwnerId}`).update({
+                    creatorVideoViews: currentViews + 1
+                });
+                
+                awardPoints(videoOwnerId, 5, 'Video view');
+            });
+        });
+    }
+    
+    // Track video views
+    function setupVideoTracking() {
+        document.querySelectorAll('video[data-post-key]').forEach(video => {
+            const postKey = video.getAttribute('data-post-key');
+            const ownerId = video.getAttribute('data-owner-id');
+            
+            if (postKey && ownerId && auth.currentUser) {
+                let viewRecorded = false;
+                let playTime = 0;
+                let lastTime = 0;
+                
+                video.addEventListener('play', () => {
+                    lastTime = video.currentTime;
+                });
+                
+                video.addEventListener('timeupdate', () => {
+                    if (!viewRecorded) {
+                        const currentTime = video.currentTime;
+                        if (currentTime > lastTime) {
+                            playTime += (currentTime - lastTime);
+                        }
+                        lastTime = currentTime;
+                        
+                        if (playTime >= 3 && auth.currentUser.uid !== ownerId) {
+                            awardVideoViewPoints(ownerId, auth.currentUser.uid, postKey);
+                            viewRecorded = true;
+                        }
+                    }
+                });
+            }
+        });
     }
 </script>
 
