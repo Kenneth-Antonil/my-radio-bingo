@@ -752,6 +752,73 @@
             cursor: pointer;
         }
 
+        /* === MODERN NOTIFICATION STYLES === */
+        .notif-filter-tab {
+            padding: 7px 14px; border: none; background: transparent;
+            color: rgba(255,255,255,0.45); font-size: 12px; font-weight: 700;
+            border-radius: 20px; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+        }
+        .notif-filter-tab.active {
+            background: rgba(14,165,233,0.18); color: var(--accent-glow);
+            border: 1px solid rgba(14,165,233,0.3);
+        }
+        .notif-section-label {
+            padding: 10px 16px 4px; font-size: 11px; font-weight: 800;
+            color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 1px;
+        }
+        .notif-item-modern {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; cursor: pointer; transition: background 0.15s;
+            position: relative;
+        }
+        .notif-item-modern:hover { background: rgba(255,255,255,0.04); }
+        .notif-item-modern:active { background: rgba(255,255,255,0.08); }
+        .notif-item-modern.unread { background: rgba(14,165,233,0.07); }
+        .notif-item-modern.unread:hover { background: rgba(14,165,233,0.12); }
+        .notif-avatars-stack { position: relative; width: 48px; height: 44px; flex-shrink: 0; }
+        .notif-av-main {
+            width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.12); position: absolute; top: 0; left: 0;
+        }
+        .notif-av-secondary {
+            width: 26px; height: 26px; border-radius: 50%; object-fit: cover;
+            border: 2px solid #0f172a; position: absolute; bottom: -2px; right: -4px;
+        }
+        .notif-type-icon {
+            position: absolute; bottom: -2px; right: -4px;
+            width: 22px; height: 22px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; border: 2px solid #0f172a;
+        }
+        .notif-type-icon.like { background: #ef4444; }
+        .notif-type-icon.comment { background: var(--accent); }
+        .notif-type-icon.mention { background: #a78bfa; }
+        .notif-type-icon.follow { background: #10b981; }
+        .notif-type-icon.share { background: #f59e0b; }
+        .notif-type-icon.gift { background: #ec4899; }
+        .notif-type-icon.system { background: #64748b; }
+        .notif-text-wrap { flex: 1; min-width: 0; }
+        .notif-text-main { font-size: 13.5px; color: #e2e8f0; line-height: 1.4; }
+        .notif-text-main strong { color: white; font-weight: 700; }
+        .notif-text-time { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 3px; }
+        .notif-unread-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+            flex-shrink: 0; box-shadow: 0 0 6px rgba(14,165,233,0.6);
+        }
+        .notif-delete-btn {
+            background: none; border: none; color: rgba(255,255,255,0.2);
+            cursor: pointer; padding: 6px; border-radius: 50%; transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .notif-delete-btn:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .notif-empty-state {
+            text-align: center; padding: 60px 20px;
+        }
+        .notif-empty-state .notif-empty-icon { font-size: 52px; margin-bottom: 12px; }
+        .notif-empty-state .notif-empty-title { font-size: 16px; font-weight: 800; color: white; margin-bottom: 6px; }
+        .notif-empty-state .notif-empty-sub { font-size: 13px; color: rgba(255,255,255,0.4); line-height: 1.5; }
+        .notif-modal-modern { border-radius: 20px !important; }
+
         /* Modern Unfriend Button */
         .btn-unfriend-modern {
             background: rgba(239, 68, 68, 0.12);
@@ -4728,15 +4795,28 @@
     </div>
 </div>
     <div id="notifModal" class="modal" onclick="this.style.display='none'">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--spacing-lg); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
-            <div style="display:flex; align-items:center; gap: var(--spacing-sm);">
-                <div style="background:rgba(255,255,255,0.1); padding:8px; border-radius: var(--radius-sm);"><i data-lucide="bell" style="width:20px;"></i></div>
-                <h3 style="margin:0; font-size:18px;">Notifications</h3>
+    <div class="modal-content notif-modal-modern" onclick="event.stopPropagation()" style="padding:0; overflow:hidden; max-height:85vh; display:flex; flex-direction:column;">
+        <!-- Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 18px 12px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(15,23,42,0.95); backdrop-filter:blur(20px); position:sticky; top:0; z-index:10;">
+            <div>
+                <h3 style="margin:0; font-size:20px; font-weight:900; color:white; letter-spacing:-0.3px;">Notifications</h3>
+                <div style="font-size:11px; color:rgba(255,255,255,0.4); margin-top:2px;" id="notifSubtitle">Loading...</div>
             </div>
-            <button onclick="document.getElementById('notifModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button onclick="clearAllNotifs()" id="clearAllBtn" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.2); color:#f87171; border-radius:20px; padding:6px 12px; font-size:11px; font-weight:700; cursor:pointer; display:none;">Clear all</button>
+                <button onclick="document.getElementById('notifModal').style.display='none'" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); color:white; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i data-lucide="x" style="width:16px;"></i></button>
+            </div>
         </div>
-        <div id="notifList"></div>
+        <!-- Filter Tabs -->
+        <div style="display:flex; gap:0; padding:10px 14px 8px; background:rgba(15,23,42,0.9); border-bottom:1px solid rgba(255,255,255,0.06);">
+            <button class="notif-filter-tab active" id="nftab-all" onclick="switchNotifTab('all')">All</button>
+            <button class="notif-filter-tab" id="nftab-like" onclick="switchNotifTab('like')">❤️ Reactions</button>
+            <button class="notif-filter-tab" id="nftab-comment" onclick="switchNotifTab('comment')">💬 Comments</button>
+            <button class="notif-filter-tab" id="nftab-mention" onclick="switchNotifTab('mention')">@ Mentions</button>
+            <button class="notif-filter-tab" id="nftab-follow" onclick="switchNotifTab('follow')">👤 Follows</button>
+        </div>
+        <!-- List -->
+        <div id="notifList" style="overflow-y:auto; flex:1; padding:8px 0 12px;"></div>
     </div>
 </div>
 
@@ -5942,6 +6022,29 @@
                     image: userData.photo || 'https://via.placeholder.com/40'
                 });
             }
+
+            // Detect @mentions in Beats comment and notify mentioned users
+            const beatsMentionMatches = text.match(/@(\w+)/g);
+            if(beatsMentionMatches && userData && userData.name) {
+                const uniqueBeatsMentions = [...new Set(beatsMentionMatches.map(m => m.slice(1)))];
+                uniqueBeatsMentions.forEach(mentionedName => {
+                    db.ref('users').orderByChild('name').equalTo(mentionedName).limitToFirst(1).once('value', snap => {
+                        if(snap.exists()) {
+                            const mentionedUid = Object.keys(snap.val())[0];
+                            if(mentionedUid !== myUid) {
+                                db.ref('notifications/' + mentionedUid).push({
+                                    msg: `${userData.name} mentioned you in a comment`,
+                                    time: Date.now(),
+                                    type: 'mention',
+                                    from: myUid,
+                                    postId: currentBeatsCommentPostKey,
+                                    image: userData.photo || 'https://via.placeholder.com/40'
+                                });
+                            }
+                        }
+                    });
+                });
+            }
             
             playSound('click');
             showToast('Comment posted!');
@@ -6601,55 +6704,205 @@
         }); 
     }
     
-    function openNotifs() { document.getElementById('notifModal').style.display='flex'; playSound('click'); renderNotifs(); }
-    
+    let currentNotifFilter = 'all';
+
+    function openNotifs() { 
+        document.getElementById('notifModal').style.display='flex'; 
+        playSound('click'); 
+        currentNotifFilter = 'all';
+        document.querySelectorAll('.notif-filter-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('nftab-all').classList.add('active');
+        renderNotifs(); 
+    }
+
+    function switchNotifTab(tab) {
+        currentNotifFilter = tab;
+        document.querySelectorAll('.notif-filter-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('nftab-' + tab).classList.add('active');
+        renderNotifs();
+        playSound('click');
+    }
+
+    function clearAllNotifs() {
+        if(!confirm('Clear all notifications?')) return;
+        db.ref('notifications/' + auth.currentUser.uid).once('value', s => {
+            const updates = {};
+            s.forEach(n => { if(n.val().type !== 'pm') updates[n.key] = null; });
+            db.ref('notifications/' + auth.currentUser.uid).update(updates).then(() => {
+                renderNotifs(); showToast('All notifications cleared');
+            });
+        });
+    }
+
+    function getNotifTimeLabel(timestamp) {
+        const now = Date.now();
+        const diff = now - timestamp;
+        const mins = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+        if(mins < 1) return 'Just now';
+        if(mins < 60) return mins + 'm ago';
+        if(hours < 24) return hours + 'h ago';
+        if(days < 7) return days + 'd ago';
+        return fixDate(timestamp);
+    }
+
+    function getNotifTypeIcon(type) {
+        const map = { like:'❤️', comment:'💬', mention:'@', follow:'👤', share:'🔄', gift:'🎁', system:'🔔' };
+        return map[type] || '🔔';
+    }
+
     function renderNotifs() { 
         const list = document.getElementById('notifList'); 
+        list.innerHTML = '<div style="text-align:center;padding:40px;opacity:0.4;font-size:13px;">Loading...</div>';
+        
         db.ref('notifications/' + auth.currentUser.uid).once('value', s => { 
             list.innerHTML = ""; 
-            const notifs = [];
-            s.forEach(n => { if(n.val().type !== 'pm') notifs.push({ key: n.key, ...n.val() }); });
-            
-            notifs.sort((a,b) => b.time - a.time);
+            let allNotifs = [];
+            s.forEach(n => { if(n.val().type !== 'pm') allNotifs.push({ key: n.key, ...n.val() }); });
+            allNotifs.sort((a,b) => b.time - a.time);
+
+            // Filter
+            let notifs = allNotifs;
+            if(currentNotifFilter !== 'all') {
+                notifs = allNotifs.filter(n => n.type === currentNotifFilter);
+            }
+
+            // Update subtitle & clear button
+            const subtitle = document.getElementById('notifSubtitle');
+            const clearBtn = document.getElementById('clearAllBtn');
+            subtitle.textContent = allNotifs.length > 0 ? allNotifs.length + ' notification' + (allNotifs.length !== 1 ? 's' : '') : 'You\'re all caught up';
+            clearBtn.style.display = allNotifs.length > 0 ? 'block' : 'none';
 
             if(notifs.length === 0) {
-                list.innerHTML = "<div style='text-align:center; opacity:0.5; padding:40px;'>No new notifications</div>";
+                const filterLabel = currentNotifFilter === 'all' ? '' : currentNotifFilter;
+                list.innerHTML = `
+                    <div class="notif-empty-state">
+                        <div class="notif-empty-icon">${currentNotifFilter === 'all' ? '🔔' : getNotifTypeIcon(currentNotifFilter)}</div>
+                        <div class="notif-empty-title">No ${filterLabel} notifications</div>
+                        <div class="notif-empty-sub">${currentNotifFilter === 'all' ? 'When you get notifications,<br>they\'ll appear here.' : 'No ' + filterLabel + ' notifications yet.'}</div>
+                    </div>`;
+                lucide.createIcons();
                 return;
             }
 
-            notifs.forEach(val => {
-                const div = document.createElement('div');
-                div.className = 'notif-card-grouped';
-                
-                let iconOrImg = `<i data-lucide="info" style="color:#64748b;"></i>`;
-                if(val.image) {
-                    iconOrImg = `<img src="${val.image}" class="notif-img">`;
-                }
-                
-                div.innerHTML = `
-                    ${iconOrImg}
-                    <div class="notif-content-wrap">
-                        <div style="font-size:13px; color:white;">${val.msg}</div>
-                        <div style="font-size:10px; opacity:0.5; margin-top:5px;">${fixDate(val.time)}</div>
-                    </div>
-                    <button class="btn-delete-notif" onclick="deleteNotif('${val.key}', event)"><i data-lucide="x" style="width:14px;"></i></button>
-                `;
-                
-                // Click Nav Logic
-                div.onclick = (e) => {
-                    if(e.target.closest('.btn-delete-notif')) return; 
-                    if(val.postId) {
-                        document.getElementById('notifModal').style.display='none';
-                        // Switch to home and find post or open comments
-                        switchTab('home');
-                        const postEl = document.getElementById('post-' + val.postId);
-                        if(postEl) postEl.scrollIntoView({behavior: "smooth"});
-                        else openComments(val.postId);
+            // GROUP notifications: group by type+postId with time window of 1 hour
+            const groups = [];
+            const grouped = {};
+            notifs.forEach(n => {
+                const groupKey = (n.type || 'system') + '_' + (n.postId || 'general');
+                if(!grouped[groupKey]) {
+                    grouped[groupKey] = { ...n, keys: [n.key], actors: [{ image: n.image, from: n.from }] };
+                    groups.push(grouped[groupKey]);
+                } else {
+                    grouped[groupKey].keys.push(n.key);
+                    // Only add unique actors
+                    if(n.from && !grouped[groupKey].actors.find(a => a.from === n.from)) {
+                        grouped[groupKey].actors.push({ image: n.image, from: n.from });
                     }
-                };
-                
-                list.appendChild(div);
+                    // Keep latest time
+                    if(n.time > grouped[groupKey].time) {
+                        grouped[groupKey].time = n.time;
+                        grouped[groupKey].image = n.image;
+                    }
+                }
             });
+
+            // Separate into New (last 24h) and Earlier
+            const now = Date.now();
+            const newGroup = groups.filter(g => now - g.time < 86400000);
+            const earlierGroup = groups.filter(g => now - g.time >= 86400000);
+
+            function renderGroup(grpNotifs, sectionLabel) {
+                if(grpNotifs.length === 0) return;
+                const label = document.createElement('div');
+                label.className = 'notif-section-label';
+                label.textContent = sectionLabel;
+                list.appendChild(label);
+
+                grpNotifs.forEach(g => {
+                    const count = g.keys.length;
+                    const actorCount = g.actors.length;
+
+                    // Build grouped message
+                    let msgText = g.msg;
+                    if(count > 1) {
+                        // Build "X and Y others [action]"
+                        const baseMsg = g.msg;
+                        // Try to extract action part (after first word group)
+                        const actionMatch = baseMsg.match(/^[^\s]+\s+(.+)$/);
+                        const action = actionMatch ? actionMatch[1] : baseMsg;
+                        if(actorCount >= 2) {
+                            msgText = `<strong>${g.actors[0].from ? '...' : 'Someone'}</strong> and <strong>${count - 1} other${count - 1 > 1 ? 's' : ''}</strong> ${action}`;
+                        } else {
+                            msgText = `<strong>${count} people</strong> ${action}`;
+                        }
+                    } else {
+                        // Single - bold the name part (first word(s) before action)
+                        const nameMatch = g.msg.match(/^([\w\s]+?)\s+(liked|commented|mentioned|started following|reacted|shared|sent|replied|gifted)/);
+                        if(nameMatch) {
+                            msgText = `<strong>${escapeHtml(nameMatch[1])}</strong> ${g.msg.slice(nameMatch[1].length)}`;
+                        }
+                    }
+
+                    // Type icon
+                    const typeIcons = { like:'❤️', comment:'💬', mention:'@', follow:'👤', share:'🔄', gift:'🎁', system:'ℹ️' };
+                    const typeIcon = typeIcons[g.type] || '🔔';
+                    const isNew = now - g.time < 86400000;
+
+                    // Second avatar for stacked display (2nd actor)
+                    const secondActorImg = actorCount >= 2 && g.actors[1].image ? 
+                        `<img src="${escapeHtml(g.actors[1].image)}" class="notif-av-secondary">` : 
+                        (count > 1 ? `<div class="notif-av-secondary" style="background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:9px;color:white;">+${count-1}</div>` : 
+                        `<div class="notif-type-icon ${g.type||'system'}">${typeIcon}</div>`);
+
+                    const div = document.createElement('div');
+                    div.className = 'notif-item-modern' + (isNew ? ' unread' : '');
+                    div.innerHTML = `
+                        <div class="notif-avatars-stack">
+                            <img src="${g.image ? escapeHtml(g.image) : 'https://via.placeholder.com/40'}" class="notif-av-main" onerror="this.src='https://via.placeholder.com/40'">
+                            ${secondActorImg}
+                        </div>
+                        <div class="notif-text-wrap">
+                            <div class="notif-text-main">${msgText}</div>
+                            <div class="notif-text-time">${getNotifTimeLabel(g.time)}</div>
+                        </div>
+                        ${isNew ? '<div class="notif-unread-dot"></div>' : ''}
+                        <button class="notif-delete-btn" title="Dismiss"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+                    `;
+
+                    // Delete button
+                    div.querySelector('.notif-delete-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const updates = {};
+                        g.keys.forEach(k => { updates[k] = null; });
+                        db.ref('notifications/' + auth.currentUser.uid).update(updates).then(() => {
+                            div.style.transition = 'opacity 0.2s, transform 0.2s';
+                            div.style.opacity = '0';
+                            div.style.transform = 'translateX(30px)';
+                            setTimeout(() => { div.remove(); renderNotifs(); }, 200);
+                        });
+                    });
+
+                    // Click to navigate
+                    div.addEventListener('click', (e) => {
+                        if(e.target.closest('.notif-delete-btn')) return;
+                        document.getElementById('notifModal').style.display = 'none';
+                        if(g.postId) {
+                            switchTab('home');
+                            const postEl = document.getElementById('post-' + g.postId);
+                            if(postEl) postEl.scrollIntoView({behavior: "smooth"});
+                            else openComments(g.postId);
+                        }
+                    });
+
+                    list.appendChild(div);
+                });
+            }
+
+            renderGroup(newGroup, '🆕 New');
+            renderGroup(earlierGroup, '📅 Earlier');
+
             lucide.createIcons();
         }); 
     }
@@ -7685,7 +7938,31 @@
             };
         }
         
-        db.ref('socialPosts').push(postData);
+        db.ref('socialPosts').push(postData).then(ref => {
+            const newPostKey = ref.key;
+            // Detect @mentions in post and notify mentioned users
+            const postMentionMatches = txt.match(/@(\w+)/g);
+            if(postMentionMatches && userData && userData.name) {
+                const uniquePostMentions = [...new Set(postMentionMatches.map(m => m.slice(1)))];
+                uniquePostMentions.forEach(mentionedName => {
+                    db.ref('users').orderByChild('name').equalTo(mentionedName).limitToFirst(1).once('value', snap => {
+                        if(snap.exists()) {
+                            const mentionedUid = Object.keys(snap.val())[0];
+                            if(mentionedUid !== auth.currentUser.uid) {
+                                db.ref('notifications/' + mentionedUid).push({
+                                    msg: `${userData.name} mentioned you in a post`,
+                                    time: Date.now(),
+                                    type: 'mention',
+                                    from: auth.currentUser.uid,
+                                    postId: newPostKey,
+                                    image: userData.photo || 'https://via.placeholder.com/40'
+                                });
+                            }
+                        }
+                    });
+                });
+            }
+        });
         document.getElementById('postInput').value = "";
         document.getElementById('postVisibility').value = 'public';
         removePostImage();
@@ -8460,6 +8737,30 @@ Please explain why you want a verification badge:`;
                  });
              }
         });
+
+        // Detect @mentions and notify each mentioned user
+        const mentionMatches = txt.match(/@(\w+)/g);
+        if(mentionMatches && userData && userData.name) {
+            const uniqueMentions = [...new Set(mentionMatches.map(m => m.slice(1)))];
+            uniqueMentions.forEach(mentionedName => {
+                db.ref('users').orderByChild('name').equalTo(mentionedName).limitToFirst(1).once('value', snap => {
+                    if(snap.exists()) {
+                        const mentionedUid = Object.keys(snap.val())[0];
+                        // Don't notify yourself or the post author (already notified above)
+                        if(mentionedUid !== auth.currentUser.uid) {
+                            db.ref('notifications/' + mentionedUid).push({
+                                msg: `${userData.name} mentioned you in a comment`,
+                                time: Date.now(),
+                                type: 'mention',
+                                from: auth.currentUser.uid,
+                                postId: currentOpenPostKey,
+                                image: userData.photo || 'https://via.placeholder.com/40'
+                            });
+                        }
+                    }
+                });
+            });
+        }
 
         document.getElementById('commentInput').value = "";
         updateCommentPreview(); // Clear preview
