@@ -5318,8 +5318,8 @@
        ============================================ */
     
     // === NOTIFICATION BLOCKER LOGIC ===
-    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); checkNotifGate(); checkInstallGate(); initBannerListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
-    setTimeout(hideSplash, 5000);
+    // (Event listener moved to after Firebase init - see line ~5418)
+    
     function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
     
     function checkNotifGate() {
@@ -5414,6 +5414,11 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
     let messaging; try { messaging = firebase.messaging(); } catch(e) { console.log("Messaging failed to init", e); }
+    
+    // === INITIALIZE APP AFTER FIREBASE IS READY ===
+    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); checkNotifGate(); checkInstallGate(); initBannerListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
+    setTimeout(hideSplash, 5000);
+    
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; let lastNotifiedDraw = ""; let selectedReplyId = null;
     let currentJackpotAmount = 500; let isJackpotActive = false;
     let onlineUsers = {};
