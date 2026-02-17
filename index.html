@@ -5318,9 +5318,8 @@
        ============================================ */
     
     // === NOTIFICATION BLOCKER LOGIC ===
-    // (Event listener moved to after Firebase init - see line ~5418)
-    
-    function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
+    window.addEventListener('load', () => { checkNotifGate(); checkInstallGate(); initBannerListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
+    // Note: hideSplash removed - splash removal now handled at end of body for reliability
     
     function checkNotifGate() {
         const blocker = document.getElementById('notifBlocker');
@@ -5414,11 +5413,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
     let messaging; try { messaging = firebase.messaging(); } catch(e) { console.log("Messaging failed to init", e); }
-    
-    // === INITIALIZE APP AFTER FIREBASE IS READY ===
-    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); checkNotifGate(); checkInstallGate(); initBannerListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
-    setTimeout(hideSplash, 5000);
-    
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; let lastNotifiedDraw = ""; let selectedReplyId = null;
     let currentJackpotAmount = 500; let isJackpotActive = false;
     let onlineUsers = {};
@@ -9701,14 +9695,14 @@ Please explain why you want a verification badge:`;
         currentReactionPostKey = null;
     }
 
-    // Remove splash screen immediately
-    setTimeout(() => {
-        const ss = document.getElementById('splash-screen');
-        if (ss) {
-            ss.style.opacity = '0';
-            setTimeout(() => ss.style.display = 'none', 500);
-        }
-    }, 1500); // Remove after 1.5 seconds
+    // OLD SPLASH REMOVAL CODE - DISABLED (moved to end of body)
+    // setTimeout(() => {
+    //     const ss = document.getElementById('splash-screen');
+    //     if (ss) {
+    //         ss.style.opacity = '0';
+    //         setTimeout(() => ss.style.display = 'none', 500);
+    //     }
+    // }, 1500);
     
 </script>
 
@@ -11310,6 +11304,41 @@ Please explain why you want a verification badge:`;
         <div id="hashtagFeed" style="padding:0 0 20px;"></div>
     </div>
 </div>
+
+<!-- EMERGENCY SPLASH REMOVAL - RUNS LAST -->
+<script>
+(function() {
+    // Remove splash screen - multiple attempts for reliability
+    function removeSplash() {
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.style.transition = 'opacity 0.5s ease';
+            splash.style.opacity = '0';
+            setTimeout(() => {
+                splash.style.display = 'none';
+                splash.remove(); // Completely remove from DOM
+            }, 500);
+            console.log('✅ Splash screen removed successfully!');
+        }
+    }
+    
+    // Try immediately
+    setTimeout(removeSplash, 100);
+    
+    // Backup attempt after 1 second
+    setTimeout(removeSplash, 1000);
+    
+    // Final fallback after 2 seconds
+    setTimeout(removeSplash, 2000);
+    
+    // Also try on DOMContentLoaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', removeSplash);
+    } else {
+        removeSplash();
+    }
+})();
+</script>
 
 </body>
 </html>
