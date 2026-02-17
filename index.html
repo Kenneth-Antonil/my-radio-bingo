@@ -2991,12 +2991,90 @@
         }
 
         /* === PEOPLE YOU MAY KNOW (PYMK) === */
+        /* === PYMK SECTION - Facebook-Inspired Design === */
         .pymk-section { margin-bottom: var(--spacing-lg); }
-        .pymk-title { padding: 0 5px; margin-bottom: var(--spacing-sm); font-size: 14px; font-weight: 800; color: #cbd5e1; }
-        .pymk-scroll { display: flex; gap: var(--spacing-sm); overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
-        .pymk-card { background: #1e293b; border: 1px solid var(--glass-border); min-width: 140px; width: 140px; padding: var(--spacing-md); border-radius: var(--radius-lg); display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; }
-        .pymk-img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-bottom: var(--spacing-sm); border: 2px solid rgba(255,255,255,0.1); }
-        .pymk-name { font-size: 13px; font-weight: 700; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; margin-bottom: var(--spacing-xs); }
+        .pymk-title { padding: 0 var(--spacing-sm); margin-bottom: var(--spacing-md); font-size: 15px; font-weight: 900; color: white; display: flex; align-items: center; gap: 8px; }
+        .pymk-title i { color: var(--accent); }
+        .pymk-scroll { display: flex; gap: var(--spacing-md); overflow-x: auto; padding: 0 var(--spacing-sm) 10px; scrollbar-width: none; }
+        .pymk-scroll::-webkit-scrollbar { display: none; }
+        
+        /* Facebook-style card with cover and avatar */
+        .pymk-card { 
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            min-width: 180px; 
+            width: 180px; 
+            border-radius: var(--radius-lg); 
+            display: flex; 
+            flex-direction: column; 
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .pymk-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(14, 165, 233, 0.3);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Cover photo area */
+        .pymk-cover {
+            height: 70px;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.4), rgba(56, 189, 248, 0.2));
+            position: relative;
+        }
+        
+        /* Avatar positioned over cover */
+        .pymk-avatar-container {
+            position: absolute;
+            top: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+        }
+        .pymk-img { 
+            width: 70px; 
+            height: 70px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            border: 3px solid rgba(30, 41, 59, 0.9);
+            background: #1e293b;
+        }
+        
+        /* Card content */
+        .pymk-content {
+            padding: 45px var(--spacing-sm) var(--spacing-md);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+        .pymk-name { 
+            font-size: 14px; 
+            font-weight: 700; 
+            color: white; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.3;
+            min-height: 36px;
+        }
+        .pymk-mutual {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .pymk-mutual i {
+            width: 12px;
+            height: 12px;
+            color: var(--accent);
+        }
         .btn-add-friend-sm { background: rgba(14, 165, 233, 0.2); color: var(--accent-glow); border: 1px solid var(--accent); padding: 6px 12px; border-radius: var(--radius-xl); font-size: 11px; font-weight: 800; cursor: pointer; width: 100%; }
         .btn-add-friend-sm:hover { background: var(--accent); color: white; }
 
@@ -4567,7 +4645,10 @@
         </div>
 
         <div id="pymkSection" class="pymk-section" style="display:none;">
-            <div class="pymk-title">People You May Know</div>
+            <div class="pymk-title">
+                <i data-lucide="users"></i>
+                People You May Know
+            </div>
             <div class="pymk-scroll" id="pymkList"></div>
         </div>
 
@@ -6422,53 +6503,112 @@
         const list = document.getElementById('pymkList');
         const container = document.getElementById('pymkSection');
         
-        db.ref('users').limitToLast(20).once('value', s => {
-            db.ref('friends/' + auth.currentUser.uid).once('value', fSnap => {
-                const friends = fSnap.exists() ? Object.keys(fSnap.val()) : [];
-                friends.push(auth.currentUser.uid); // Exclude self
+        // Get my friends first
+        db.ref('friends/' + auth.currentUser.uid).once('value', myFriendsSnap => {
+            const myFriends = myFriendsSnap.exists() ? Object.keys(myFriendsSnap.val()) : [];
+            
+            // Calculate mutual friends for all non-friends
+            const candidates = [];
+            
+            db.ref('users').limitToLast(100).once('value', usersSnap => {
+                let processedCount = 0;
+                const totalUsers = usersSnap.numChildren();
                 
-                const candidates = [];
-                s.forEach(uSnap => {
-                    if(!friends.includes(uSnap.key)) {
-                        candidates.push({ uid: uSnap.key, ...uSnap.val() });
+                usersSnap.forEach(userSnap => {
+                    const uid = userSnap.key;
+                    const userData = userSnap.val();
+                    
+                    // Skip if already friend or self
+                    if(myFriends.includes(uid) || uid === auth.currentUser.uid) {
+                        processedCount++;
+                        if(processedCount === totalUsers) finalizePYMK();
+                        return;
                     }
+                    
+                    // Get this user's friends to calculate mutual friends
+                    db.ref('friends/' + uid).once('value', theirFriendsSnap => {
+                        const theirFriends = theirFriendsSnap.exists() ? Object.keys(theirFriendsSnap.val()) : [];
+                        
+                        // Calculate mutual friends count
+                        const mutualFriends = myFriends.filter(f => theirFriends.includes(f));
+                        const mutualCount = mutualFriends.length;
+                        
+                        // Only include if there are mutual friends OR if they're a content creator
+                        if(mutualCount > 0 || userData.isContentCreator) {
+                            candidates.push({
+                                uid: uid,
+                                ...userData,
+                                mutualCount: mutualCount,
+                                mutualFriends: mutualFriends
+                            });
+                        }
+                        
+                        processedCount++;
+                        if(processedCount === totalUsers) {
+                            finalizePYMK();
+                        }
+                    });
                 });
                 
-                // Shuffle and pick 5
-                const shuffled = candidates.sort(() => 0.5 - Math.random()).slice(0, 5);
-                
-                if(shuffled.length > 0) {
-                    list.innerHTML = "";
-                    shuffled.forEach(u => {
-                        const div = document.createElement('div');
-                        div.className = 'pymk-card';
-                        div.style.cursor = 'pointer';
-                        
-                        // Check if request already sent
-                        db.ref('friendRequests/' + u.uid + '/' + auth.currentUser.uid).once('value', reqSnap => {
-                            const btnHtml = reqSnap.exists() 
-                                ? `<button class="btn-add-friend-sm" style="opacity:0.6;" onclick="event.stopPropagation(); cancelFriendReqPYMK('${u.uid}')">CANCEL</button>`
-                                : `<button class="btn-add-friend-sm" onclick="event.stopPropagation(); sendFriendReqPYMK('${u.uid}')">ADD</button>`;
-                            
-                            div.innerHTML = `
-                                ${renderAvatarWithBadge(u.photo || 'https://via.placeholder.com/60', u.points || 0, 50, u.uid)}
-                                <div class="pymk-name" style="margin-top:5px;">${u.name}</div>
-                                ${btnHtml}
-                            `;
-                            
-                            // Add click handler for profile preview
-                            div.onclick = (e) => {
-                                if(!e.target.closest('button')) {
-                                    showPYMKPreview(u);
-                                }
-                            };
-                        });
-                        
-                        list.appendChild(div);
+                function finalizePYMK() {
+                    // Sort by: content creators first, then by mutual friends count
+                    candidates.sort((a, b) => {
+                        if(a.isContentCreator && !b.isContentCreator) return -1;
+                        if(!a.isContentCreator && b.isContentCreator) return 1;
+                        return b.mutualCount - a.mutualCount;
                     });
-                    container.style.display = 'block';
-                } else {
-                    container.style.display = 'none';
+                    
+                    // Take top 6
+                    const topCandidates = candidates.slice(0, 6);
+                    
+                    if(topCandidates.length > 0) {
+                        list.innerHTML = "";
+                        topCandidates.forEach(user => {
+                            const div = document.createElement('div');
+                            div.className = 'pymk-card';
+                            div.style.cursor = 'pointer';
+                            
+                            // Check if request already sent
+                            db.ref('friendRequests/' + user.uid + '/' + auth.currentUser.uid).once('value', reqSnap => {
+                                const btnHtml = reqSnap.exists() 
+                                    ? `<button class="btn-add-friend-sm" style="opacity:0.6;" onclick="event.stopPropagation(); cancelFriendReqPYMK('${user.uid}')">CANCEL</button>`
+                                    : `<button class="btn-add-friend-sm" onclick="event.stopPropagation(); sendFriendReqPYMK('${user.uid}')">ADD FRIEND</button>`;
+                                
+                                // Show mutual friends count or content creator badge
+                                let mutualHtml = '';
+                                if(user.isContentCreator) {
+                                    mutualHtml = `<div class="pymk-mutual"><i data-lucide="badge-check"></i> Content Creator</div>`;
+                                } else if(user.mutualCount > 0) {
+                                    mutualHtml = `<div class="pymk-mutual"><i data-lucide="users"></i> ${user.mutualCount} mutual friend${user.mutualCount > 1 ? 's' : ''}</div>`;
+                                }
+                                
+                                div.innerHTML = `
+                                    <div class="pymk-cover"></div>
+                                    <div class="pymk-avatar-container">
+                                        ${renderAvatarWithBadge(user.photo || 'https://via.placeholder.com/70', user.points || 0, 70, user.uid)}
+                                    </div>
+                                    <div class="pymk-content">
+                                        <div class="pymk-name">${escapeHtml(user.name)}</div>
+                                        ${mutualHtml}
+                                        ${btnHtml}
+                                    </div>
+                                `;
+                                
+                                // Add click handler for profile preview
+                                div.onclick = (e) => {
+                                    if(!e.target.closest('button')) {
+                                        showPYMKPreview(user);
+                                    }
+                                };
+                                
+                                list.appendChild(div);
+                                setTimeout(() => lucide.createIcons(), 50);
+                            });
+                        });
+                        container.style.display = 'block';
+                    } else {
+                        container.style.display = 'none';
+                    }
                 }
             });
         });
@@ -9075,83 +9215,130 @@ Please explain why you want a verification badge:`;
 
         feedContainer.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>Loading Feed...</div>";
         
+        // Get my friends list
         db.ref('friends/' + auth.currentUser.uid).once('value', fSnap => {
             const myFriends = fSnap.exists() ? Object.keys(fSnap.val()) : [];
             
-            postListener = db.ref('socialPosts').limitToLast(50);
-            postListener.on('value', pSnap => {
-                const allPosts = [];
-                pSnap.forEach(child => { 
-                    const val = child.val();
-                    if(typeof val === 'object' && val !== null && !val.deleted) {
-                        // === RANKING ALGORITHM ===
-                        // Hype Score = (Time Recency) + (Likes * Weight)
-                        // Time is normalized to hours since epoch to keep numbers manageable, then small weight
-                        // Actually easier: Score = Time + (Likes * 1000 * 60 * 60) -> 1 Like = 1 Hour of freshness
-                        const likeCount = val.likes || 0;
-                        const score = val.timestamp + (likeCount * 3600000); // Each like pushes it '1 hour' forward in timeline logic
+            // Get all users to check content creator status
+            db.ref('users').once('value', usersSnap => {
+                const allUsersData = {};
+                usersSnap.forEach(uSnap => {
+                    allUsersData[uSnap.key] = uSnap.val();
+                });
+                
+                postListener = db.ref('socialPosts').limitToLast(50);
+                postListener.on('value', pSnap => {
+                    const allPosts = [];
+                    pSnap.forEach(child => { 
+                        const val = child.val();
+                        if(typeof val === 'object' && val !== null && !val.deleted) {
+                            const likeCount = val.likes || 0;
+                            const authorData = allUsersData[val.uid] || {};
+                            const isContentCreator = authorData.isContentCreator || false;
+                            const isFriend = myFriends.includes(val.uid);
+                            const isHighEngagement = likeCount >= 5; // 5+ likes = high engagement
+                            
+                            // Calculate priority score
+                            let priorityScore = val.timestamp; // Base: timestamp
+                            
+                            if(isContentCreator) {
+                                // Content creators get massive boost (4 days worth)
+                                priorityScore += (345600000); // 4 days in milliseconds
+                            } else if(isFriend) {
+                                // Friends get big boost (2 days worth)
+                                priorityScore += (172800000); // 2 days in milliseconds
+                            } else if(isHighEngagement) {
+                                // High engagement non-friends get medium boost (1 day worth)
+                                priorityScore += (86400000); // 1 day in milliseconds
+                            }
+                            // Non-friends with low engagement stay at base timestamp
+                            
+                            // Add hype score for "HOT" sorting
+                            const hypeScore = val.timestamp + (likeCount * 3600000);
+                            
+                            allPosts.push({ 
+                                key: child.key, 
+                                priorityScore: priorityScore,
+                                hypeScore: hypeScore,
+                                isContentCreator: isContentCreator,
+                                isFriend: isFriend,
+                                ...val 
+                            }); 
+                        }
+                    });
+                    
+                    // Sort based on selected method
+                    if(feedSortMethod === 'hype') {
+                        // HOT: Use hype score but still respect priority tiers
+                        allPosts.sort((a, b) => {
+                            // Content creators always first
+                            if(a.isContentCreator && !b.isContentCreator) return -1;
+                            if(!a.isContentCreator && b.isContentCreator) return 1;
+                            
+                            // Then friends
+                            if(a.isFriend && !b.isFriend) return -1;
+                            if(!a.isFriend && b.isFriend) return 1;
+                            
+                            // Within same tier, sort by hype score
+                            return b.hypeScore - a.hypeScore;
+                        });
+                    } else {
+                        // NEW: Use priority score (content creators > friends > high engagement > rest)
+                        allPosts.sort((a, b) => b.priorityScore - a.priorityScore);
+                    }
+                    
+                    const scrollPos = window.scrollY; 
+                    
+                    feedContainer.innerHTML = "";
+                    if(allPosts.length === 0) {
+                        feedContainer.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>No posts yet. Be the first!</div>";
+                        return;
+                    }
+                    
+                    let adCounter = 0;
+                    
+                    allPosts.forEach(post => {
+                        const isFriend = myFriends.includes(post.uid);
+                        const isMe = post.uid === auth.currentUser.uid;
                         
-                        allPosts.push({ key: child.key, hypeScore: score, ...val }); 
+                        // === VISIBILITY FILTERING ===
+                        const visibility = post.visibility || 'public'; // Default to public for old posts
+                        
+                        // Only Me: only author can see
+                        if(visibility === 'private' && !isMe) return;
+                        
+                        // Friends Only: only friends and author can see
+                        if(visibility === 'friends' && !isMe && !isFriend) return;
+                        
+                        // Public: everyone can see (no filtering needed)
+                        
+                        const div = createPostElement(post, isFriend || isMe);
+                        feedContainer.appendChild(div);
+                        loadCommentPreview(post.key);
+                        loadReactionSummary(post.key);
+                        
+                        // === IN-FEED ADS INJECTION ===
+                        adCounter++;
+                        if(adCounter % 5 === 0) {
+                             const adDiv = document.createElement('div');
+                             adDiv.className = 'ad-container-global';
+                             adDiv.style.margin = '15px auto';
+                             adDiv.innerHTML = `
+                                <script type="text/javascript">
+                                    atOptions = { 'key' : '59f94c5cb7bcd84edb277947774c3b9d', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                                <\/script>
+                                <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"><\/script>
+                             `;
+                             feedContainer.appendChild(adDiv);
+                        }
+                    });
+                    lucide.createIcons();
+                    
+                    if(document.getElementById('view-home').style.display !== 'none' && window.scrollY > 200) {
+                         // Only restore scroll if we are down the page
+                         setTimeout(() => window.scrollTo(0, scrollPos), 10);
                     }
                 });
-                
-                if(feedSortMethod === 'hype') {
-                    allPosts.sort((a, b) => b.hypeScore - a.hypeScore);
-                } else {
-                    allPosts.sort((a, b) => b.timestamp - a.timestamp);
-                }
-                
-                const scrollPos = window.scrollY; 
-                
-                feedContainer.innerHTML = "";
-                if(allPosts.length === 0) {
-                    feedContainer.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>No posts yet. Be the first!</div>";
-                    return;
-                }
-                
-                let adCounter = 0;
-                
-                allPosts.forEach(post => {
-                    const isFriend = myFriends.includes(post.uid);
-                    const isMe = post.uid === auth.currentUser.uid;
-                    
-                    // === VISIBILITY FILTERING ===
-                    const visibility = post.visibility || 'public'; // Default to public for old posts
-                    
-                    // Only Me: only author can see
-                    if(visibility === 'private' && !isMe) return;
-                    
-                    // Friends Only: only friends and author can see
-                    if(visibility === 'friends' && !isMe && !isFriend) return;
-                    
-                    // Public: everyone can see (no filtering needed)
-                    
-                    const div = createPostElement(post, isFriend || isMe);
-                    feedContainer.appendChild(div);
-                    loadCommentPreview(post.key);
-                    loadReactionSummary(post.key);
-                    
-                    // === IN-FEED ADS INJECTION ===
-                    adCounter++;
-                    if(adCounter % 5 === 0) {
-                         const adDiv = document.createElement('div');
-                         adDiv.className = 'ad-container-global';
-                         adDiv.style.margin = '15px auto';
-                         adDiv.innerHTML = `
-                            <script type="text/javascript">
-                                atOptions = { 'key' : '59f94c5cb7bcd84edb277947774c3b9d', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-                            <\/script>
-                            <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"><\/script>
-                         `;
-                         feedContainer.appendChild(adDiv);
-                    }
-                });
-                lucide.createIcons();
-                
-                if(document.getElementById('view-home').style.display !== 'none' && window.scrollY > 200) {
-                     // Only restore scroll if we are down the page
-                     setTimeout(() => window.scrollTo(0, scrollPos), 10);
-                }
             });
         });
     }
