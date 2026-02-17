@@ -1409,14 +1409,22 @@
     function toggleBall(num) { const ref = db.ref('drawnNumbers/' + num); ref.once('value', s => { if(s.exists()) { ref.remove(); } else { ref.set(num); db.ref('gameState/lastCalled').set(num); db.ref('gameState/gameStartTime').once('value', ss => { if(!ss.exists()) db.ref('gameState/gameStartTime').set(Date.now()); }); } }); }
 
     // --- USERS & LIVE ACTIVITY SPY ---
-    db.ref('status').on('value', s => { globalStatusData = s.val() || {}; document.getElementById('countOnline').innerText = Object.keys(globalStatusData).length; renderActiveUserList(); updateMonitorCards(); });
+    db.ref('status').on('value', s => {
+        globalStatusData = s.val() || {};
+        // Count ONLY users with state === 'online', not just any status entry
+        const trueOnlineCount = Object.values(globalStatusData).filter(u => u && u.state === 'online').length;
+        document.getElementById('countOnline').innerText = trueOnlineCount;
+        renderActiveUserList();
+        updateMonitorCards();
+    });
     function renderActiveUserList() { 
         const list = document.getElementById('activeUsersList'); 
         list.innerHTML = ""; 
-        Object.entries(globalStatusData).forEach(([uid, data]) => { 
+        Object.entries(globalStatusData).forEach(([uid, data]) => {
+            // FIXED: only show users who are actually online
+            if(!data || data.state !== 'online') return;
             let displayName = "Guest"; 
             if(allUsersData[uid]) {
-                // Try multiple possible name fields
                 displayName = allUsersData[uid].name || allUsersData[uid].username || allUsersData[uid].displayName || allUsersData[uid].email || uid.substring(0, 10);
             } else if(data.name) {
                 displayName = data.name;
@@ -1533,11 +1541,17 @@
     function updateMonitorCards() {
         const container = document.getElementById('liveCardsContainer'); container.innerHTML = ""; let usersArray = [];
         Object.entries(allUsersData).forEach(([key, user]) => { if(user.card || user.currentCard) { usersArray.push({ ...user, uid: key }); } });
-        usersArray.sort((a, b) => { const aOnline = globalStatusData[a.uid] ? 1 : 0; const bOnline = globalStatusData[b.uid] ? 1 : 0; return bOnline - aOnline; });
+        usersArray.sort((a, b) => {
+            // FIXED: check state === 'online', not just existence in status
+            const aOnline = globalStatusData[a.uid] && globalStatusData[a.uid].state === 'online' ? 1 : 0;
+            const bOnline = globalStatusData[b.uid] && globalStatusData[b.uid].state === 'online' ? 1 : 0;
+            return bOnline - aOnline;
+        });
         usersArray.forEach(user => {
             const card = user.currentCard || user.card; 
             const check = checkCardStatus(card, currentPattern, drawnNumbers); 
-            const isOnline = globalStatusData[user.uid] ? true : false; 
+            // FIXED: must have state === 'online', not just any record in status
+            const isOnline = globalStatusData[user.uid] && globalStatusData[user.uid].state === 'online';
             // Try multiple possible name fields
             const displayName = user.name || user.username || user.displayName || user.email || user.uid.substring(0, 10);
             const safeName = cleanName(displayName);
@@ -2109,7 +2123,7 @@
                     if (selectedGrantUser === uid) div.classList.add('selected');
                     
                     const verifiedBadge = user.verified ? '<span class="verified-badge-inline"><i data-lucide="check-circle" style="width:10px;height:10px;"></i> Verified</span>' : '';
-                    const statusDot = user.online ? '<span class="online-dot"></span>' : '<span class="offline-dot"></span>';
+                    const statusDot = (globalStatusData[uid] && globalStatusData[uid].state === 'online') ? '<span class="online-dot"></span>' : '<span class="offline-dot"></span>';
                     
                     // Show UID in small text if no proper name
                     const uidText = (!user.username && !user.displayName && !user.name && !user.email) 
