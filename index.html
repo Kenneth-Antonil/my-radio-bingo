@@ -4567,10 +4567,7 @@
         </div>
 
         <div id="pymkSection" class="pymk-section" style="display:none;">
-            <div class="pymk-header">
-                <span class="pymk-title">People You May Know</span>
-                <button class="pymk-see-all" onclick="loadPYMK(true)">See all</button>
-            </div>
+            <div class="pymk-title">People You May Know</div>
             <div class="pymk-scroll" id="pymkList"></div>
         </div>
 
@@ -5318,8 +5315,9 @@
        ============================================ */
     
     // === NOTIFICATION BLOCKER LOGIC ===
-    window.addEventListener('load', () => { checkNotifGate(); checkInstallGate(); initBannerListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
-    // Note: hideSplash removed - splash removal now handled at end of body for reliability
+    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); checkNotifGate(); checkInstallGate(); initBannerListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
+    setTimeout(hideSplash, 5000);
+    function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
     
     function checkNotifGate() {
         const blocker = document.getElementById('notifBlocker');
@@ -6418,250 +6416,120 @@
         });
     }
 
-    // === PYMK — Mutual Friends Algorithm ===
-    let pymkDismissed = new Set(); // Track dismissed cards this session
-
-    function loadPYMK(showAll = false) {
+    // === PYMK LOGIC ===
+    function loadPYMK() {
         if(!auth.currentUser) return;
-        const myUid = auth.currentUser.uid;
-        const list  = document.getElementById('pymkList');
-        const section = document.getElementById('pymkSection');
-        const limit = showAll ? 15 : 7;
-
-        list.innerHTML = '<div style="padding:20px 16px;opacity:0.4;font-size:12px;">Finding people...</div>';
-
-        // Step 1: Get MY friends list
-        db.ref('friends/' + myUid).once('value', myFriendSnap => {
-            const myFriends = myFriendSnap.exists() ? Object.keys(myFriendSnap.val()) : [];
-            const excluded  = new Set([myUid, ...myFriends, ...pymkDismissed]);
-
-            // Step 2: Count mutual friends by scanning friends-of-friends
-            const mutualCount = {};   // uid → number of mutuals
-            const mutualNames = {};   // uid → one mutual friend's name (for display)
-            let pending = myFriends.length;
-
-            const finalize = () => {
-                db.ref('users').once('value', allSnap => {
-                    const allUsers = {};
-                    allSnap.forEach(s => { allUsers[s.key] = s.val(); });
-
-                    const candidates = [];
-                    allSnap.forEach(uSnap => {
-                        const uid = uSnap.key;
-                        const u   = uSnap.val();
-                        if(excluded.has(uid) || !u || !u.name) return;
-
-                        const mutuals  = mutualCount[uid] || 0;
-                        // Score: mutual friends are most important, creators slightly boosted
-                        const score    = (mutuals * 1000)
-                                       + (u.isContentCreator ? 200 : 0)
-                                       + Math.min(u.points || 0, 100);
-
-                        candidates.push({
-                            uid, ...u,
-                            mutuals,
-                            mutualName: mutualNames[uid] || null,
-                            score
-                        });
-                    });
-
-                    // Sort by score, shuffle within same-score tier for variety
-                    candidates.sort((a, b) => {
-                        const diff = b.score - a.score;
-                        return diff !== 0 ? diff : Math.random() - 0.5;
-                    });
-
-                    const top = candidates.slice(0, limit);
-                    if(top.length === 0) { section.style.display = 'none'; return; }
-
-                    list.innerHTML = '';
-                    top.forEach(u => renderPYMKCard(u, list, myUid));
-                    section.style.display = 'block';
-                    setTimeout(() => lucide.createIcons(), 80);
-                });
-            };
-
-            if(myFriends.length === 0) { finalize(); return; }
-
-            // Count mutual connections for each friend-of-friend
-            myFriends.forEach(friendUid => {
-                db.ref('friends/' + friendUid).once('value', theirSnap => {
-                    if(theirSnap.exists()) {
-                        const theirFriendData = theirSnap.val();
-                        Object.keys(theirFriendData).forEach(candidateUid => {
-                            if(!excluded.has(candidateUid)) {
-                                mutualCount[candidateUid] = (mutualCount[candidateUid] || 0) + 1;
-                                // Store one mutual friend name for the label
-                                if(!mutualNames[candidateUid] && allUsersData[friendUid]) {
-                                    mutualNames[candidateUid] = allUsersData[friendUid].name || null;
-                                }
-                            }
-                        });
+        const list = document.getElementById('pymkList');
+        const container = document.getElementById('pymkSection');
+        
+        db.ref('users').limitToLast(20).once('value', s => {
+            db.ref('friends/' + auth.currentUser.uid).once('value', fSnap => {
+                const friends = fSnap.exists() ? Object.keys(fSnap.val()) : [];
+                friends.push(auth.currentUser.uid); // Exclude self
+                
+                const candidates = [];
+                s.forEach(uSnap => {
+                    if(!friends.includes(uSnap.key)) {
+                        candidates.push({ uid: uSnap.key, ...uSnap.val() });
                     }
-                    pending--;
-                    if(pending === 0) finalize();
                 });
+                
+                // Shuffle and pick 5
+                const shuffled = candidates.sort(() => 0.5 - Math.random()).slice(0, 5);
+                
+                if(shuffled.length > 0) {
+                    list.innerHTML = "";
+                    shuffled.forEach(u => {
+                        const div = document.createElement('div');
+                        div.className = 'pymk-card';
+                        div.style.cursor = 'pointer';
+                        
+                        // Check if request already sent
+                        db.ref('friendRequests/' + u.uid + '/' + auth.currentUser.uid).once('value', reqSnap => {
+                            const btnHtml = reqSnap.exists() 
+                                ? `<button class="btn-add-friend-sm" style="opacity:0.6;" onclick="event.stopPropagation(); cancelFriendReqPYMK('${u.uid}')">CANCEL</button>`
+                                : `<button class="btn-add-friend-sm" onclick="event.stopPropagation(); sendFriendReqPYMK('${u.uid}')">ADD</button>`;
+                            
+                            div.innerHTML = `
+                                ${renderAvatarWithBadge(u.photo || 'https://via.placeholder.com/60', u.points || 0, 50, u.uid)}
+                                <div class="pymk-name" style="margin-top:5px;">${u.name}</div>
+                                ${btnHtml}
+                            `;
+                            
+                            // Add click handler for profile preview
+                            div.onclick = (e) => {
+                                if(!e.target.closest('button')) {
+                                    showPYMKPreview(u);
+                                }
+                            };
+                        });
+                        
+                        list.appendChild(div);
+                    });
+                    container.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                }
             });
         });
     }
 
-    // Gradient covers per user (deterministic, based on uid)
-    const PYMK_GRADIENTS = [
-        'linear-gradient(135deg,#0c2340,#1a3a5f)',
-        'linear-gradient(135deg,#1a0f2e,#3b1f5e)',
-        'linear-gradient(135deg,#0a1f18,#1a3a2f)',
-        'linear-gradient(135deg,#200f0f,#3a1a1a)',
-        'linear-gradient(135deg,#0f1a20,#1a2f3a)',
-        'linear-gradient(135deg,#1a1a0f,#2e2e10)',
-    ];
-
-    function renderPYMKCard(u, container, myUid) {
-        const div = document.createElement('div');
-        div.className = 'pymk-card';
-
-        const coverBg = PYMK_GRADIENTS[Math.abs(u.uid.charCodeAt(0) + u.uid.charCodeAt(2)) % PYMK_GRADIENTS.length];
-        const isCreator = u.isContentCreator;
-        const verified  = u.verified;
-
-        // Mutual friend label
-        let subHtml = '';
-        if(u.mutuals > 0) {
-            const label = u.mutuals === 1
-                ? (u.mutualName ? `${escapeHtml(u.mutualName)} is a mutual friend` : '1 mutual friend')
-                : `${u.mutuals} mutual friends`;
-            subHtml = `<div class="pymk-sub has-mutual"><i data-lucide="users" style="width:10px;height:10px;flex-shrink:0;"></i>${label}</div>`;
-        } else if(isCreator) {
-            subHtml = `<div class="pymk-sub"><i data-lucide="star" style="width:10px;height:10px;color:#fbbf24;flex-shrink:0;"></i>Content Creator</div>`;
-        } else {
-            subHtml = `<div class="pymk-sub">RB Live Player</div>`;
-        }
-
-        const verifiedHtml = verified
-            ? `<i data-lucide="check-circle" style="width:10px;height:10px;color:#38bdf8;vertical-align:middle;margin-left:2px;"></i>`
-            : '';
-        const creatorRing = isCreator ? 'pymk-creator-ring' : '';
-
-        div.innerHTML = `
-            <div class="pymk-cover-bg" style="background:${coverBg};"></div>
-            <div class="pymk-avatar-wrap">
-                <img class="pymk-avatar ${creatorRing}"
-                     src="${u.photo || 'https://via.placeholder.com/52'}"
-                     onerror="this.src='https://via.placeholder.com/52'"
-                     alt="${escapeHtml(u.name)}">
-            </div>
-            <div class="pymk-name">${escapeHtml(u.name)}${verifiedHtml}</div>
-            ${subHtml}
-            <div class="pymk-btns">
-                <button class="btn-pymk-add" id="pymkbtn-${u.uid}"
-                        onclick="event.stopPropagation(); sendFriendReqPYMK('${u.uid}')">
-                    <i data-lucide="user-plus" style="width:11px;height:11px;pointer-events:none;"></i> Add
-                </button>
-                <button class="btn-pymk-dismiss"
-                        onclick="event.stopPropagation(); dismissPYMKCard('${u.uid}', this)"
-                        title="Not interested">
-                    <i data-lucide="x" style="width:12px;height:12px;pointer-events:none;"></i>
-                </button>
-            </div>
-        `;
-
-        div.addEventListener('click', e => {
-            if(e.target.closest('button')) return;
-            showPYMKPreview(u);
-        });
-
-        // Check if request already sent
-        db.ref('friendRequests/' + u.uid + '/' + myUid).once('value', reqSnap => {
-            if(reqSnap.exists()) _setPYMKBtnSent(u.uid);
-        });
-
-        container.appendChild(div);
-    }
-
-    function _setPYMKBtnSent(uid) {
-        const btn = document.getElementById('pymkbtn-' + uid);
-        if(!btn) return;
-        btn.className = 'btn-pymk-add sent';
-        btn.innerHTML = 'Sent';
-        btn.onclick = e => { e.stopPropagation(); cancelFriendReqPYMK(uid); };
-    }
-
     function sendFriendReqPYMK(uid) {
         db.ref('friendRequests/' + uid + '/' + auth.currentUser.uid).set(true);
-        _setPYMKBtnSent(uid);
-        showToast('Friend request sent!');
+        showToast("Request Sent!");
+        loadPYMK(); 
     }
-
+    
     function cancelFriendReqPYMK(uid) {
         db.ref('friendRequests/' + uid + '/' + auth.currentUser.uid).remove();
-        const btn = document.getElementById('pymkbtn-' + uid);
-        if(btn) {
-            btn.className = 'btn-pymk-add';
-            btn.innerHTML = '<i data-lucide="user-plus" style="width:11px;height:11px;pointer-events:none;"></i> Add';
-            btn.onclick = e => { e.stopPropagation(); sendFriendReqPYMK(uid); };
-            lucide.createIcons();
-        }
-        showToast('Request cancelled');
+        showToast("Request Cancelled");
+        loadPYMK();
     }
-
-    function dismissPYMKCard(uid, btnEl) {
-        pymkDismissed.add(uid);
-        const card = btnEl.closest('.pymk-card');
-        if(card) {
-            card.style.transition = 'opacity 0.2s, transform 0.2s';
-            card.style.opacity = '0';
-            card.style.transform = 'scale(0.88)';
-            setTimeout(() => { card.remove(); }, 200);
-        }
-    }
-
-    // PYMK Profile Preview
+    
+    // PYMK Profile Preview Functions
     function showPYMKPreview(user) {
-        const modal    = document.getElementById('pymkPreviewModal');
+        const modal = document.getElementById('pymkPreviewModal');
         const backdrop = document.getElementById('pymkPreviewBackdrop');
-        const content  = document.getElementById('pymkPreviewContent');
-
+        const content = document.getElementById('pymkPreviewContent');
+        
+        // Check friend status
         db.ref('friends/' + auth.currentUser.uid + '/' + user.uid).once('value', fSnap => {
             db.ref('friendRequests/' + user.uid + '/' + auth.currentUser.uid).once('value', reqSnap => {
-                const isFriend    = fSnap.exists();
+                const isFriend = fSnap.exists();
                 const requestSent = reqSnap.exists();
-
+                
                 let actionBtn = '';
                 if(isFriend) {
-                    actionBtn = `<button onclick="openUserProfile('${user.uid}')" style="background:var(--accent);color:white;border:none;padding:13px 24px;border-radius:12px;font-weight:700;cursor:pointer;width:100%;font-size:14px;margin-top:16px;">View Profile</button>`;
+                    actionBtn = `<button onclick="openUserProfile('${user.uid}')" style="background:var(--accent); color:white; border:none; padding:12px 24px; border-radius:12px; font-weight:700; cursor:pointer; width:100%; font-size:14px; margin-top:16px;">View Profile</button>`;
                 } else if(requestSent) {
-                    actionBtn = `<button onclick="cancelFriendReqPYMK('${user.uid}'); closePYMKPreview();" style="background:rgba(255,255,255,0.1);color:white;border:none;padding:13px 24px;border-radius:12px;font-weight:700;cursor:pointer;width:100%;font-size:14px;margin-top:16px;">Cancel Request</button>`;
+                    actionBtn = `<button onclick="cancelFriendReqPYMK('${user.uid}'); closePYMKPreview();" style="background:rgba(255,255,255,0.1); color:white; border:none; padding:12px 24px; border-radius:12px; font-weight:700; cursor:pointer; width:100%; font-size:14px; margin-top:16px;">Cancel Request</button>`;
                 } else {
-                    actionBtn = `<button onclick="sendFriendReqPYMK('${user.uid}'); closePYMKPreview();" style="background:var(--accent);color:white;border:none;padding:13px 24px;border-radius:12px;font-weight:700;cursor:pointer;width:100%;font-size:14px;margin-top:16px;"><i data-lucide='user-plus' style='width:14px;height:14px;vertical-align:middle;'></i> Add Friend</button>`;
+                    actionBtn = `<button onclick="sendFriendReqPYMK('${user.uid}'); closePYMKPreview();" style="background:var(--accent); color:white; border:none; padding:12px 24px; border-radius:12px; font-weight:700; cursor:pointer; width:100%; font-size:14px; margin-top:16px;">Add Friend</button>`;
                 }
-
-                const mutualLabel = user.mutuals > 0
-                    ? `<div style="font-size:12px;color:#60a5fa;margin:4px 0 12px;display:flex;align-items:center;gap:4px;justify-content:center;"><i data-lucide='users' style='width:12px;height:12px;'></i>${user.mutuals} mutual friend${user.mutuals > 1 ? 's' : ''}</div>`
-                    : '';
-
+                
                 content.innerHTML = `
                     ${renderAvatarWithBadge(user.photo || 'https://via.placeholder.com/100', user.points || 0, 100, user.uid)}
-                    <h3 style="margin:12px 0 4px;font-size:18px;">${escapeHtml(user.name)}</h3>
-                    ${mutualLabel}
-                    <div style="display:flex;gap:20px;justify-content:center;margin:8px 0 0;padding:16px;background:rgba(255,255,255,0.05);border-radius:12px;">
+                    <h3 style="margin:12px 0 4px; font-size:18px;">${escapeHtml(user.name)}</h3>
+                    <div style="display:flex; gap:20px; justify-content:center; margin:16px 0; padding:16px; background:rgba(255,255,255,0.05); border-radius:12px;">
                         <div style="text-align:center;">
-                            <div style="font-size:20px;font-weight:900;color:var(--gold);">${(user.points||0).toLocaleString()}</div>
-                            <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;">Coins</div>
+                            <div style="font-size:20px; font-weight:900; color:var(--gold);">${user.points || 0}</div>
+                            <div style="font-size:10px; color:#94a3b8; text-transform:uppercase;">Points</div>
                         </div>
                         <div style="text-align:center;">
-                            <div style="font-size:20px;font-weight:900;color:var(--accent);">${user.bingoWins||0}</div>
-                            <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;">Wins</div>
+                            <div style="font-size:20px; font-weight:900; color:var(--accent);">${user.bingoWins || 0}</div>
+                            <div style="font-size:10px; color:#94a3b8; text-transform:uppercase;">Wins</div>
                         </div>
                     </div>
                     ${actionBtn}
                 `;
-
+                
                 modal.style.display = 'block';
                 backdrop.style.display = 'block';
                 setTimeout(() => lucide.createIcons(), 50);
             });
         });
     }
-
+    
     function closePYMKPreview() {
         document.getElementById('pymkPreviewModal').style.display = 'none';
         document.getElementById('pymkPreviewBackdrop').style.display = 'none';
@@ -9203,120 +9071,86 @@ Please explain why you want a verification badge:`;
 
     function loadSocialFeed() {
         const feedContainer = document.getElementById('socialFeed');
-        if(postListener) db.ref('socialPosts').off();
+        if(postListener) db.ref('socialPosts').off(); // Clear old listener
 
         feedContainer.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>Loading Feed...</div>";
-
+        
         db.ref('friends/' + auth.currentUser.uid).once('value', fSnap => {
-            const myFriends = new Set(fSnap.exists() ? Object.keys(fSnap.val()) : []);
-            const myUid = auth.currentUser.uid;
-
-            postListener = db.ref('socialPosts').limitToLast(80);
+            const myFriends = fSnap.exists() ? Object.keys(fSnap.val()) : [];
+            
+            postListener = db.ref('socialPosts').limitToLast(50);
             postListener.on('value', pSnap => {
                 const allPosts = [];
-
-                pSnap.forEach(child => {
+                pSnap.forEach(child => { 
                     const val = child.val();
-                    if(typeof val !== 'object' || val === null || val.deleted) return;
-
-                    const isFriend  = myFriends.has(val.uid);
-                    const isMe      = val.uid === myUid;
-                    const isCreator = allUsersData[val.uid]?.isContentCreator || false;
-
-                    // === VISIBILITY FILTERING ===
-                    const vis = val.visibility || 'public';
-                    if(vis === 'private' && !isMe) return;
-                    if(vis === 'friends' && !isMe && !isFriend) return;
-
-                    // === TIER: 1=Creator, 2=Friend/Self, 3=Public ===
-                    let tier;
-                    if(isCreator)       tier = 1;
-                    else if(isFriend || isMe) tier = 2;
-                    else                tier = 3;
-
-                    // === REACTION SCORE within each tier ===
-                    // Count total reactions (likes object or numeric) + comments
-                    let reactionCount = 0;
-                    if(typeof val.likes === 'object' && val.likes !== null) {
-                        reactionCount = Object.keys(val.likes).length;
-                    } else if(typeof val.likes === 'number') {
-                        reactionCount = val.likes;
+                    if(typeof val === 'object' && val !== null && !val.deleted) {
+                        // === RANKING ALGORITHM ===
+                        // Hype Score = (Time Recency) + (Likes * Weight)
+                        // Time is normalized to hours since epoch to keep numbers manageable, then small weight
+                        // Actually easier: Score = Time + (Likes * 1000 * 60 * 60) -> 1 Like = 1 Hour of freshness
+                        const likeCount = val.likes || 0;
+                        const score = val.timestamp + (likeCount * 3600000); // Each like pushes it '1 hour' forward in timeline logic
+                        
+                        allPosts.push({ key: child.key, hypeScore: score, ...val }); 
                     }
-                    const commentCount = val.commentCount || 0;
-                    const engagementScore = (reactionCount * 3) + (commentCount * 2);
-
-                    // Age decay: posts older than 48h lose ranking power
-                    const ageMs    = Date.now() - (val.timestamp || 0);
-                    const ageHours = ageMs / 3600000;
-                    const decayFactor = Math.max(0, 1 - (ageHours / 72)); // Full power 0-72h, fades out
-
-                    // Final hype score (used within tier)
-                    const hypeScore = (engagementScore * decayFactor) + (decayFactor * 10);
-
-                    allPosts.push({
-                        key: child.key,
-                        tier,
-                        hypeScore,
-                        timestamp: val.timestamp || 0,
-                        isFriend,
-                        isMe,
-                        isCreator,
-                        ...val
-                    });
                 });
-
-                // === SORT ===
+                
                 if(feedSortMethod === 'hype') {
-                    // Primary: tier (1→2→3), Secondary within tier: hypeScore desc
-                    allPosts.sort((a, b) => {
-                        if(a.tier !== b.tier) return a.tier - b.tier;
-                        return b.hypeScore - a.hypeScore;
-                    });
+                    allPosts.sort((a, b) => b.hypeScore - a.hypeScore);
                 } else {
-                    // Newest first — but still creators bumped up slightly
-                    allPosts.sort((a, b) => {
-                        if(a.tier !== b.tier) return a.tier - b.tier;
-                        return b.timestamp - a.timestamp;
-                    });
+                    allPosts.sort((a, b) => b.timestamp - a.timestamp);
                 }
-
-                const scrollPos = window.scrollY;
+                
+                const scrollPos = window.scrollY; 
+                
                 feedContainer.innerHTML = "";
-
                 if(allPosts.length === 0) {
                     feedContainer.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>No posts yet. Be the first!</div>";
                     return;
                 }
-
+                
                 let adCounter = 0;
-                let lastTier = 0;
-
+                
                 allPosts.forEach(post => {
-                    const div = createPostElement(post, post.isFriend || post.isMe);
+                    const isFriend = myFriends.includes(post.uid);
+                    const isMe = post.uid === auth.currentUser.uid;
+                    
+                    // === VISIBILITY FILTERING ===
+                    const visibility = post.visibility || 'public'; // Default to public for old posts
+                    
+                    // Only Me: only author can see
+                    if(visibility === 'private' && !isMe) return;
+                    
+                    // Friends Only: only friends and author can see
+                    if(visibility === 'friends' && !isMe && !isFriend) return;
+                    
+                    // Public: everyone can see (no filtering needed)
+                    
+                    const div = createPostElement(post, isFriend || isMe);
                     feedContainer.appendChild(div);
                     loadCommentPreview(post.key);
                     loadReactionSummary(post.key);
-
-                    // === IN-FEED ADS ===
+                    
+                    // === IN-FEED ADS INJECTION ===
                     adCounter++;
                     if(adCounter % 5 === 0) {
-                        const adDiv = document.createElement('div');
-                        adDiv.className = 'ad-container-global';
-                        adDiv.style.margin = '15px auto';
-                        adDiv.innerHTML = \`
+                         const adDiv = document.createElement('div');
+                         adDiv.className = 'ad-container-global';
+                         adDiv.style.margin = '15px auto';
+                         adDiv.innerHTML = `
                             <script type="text/javascript">
                                 atOptions = { 'key' : '59f94c5cb7bcd84edb277947774c3b9d', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
                             <\/script>
                             <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"><\/script>
-                        \`;
-                        feedContainer.appendChild(adDiv);
+                         `;
+                         feedContainer.appendChild(adDiv);
                     }
                 });
-
                 lucide.createIcons();
-
+                
                 if(document.getElementById('view-home').style.display !== 'none' && window.scrollY > 200) {
-                    setTimeout(() => window.scrollTo(0, scrollPos), 10);
+                     // Only restore scroll if we are down the page
+                     setTimeout(() => window.scrollTo(0, scrollPos), 10);
                 }
             });
         });
@@ -9695,14 +9529,14 @@ Please explain why you want a verification badge:`;
         currentReactionPostKey = null;
     }
 
-    // OLD SPLASH REMOVAL CODE - DISABLED (moved to end of body)
-    // setTimeout(() => {
-    //     const ss = document.getElementById('splash-screen');
-    //     if (ss) {
-    //         ss.style.opacity = '0';
-    //         setTimeout(() => ss.style.display = 'none', 500);
-    //     }
-    // }, 1500);
+    // Remove splash screen immediately
+    setTimeout(() => {
+        const ss = document.getElementById('splash-screen');
+        if (ss) {
+            ss.style.opacity = '0';
+            setTimeout(() => ss.style.display = 'none', 500);
+        }
+    }, 1500); // Remove after 1.5 seconds
     
 </script>
 
@@ -11304,41 +11138,6 @@ Please explain why you want a verification badge:`;
         <div id="hashtagFeed" style="padding:0 0 20px;"></div>
     </div>
 </div>
-
-<!-- EMERGENCY SPLASH REMOVAL - RUNS LAST -->
-<script>
-(function() {
-    // Remove splash screen - multiple attempts for reliability
-    function removeSplash() {
-        const splash = document.getElementById('splash-screen');
-        if (splash) {
-            splash.style.transition = 'opacity 0.5s ease';
-            splash.style.opacity = '0';
-            setTimeout(() => {
-                splash.style.display = 'none';
-                splash.remove(); // Completely remove from DOM
-            }, 500);
-            console.log('✅ Splash screen removed successfully!');
-        }
-    }
-    
-    // Try immediately
-    setTimeout(removeSplash, 100);
-    
-    // Backup attempt after 1 second
-    setTimeout(removeSplash, 1000);
-    
-    // Final fallback after 2 seconds
-    setTimeout(removeSplash, 2000);
-    
-    // Also try on DOMContentLoaded
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', removeSplash);
-    } else {
-        removeSplash();
-    }
-})();
-</script>
 
 </body>
 </html>
