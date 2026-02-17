@@ -4369,7 +4369,551 @@
             background: rgba(239, 68, 68, 0.1);
             border-color: var(--danger);
         }
-        
+
+        /* ========================================
+           🪙 COIN TOAST ANIMATION
+        ======================================== */
+        @keyframes coinToastAnim {
+            from { transform: translateX(-50%) translateY(20px) scale(0.8); opacity:0; }
+            to { transform: translateX(-50%) translateY(0) scale(1); opacity:1; }
+        }
+
+        /* ========================================
+           📷 CAMERA FEATURE
+        ======================================== */
+        .camera-page {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 8500;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .camera-page.active { display: flex; }
+
+        .camera-viewport {
+            position: relative;
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #cameraVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: filter 0.3s ease;
+        }
+
+        .camera-sticker-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .camera-sticker-overlay .sticker-el {
+            font-size: 80px;
+            opacity: 0.85;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+            animation: stickerFloat 2s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+        @keyframes stickerFloat {
+            from { transform: translateY(0) rotate(-3deg); }
+            to { transform: translateY(-12px) rotate(3deg); }
+        }
+
+        .camera-top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: max(env(safe-area-inset-top), 12px) 16px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+            z-index: 10;
+        }
+
+        .cam-top-btn {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .camera-filter-bar {
+            position: absolute;
+            bottom: 150px;
+            left: 0;
+            right: 0;
+            display: flex;
+            gap: 12px;
+            padding: 12px 16px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .camera-filter-bar::-webkit-scrollbar { display: none; }
+
+        .filter-pill {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .filter-thumb {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid transparent;
+            overflow: hidden;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .filter-thumb.active { border-color: var(--accent); box-shadow: 0 0 12px rgba(14,165,233,0.6); }
+        .filter-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .filter-pill span { font-size: 10px; color: rgba(255,255,255,0.7); font-weight: 700; text-align: center; }
+
+        .camera-sticker-bar {
+            position: absolute;
+            bottom: 230px;
+            left: 0;
+            right: 0;
+            display: flex;
+            gap: 14px;
+            padding: 8px 16px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .camera-sticker-bar::-webkit-scrollbar { display: none; }
+        .sticker-btn {
+            flex-shrink: 0;
+            font-size: 32px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+        }
+        .sticker-btn:active { transform: scale(0.85); }
+        .sticker-btn.active-sticker { transform: scale(1.2); filter: drop-shadow(0 0 6px rgba(255,255,255,0.8)); }
+
+        .camera-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 24px max(env(safe-area-inset-bottom), 20px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+        }
+
+        .cam-side-btn {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            font-size: 22px;
+        }
+
+        .cam-capture-btn {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: white;
+            border: 4px solid rgba(255,255,255,0.5);
+            cursor: pointer;
+            box-shadow: 0 0 0 4px rgba(255,255,255,0.3);
+            transition: transform 0.15s, box-shadow 0.15s;
+            position: relative;
+        }
+        .cam-capture-btn::after {
+            content: '';
+            position: absolute;
+            inset: 6px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.1);
+        }
+        .cam-capture-btn:active { transform: scale(0.9); box-shadow: 0 0 0 2px rgba(255,255,255,0.3); }
+
+        #cameraCanvas { display: none; }
+
+        .cam-photo-preview {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: #000;
+            z-index: 20;
+            flex-direction: column;
+        }
+        .cam-photo-preview.show { display: flex; }
+        .cam-photo-preview img { flex: 1; object-fit: contain; width: 100%; }
+        .cam-photo-actions {
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            background: rgba(0,0,0,0.8);
+        }
+        .cam-action-share-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* ========================================
+           💬 REDESIGNED MESSENGER
+        ======================================== */
+        .pm-modal {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 7000;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Messenger Header */
+        .pm-inbox-header {
+            padding: max(env(safe-area-inset-top), 12px) 16px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(10, 15, 30, 0.98);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .pm-chat-header-new {
+            padding: max(env(safe-area-inset-top), 10px) 12px 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(10,15,30,0.98);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .pm-search-box {
+            flex: 1;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 9px 16px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+        .pm-search-box::placeholder { color: rgba(255,255,255,0.4); }
+
+        .pm-item-new {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            position: relative;
+        }
+        .pm-item-new:active { background: rgba(255,255,255,0.06); }
+
+        .pm-item-avatar-wrap {
+            position: relative;
+            flex-shrink: 0;
+        }
+        .pm-item-avatar-wrap img {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .pm-item-online-dot {
+            position: absolute;
+            bottom: 1px;
+            right: 1px;
+            width: 14px;
+            height: 14px;
+            background: #22c55e;
+            border: 2px solid #000;
+            border-radius: 50%;
+        }
+
+        .pm-item-body { flex: 1; min-width: 0; }
+        .pm-item-name { font-size: 15px; font-weight: 700; color: white; }
+        .pm-item-preview { font-size: 13px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .pm-item-time { font-size: 11px; color: rgba(255,255,255,0.4); flex-shrink: 0; }
+        .pm-unread-badge { background: var(--accent); color: white; font-size: 11px; font-weight: 800; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+        /* Chat view */
+        .pm-chat-header-new .chat-h-name { font-size: 15px; font-weight: 800; color: white; }
+        .pm-chat-header-new .chat-h-status { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+        .pm-messages-new {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: #0a0f1e;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .msg-bubble-new {
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.5;
+            position: relative;
+            word-break: break-word;
+        }
+        .msg-me-new {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #0ea5e9, #3b82f6);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-them-new {
+            align-self: flex-start;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-meta {
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            margin-top: 3px;
+        }
+        .msg-me-new .msg-meta { text-align: right; }
+
+        .msg-heart-float {
+            position: absolute;
+            bottom: -8px;
+            right: -4px;
+            font-size: 14px;
+            animation: heartPop 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+        }
+        @keyframes heartPop {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .msg-sender-name {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        /* Message image preview */
+        .msg-img-preview {
+            max-width: 200px;
+            border-radius: 12px;
+            margin-top: 6px;
+            cursor: pointer;
+        }
+
+        /* Footer */
+        .pm-footer-new {
+            padding: 10px 12px max(env(safe-area-inset-bottom), 12px);
+            background: rgba(10,15,30,0.98);
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .pm-emoji-bar {
+            display: none;
+            gap: 10px;
+            padding: 10px 0;
+            flex-wrap: wrap;
+        }
+        .pm-emoji-bar.open { display: flex; }
+        .pm-emoji-btn-item { 
+            font-size: 26px; 
+            cursor: pointer; 
+            transition: transform 0.15s; 
+            line-height: 1;
+        }
+        .pm-emoji-btn-item:active { transform: scale(1.3); }
+
+        .pm-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pm-input-new {
+            flex: 1;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 24px;
+            padding: 11px 18px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+        }
+        .pm-input-new::placeholder { color: rgba(255,255,255,0.35); }
+
+        .pm-icon-btn {
+            background: rgba(255,255,255,0.08);
+            border: none;
+            color: rgba(255,255,255,0.6);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .pm-icon-btn:active { background: rgba(255,255,255,0.15); transform: scale(0.92); }
+        .pm-send-btn {
+            background: linear-gradient(135deg, var(--accent), #3b82f6);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .pm-send-btn:active { transform: scale(0.9); }
+
+        .pm-img-attach-preview {
+            display: none;
+            padding: 8px 0 0;
+        }
+        .pm-img-attach-preview.show { display: block; }
+        .pm-img-thumb {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            object-fit: cover;
+            position: relative;
+        }
+
+        .pm-typing-indicator {
+            display: none;
+            align-self: flex-start;
+            background: rgba(255,255,255,0.1);
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            padding: 12px 16px;
+            gap: 4px;
+            align-items: center;
+        }
+        .pm-typing-indicator.show { display: flex; }
+        .typing-dot {
+            width: 7px;
+            height: 7px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 50%;
+            animation: typingBounce 1.2s ease-in-out infinite;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-6px); }
+        }
+
+        /* Quick reactions tray */
+        .msg-quick-react-tray {
+            position: absolute;
+            background: rgba(20,30,50,0.98);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 30px;
+            padding: 8px 12px;
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+            backdrop-filter: blur(20px);
+            white-space: nowrap;
+        }
+        .qr-emoji { font-size: 22px; cursor: pointer; transition: transform 0.15s; }
+        .qr-emoji:active { transform: scale(1.3); }
+
+        /* Sticker/GIF panel */
+        .pm-sticker-panel {
+            display: none;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 12px 0 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .pm-sticker-panel.open { display: flex; }
+        .pm-sticker { font-size: 36px; cursor: pointer; transition: transform 0.15s; line-height: 1; }
+        .pm-sticker:active { transform: scale(1.3); }
+
+        /* Voice note button style */
+        .pm-voice-btn-active { background: linear-gradient(135deg, #ef4444, #dc2626) !important; color: white !important; animation: voicePulse 1s ease-in-out infinite; }
+        @keyframes voicePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+            50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+        }
+
+        /* Active friends bar */
+        .active-friends-bar-new {
+            display: flex;
+            gap: 14px;
+            padding: 12px 16px 8px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .active-friends-bar-new::-webkit-scrollbar { display: none; }
+        .af-item { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; }
+        .af-ring { width: 54px; height: 54px; border-radius: 50%; border: 2px solid #22c55e; padding: 2px; position: relative; }
+        .af-ring img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+        .af-online-dot { position: absolute; bottom: 1px; right: 1px; width: 12px; height: 12px; background: #22c55e; border: 2px solid #000; border-radius: 50%; }
+        .af-name { font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 600; max-width: 54px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Camera nav button */
+        .cam-nav-tab {
+            position: relative;
+        }
+
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9712694598388252"
      crossorigin="anonymous"></script>
         
@@ -4386,13 +4930,17 @@
         <i data-lucide="play-circle" class="nav-icon"></i>
         <span class="nav-label">Bingo</span>
     </button>
+    <button class="nav-item cam-nav-tab" onclick="openCamera()" id="nav-camera" style="position:relative;">
+        <div style="position:relative; display:flex; flex-direction:column; align-items:center;">
+            <div style="background:linear-gradient(135deg,var(--accent),#8b5cf6); border-radius:50%; width:44px; height:44px; display:flex; align-items:center; justify-content:center; margin-bottom:2px; box-shadow:0 4px 15px rgba(14,165,233,0.5); transform:translateY(-6px);">
+                <i data-lucide="camera" style="width:22px; height:22px; color:white;"></i>
+            </div>
+            <span class="nav-label" style="margin-top:-4px; color:var(--accent); font-weight:800;">Camera</span>
+        </div>
+    </button>
     <button class="nav-item" onclick="switchTab('beats')" id="nav-beats">
         <i data-lucide="clapperboard" class="nav-icon"></i>
         <span class="nav-label">Beats</span>
-    </button>
-    <button class="nav-item" onclick="document.getElementById('storeModal').style.display='flex'; setTimeout(() => lucide.createIcons(), 50);" id="nav-store">
-        <i data-lucide="shopping-bag" class="nav-icon"></i>
-        <span class="nav-label">Store</span>
     </button>
     <button class="nav-item" onclick="openMyProfile()" id="nav-profile">
         <i data-lucide="user" class="nav-icon"></i>
@@ -4828,62 +5376,143 @@
 </div>
 
 <div id="pmModal" class="pm-modal">
-    <div class="pm-container">
-        <div id="pmInboxView" style="display:flex; flex-direction:column; height:100%;">
-            <div class="pm-header">
-                <div style="display:flex; align-items:center; gap: var(--spacing-sm); flex:1;">
-                    <h3>Chats</h3>
-                    <button class="group-create-btn" onclick="startCreateGroup()"><i data-lucide="users" style="width:14px"></i> Group</button>
-                </div>
-                <div style="display:flex; gap: var(--spacing-sm);">
-                    <button onclick="document.getElementById('pmModal').style.display='none'" style="background:rgba(255,255,255,0.1); border:none; width:30px; height:30px; border-radius:50%; color:white; display:flex; align-items:center; justify-content:center;"><i data-lucide="x" style="width:16px;"></i></button>
-                </div>
+    <!-- ====== INBOX VIEW ====== -->
+    <div id="pmInboxView" style="display:flex; flex-direction:column; height:100%; background:#0a0f1e;">
+        <div class="pm-inbox-header">
+            <button onclick="document.getElementById('pmModal').style.display='none'" class="cam-top-btn">
+                <i data-lucide="arrow-left" style="width:18px;"></i>
+            </button>
+            <div style="flex:1;">
+                <div style="font-size:18px; font-weight:900; color:white;">Messages</div>
             </div>
-            <div class="active-friends-bar" id="activeFriendsBar"></div>
-            <div id="pmList" class="pm-inbox-list"></div>
+            <button class="cam-top-btn" onclick="startCreateGroup()" title="New Group">
+                <i data-lucide="users" style="width:18px;"></i>
+            </button>
+            <button class="cam-top-btn" style="background:linear-gradient(135deg,var(--accent),#3b82f6);" title="New Message" onclick="showToast('Search for a friend to message them!')">
+                <i data-lucide="edit" style="width:18px;color:white;"></i>
+            </button>
         </div>
-        
-        <div id="pmChatView" class="pm-chat-view">
-            <div class="pm-chat-header">
-                <button onclick="backToInbox()" style="background:none; border:none; color:var(--messenger-blue);"><i data-lucide="arrow-left"></i></button>
-                <div style="display:flex; align-items:center; flex:1;">
-                     <div id="chatTargetAvatarCont" style="width:36px; height:36px; margin-left:5px;"></div>
-                     <div style="display:flex; flex-direction:column; margin-left:10px;">
-                        <span id="chatTargetName" style="font-weight:700; font-size:15px; color:white;">User</span>
-                        <span id="chatTargetStatus" style="font-size:11px; color:#b0b3b8;">Active now</span>
-                     </div>
-                </div>
-                <button onclick="deleteConversation()" style="background:none; border:none; color:var(--danger); margin-left:auto;"><i data-lucide="trash-2"></i></button>
+        <!-- Search -->
+        <div style="padding:10px 16px 6px;">
+            <input class="pm-search-box" type="text" id="pmSearchInput" placeholder="🔍 Search conversations..." oninput="filterPmList(this.value)">
+        </div>
+        <!-- Online Now strip -->
+        <div class="active-friends-bar-new" id="activeFriendsBarNew"></div>
+        <!-- Conversation list -->
+        <div id="pmList" style="flex:1; overflow-y:auto;" class="pm-inbox-list"></div>
+    </div>
+
+    <!-- ====== CHAT VIEW ====== -->
+    <div id="pmChatView" class="pm-chat-view" style="display:none; flex-direction:column; height:100%; background:#0a0f1e;">
+        <div class="pm-chat-header-new">
+            <button onclick="backToInbox()" class="pm-icon-btn">
+                <i data-lucide="arrow-left" style="width:18px;"></i>
+            </button>
+            <div id="chatTargetAvatarCont" style="width:40px; height:40px; flex-shrink:0;"></div>
+            <div style="flex:1; min-width:0; margin-left:8px;">
+                <div class="chat-h-name" id="chatTargetName">User</div>
+                <div class="chat-h-status" id="chatTargetStatus">Active now</div>
             </div>
-            <div id="pmMessages" class="pm-messages"></div>
-            
-            <div class="pm-footer-modern">
-                <label for="pmImgInput" class="pm-attach-btn">
-                    <i data-lucide="image" style="width:24px;"></i>
-                </label>
-                <input type="file" id="pmImgInput" accept="image/*" style="display:none" onchange="handlePmImage(this)">
-                
-                <form onsubmit="event.preventDefault(); sendPrivateMessage();" style="flex:1; display:flex; gap: var(--spacing-sm);">
-                    <input type="text" id="pmInput" class="pm-styled-input" placeholder="Type a message..." autocomplete="off">
-                    <button type="submit" style="background:none; border:none; color:var(--messenger-blue); cursor:pointer;"><i data-lucide="send" style="width:24px"></i></button>
-                </form>
-            </div>
-            <div id="pmImgPreviewCont" style="padding: var(--spacing-sm); background:#0f172a; display:none;">
-                <span style="font-size:10px; color:var(--accent-glow);">Image attached</span>
+            <button onclick="openChatInfo()" class="pm-icon-btn" title="Chat Info">
+                <i data-lucide="info" style="width:18px;"></i>
+            </button>
+            <button onclick="deleteConversation()" class="pm-icon-btn" title="Delete" style="color:var(--danger);">
+                <i data-lucide="trash-2" style="width:18px;"></i>
+            </button>
+        </div>
+
+        <!-- Messages area -->
+        <div id="pmMessages" class="pm-messages-new">
+            <div id="pmTypingIndicator" class="pm-typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
             </div>
         </div>
 
-        <div id="pmCreateGroupView" style="display:none; flex-direction:column; height:100%; background:#000;">
-            <div class="pm-header">
-                <button onclick="cancelCreateGroup()" style="background:none; border:none; color:white;"><i data-lucide="arrow-left"></i></button>
-                <h3>New Group</h3>
-                <button onclick="finalizeCreateGroup()" style="color:var(--accent); background:none; border:none; font-weight:800;">CREATE</button>
+        <!-- Image attach preview -->
+        <div id="pmImgPreviewCont" class="pm-img-attach-preview" style="padding:8px 12px 0; background:rgba(10,15,30,0.98);">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <img id="pmImgThumb" class="pm-img-thumb" src="">
+                <button onclick="removePmImage()" style="background:rgba(239,68,68,0.2); border:1px solid #ef4444; border-radius:50%; width:24px; height:24px; color:#ef4444; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;">×</button>
             </div>
-            <div style="padding: var(--spacing-lg);">
-                <input type="text" id="newGroupName" class="styled-input" placeholder="Group Name">
-                <h4 style="color:#94a3b8; margin-top: var(--spacing-lg); font-size:12px; text-transform:uppercase;">Select Friends</h4>
-                <div id="friendSelectContainer" style="margin-top:10px;"></div>
+        </div>
+
+        <!-- Sticker Panel -->
+        <div id="pmStickerPanel" class="pm-sticker-panel" style="padding:10px 12px; background:rgba(10,15,30,0.98); border-top:1px solid rgba(255,255,255,0.08);">
+            <span class="pm-sticker" onclick="sendSticker('😂')">😂</span>
+            <span class="pm-sticker" onclick="sendSticker('❤️')">❤️</span>
+            <span class="pm-sticker" onclick="sendSticker('🔥')">🔥</span>
+            <span class="pm-sticker" onclick="sendSticker('👏')">👏</span>
+            <span class="pm-sticker" onclick="sendSticker('😍')">😍</span>
+            <span class="pm-sticker" onclick="sendSticker('🎉')">🎉</span>
+            <span class="pm-sticker" onclick="sendSticker('😭')">😭</span>
+            <span class="pm-sticker" onclick="sendSticker('💯')">💯</span>
+            <span class="pm-sticker" onclick="sendSticker('🙌')">🙌</span>
+            <span class="pm-sticker" onclick="sendSticker('😎')">😎</span>
+            <span class="pm-sticker" onclick="sendSticker('🤣')">🤣</span>
+            <span class="pm-sticker" onclick="sendSticker('😱')">😱</span>
+            <span class="pm-sticker" onclick="sendSticker('🥰')">🥰</span>
+            <span class="pm-sticker" onclick="sendSticker('👍')">👍</span>
+            <span class="pm-sticker" onclick="sendSticker('🤩')">🤩</span>
+            <span class="pm-sticker" onclick="sendSticker('💪')">💪</span>
+            <span class="pm-sticker" onclick="sendSticker('🏆')">🏆</span>
+            <span class="pm-sticker" onclick="sendSticker('🎮')">🎮</span>
+            <span class="pm-sticker" onclick="sendSticker('🍀')">🍀</span>
+            <span class="pm-sticker" onclick="sendSticker('🌟')">🌟</span>
+        </div>
+
+        <!-- Emoji Picker Row -->
+        <div id="pmEmojiBar" class="pm-emoji-bar" style="padding:10px 12px 0; background:rgba(10,15,30,0.98);">
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('😊')">😊</span>
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('😂')">😂</span>
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('❤️')">❤️</span>
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('🔥')">🔥</span>
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('😍')">😍</span>
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('🎉')">🎉</span>
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('😭')">😭</span>
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('💯')">💯</span>
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('👍')">👍</span>
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('🤩')">🤩</span>
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('😎')">😎</span>
+            <span class="pm-emoji-btn-item" onclick="addEmojiToMsg('🙏')">🙏</span>
+        </div>
+
+        <!-- Footer -->
+        <div class="pm-footer-new">
+            <div class="pm-input-row">
+                <button class="pm-icon-btn" onclick="togglePmEmojiBar()" title="Emoji">😊</button>
+                <button class="pm-icon-btn" onclick="togglePmStickerPanel()" title="Stickers">
+                    <i data-lucide="sticker" style="width:18px;"></i>
+                </button>
+                <label for="pmImgInput" class="pm-icon-btn" title="Photo" style="cursor:pointer;">
+                    <i data-lucide="image" style="width:18px;"></i>
+                </label>
+                <input type="file" id="pmImgInput" accept="image/*" style="display:none" onchange="handlePmImage(this)">
+                <input type="text" id="pmInput" class="pm-input-new" placeholder="Type a message..." autocomplete="off"
+                    onkeypress="if(event.key==='Enter'){event.preventDefault();sendPrivateMessage();}"
+                    oninput="handlePmTypingIndicator()">
+                <button id="pmVoiceBtn" class="pm-icon-btn" onmousedown="startVoiceRecord()" onmouseup="stopVoiceRecord()" ontouchstart="startVoiceRecord()" ontouchend="stopVoiceRecord()" title="Voice Note">
+                    <i data-lucide="mic" style="width:18px;"></i>
+                </button>
+                <button class="pm-send-btn" onclick="sendPrivateMessage()" title="Send">
+                    <i data-lucide="send" style="width:18px;"></i>
+                </button>
             </div>
+        </div>
+    </div>
+
+    <!-- ====== GROUP CREATE VIEW ====== -->
+    <div id="pmCreateGroupView" style="display:none; flex-direction:column; height:100%; background:#000;">
+        <div class="pm-inbox-header">
+            <button onclick="cancelCreateGroup()" class="cam-top-btn"><i data-lucide="arrow-left" style="width:18px;"></i></button>
+            <div style="flex:1; font-size:17px; font-weight:900; color:white;">New Group</div>
+            <button onclick="finalizeCreateGroup()" style="color:var(--accent); background:none; border:none; font-weight:900; font-size:15px;">CREATE</button>
+        </div>
+        <div style="padding: var(--spacing-lg);">
+            <input type="text" id="newGroupName" class="styled-input" placeholder="Group Name">
+            <h4 style="color:#94a3b8; margin-top: var(--spacing-lg); font-size:12px; text-transform:uppercase;">Select Friends</h4>
+            <div id="friendSelectContainer" style="margin-top:10px;"></div>
         </div>
     </div>
 </div>
@@ -7144,7 +7773,13 @@
     let currentChatPartner = null;
     let isGroupChat = false;
 
-    function openMessenger() { document.getElementById('pmModal').style.display = 'flex'; document.getElementById('pmInboxView').style.display = 'flex'; document.getElementById('pmChatView').style.display = 'none'; loadInbox(); }
+    function openMessenger() { 
+        document.getElementById('pmModal').style.display = 'flex'; 
+        document.getElementById('pmInboxView').style.display = 'flex'; 
+        document.getElementById('pmChatView').style.display = 'none'; 
+        loadInbox(); 
+        loadActiveFriendsNew();
+    }
     function loadInbox() { 
         const uid = auth.currentUser.uid; 
         const list = document.getElementById('pmList'); 
@@ -7419,27 +8054,45 @@
     
     function listenGroupMessages(groupId) {
         const chatDiv = document.getElementById('pmMessages'); 
-        chatDiv.innerHTML = "";
-        if(pmListenerRef) db.ref('groupMessages').off(); // Clear old listener location logic if slightly diff
+        chatDiv.innerHTML = "<div id='pmTypingIndicator' class='pm-typing-indicator'><div class='typing-dot'></div><div class='typing-dot'></div><div class='typing-dot'></div></div>";
+        if(pmListenerRef) db.ref('groupMessages').off();
 
         const gRef = db.ref('groupMessages/' + groupId).limitToLast(100);
         gRef.on('child_added', s => {
              const m = s.val();
-             const div = document.createElement('div'); 
-             div.className = `msg-bubble ${m.from === auth.currentUser.uid ? 'msg-me' : 'msg-them'}`;
-             let contentHtml = m.text;
-             if(m.image) contentHtml += `<br><img src="${m.image}" class="msg-image-preview">`;
+             const isMe = m.from === auth.currentUser.uid;
              
-             // Show name in group
-             if(m.from !== auth.currentUser.uid) {
-                 contentHtml = `<span style="font-size:9px; color:#94a3b8; display:block; margin-bottom:2px;">${m.senderName}</span>` + contentHtml;
+             const wrapper = document.createElement('div');
+             wrapper.style.cssText = 'display:flex; flex-direction:column; align-items:' + (isMe ? 'flex-end' : 'flex-start') + ';';
+             
+             const bubble = document.createElement('div');
+             bubble.className = `msg-bubble-new ${isMe ? 'msg-me-new' : 'msg-them-new'}`;
+             
+             let inner = '';
+             if (!isMe) inner += `<div class="msg-sender-name">${escapeHtml(m.senderName || 'User')}</div>`;
+             if (m.isSticker) {
+                 bubble.style.cssText = 'background:transparent; padding:0;';
+                 inner += `<span style="font-size:48px; line-height:1;">${escapeHtml(m.text)}</span>`;
+             } else {
+                 inner += escapeHtml(m.text || '');
+                 if(m.image) inner += `<br><img src="${m.image}" class="msg-img-preview">`;
              }
-
-             div.innerHTML = contentHtml;
-             chatDiv.appendChild(div); 
+             bubble.innerHTML = inner;
+             
+             const meta = document.createElement('div');
+             meta.className = 'msg-meta';
+             const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' }) : '';
+             meta.textContent = timeStr;
+             
+             wrapper.appendChild(bubble);
+             wrapper.appendChild(meta);
+             
+             const typingEl = document.getElementById('pmTypingIndicator');
+             if (typingEl) chatDiv.insertBefore(wrapper, typingEl);
+             else chatDiv.appendChild(wrapper);
              chatDiv.scrollTop = chatDiv.scrollHeight; 
         });
-        pmListenerRef = gRef; // Hacky reference store
+        pmListenerRef = gRef;
     }
 
     function openPrivateChat(uid, name, photo) { 
@@ -7481,6 +8134,7 @@
         });
 
         listenPrivateMessages(auth.currentUser.uid); 
+        listenTypingIndicator(uid);
     }
     
     function backToInbox() { 
@@ -7502,7 +8156,11 @@
         if(input.files && input.files[0]) {
             compressImage(input.files[0], 500, 0.7).then(base64 => {
                 pmImageBase64 = base64;
-                document.getElementById('pmImgPreviewCont').style.display = 'block';
+                const cont = document.getElementById('pmImgPreviewCont');
+                const thumb = document.getElementById('pmImgThumb');
+                if (thumb) thumb.src = base64;
+                cont.style.display = 'block';
+                cont.classList.add('show');
             });
         }
     }
@@ -7533,7 +8191,7 @@
     let isInitialLoad = true;
     function listenPrivateMessages(myUid) { 
         const chatDiv = document.getElementById('pmMessages'); 
-        chatDiv.innerHTML = "";
+        chatDiv.innerHTML = "<div id='pmTypingIndicator' class='pm-typing-indicator'><div class='typing-dot'></div><div class='typing-dot'></div><div class='typing-dot'></div></div>";
         if(pmListenerRef) db.ref('messages').off();
         isInitialLoad = true;
 
@@ -7545,21 +8203,15 @@
             // Play sound for new incoming messages when not in initial load
             if(!isInitialLoad && m.to === myUid && (m.timestamp > (Date.now() - 2000))) {
                 playSound('pop');
-                
-                // Show toast notification if PM modal is closed or chat is with different user
                 const pmModal = document.getElementById('pmModal');
                 const isPMModalClosed = pmModal.style.display === 'none' || !pmModal.style.display;
                 const isDifferentChat = currentChatPartner !== m.from;
-                
                 if(isPMModalClosed || isDifferentChat) {
-                    // Get sender name
                     db.ref('users/' + m.from).once('value', uSnap => {
                         const sender = uSnap.val();
                         if(sender) {
-                            const messagePreview = m.image ? 'Photo' : (m.text.length > 30 ? m.text.substring(0, 30) + '...' : m.text);
-                            const sanitizedName = escapeHtml(sender.name);
-                            const sanitizedPreview = escapeHtml(messagePreview);
-                            showToast(`${sanitizedName}: ${sanitizedPreview}`);
+                            const messagePreview = m.isSticker ? '📩 Sticker' : m.isVoice ? '🎙️ Voice note' : m.image ? '📷 Photo' : (m.text.length > 30 ? m.text.substring(0, 30) + '...' : m.text);
+                            showToast(`${escapeHtml(sender.name)}: ${escapeHtml(messagePreview)}`);
                         }
                     });
                 }
@@ -7567,45 +8219,104 @@
 
             if(!currentChatPartner) return; 
             if( (m.from === myUid && m.to === currentChatPartner) || (m.from === currentChatPartner && m.to === myUid) ) { 
-                const div = document.createElement('div'); 
-                div.className = `msg-bubble ${m.from === myUid ? 'msg-me' : 'msg-them'}`; 
-                
-                let contentHtml = m.text;
-                if(m.image) {
-                    contentHtml += `<br><img src="${m.image}" class="msg-image-preview">`;
-                }
-                
-                // Heart logic
-                let heartHtml = '';
-                if(m.hearted) {
-                    heartHtml = `<div class="msg-heart-reaction"><i data-lucide="heart" style="width:12px;height:12px;color:#ef4444;"></i></div>`;
+                const isMe = m.from === myUid;
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = 'display:flex; flex-direction:column; align-items:' + (isMe ? 'flex-end' : 'flex-start') + ';';
+
+                const bubble = document.createElement('div');
+                bubble.className = `msg-bubble-new ${isMe ? 'msg-me-new' : 'msg-them-new'}`;
+                bubble.dataset.msgKey = key;
+
+                let inner = '';
+                if (m.isSticker) {
+                    bubble.style.background = 'transparent';
+                    bubble.style.padding = '0';
+                    inner = `<span style="font-size:48px; line-height:1; display:block;">${escapeHtml(m.text)}</span>`;
+                } else if (m.isVoice && m.audio) {
+                    inner = `<audio controls src="${m.audio}" style="max-width:200px; border-radius:8px;"></audio>`;
+                } else {
+                    inner = escapeHtml(m.text || '');
+                    if(m.image) inner += `<br><img src="${m.image}" class="msg-img-preview" onclick="openFullscreenPhoto('${m.image}', null, 'image')">`;
                 }
 
-                div.innerHTML = `${contentHtml}${heartHtml}`; 
-                
-                // Double click to heart
-                div.ondblclick = () => {
+                if (m.hearted) {
+                    inner += `<div class="msg-heart-float">❤️</div>`;
+                }
+
+                bubble.innerHTML = inner;
+
+                // Double-tap to heart
+                bubble.ondblclick = () => {
                     if(!m.hearted) {
                         db.ref('messages/' + key).update({ hearted: true });
-                        showToast("Message hearted");
+                        bubble.innerHTML += `<div class="msg-heart-float">❤️</div>`;
+                        showToast('❤️ Message hearted!');
                     }
                 };
 
-                chatDiv.appendChild(div); 
+                const meta = document.createElement('div');
+                meta.className = 'msg-meta';
+                const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' }) : '';
+                meta.textContent = timeStr + (isMe && !m.isSticker ? ' ✓✓' : '');
+
+                wrapper.appendChild(bubble);
+                wrapper.appendChild(meta);
+
+                // Insert before typing indicator
+                const typingEl = document.getElementById('pmTypingIndicator');
+                if (typingEl) chatDiv.insertBefore(wrapper, typingEl);
+                else chatDiv.appendChild(wrapper);
+                
                 chatDiv.scrollTop = chatDiv.scrollHeight; 
             } 
         }); 
         
-        // Listen for changes (hearts)
-        pmListenerRef.on('child_changed', s => {
-             // In real app, find specific bubble and update. Here we just re-render or let it slide for simplicity in one-file
-        });
-
         setTimeout(() => { isInitialLoad = false; }, 1500);
     }
 
     function deductPoints(amt) { db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) - amt); spawnLossAnimation(amt); }
     function addPoints(amt) { db.ref('users/' + userData.uid + '/points').transaction(p => (p || 0) + amt); }
+
+    // ================================================
+    // 🪙 ENGAGEMENT COINS SYSTEM (max 20/day)
+    // Award 1 RB Coin per comment, react, or share
+    // ================================================
+    const DAILY_ENGAGEMENT_LIMIT = 20;
+    function awardEngagementCoin(action) {
+        if (!auth.currentUser || !userData) return;
+        const uid = auth.currentUser.uid;
+        const today = new Date().toDateString();
+        const coinRef = db.ref('engagementCoins/' + uid + '/' + today);
+        coinRef.transaction(current => {
+            const count = current || 0;
+            if (count >= DAILY_ENGAGEMENT_LIMIT) return count; // already at limit
+            return count + 1;
+        }, (err, committed, snap) => {
+            if (err || !committed) return;
+            const newCount = snap.val();
+            const prev = newCount - 1;
+            if (prev < DAILY_ENGAGEMENT_LIMIT) {
+                // Award 1 coin to user
+                db.ref('users/' + uid + '/points').transaction(p => (p || 0) + 1);
+                const remaining = DAILY_ENGAGEMENT_LIMIT - newCount;
+                if (remaining > 0) {
+                    showRbCoinToast(action, newCount, remaining);
+                    spawnFlyingCoins(1);
+                } else {
+                    showToast('🪙 Daily limit reached! 20 RB Coins earned today.');
+                }
+            }
+        });
+    }
+
+    function showRbCoinToast(action, earned, remaining) {
+        const label = action === 'comment' ? 'Commented' : action === 'react' ? 'Reacted' : 'Shared';
+        const el = document.createElement('div');
+        el.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,rgba(251,191,36,0.95),rgba(245,158,11,0.9));color:#0f172a;padding:8px 18px;border-radius:30px;font-size:13px;font-weight:900;z-index:99999;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(251,191,36,0.5);animation:coinToastAnim 0.4s cubic-bezier(0.175,0.885,0.32,1.275);white-space:nowrap;';
+        el.innerHTML = '<span style="font-size:16px;">🪙</span> +1 RB Coin · ' + label + ' <span style="opacity:0.7;font-size:11px;">' + earned + '/20 today</span>';
+        document.body.appendChild(el);
+        setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity 0.4s'; setTimeout(()=>el.remove(),400); }, 2500);
+    }
 
     function verifyAdMath() { const ans = document.getElementById('mathAns').value; const corr = document.getElementById('mathQ').dataset.ans; if(ans === corr) { document.getElementById('adCaptchaOverlay').style.display = 'none'; addPoints(50); showToast("Reward: +50 Coins Added!"); } else { showToast("Wrong Answer!"); } }
     
@@ -8942,6 +9653,8 @@ Please explain why you want a verification badge:`;
 
         document.getElementById('commentInput').value = "";
         updateCommentPreview(); // Clear preview
+        // Award 1 RB Coin for engagement (max 20/day)
+        awardEngagementCoin('comment');
     }
     
     function updateCommentPreview() {
@@ -9112,6 +9825,8 @@ Please explain why you want a verification badge:`;
                 showToast("Post shared successfully!");
                 playSound('pop');
                 closeShareModal();
+                // Award 1 RB Coin for engagement (max 20/day)
+                awardEngagementCoin('share');
             }).catch(err => {
                 console.error("Share error:", err);
                 showToast("Failed to share. Try again.");
@@ -9628,10 +10343,8 @@ Please explain why you want a verification badge:`;
                                 });
                             }
                             rewardHistoryRef.set(true); 
-                        }
-                    });
-                }
-                likeRef.set(emoji);
+                            // Award 1 RB Coin for engagement (max 20/day)
+                            awardEngagementCoin('react');
             }
         });
     }
@@ -9724,7 +10437,372 @@ Please explain why you want a verification badge:`;
             setTimeout(() => ss.style.display = 'none', 500);
         }
     }, 1500); // Remove after 1.5 seconds
-    
+
+    // ================================================
+    // 📷 CAMERA SYSTEM WITH FILTERS & STICKERS
+    // ================================================
+    let cameraStream = null;
+    let currentFilter = 'none';
+    let activeSticker = '';
+    let facingMode = 'user';
+    let camTimerActive = false;
+    let capturedDataUrl = null;
+
+    function openCamera() {
+        document.getElementById('cameraPage').classList.add('active');
+        startCamera();
+        lucide.createIcons();
+    }
+
+    function closeCamera() {
+        stopCamera();
+        document.getElementById('cameraPage').classList.remove('active');
+        dismissCamPreview();
+    }
+
+    function startCamera() {
+        if (cameraStream) stopCamera();
+        const constraints = { video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
+        navigator.mediaDevices.getUserMedia(constraints).then(stream => {
+            cameraStream = stream;
+            const video = document.getElementById('cameraVideo');
+            video.srcObject = stream;
+            video.play();
+            if (currentFilter !== 'none') video.style.filter = currentFilter;
+        }).catch(err => {
+            showToast('Camera access denied. Please allow camera permission.');
+            console.error('Camera error:', err);
+            closeCamera();
+        });
+    }
+
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(t => t.stop());
+            cameraStream = null;
+        }
+        const video = document.getElementById('cameraVideo');
+        video.srcObject = null;
+    }
+
+    function flipCamera() {
+        facingMode = facingMode === 'user' ? 'environment' : 'user';
+        startCamera();
+        showToast(facingMode === 'user' ? 'Switched to front camera' : 'Switched to back camera');
+    }
+
+    function applyFilter(filterVal) {
+        currentFilter = filterVal;
+        const video = document.getElementById('cameraVideo');
+        video.style.filter = filterVal === 'none' ? '' : filterVal;
+        // Update active pill
+        document.querySelectorAll('.filter-thumb').forEach(el => el.classList.remove('active'));
+        // Highlight the right one based on filterVal
+        const map = { 'none':'filter-none','grayscale(100%)':'filter-gray','sepia(100%)':'filter-sepia','saturate(200%) contrast(1.1)':'filter-vivid','hue-rotate(200deg) saturate(150%)':'filter-cool','hue-rotate(30deg) saturate(200%) brightness(1.1)':'filter-warm','contrast(1.5) brightness(0.9)':'filter-drama','invert(80%) hue-rotate(180deg)':'filter-neon','blur(2px) saturate(150%)':'filter-dream','brightness(1.3) contrast(0.8) saturate(0.5)':'filter-fade' };
+        const el = document.getElementById(map[filterVal] || 'filter-none');
+        if (el) el.classList.add('active');
+    }
+
+    function setActiveSticker(emoji) {
+        activeSticker = emoji;
+        const overlay = document.getElementById('cameraStickerOverlay');
+        document.querySelectorAll('.sticker-btn').forEach(b => b.classList.remove('active-sticker'));
+        if (emoji) {
+            overlay.innerHTML = `<div class="sticker-el">${emoji}</div>`;
+            // highlight selected button
+            document.querySelectorAll('.sticker-btn').forEach(b => { if(b.textContent === emoji) b.classList.add('active-sticker'); });
+        } else {
+            overlay.innerHTML = '';
+        }
+    }
+
+    let camTimerSecs = 0;
+    function toggleCamTimer() {
+        const options = [0, 3, 10];
+        const idx = options.indexOf(camTimerSecs);
+        camTimerSecs = options[(idx + 1) % options.length];
+        const btn = document.getElementById('camTimerBtn');
+        if (camTimerSecs === 0) { btn.innerHTML = '<i data-lucide="timer" style="width:22px;"></i>'; showToast('Timer off'); }
+        else { btn.innerHTML = `<span style="font-size:14px;font-weight:900;">${camTimerSecs}s</span>`; showToast(`Timer: ${camTimerSecs} seconds`); }
+        lucide.createIcons();
+    }
+
+    function capturePhoto() {
+        if (camTimerSecs > 0) {
+            let t = camTimerSecs;
+            const countDiv = document.getElementById('camTimerCountdown');
+            const numEl = document.getElementById('camTimerNum');
+            countDiv.style.display = 'flex';
+            const interval = setInterval(() => {
+                numEl.textContent = t;
+                t--;
+                if (t < 0) {
+                    clearInterval(interval);
+                    countDiv.style.display = 'none';
+                    doCapture();
+                }
+            }, 1000);
+            numEl.textContent = t;
+        } else {
+            doCapture();
+        }
+    }
+
+    function doCapture() {
+        const video = document.getElementById('cameraVideo');
+        const canvas = document.getElementById('cameraCanvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+
+        // Flip horizontally if front camera
+        if (facingMode === 'user') {
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+        }
+
+        // Apply filter via canvas
+        if (currentFilter !== 'none') ctx.filter = currentFilter;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.filter = 'none';
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+        // Draw sticker overlay
+        if (activeSticker) {
+            ctx.font = `${Math.min(canvas.width, canvas.height) * 0.25}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(activeSticker, canvas.width / 2, canvas.height / 2);
+        }
+
+        capturedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+        // Flash effect
+        const flash = document.createElement('div');
+        flash.style.cssText = 'position:absolute;inset:0;background:white;z-index:90;pointer-events:none;transition:opacity 0.3s;';
+        document.getElementById('cameraPage').appendChild(flash);
+        setTimeout(() => { flash.style.opacity = '0'; setTimeout(() => flash.remove(), 300); }, 50);
+
+        // Show preview
+        document.getElementById('camCapturedImg').src = capturedDataUrl;
+        document.getElementById('camPhotoPreview').classList.add('show');
+        playSound('click');
+    }
+
+    function dismissCamPreview() {
+        document.getElementById('camPhotoPreview').classList.remove('show');
+        capturedDataUrl = null;
+    }
+
+    function shareCapToStory() {
+        if (!capturedDataUrl) return;
+        // Set it as story photo and open story creator
+        storyPhotoData = capturedDataUrl;
+        dismissCamPreview();
+        closeCamera();
+        openStoryCreator();
+        switchStoryType('photo', document.getElementById('stab-photo'));
+        document.getElementById('storyPhotoPreview').innerHTML = `<img src="${capturedDataUrl}" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;">`;
+        showToast('Photo ready! Add a caption and share to Story.');
+    }
+
+    function shareCapToPost() {
+        if (!capturedDataUrl) return;
+        dismissCamPreview();
+        closeCamera();
+        // Switch to home tab and set post image
+        switchTab('home');
+        postImageBase64 = capturedDataUrl;
+        const preview = document.getElementById('imagePreviewContainer');
+        const img = document.getElementById('imagePreviewImg');
+        if (preview && img) {
+            img.src = capturedDataUrl;
+            preview.classList.add('show');
+        }
+        document.getElementById('postInput').focus();
+        showToast('Photo added to post! Write a caption and post it.');
+    }
+
+    function downloadCaptured() {
+        if (!capturedDataUrl) return;
+        const a = document.createElement('a');
+        a.href = capturedDataUrl;
+        a.download = `rb-photo-${Date.now()}.jpg`;
+        a.click();
+        showToast('Photo saved!');
+    }
+
+    function openCameraGallery() {
+        // Trigger image pick
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                capturedDataUrl = ev.target.result;
+                document.getElementById('camCapturedImg').src = capturedDataUrl;
+                document.getElementById('camPhotoPreview').classList.add('show');
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
+    }
+
+    // ================================================
+    // 💬 ENHANCED MESSENGER FUNCTIONS
+    // ================================================
+    let pmEmojiBarOpen = false;
+    let pmStickerPanelOpen = false;
+    let voiceRecorder = null;
+    let voiceChunks = [];
+
+    function togglePmEmojiBar() {
+        pmEmojiBarOpen = !pmEmojiBarOpen;
+        pmStickerPanelOpen = false;
+        document.getElementById('pmEmojiBar').classList.toggle('open', pmEmojiBarOpen);
+        document.getElementById('pmStickerPanel').classList.toggle('open', false);
+    }
+
+    function togglePmStickerPanel() {
+        pmStickerPanelOpen = !pmStickerPanelOpen;
+        pmEmojiBarOpen = false;
+        document.getElementById('pmStickerPanel').classList.toggle('open', pmStickerPanelOpen);
+        document.getElementById('pmEmojiBar').classList.toggle('open', false);
+    }
+
+    function addEmojiToMsg(emoji) {
+        const inp = document.getElementById('pmInput');
+        inp.value += emoji;
+        inp.focus();
+    }
+
+    function sendSticker(emoji) {
+        if (!currentChatPartner || !auth.currentUser) return showToast('Open a chat first!');
+        const myUid = auth.currentUser.uid;
+        const msgData = { from: myUid, text: emoji, isSticker: true, timestamp: Date.now() };
+        if (isGroupChat) {
+            msgData.senderName = userData.name;
+            db.ref('groupMessages/' + currentChatPartner).push(msgData);
+        } else {
+            msgData.to = currentChatPartner;
+            db.ref('messages').push(msgData);
+        }
+        togglePmStickerPanel();
+    }
+
+    function removePmImage() {
+        pmImageBase64 = null;
+        document.getElementById('pmImgPreviewCont').classList.remove('show');
+        document.getElementById('pmImgPreviewCont').style.display = 'none';
+    }
+
+    function filterPmList(query) {
+        const items = document.querySelectorAll('.pm-item-new, .pm-item');
+        items.forEach(item => {
+            const name = item.querySelector('.pm-name, .pm-item-name');
+            if (!name) return;
+            item.style.display = name.textContent.toLowerCase().includes(query.toLowerCase()) ? '' : 'none';
+        });
+    }
+
+    let typingTimeout = null;
+    function handlePmTypingIndicator() {
+        if (!currentChatPartner || isGroupChat) return;
+        const myUid = auth.currentUser.uid;
+        db.ref('typing/' + currentChatPartner + '/' + myUid).set(true);
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            db.ref('typing/' + currentChatPartner + '/' + myUid).remove();
+        }, 2000);
+    }
+
+    function listenTypingIndicator(partnerUid) {
+        const myUid = auth.currentUser.uid;
+        db.ref('typing/' + myUid + '/' + partnerUid).on('value', snap => {
+            const isTyping = snap.exists() && snap.val() === true;
+            const indicator = document.getElementById('pmTypingIndicator');
+            if (indicator) indicator.classList.toggle('show', isTyping);
+        });
+    }
+
+    function startVoiceRecord() {
+        if (!navigator.mediaDevices || !window.MediaRecorder) {
+            showToast('Voice recording not supported on this device.');
+            return;
+        }
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            voiceChunks = [];
+            voiceRecorder = new MediaRecorder(stream);
+            voiceRecorder.ondataavailable = e => voiceChunks.push(e.data);
+            voiceRecorder.onstop = () => {
+                const blob = new Blob(voiceChunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    const base64 = ev.target.result;
+                    if (!currentChatPartner) return;
+                    const myUid = auth.currentUser.uid;
+                    const msgData = { from: myUid, audio: base64, isVoice: true, timestamp: Date.now() };
+                    if (isGroupChat) { msgData.senderName = userData.name; db.ref('groupMessages/' + currentChatPartner).push(msgData); }
+                    else { msgData.to = currentChatPartner; db.ref('messages').push(msgData); }
+                    showToast('🎙️ Voice note sent!');
+                };
+                reader.readAsDataURL(blob);
+                stream.getTracks().forEach(t => t.stop());
+            };
+            voiceRecorder.start();
+            document.getElementById('pmVoiceBtn').classList.add('pm-voice-btn-active');
+            showToast('🎙️ Recording... release to send');
+        }).catch(() => showToast('Microphone access denied.'));
+    }
+
+    function stopVoiceRecord() {
+        if (voiceRecorder && voiceRecorder.state === 'recording') {
+            voiceRecorder.stop();
+            document.getElementById('pmVoiceBtn').classList.remove('pm-voice-btn-active');
+        }
+    }
+
+    function openChatInfo() {
+        if (!currentChatPartner || isGroupChat) return;
+        openUserProfile(currentChatPartner);
+    }
+
+    // Load online friends for "Active Now" bar
+    function loadActiveFriendsNew() {
+        if (!auth.currentUser) return;
+        const bar = document.getElementById('activeFriendsBarNew');
+        if (!bar) return;
+        const myUid = auth.currentUser.uid;
+        db.ref('friends/' + myUid).once('value', fSnap => {
+            if (!fSnap.exists()) return;
+            const friends = Object.keys(fSnap.val());
+            bar.innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,0.4);font-weight:700;align-self:center;white-space:nowrap;padding-right:4px;">Active</div>';
+            let foundAny = false;
+            friends.forEach(uid => {
+                db.ref('users/' + uid).once('value', uSnap => {
+                    const u = uSnap.val();
+                    if (!u) return;
+                    const isOnline = onlineUsers[uid] && onlineUsers[uid].state === 'online';
+                    if (!isOnline) return;
+                    foundAny = true;
+                    const item = document.createElement('div');
+                    item.className = 'af-item';
+                    item.onclick = () => openPrivateChat(uid, u.name, u.photo || '');
+                    item.innerHTML = `
+                        <div class="af-ring">
+                            <img src="${u.photo || 'https://via.placeholder.com/44'}" alt="${escapeHtml(u.name)}">
+                            <div class="af-online-dot"></div>
+                        </div>
+                        <div class="af-name">${escapeHtml(u.name.split(' ')[0])}</div>
+                    `;
+                    bar.appendChild(item);
+                });
+            });
+        });
+    }
 </script>
 
 <!-- Fullscreen Photo Viewer -->
@@ -11208,6 +12286,143 @@ Please explain why you want a verification badge:`;
             <button class="tourn-tab-btn"        id="ttab-finished" onclick="switchTournTab('finished')"><i data-lucide="check-circle" style="width:14px;height:14px;vertical-align:middle;color:#10b981;"></i> Finished</button>
         </div>
         <div id="tournContent"></div>
+    </div>
+</div>
+
+<!-- ====================================
+     📷 CAMERA WITH FILTERS & EFFECTS
+==================================== -->
+<div class="camera-page" id="cameraPage">
+    <div class="camera-viewport">
+        <video id="cameraVideo" autoplay playsinline muted></video>
+        <canvas id="cameraCanvas"></canvas>
+
+        <!-- Sticker Overlay -->
+        <div class="camera-sticker-overlay" id="cameraStickerOverlay"></div>
+
+        <!-- Top Controls -->
+        <div class="camera-top-bar">
+            <button class="cam-top-btn" onclick="closeCamera()">
+                <i data-lucide="x" style="width:20px;"></i>
+            </button>
+            <div style="font-size:14px; font-weight:800; color:white; text-shadow:0 2px 6px rgba(0,0,0,0.8);">📷 Camera</div>
+            <button class="cam-top-btn" onclick="flipCamera()" id="camFlipBtn" title="Flip Camera">
+                <i data-lucide="rotate-ccw" style="width:20px;"></i>
+            </button>
+        </div>
+
+        <!-- Stickers Bar -->
+        <div class="camera-sticker-bar" id="cameraStickerBar">
+            <span class="sticker-btn" onclick="setActiveSticker('')" title="None">❌</span>
+            <span class="sticker-btn" onclick="setActiveSticker('👑')" title="Crown">👑</span>
+            <span class="sticker-btn" onclick="setActiveSticker('🌟')" title="Star">🌟</span>
+            <span class="sticker-btn" onclick="setActiveSticker('❤️')" title="Heart">❤️</span>
+            <span class="sticker-btn" onclick="setActiveSticker('🎉')" title="Party">🎉</span>
+            <span class="sticker-btn" onclick="setActiveSticker('🌈')" title="Rainbow">🌈</span>
+            <span class="sticker-btn" onclick="setActiveSticker('😎')" title="Cool">😎</span>
+            <span class="sticker-btn" onclick="setActiveSticker('🔥')" title="Fire">🔥</span>
+            <span class="sticker-btn" onclick="setActiveSticker('🦋')" title="Butterfly">🦋</span>
+            <span class="sticker-btn" onclick="setActiveSticker('✨')" title="Sparkle">✨</span>
+            <span class="sticker-btn" onclick="setActiveSticker('🎶')" title="Music">🎶</span>
+            <span class="sticker-btn" onclick="setActiveSticker('🌸')" title="Flower">🌸</span>
+        </div>
+
+        <!-- Filter Pills -->
+        <div class="camera-filter-bar" id="cameraFilterBar">
+            <div class="filter-pill" onclick="applyFilter('none')">
+                <div class="filter-thumb active" id="filter-none" style="background:linear-gradient(135deg,#1e3a5f,#2d6a9f);">
+                    <span>📷</span>
+                </div>
+                <span>Normal</span>
+            </div>
+            <div class="filter-pill" onclick="applyFilter('grayscale(100%)')">
+                <div class="filter-thumb" id="filter-gray" style="background:linear-gradient(135deg,#555,#999);">
+                    <span>⚫</span>
+                </div>
+                <span>B&W</span>
+            </div>
+            <div class="filter-pill" onclick="applyFilter('sepia(100%)')">
+                <div class="filter-thumb" id="filter-sepia" style="background:linear-gradient(135deg,#704214,#c8a87a);">
+                    <span>🏵️</span>
+                </div>
+                <span>Vintage</span>
+            </div>
+            <div class="filter-pill" onclick="applyFilter('saturate(200%) contrast(1.1)')">
+                <div class="filter-thumb" id="filter-vivid" style="background:linear-gradient(135deg,#e91e63,#9c27b0);">
+                    <span>🎨</span>
+                </div>
+                <span>Vivid</span>
+            </div>
+            <div class="filter-pill" onclick="applyFilter('hue-rotate(200deg) saturate(150%)')">
+                <div class="filter-thumb" id="filter-cool" style="background:linear-gradient(135deg,#0ea5e9,#8b5cf6);">
+                    <span>🧊</span>
+                </div>
+                <span>Cool</span>
+            </div>
+            <div class="filter-pill" onclick="applyFilter('hue-rotate(30deg) saturate(200%) brightness(1.1)')">
+                <div class="filter-thumb" id="filter-warm" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">
+                    <span>🌅</span>
+                </div>
+                <span>Warm</span>
+            </div>
+            <div class="filter-pill" onclick="applyFilter('contrast(1.5) brightness(0.9)')">
+                <div class="filter-thumb" id="filter-drama" style="background:linear-gradient(135deg,#1a1a1a,#3d3d3d);">
+                    <span>🎭</span>
+                </div>
+                <span>Drama</span>
+            </div>
+            <div class="filter-pill" onclick="applyFilter('invert(80%) hue-rotate(180deg)')">
+                <div class="filter-thumb" id="filter-neon" style="background:linear-gradient(135deg,#06b6d4,#10b981);">
+                    <span>⚡</span>
+                </div>
+                <span>Neon</span>
+            </div>
+            <div class="filter-pill" onclick="applyFilter('blur(2px) saturate(150%)')">
+                <div class="filter-thumb" id="filter-dream" style="background:linear-gradient(135deg,#a78bfa,#f0abfc);">
+                    <span>💭</span>
+                </div>
+                <span>Dream</span>
+            </div>
+            <div class="filter-pill" onclick="applyFilter('brightness(1.3) contrast(0.8) saturate(0.5)')">
+                <div class="filter-thumb" id="filter-fade" style="background:linear-gradient(135deg,#cbd5e1,#94a3b8);">
+                    <span>🌫️</span>
+                </div>
+                <span>Fade</span>
+            </div>
+        </div>
+
+        <!-- Capture controls -->
+        <div class="camera-controls">
+            <button class="cam-side-btn" onclick="openCameraGallery()" title="Gallery">
+                <i data-lucide="image" style="width:22px;"></i>
+            </button>
+            <button class="cam-capture-btn" onclick="capturePhoto()" id="camCaptureBtn"></button>
+            <button class="cam-side-btn" id="camTimerBtn" onclick="toggleCamTimer()" title="Timer">
+                <i data-lucide="timer" style="width:22px;"></i>
+            </button>
+        </div>
+
+        <!-- Timer countdown overlay -->
+        <div id="camTimerCountdown" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.5); z-index:50; display:flex; align-items:center; justify-content:center; pointer-events:none;">
+            <div id="camTimerNum" style="font-size:120px; font-weight:900; color:white; text-shadow:0 0 30px rgba(255,255,255,0.5);"></div>
+        </div>
+
+        <!-- Photo preview -->
+        <div class="cam-photo-preview" id="camPhotoPreview">
+            <img id="camCapturedImg" src="" alt="Captured Photo" style="flex:1; object-fit:contain; width:100%; background:#000;">
+            <div class="cam-photo-actions">
+                <button class="cam-action-share-btn" onclick="shareCapToStory()" style="background:linear-gradient(135deg,#7c3aed,#ec4899); color:white;">
+                    <i data-lucide="zap" style="width:16px;"></i> Story
+                </button>
+                <button class="cam-action-share-btn" onclick="shareCapToPost()" style="background:linear-gradient(135deg,var(--accent),#3b82f6); color:white;">
+                    <i data-lucide="image" style="width:16px;"></i> Post
+                </button>
+                <button class="cam-action-share-btn" onclick="downloadCaptured()" style="background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2);">
+                    <i data-lucide="download" style="width:16px;"></i> Save
+                </button>
+                <button onclick="dismissCamPreview()" style="background:none; border:none; color:rgba(255,255,255,0.6); font-size:22px; cursor:pointer;">×</button>
+            </div>
+        </div>
     </div>
 </div>
 
