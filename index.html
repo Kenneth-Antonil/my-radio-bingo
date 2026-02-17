@@ -5977,6 +5977,7 @@
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
+    window.db = db; window.auth = auth;
     let messaging; try { messaging = firebase.messaging(); } catch(e) { console.log("Messaging failed to init", e); }
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; let lastNotifiedDraw = ""; let selectedReplyId = null;
     let currentJackpotAmount = 500; let isJackpotActive = false;
@@ -6805,7 +6806,8 @@
             });
             userRef.on('value', s => { 
                 if(s.exists()){ 
-                    userData = s.val(); userData.uid = u.uid; 
+                    userData = s.val(); userData.uid = u.uid;
+                    window.userData = userData;
                     document.getElementById('storePoints').innerText = (userData.points || 0).toLocaleString(); 
                     document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || ""); 
                     if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none'; 
@@ -12161,14 +12163,18 @@ Please explain why you want a verification badge:`;
 
 <!-- ===== ALL NEW FEATURES JS (separate script — splash screen untouched above) ===== -->
 <script>
+// These resolve at call-time via window — safe even if Firebase inits later
+function _db()   { return window.db; }
+function _auth() { return window.auth; }
+function _user() { return window.userData; }
 // ================================================
 // 🪙 RB COINS — 1 per comment/react/share, max 10/day
 // ================================================
 function awardRbCoin(action) {
-    if (!auth || !auth.currentUser || !userData) return;
-    var uid = auth.currentUser.uid;
+    if (!_auth() || !_auth().currentUser || !_user()) return;
+    var uid = _auth().currentUser.uid;
     var today = new Date().toDateString();
-    db.ref('engCoins/' + uid + '/' + today).transaction(function(cur) {
+    _db().ref('engCoins/' + uid + '/' + today).transaction(function(cur) {
         var n = cur || 0;
         if (n >= 10) return n;
         return n + 1;
@@ -12176,7 +12182,7 @@ function awardRbCoin(action) {
         if (err || !committed) return;
         var earned = snap.val();
         if (earned <= 10) {
-            db.ref('users/' + uid + '/points').transaction(function(p) { return (p || 0) + 1; });
+            _db().ref('users/' + uid + '/points').transaction(function(p) { return (p || 0) + 1; });
             showRbCoinToast(action, earned);
         }
     });
@@ -12301,11 +12307,21 @@ function _qrCornerPx(r, c) {
 function openStorePage() {
     var page = document.getElementById('rbStorePage');
     if (page) page.classList.add('active');
-    // Update coin display
-    var pts = (window.userData && window.userData.points) ? window.userData.points : 0;
+    // Read coins from window.userData (shared from main script)
+    var pts = 0;
+    if (window.userData && window.userData.points) {
+        pts = window.userData.points;
+    }
     var el = document.getElementById('rbStoreCoins');
     if (el) el.textContent = Number(pts).toLocaleString();
-    // Load vouchers and history
+    // Also refresh from Firebase live value if available
+    if (window.db && window.auth && window.auth.currentUser) {
+        window.db.ref('users/' + window.auth.currentUser.uid + '/points').once('value', function(snap) {
+            var livePts = snap.val() || 0;
+            if (el) el.textContent = Number(livePts).toLocaleString();
+            if (window.userData) window.userData.points = livePts;
+        });
+    }
     loadRbVouchers();
     loadCoinHistory();
     switchStoreSection('cashout');
@@ -12327,8 +12343,8 @@ function switchStoreSection(section) {
 }
 
 function redeemGiftCard(brand, value, typeName, cost, emoji, color1, color2) {
-    if (!auth || !auth.currentUser) { showToast('Please log in first.'); return; }
-    var pts = (window.userData && window.userData.points) ? window.userData.points : 0;
+    if (!_auth() || !_auth().currentUser) { showToast('Please log in first.'); return; }
+    var pts = (_user() && _user().points) ? _user().points : 0;
     if (pts < cost) {
         showToast('❌ Hindi sapat ang iyong RB Coins! Kailangan: ' + Number(cost).toLocaleString() + ' coins');
         return;
@@ -12336,7 +12352,7 @@ function redeemGiftCard(brand, value, typeName, cost, emoji, color1, color2) {
     _rbStorePendingCard = { brand: brand, value: value, typeName: typeName, cost: cost, emoji: emoji, color1: color1, color2: color2 };
     showCustomConfirm(
         '🎁 I-Redeem ang ' + typeName + '?',
-        'Gagamitin ang ' + Number(cost).toLocaleString() + ' RB Coins mo para sa ' + brand + ' ' + value + ' gift card. Hindi na ito maibabalik!',
+        'Gagamitin ang ' + Number(cost).toLocaleString() + ' RB Coins mo para sa ' + brand + ' ' + value + '. Hindi na ito maibabalik!',
         function() { processGiftCardRedemption(); }
     );
 }
@@ -12344,12 +12360,12 @@ function redeemGiftCard(brand, value, typeName, cost, emoji, color1, color2) {
 function processGiftCardRedemption() {
     if (!_rbStorePendingCard) return;
     var card = _rbStorePendingCard;
-    var uid = auth.currentUser.uid;
+    var uid = _auth().currentUser.uid;
     var cost = card.cost;
-    // Deduct coins
-    db.ref('users/' + uid + '/points').transaction(function(current) {
+    // Deduct coins atomically in Firebase
+    _db().ref('users/' + uid + '/points').transaction(function(current) {
         var pts = current || 0;
-        if (pts < cost) return; // abort
+        if (pts < cost) return; // abort if insufficient
         return pts - cost;
     }, function(err, committed, snap) {
         if (err || !committed) { showToast('❌ May error. Subukan ulit.'); return; }
@@ -12368,21 +12384,21 @@ function processGiftCardRedemption() {
             used: false,
             uid: uid
         };
-        // Save voucher
-        db.ref('rbVouchers/' + uid).push(voucherData);
+        // Save voucher to Firebase
+        _db().ref('rbVouchers/' + uid).push(voucherData);
         // Update local userData
         if (window.userData) window.userData.points = (window.userData.points || 0) - cost;
-        // Update display
+        // Update RB Store coins display
         var el = document.getElementById('rbStoreCoins');
         if (el) el.textContent = Number(window.userData.points).toLocaleString();
-        // Update store points display
+        // Update top nav coins display
         var sp = document.getElementById('storePoints');
         if (sp) sp.textContent = Number(window.userData.points).toLocaleString();
-        // Log history
-        db.ref('rbCoinHistory/' + uid).push({
+        // Log to coin history
+        _db().ref('rbCoinHistory/' + uid).push({
             type: 'spend',
             amount: cost,
-            label: 'Redeemed ' + card.brand + ' ' + card.value + ' Gift Card',
+            label: 'Redeemed ' + card.brand + ' ' + card.value,
             timestamp: Date.now()
         });
         // Show QR modal
@@ -12441,12 +12457,12 @@ function saveVoucherAndClose() {
 }
 
 function loadRbVouchers() {
-    if (!auth || !auth.currentUser) return;
-    var uid = auth.currentUser.uid;
+    if (!_auth() || !_auth().currentUser) return;
+    var uid = _auth().currentUser.uid;
     var list = document.getElementById('rbVouchersList');
     if (!list) return;
     list.innerHTML = '<div style="text-align:center;padding:30px;opacity:0.4;font-size:13px;">Loading...</div>';
-    db.ref('rbVouchers/' + uid).orderByChild('timestamp').once('value', function(snap) {
+    _db().ref('rbVouchers/' + uid).orderByChild('timestamp').once('value', function(snap) {
         if (!snap.exists()) {
             list.innerHTML = '<div style="text-align:center;padding:50px 20px;opacity:0.4;"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><div style="font-size:14px;font-weight:700;">Wala ka pang voucher</div><div style="font-size:12px;margin-top:6px;opacity:0.7;">Mag-redeem ng GCash o Maya para magsimula!</div></div>';
             return;
@@ -12476,19 +12492,19 @@ function loadRbVouchers() {
 }
 
 function reopenVoucher(key) {
-    if (!auth || !auth.currentUser) return;
-    db.ref('rbVouchers/' + auth.currentUser.uid + '/' + key).once('value', function(snap) {
+    if (!_auth() || !_auth().currentUser) return;
+    _db().ref('rbVouchers/' + _auth().currentUser.uid + '/' + key).once('value', function(snap) {
         if (snap.exists()) showQrModal(snap.val());
     });
 }
 
 function loadCoinHistory() {
-    if (!auth || !auth.currentUser) return;
-    var uid = auth.currentUser.uid;
+    if (!_auth() || !_auth().currentUser) return;
+    var uid = _auth().currentUser.uid;
     var list = document.getElementById('rbCoinHistoryList');
     if (!list) return;
     list.innerHTML = '<div style="text-align:center;padding:30px;opacity:0.4;font-size:13px;">Loading...</div>';
-    db.ref('rbCoinHistory/' + uid).orderByChild('timestamp').limitToLast(30).once('value', function(snap) {
+    _db().ref('rbCoinHistory/' + uid).orderByChild('timestamp').limitToLast(30).once('value', function(snap) {
         if (!snap.exists()) {
             list.innerHTML = '<div style="text-align:center;padding:50px 20px;opacity:0.4;"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div style="font-size:14px;font-weight:700;">Walang history pa</div><div style="font-size:12px;margin-top:6px;opacity:0.7;">Mag-earn at mag-spend ng coins para lumabas dito</div></div>';
             return;
