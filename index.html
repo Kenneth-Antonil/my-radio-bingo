@@ -2,7 +2,7 @@
 <html lang="tl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-visual">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -5970,6 +5970,7 @@
                 <input type="file" id="pmImgInput" accept="image/*" style="display:none" onchange="handlePmImage(this)">
                 <input type="text" id="pmInput" class="pm-newinput" placeholder="Aa" autocomplete="off"
                     onkeypress="if(event.key==='Enter'){event.preventDefault();sendPrivateMessage();}"
+                    onfocus="setTimeout(function(){var f=document.querySelector('.pm-footer2');if(f)f.scrollIntoView({block:'end',behavior:'smooth'});},400);"
                     oninput="onPmType()">
                 <button id="pmVoiceBtn2" class="pm-iconbtn2" title="Voice"
                     onmousedown="startVoice2()" onmouseup="stopVoice2()"
@@ -13540,35 +13541,98 @@ function stopVoice2() {
     }
 }
 
-// ── MOBILE KEYBOARD FIX ──────────────────────────────────────────
-// On iOS Safari, position:fixed modals don't shrink when the keyboard opens.
-// visualViewport gives us the real visible height and lets us resize the modal.
+// ── iOS KEYBOARD FIX ─────────────────────────────────────────────
+// iOS Safari does NOT shrink position:fixed elements when the keyboard opens.
+// The keyboard slides over the bottom, burying the input and send button.
+//
+// Fix strategy:
+//  1. On input FOCUS -> wait 350ms (keyboard animation) then clamp modal height
+//  2. On visualViewport RESIZE -> same with timeout (catches all edge cases)
+//  3. On input BLUR / modal close -> restore full screen
+//  4. window.scrollTo(0,0) stops iOS scrolling the body instead of the modal
+//  5. Scroll pmMessages to bottom so latest message is always visible
 (function() {
-    if (!window.visualViewport) return;
-    var modal = document.getElementById('pmModal');
-    if (!modal) return;
+    var modal   = document.getElementById('pmModal');
+    var pmInput = document.getElementById('pmInput');
+    if (!modal || !pmInput) return;
 
-    function resizeModal() {
-        if (modal.style.display === 'none' || !modal.style.display) return;
-        var vvh = window.visualViewport.height;
-        var vvt = window.visualViewport.offsetTop;
-        modal.style.height = vvh + 'px';
-        modal.style.top    = vvt + 'px';
+    var _kbTimer = null;
+    var _isKeyboardOpen = false;
+
+    function applyKeyboardHeight() {
+        if (!modal || modal.style.display === 'none') return;
+
+        var vh, vt;
+        if (window.visualViewport) {
+            vh = window.visualViewport.height;
+            vt = window.visualViewport.offsetTop || 0;
+        } else {
+            vh = window.innerHeight;
+            vt = 0;
+        }
+
+        // Stop iOS from scrolling the body upward when keyboard appears
+        window.scrollTo(0, 0);
+        if (document.body) document.body.scrollTop = 0;
+
+        modal.style.position = 'fixed';
+        modal.style.top      = vt + 'px';
+        modal.style.height   = vh + 'px';
+        modal.style.left     = '0';
+        modal.style.right    = '0';
+
+        // Keep latest message in view
+        var msgs = document.getElementById('pmMessages');
+        if (msgs) msgs.scrollTop = msgs.scrollHeight;
     }
 
-    function resetModal() {
-        modal.style.height = '';
+    function resetKeyboardHeight() {
+        if (!modal) return;
         modal.style.top    = '';
+        modal.style.height = '';
+        _isKeyboardOpen    = false;
+        var msgs = document.getElementById('pmMessages');
+        if (msgs) setTimeout(function() { msgs.scrollTop = msgs.scrollHeight; }, 50);
     }
 
-    window.visualViewport.addEventListener('resize', resizeModal);
-    window.visualViewport.addEventListener('scroll', resizeModal);
+    // INPUT FOCUS — most reliable iOS trigger. Keyboard takes ~350ms to finish.
+    pmInput.addEventListener('focus', function() {
+        _isKeyboardOpen = true;
+        clearTimeout(_kbTimer);
+        _kbTimer = setTimeout(applyKeyboardHeight, 350);
+    });
 
-    // Reset when modal closes
-    var _origClose = window.openMessenger;
-    document.addEventListener('click', function(e) {
-        if (modal.style.display === 'none') resetModal();
-    }, true);
+    // INPUT BLUR — keyboard dismissed
+    pmInput.addEventListener('blur', function() {
+        _isKeyboardOpen = false;
+        clearTimeout(_kbTimer);
+        _kbTimer = setTimeout(resetKeyboardHeight, 100);
+    });
+
+    // VISUAL VIEWPORT RESIZE — backup trigger for all other cases
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', function() {
+            clearTimeout(_kbTimer);
+            if (_isKeyboardOpen) {
+                _kbTimer = setTimeout(applyKeyboardHeight, 100);
+            } else {
+                _kbTimer = setTimeout(resetKeyboardHeight, 100);
+            }
+        });
+    }
+
+    // Patch openMessenger and backToInbox so height resets when navigating
+    var _oOM = window.openMessenger;
+    window.openMessenger = function() {
+        resetKeyboardHeight();
+        if (typeof _oOM === 'function') _oOM.apply(this, arguments);
+    };
+
+    var _oBTI = window.backToInbox;
+    window.backToInbox = function() {
+        resetKeyboardHeight();
+        if (typeof _oBTI === 'function') _oBTI.apply(this, arguments);
+    };
 })();
 </script>
 
