@@ -6503,10 +6503,6 @@
         document.getElementById('view-bingo').style.display = 'none';
         document.getElementById('view-beats').style.display = 'none';
         
-        // Close store page if open when switching tabs
-        var storePage = document.getElementById('rbStorePage');
-        if (storePage) storePage.classList.remove('active');
-
         // Pause all beats videos when leaving beats tab
         document.querySelectorAll('.beats-video').forEach(v => v.pause());
         
@@ -13058,10 +13054,6 @@ function openStorePage() {
     var page = document.getElementById('rbStorePage');
     if (!page) { console.error('RB Store page not found'); return; }
     page.classList.add('active');
-    // Mark nav-store as active
-    document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
-    var storeNav = document.getElementById('nav-store');
-    if (storeNav) storeNav.classList.add('active');
     // Scroll to top
     var body = page.querySelector('.rbstore-body');
     if (body) body.scrollTop = 0;
@@ -13085,13 +13077,6 @@ function openStorePage() {
 function closeStorePage() {
     var page = document.getElementById('rbStorePage');
     if (page) page.classList.remove('active');
-    // Restore home tab as active
-    document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
-    var homeNav = document.getElementById('nav-home');
-    if (homeNav) homeNav.classList.add('active');
-    // Make sure home view is visible
-    var homeView = document.getElementById('view-home');
-    if (homeView) homeView.style.display = 'block';
 }
 
 function switchStoreSection(section) {
@@ -13763,21 +13748,23 @@ function loadPartnerStores() {
     });
 }
 
-// Hook switchStoreSection to load wallet data + partner stores on tab switch
+// Hook switchStoreSection to load wallet + partner stores
 var _origSwitchStoreSection = window.switchStoreSection;
 window.switchStoreSection = function(section) {
-    if (typeof _origSwitchStoreSection === 'function') _origSwitchStoreSection.call(this, section);
-    if (section === 'wallet') loadWalletTab();
-    if (section === 'partners') loadPartnerStores();
+    try { if (typeof _origSwitchStoreSection === 'function') _origSwitchStoreSection.call(this, section); } catch(e) {}
+    try { if (section === 'wallet') loadWalletTab(); } catch(e) {}
+    try { if (section === 'partners') loadPartnerStores(); } catch(e) {}
 };
 
 // On store page open, ensure account number is created
 var _origOpenStorePage2 = window.openStorePage;
 window.openStorePage = function() {
-    if (typeof _origOpenStorePage2 === 'function') _origOpenStorePage2.call(this);
-    if (window.auth && window.auth.currentUser) {
-        ensureAccountNumber(window.auth.currentUser.uid, function() {});
-    }
+    try { if (typeof _origOpenStorePage2 === 'function') _origOpenStorePage2.call(this); } catch(e) {}
+    try {
+        if (window.auth && window.auth.currentUser) {
+            ensureAccountNumber(window.auth.currentUser.uid, function() {});
+        }
+    } catch(e) {}
 };
 </body>
 </html>
