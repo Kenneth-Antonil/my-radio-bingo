@@ -8435,7 +8435,7 @@
     }
     
     function renderActiveFriends() {
-        const bar = document.getElementById('activeFriendsBar');
+        const bar = document.getElementById('pmActiveFriendsBar');
         bar.innerHTML = '';
         
         if(!auth.currentUser) return;
@@ -8569,12 +8569,21 @@
              const m = s.val();
              const div = document.createElement('div'); 
              div.className = `msg-bubble ${m.from === auth.currentUser.uid ? 'msg-me' : 'msg-them'}`;
-             let contentHtml = m.text;
-             if(m.image) contentHtml += `<br><img src="${m.image}" class="msg-image-preview">`;
+             let contentHtml = '';
+
+             if(m.isSticker) {
+                 div.classList.add('msg-sticker');
+                 contentHtml = `<span style="font-size:48px;line-height:1;">${m.text || ''}</span>`;
+             } else if(m.isVoice && m.audio) {
+                 contentHtml = `<audio controls src="${m.audio}" style="max-width:200px;height:36px;border-radius:20px;outline:none;"></audio>`;
+             } else {
+                 contentHtml = m.text ? escapeHtml(m.text) : '';
+                 if(m.image) contentHtml += `<br><img src="${m.image}" class="msg-image-preview">`;
+             }
              
-             // Show name in group
+             // Show sender name in group for others' messages
              if(m.from !== auth.currentUser.uid) {
-                 contentHtml = `<span style="font-size:9px; color:#94a3b8; display:block; margin-bottom:2px;">${m.senderName}</span>` + contentHtml;
+                 contentHtml = `<span style="font-size:9px;color:#94a3b8;display:block;margin-bottom:2px;">${escapeHtml(m.senderName || 'User')}</span>` + contentHtml;
              }
 
              div.innerHTML = contentHtml;
@@ -8644,31 +8653,38 @@
         if(input.files && input.files[0]) {
             compressImage(input.files[0], 500, 0.7).then(base64 => {
                 pmImageBase64 = base64;
-                document.getElementById('pmImgPreviewCont').style.display = 'block';
+                window.pmImageBase64 = base64;
+                const strip = document.getElementById('pmImgStrip2');
+                const thumb = document.getElementById('pmImgThumb2');
+                if(thumb) thumb.src = base64;
+                if(strip) strip.classList.add('on');
             });
         }
     }
 
     function sendPrivateMessage() { 
         const inp = document.getElementById('pmInput'); 
-        const text = inp.value.trim(); 
-        if((!text && !pmImageBase64) || !currentChatPartner) return; 
+        const text = inp.value.trim();
+        const imageData = pmImageBase64 || window.pmImageBase64 || null;
+        if((!text && !imageData) || !currentChatPartner) return; 
         const myUid = auth.currentUser.uid; 
         
         if(isGroupChat) {
-            const msgData = { from: myUid, senderName: userData.name, text: text, image: pmImageBase64, timestamp: Date.now() };
+            const msgData = { from: myUid, senderName: userData.name, text: text, image: imageData, timestamp: Date.now() };
             db.ref('groupMessages/' + currentChatPartner).push(msgData);
         } else {
-            const msgData = { from: myUid, to: currentChatPartner, text: text, image: pmImageBase64, timestamp: Date.now() }; 
+            const msgData = { from: myUid, to: currentChatPartner, text: text, image: imageData, timestamp: Date.now() }; 
             db.ref('messages').push(msgData); 
-            const notifMsg = pmImageBase64 ? 'Sent a photo' : `New PM from ${userData.name}`;
+            const notifMsg = imageData ? 'Sent a photo' : `New PM from ${userData.name}`;
             db.ref('notifications/' + currentChatPartner).push({ msg: notifMsg, time: Date.now(), type: 'pm', from: myUid }); 
         }
 
-        inp.value = ""; 
+        inp.value = ''; 
         pmImageBase64 = null;
-        document.getElementById('pmImgInput').value = "";
-        document.getElementById('pmImgPreviewCont').style.display = 'none';
+        window.pmImageBase64 = null;
+        document.getElementById('pmImgInput').value = '';
+        const strip = document.getElementById('pmImgStrip2');
+        if(strip) strip.classList.remove('on');
     }
     
     let pmListenerRef = null;
@@ -8676,7 +8692,7 @@
     function listenPrivateMessages(myUid) { 
         const chatDiv = document.getElementById('pmMessages'); 
         chatDiv.innerHTML = "";
-        if(pmListenerRef) db.ref('messages').off();
+        if(pmListenerRef) { pmListenerRef.off(); pmListenerRef = null; }
         isInitialLoad = true;
 
         pmListenerRef = db.ref('messages').limitToLast(100);
@@ -8698,7 +8714,8 @@
                     db.ref('users/' + m.from).once('value', uSnap => {
                         const sender = uSnap.val();
                         if(sender) {
-                            const messagePreview = m.image ? 'Photo' : (m.text.length > 30 ? m.text.substring(0, 30) + '...' : m.text);
+                            const msgText = m.isSticker ? '(Sticker)' : m.isVoice ? '(Voice note)' : m.image ? '(Photo)' : (m.text || '');
+                            const messagePreview = msgText.length > 30 ? msgText.substring(0, 30) + '...' : msgText;
                             const sanitizedName = escapeHtml(sender.name);
                             const sanitizedPreview = escapeHtml(messagePreview);
                             showToast(`${sanitizedName}: ${sanitizedPreview}`);
@@ -8712,24 +8729,36 @@
                 const div = document.createElement('div'); 
                 div.className = `msg-bubble ${m.from === myUid ? 'msg-me' : 'msg-them'}`; 
                 
-                let contentHtml = m.text;
-                if(m.image) {
-                    contentHtml += `<br><img src="${m.image}" class="msg-image-preview">`;
+                let contentHtml = '';
+
+                if(m.isSticker) {
+                    // Sticker — render large emoji
+                    div.classList.add('msg-sticker');
+                    contentHtml = `<span style="font-size:48px;line-height:1;">${m.text || ''}</span>`;
+                } else if(m.isVoice && m.audio) {
+                    // Voice note — render audio player
+                    contentHtml = `<audio controls src="${m.audio}" style="max-width:200px;height:36px;border-radius:20px;outline:none;"></audio>`;
+                } else {
+                    contentHtml = m.text ? escapeHtml(m.text) : '';
+                    if(m.image) {
+                        contentHtml += `<br><img src="${m.image}" class="msg-image-preview" onclick="openFullscreenPhoto('${m.image}')">`;
+                    }
                 }
                 
-                // Heart logic
+                // Heart reaction
                 let heartHtml = '';
                 if(m.hearted) {
                     heartHtml = `<div class="msg-heart-reaction"><i data-lucide="heart" style="width:12px;height:12px;color:#ef4444;"></i></div>`;
                 }
 
                 div.innerHTML = `${contentHtml}${heartHtml}`; 
+                lucide.createIcons({ el: div });
                 
-                // Double click to heart
+                // Double-tap to heart
                 div.ondblclick = () => {
                     if(!m.hearted) {
                         db.ref('messages/' + key).update({ hearted: true });
-                        showToast("Message hearted");
+                        showToast('❤️ Message hearted');
                     }
                 };
 
@@ -12596,7 +12625,7 @@ Please explain why you want a verification badge:`;
         <div id="rs-section-vouchers" style="display:none;">
             <div class="section-label">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;opacity:0.5;"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                Iyong mga Voucher
+                My Vouchers
             </div>
             <div id="rbVouchersList">
                 <div style="text-align:center;padding:50px 20px;opacity:0.4;">
@@ -12664,7 +12693,7 @@ Please explain why you want a verification badge:`;
                     <div id="partnerFormWrap" style="display:flex;flex-direction:column;gap:10px;">
                         <div>
                             <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Pangalan ng Tindahan *</div>
-                            <input id="pf_storeName" type="text" placeholder="Halimbawa: Juan's Sari-Sari Store" style="width:100%;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:11px 14px;color:white;font-size:13px;outline:none;box-sizing:border-box;">
+                            <input id="pf_storeName" type="text" placeholder="e.g. Juan's Sari-Sari Store" style="width:100%;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:11px 14px;color:white;font-size:13px;outline:none;box-sizing:border-box;">
                         </div>
                         <div>
                             <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Uri ng Tindahan *</div>
@@ -13422,20 +13451,11 @@ function clearPmImage() {
     if (strip) strip.classList.remove('on');
 }
 
-// Override handlePmImage to show the new strip
+// Override handlePmImage to sync window.pmImageBase64 (for legacy compat)
 var _origHandlePmImage = window.handlePmImage;
 window.handlePmImage = function(input) {
     if (typeof _origHandlePmImage === 'function') _origHandlePmImage(input);
-    var f = input && input.files && input.files[0];
-    if (!f) return;
-    var r = new FileReader();
-    r.onload = function(ev) {
-        var thumb = document.getElementById('pmImgThumb2');
-        var strip = document.getElementById('pmImgStrip2');
-        if (thumb) thumb.src = ev.target.result;
-        if (strip) strip.classList.add('on');
-    };
-    r.readAsDataURL(f);
+    // window.pmImageBase64 is set inside the original now
 };
 
 function onPmType() {
@@ -13508,14 +13528,14 @@ function stopVoice2() {
             <button onclick="closeSendCoinsModal()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;width:32px;height:32px;cursor:pointer;color:white;font-size:18px;line-height:1;">✕</button>
         </div>
         <div style="margin-bottom:14px;">
-            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Account Number ng Tatanggap *</div>
+            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Recipient Account Number *</div>
             <input id="sendToAccNo" type="text" placeholder="RB-XXXX-XXXX-XXXX" maxlength="20" oninput="lookupSendRecipient(this.value)" style="width:100%;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:white;font-size:14px;font-family:'Courier New',monospace;outline:none;letter-spacing:2px;box-sizing:border-box;">
             <div id="sendRecipientPreview" style="margin-top:8px;padding:10px;background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.2);border-radius:8px;display:none;font-size:12px;color:white;font-weight:700;"></div>
         </div>
         <div style="margin-bottom:18px;">
-            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Dami ng RB Coins *</div>
-            <input id="sendCoinsAmount" type="number" placeholder="Halimbawa: 1000" min="1" style="width:100%;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#fbbf24;font-size:18px;font-weight:900;outline:none;box-sizing:border-box;">
-            <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:5px;">Iyong balance: <span id="sendModalBalance" style="color:#fbbf24;font-weight:800;">0</span> RB Coins</div>
+            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Amount of RB Coins *</div>
+            <input id="sendCoinsAmount" type="number" placeholder="e.g. 1000" min="1" style="width:100%;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#fbbf24;font-size:18px;font-weight:900;outline:none;box-sizing:border-box;">
+            <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:5px;">Your balance: <span id="sendModalBalance" style="color:#fbbf24;font-weight:800;">0</span> RB Coins</div>
         </div>
         <button onclick="executeSendCoins()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#6366f1);border:none;border-radius:14px;color:white;font-size:14px;font-weight:900;cursor:pointer;">SEND COINS</button>
     </div>
@@ -13524,14 +13544,14 @@ function stopVoice2() {
 <!-- ===== RECEIVE INFO MODAL ===== -->
 <div id="receiveInfoModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:99995;align-items:center;justify-content:center;padding:20px;" onclick="this.style.display='none'">
     <div style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:24px;max-width:360px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.6);text-align:center;" onclick="event.stopPropagation()">
-        <div style="font-size:16px;font-weight:900;color:white;margin-bottom:16px;">📥 IYONG ACCOUNT NUMBER</div>
+        <div style="font-size:16px;font-weight:900;color:white;margin-bottom:16px;">📥 YOUR ACCOUNT NUMBER</div>
         <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:14px;padding:20px;">
             <canvas id="receiveQRCanvas" style="border-radius:8px;background:white;padding:6px;display:block;margin:0 auto 12px;"></canvas>
             <div id="receiveAccNoText" style="font-family:'Courier New',monospace;font-size:15px;font-weight:900;color:white;letter-spacing:3px;margin-bottom:8px;"></div>
             <div style="font-size:11px;color:rgba(255,255,255,0.4);">Share to receive RB Coins from other users</div>
         </div>
         <button onclick="copyMyAccNo()" style="margin-top:14px;width:100%;padding:12px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:12px;color:#10b981;font-size:13px;font-weight:900;cursor:pointer;">📋 COPY ACCOUNT NUMBER</button>
-        <button onclick="document.getElementById('receiveInfoModal').style.display='none'" style="margin-top:8px;width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;">Isara</button>
+        <button onclick="document.getElementById('receiveInfoModal').style.display='none'" style="margin-top:8px;width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;">Close</button>
     </div>
 </div>
 
