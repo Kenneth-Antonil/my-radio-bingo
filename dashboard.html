@@ -905,6 +905,7 @@
         <button class="tab-btn" onclick="openTab('cashout-tab', this)"><i data-lucide="wallet" width="16"></i> CASHOUTS</button>
         <button class="tab-btn" onclick="openTab('support-tab', this)"><i data-lucide="message-square" width="16"></i> SUPPORT</button>
         <button class="tab-btn" onclick="openTab('tournament-tab', this)"><i data-lucide="trophy" width="16"></i> TOURNAMENTS</button>
+        <button class="tab-btn" id="partnersTabBtn" onclick="openTab('partners-tab', this)"><i data-lucide="store" width="16"></i> PARTNERS <span id="partnersBadge" style="display:none;background:#ef4444;color:white;font-size:9px;font-weight:900;padding:1px 7px;border-radius:20px;margin-left:4px;vertical-align:middle;"></span></button>
     </div>
 
     <div id="settings-tab" class="tab-content">
@@ -1251,6 +1252,38 @@
             </div>
         </div>
     </div>
+
+    <!-- ===== PARTNER APPLICATIONS TAB ===== -->
+    <div id="partners-tab" class="tab-content">
+        <div class="card">
+
+            <!-- Header + filter bar -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+                <div>
+                    <h2 style="margin:0 0 4px 0;display:flex;align-items:center;gap:10px;">
+                        <i data-lucide="store" style="width:20px;"></i> Partner Store Applications
+                    </h2>
+                    <p style="font-size:11px;opacity:0.5;margin:0;">Mga tindahang nag-apply na maging kasosyo ng RB Live</p>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <button onclick="filterPA('all')"      id="paf-all"      style="padding:7px 14px;border-radius:10px;border:1px solid rgba(139,92,246,0.4);background:rgba(139,92,246,0.15);color:#a78bfa;font-weight:800;font-size:11px;cursor:pointer;">ALL <span id="pac-all">0</span></button>
+                    <button onclick="filterPA('pending')"  id="paf-pending"  style="padding:7px 14px;border-radius:10px;border:1px solid rgba(251,191,36,0.4);background:rgba(251,191,36,0.1);color:#fbbf24;font-weight:800;font-size:11px;cursor:pointer;">PENDING <span id="pac-pending">0</span></button>
+                    <button onclick="filterPA('approved')" id="paf-approved" style="padding:7px 14px;border-radius:10px;border:1px solid rgba(16,185,129,0.4);background:rgba(16,185,129,0.1);color:#10b981;font-weight:800;font-size:11px;cursor:pointer;">APPROVED <span id="pac-approved">0</span></button>
+                    <button onclick="filterPA('rejected')" id="paf-rejected" style="padding:7px 14px;border-radius:10px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;font-weight:800;font-size:11px;cursor:pointer;">REJECTED <span id="pac-rejected">0</span></button>
+                    <button onclick="loadPartnerApps()" style="padding:7px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.6);font-weight:800;font-size:11px;cursor:pointer;">↻ Refresh</button>
+                </div>
+            </div>
+
+            <!-- List -->
+            <div id="partnerAppsList">
+                <div style="text-align:center;padding:60px;opacity:0.35;">
+                    <i data-lucide="store" style="width:42px;height:42px;display:block;margin:0 auto 14px;"></i>
+                    <div style="font-size:13px;font-weight:700;">Walang applications pa</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <div class="activity-panel">
@@ -3148,5 +3181,204 @@
     };
 </script>
 
+
+<script>
+
+// ================================================
+// 🏪 PARTNER APPLICATIONS MANAGER
+// ================================================
+
+var _paAll = [];
+var _paFilter = 'all';
+
+var _paTypeIcon = {
+    'sari-sari':'🛒','grocery':'🏬','food':'🍜','pharmacy':'💊',
+    'clothing':'👕','electronics':'📱','school':'📚','beauty':'💄','other':'🏪'
+};
+var _paTypeLabel = {
+    'sari-sari':'Sari-Sari Store','grocery':'Grocery / Supermarket',
+    'food':'Food / Restaurant / Karinderya','pharmacy':'Pharmacy / Botika',
+    'clothing':'Damit / Clothing','electronics':'Electronics / Gadgets',
+    'school':'School Supplies','beauty':'Beauty / Personal Care','other':'Iba Pa'
+};
+
+function _paEsc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function loadPartnerApps() {
+    var list = document.getElementById('partnerAppsList');
+    if (!list) return;
+    list.innerHTML = '<div style="text-align:center;padding:50px;opacity:0.4;font-size:13px;font-weight:700;">Loading...</div>';
+
+    db.ref('partnerApplications').orderByChild('timestamp').once('value', function(snap) {
+        _paAll = [];
+        if (snap.exists()) {
+            snap.forEach(function(child) {
+                var d = child.val();
+                d._key = child.key;
+                _paAll.push(d);
+            });
+            _paAll.reverse();
+        }
+        _paUpdateCounts();
+        _paRender();
+    });
+}
+
+function _paUpdateCounts() {
+    var c = { all: _paAll.length, pending: 0, approved: 0, rejected: 0 };
+    _paAll.forEach(function(a) {
+        var s = a.status || 'pending';
+        if (c[s] !== undefined) c[s]++;
+    });
+    ['all','pending','approved','rejected'].forEach(function(k) {
+        var el = document.getElementById('pac-' + k);
+        if (el) el.textContent = c[k];
+    });
+    var badge = document.getElementById('partnersBadge');
+    if (badge) {
+        if (c.pending > 0) {
+            badge.textContent = c.pending;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+function filterPA(f) {
+    _paFilter = f;
+    _paRender();
+}
+
+function _paRender() {
+    var list = document.getElementById('partnerAppsList');
+    if (!list) return;
+
+    var items = _paFilter === 'all'
+        ? _paAll
+        : _paAll.filter(function(a) { return (a.status || 'pending') === _paFilter; });
+
+    if (items.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:60px;opacity:0.35;"><div style="font-size:36px;margin-bottom:12px;">📭</div><div style="font-size:13px;font-weight:700;">Walang ' + _paFilter + ' applications</div></div>';
+        return;
+    }
+
+    var html = '';
+    items.forEach(function(app) {
+        var status = app.status || 'pending';
+        var icon   = _paTypeIcon[app.storeType]  || '🏪';
+        var tLabel = _paTypeLabel[app.storeType] || app.storeType || 'Unknown';
+        var date   = app.timestamp
+            ? new Date(app.timestamp).toLocaleString('en-PH', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+            : '—';
+
+        var statusColor  = status === 'approved' ? '#10b981' : status === 'rejected' ? '#ef4444' : '#fbbf24';
+        var statusBg     = status === 'approved' ? 'rgba(16,185,129,0.12)' : status === 'rejected' ? 'rgba(239,68,68,0.12)' : 'rgba(251,191,36,0.12)';
+        var statusBorder = status === 'approved' ? 'rgba(16,185,129,0.3)'  : status === 'rejected' ? 'rgba(239,68,68,0.3)'  : 'rgba(251,191,36,0.3)';
+        var statusLabel  = status === 'approved' ? 'APPROVED' : status === 'rejected' ? 'REJECTED' : 'PENDING';
+
+        var approveBtn = status !== 'approved'
+            ? '<button onclick="setPartnerStatus(\'' + app._key + '\',\'approved\')" '
+            + 'style="padding:8px 14px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:9px;color:white;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap;letter-spacing:0.5px;">'
+            + '✓ APPROVE</button>'
+            : '';
+
+        var rejectBtn = status !== 'rejected'
+            ? '<button onclick="setPartnerStatus(\'' + app._key + '\',\'rejected\')" '
+            + 'style="padding:8px 14px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:9px;color:#ef4444;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap;">'
+            + '✕ REJECT</button>'
+            : '';
+
+        var resetBtn = status !== 'pending'
+            ? '<button onclick="setPartnerStatus(\'' + app._key + '\',\'pending\')" '
+            + 'style="padding:8px 14px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:9px;color:#fbbf24;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">'
+            + '↩ RESET</button>'
+            : '';
+
+        var deleteBtn = '<button onclick="deletePartnerApp(\'' + app._key + '\',\'' + _paEsc(app.storeName) + '\')" '
+            + 'style="padding:8px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;color:rgba(255,255,255,0.35);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">'
+            + '🗑 DELETE</button>';
+
+        html += '<div id="pcard-' + app._key + '" style="background:rgba(15,23,42,0.5);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px;margin-bottom:12px;">'
+            + '<div style="display:flex;gap:14px;flex-wrap:wrap;">'
+
+            // Icon block
+            + '<div style="width:50px;height:50px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);border-radius:13px;'
+            + 'display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">' + icon + '</div>'
+
+            // Info block
+            + '<div style="flex:1;min-width:0;">'
+            + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px;">'
+            + '<span style="font-size:16px;font-weight:900;color:white;">' + _paEsc(app.storeName || '—') + '</span>'
+            + '<span style="background:' + statusBg + ';border:1px solid ' + statusBorder + ';color:' + statusColor + ';'
+            + 'font-size:9px;font-weight:900;padding:2px 9px;border-radius:20px;letter-spacing:1px;">' + statusLabel + '</span>'
+            + '</div>'
+            + '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:10px;">' + _paEsc(tLabel) + '</div>'
+            + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:5px 16px;">'
+            + '<div style="font-size:12px;color:rgba(255,255,255,0.35);"><span style="color:rgba(255,255,255,0.6);font-weight:700;">May-ari: </span>' + _paEsc(app.ownerName || '—') + '</div>'
+            + '<div style="font-size:12px;color:rgba(255,255,255,0.35);"><span style="color:rgba(255,255,255,0.6);font-weight:700;">Contact: </span>' + _paEsc(app.contact || '—') + '</div>'
+            + '<div style="font-size:12px;color:rgba(255,255,255,0.35);grid-column:1/-1;"><span style="color:rgba(255,255,255,0.6);font-weight:700;">Address: </span>' + _paEsc(app.address || '—') + '</div>'
+            + '<div style="font-size:10px;color:rgba(255,255,255,0.25);grid-column:1/-1;">📅 ' + date + (app.uid && app.uid !== 'guest' ? '  ·  UID: ' + app.uid.slice(0,10) + '…' : '') + '</div>'
+            + '</div>'
+            + '</div>'
+
+            // Actions
+            + '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;justify-content:flex-start;">'
+            + approveBtn + rejectBtn + resetBtn + deleteBtn
+            + '</div>'
+
+            + '</div>'
+            + '</div>';
+    });
+
+    list.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+}
+
+function setPartnerStatus(key, newStatus) {
+    db.ref('partnerApplications/' + key + '/status').set(newStatus, function(err) {
+        if (err) { alert('Error: ' + err.message); return; }
+        var app = _paAll.find(function(a) { return a._key === key; });
+        if (app) app.status = newStatus;
+        _paUpdateCounts();
+        _paRender();
+        var msg = newStatus === 'approved' ? '✅ Application APPROVED!' : newStatus === 'rejected' ? '❌ Application REJECTED.' : '↩ Reset to PENDING.';
+        if (typeof addActivityItem === 'function') addActivityItem(msg);
+    });
+}
+
+function deletePartnerApp(key, name) {
+    if (!confirm('DELETE ang application ni "' + name + '"?\n\nHindi na ito maibabalik.')) return;
+    db.ref('partnerApplications/' + key).remove(function(err) {
+        if (err) { alert('Error: ' + err.message); return; }
+        _paAll = _paAll.filter(function(a) { return a._key !== key; });
+        _paUpdateCounts();
+        _paRender();
+        if (typeof addActivityItem === 'function') addActivityItem('🗑️ Deleted partner app: ' + name);
+    });
+}
+
+// Hook openTab — load apps when partners tab is opened
+(function() {
+    var _origOT = window.openTab;
+    window.openTab = function(tabId, btn) {
+        _origOT(tabId, btn);
+        if (tabId === 'partners-tab') loadPartnerApps();
+    };
+})();
+
+// Live badge: watch pending count in real-time
+db.ref('partnerApplications').orderByChild('status').equalTo('pending').on('value', function(snap) {
+    var count = snap.exists() ? Object.keys(snap.val()).length : 0;
+    var badge = document.getElementById('partnersBadge');
+    if (badge) {
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+});
+
+</script>
 </body>
 </html>
