@@ -4367,7 +4367,14 @@
         /* Modal base */
         .pm-modal {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100vh;
+            height: 100svh; /* small viewport - accounts for browser chrome */
+            height: 100dvh; /* dynamic viewport - shrinks when keyboard opens (iOS 16+, Android) */
             background: #07091a;
             z-index: 7000;
             display: none;
@@ -4377,6 +4384,7 @@
 
         /* ── INBOX HEADER ── */
         .pm-inboxhdr {
+            flex-shrink: 0;
             padding: max(env(safe-area-inset-top), 14px) 14px 10px;
             display: flex;
             align-items: center;
@@ -4626,6 +4634,7 @@
 
         /* ── CHAT HEADER ── */
         .pm-chathdr {
+            flex-shrink: 0;
             padding: max(env(safe-area-inset-top), 10px) 12px 10px;
             display: flex;
             align-items: center;
@@ -4651,6 +4660,7 @@
         /* ── MESSAGE AREA ── */
         .pm-msgarea {
             flex: 1;
+            min-height: 0; /* critical — prevents flex children from overflowing */
             overflow-y: auto;
             padding: 12px 10px;
             display: flex;
@@ -4658,6 +4668,7 @@
             gap: 2px;
             background: #07091a;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
         .pm-msgarea::-webkit-scrollbar { width: 3px; }
         .pm-msgarea::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
@@ -4761,7 +4772,9 @@
 
         /* ── FOOTER ── */
         .pm-footer2 {
-            padding: 8px 10px max(env(safe-area-inset-bottom), 10px);
+            flex-shrink: 0; /* never compress the footer */
+            padding: 8px 10px;
+            padding-bottom: max(env(safe-area-inset-bottom), 10px);
             background: #07091a;
             border-top: 1px solid rgba(255,255,255,.07);
         }
@@ -4820,6 +4833,14 @@
             transition: transform 0.1s, box-shadow 0.15s;
         }
         .pm-sendbtn2:active { transform: scale(0.9); box-shadow: none; }
+
+        /* Tight screens — shrink icon buttons so send is never cut off */
+        @media (max-width: 360px) {
+            .pm-iconbtn2 { width: 34px; height: 34px; }
+            .pm-newinput { padding: 10px 12px; font-size: 13px; }
+            .pm-sendbtn2 { width: 38px; height: 38px; }
+            .pm-inputrow { gap: 4px; }
+        }
 
         /* ── PANELS (Emoji / Sticker) ── */
         .pm-panel2 {
@@ -5854,7 +5875,7 @@
 <div id="pmModal" class="pm-modal">
 
     <!-- INBOX VIEW -->
-    <div id="pmInboxView" style="display:flex;flex-direction:column;height:100%;">
+    <div id="pmInboxView" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
         <div class="pm-inboxhdr">
             <div class="pm-inboxhdr-title">💬 Messages</div>
             <button class="pm-hdrbtn" onclick="startCreateGroup()" title="New Group">
@@ -5882,7 +5903,7 @@
     </div>
 
     <!-- CHAT VIEW -->
-    <div id="pmChatView" style="display:none;flex-direction:column;height:100%;">
+    <div id="pmChatView" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
         <div class="pm-chathdr">
             <button onclick="backToInbox()" class="pm-hdrbtn">
                 <i data-lucide="arrow-left" style="width:18px;"></i>
@@ -5963,7 +5984,7 @@
     </div>
 
     <!-- GROUP CREATE VIEW -->
-    <div id="pmCreateGroupView" style="display:none;flex-direction:column;height:100%;background:#000;">
+    <div id="pmCreateGroupView" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:#000;">
         <div class="pm-inboxhdr">
             <button onclick="cancelCreateGroup()" class="pm-hdrbtn"><i data-lucide="arrow-left" style="width:18px;"></i></button>
             <div style="flex:1;font-size:17px;font-weight:900;color:white;">New Group</div>
@@ -13518,6 +13539,37 @@ function stopVoice2() {
         if (btn) btn.classList.remove("pm-voiceon");
     }
 }
+
+// ── MOBILE KEYBOARD FIX ──────────────────────────────────────────
+// On iOS Safari, position:fixed modals don't shrink when the keyboard opens.
+// visualViewport gives us the real visible height and lets us resize the modal.
+(function() {
+    if (!window.visualViewport) return;
+    var modal = document.getElementById('pmModal');
+    if (!modal) return;
+
+    function resizeModal() {
+        if (modal.style.display === 'none' || !modal.style.display) return;
+        var vvh = window.visualViewport.height;
+        var vvt = window.visualViewport.offsetTop;
+        modal.style.height = vvh + 'px';
+        modal.style.top    = vvt + 'px';
+    }
+
+    function resetModal() {
+        modal.style.height = '';
+        modal.style.top    = '';
+    }
+
+    window.visualViewport.addEventListener('resize', resizeModal);
+    window.visualViewport.addEventListener('scroll', resizeModal);
+
+    // Reset when modal closes
+    var _origClose = window.openMessenger;
+    document.addEventListener('click', function(e) {
+        if (modal.style.display === 'none') resetModal();
+    }, true);
+})();
 </script>
 
 <!-- ===== SEND COINS MODAL ===== -->
