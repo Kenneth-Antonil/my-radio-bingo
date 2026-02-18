@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="tl">
 <head>
@@ -5748,7 +5747,7 @@
             <div id="lateOverlay" class="late-overlay">
                 <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom: var(--spacing-md); filter: drop-shadow(0 0 10px var(--danger));"></i>
                 <div class="late-text">GAME ONGOING</div>
-                <div class="late-subtext">Sorry, ongoing na ang bola. Bawal na sumali ang late.</div>
+                <div class="late-subtext">Sorry, the draw is already in progress. Late entries are not allowed.</div>
                 <div style="margin-top: var(--spacing-lg); background:rgba(255,255,255,0.1); padding: var(--spacing-sm) 20px; border-radius: var(--radius-md); border:1px solid rgba(255,255,255,0.1);">
                     <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
                     <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
@@ -6217,7 +6216,7 @@
         <div id="guideAndroidContent">
             <div class="guide-step"><div class="step-num">1</div><div class="step-text">Pindutin ang <b>Three Dots (⋮)</b> sa upper right corner ng Google Chrome browser.</div></div>
             <div class="guide-step"><div class="step-num">2</div><div class="step-text">Hanapin at pindutin ang <b>"Install App"</b> o <b>"Add to Home Screen"</b>.</div></div>
-            <div class="guide-step"><div class="step-num">3</div><div class="step-text">Click <b>Install</b> para mapunta ito sa iyong home screen.</div></div>
+            <div class="guide-step"><div class="step-num">3</div><div class="step-text">Click <b>Install</b> to add it to your home screen.</div></div>
         </div>
         <div id="guideIOSContent" style="display:none;">
             <div class="guide-step"><div class="step-num">1</div><div class="step-text">Gamitin ang <b>Safari Browser</b> at pindutin ang <b>Share Icon</b> <i data-lucide="share" style="width:12px"></i> sa ibaba.</div></div>
@@ -6559,7 +6558,7 @@
     }
 
     let notifiedFiveMins = false; let lastCheckedSchedule = null;
-    function checkFiveMinuteNotification(timeInput) { if(notifiedFiveMins && lastCheckedSchedule === timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 5) { if(Notification.permission === "granted") { new Notification("RB LIVE BINGO", { body: "Dali! 5 minutes na lang bola na! Buksan na ang app." }); } showToast("⚠️ 5 minutes na lang, bola na!"); notifiedFiveMins = true; lastCheckedSchedule = timeInput; } if(mins > 5) notifiedFiveMins = false; } }
+    function checkFiveMinuteNotification(timeInput) { if(notifiedFiveMins && lastCheckedSchedule === timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 5) { if(Notification.permission === "granted") { new Notification("RB LIVE BINGO", { body: "Hurry! Draw starts in 5 minutes! Open the app now." }); } showToast("⚠️ Only 5 minutes left until the draw!"); notifiedFiveMins = true; lastCheckedSchedule = timeInput; } if(mins > 5) notifiedFiveMins = false; } }
 
     let deferredPrompt;
     const bottomBanner = document.getElementById('pwaInstallBanner');
@@ -6664,7 +6663,7 @@
                     <div class="beats-placeholder">
                         <i data-lucide="video-off" style="width:60px; height:60px; color:rgba(255,255,255,0.3);"></i>
                         <h3 style="font-size:18px; margin:10px 0;">No Beats Yet</h3>
-                        <p style="font-size:13px; opacity:0.6;">Wala pang nag-upload ng video. Be the first!</p>
+                        <p style="font-size:13px; opacity:0.6;">No videos uploaded yet. Be the first!</p>
                     </div>
                 `;
                 setTimeout(() => lucide.createIcons(), 50);
@@ -6690,7 +6689,7 @@
                     <div class="beats-placeholder">
                         <i data-lucide="video-off" style="width:60px; height:60px; color:rgba(255,255,255,0.3);"></i>
                         <h3 style="font-size:18px; margin:10px 0;">No Beats Yet</h3>
-                        <p style="font-size:13px; opacity:0.6;">Wala pang nag-upload ng video. Be the first!</p>
+                        <p style="font-size:13px; opacity:0.6;">No videos uploaded yet. Be the first!</p>
                     </div>
                 `;
                 setTimeout(() => lucide.createIcons(), 50);
@@ -8207,10 +8206,10 @@
     function listenForNextDraw() { db.ref('gameState').on('value', s => { updateNextDrawDisplay(); }); }
 
     function updateNextDrawDisplay() { db.ref('gameState').on('value', s => { const gameData = s.val() || {}; const now = Date.now(); if(gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0) { const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const ndIcon = document.querySelector('.nd-icon'); banner.style.display = 'flex'; banner.style.background = 'rgba(71, 85, 105, 0.9)'; banner.style.borderColor = '#94a3b8'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; labelEl.innerText = "GAME STATUS"; labelEl.style.color = "#e2e8f0"; timeEl.innerText = "GAME ONGOING"; timeEl.style.fontSize = "20px"; timeEl.style.color = "#ffffff"; timeEl.style.fontWeight = "900"; if(ndIcon) { ndIcon.style.background = 'rgba(255,255,255,0.1)'; ndIcon.style.color = 'white'; ndIcon.style.borderColor = 'rgba(255,255,255,0.2)'; } return; } let displayTime = null; if(gameData.schedules) { const rawScheds = Object.values(gameData.schedules); const times = rawScheds.map(val => (typeof val === 'object' && val.time) ? val.time : val); const futureTimes = times.filter(t => t > now); const sorted = futureTimes.sort((a,b) => a - b); if(sorted.length > 0) { displayTime = sorted[0]; } } if(!displayTime && gameData.nextDraw) { if(gameData.nextDraw > now) { displayTime = gameData.nextDraw; } } const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const lateSched = document.getElementById('lateNextSched'); const ndIcon = document.querySelector('.nd-icon'); if(ndIcon) { ndIcon.style.background = ''; ndIcon.style.color = ''; ndIcon.style.borderColor = ''; } if(displayTime && displayTime > now) { banner.style.display = 'flex'; banner.style.background = 'rgba(15, 23, 42, 0.8)'; banner.style.borderColor = 'rgba(251, 191, 36, 0.4)'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; const formatted = fixDate(displayTime); timeEl.innerText = formatted; timeEl.style.fontSize = "18px"; timeEl.style.color = "white"; labelEl.innerText = "SUSUNOD NA BOLA"; labelEl.style.color = "var(--gold)"; lateSched.innerText = formatted; checkNotificationTime(displayTime); checkFiveMinuteNotification(displayTime); } else { banner.style.display = 'flex'; banner.style.background = 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))'; banner.style.borderColor = '#3b82f6'; banner.style.boxShadow = '0 10px 30px rgba(59, 130, 246, 0.2)'; labelEl.innerText = "WAITING FOR DRAW"; labelEl.style.color = "#93c5fd"; timeEl.innerText = "MAGHINTAY SA SUSUNOD NA DRAW."; timeEl.style.fontSize = "11px"; timeEl.style.fontWeight = "700"; timeEl.style.lineHeight = "1.4"; lateSched.innerText = "--:--"; } }); }
-    function checkNotificationTime(timeInput) { if(lastNotifiedDraw == timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 10) { if(Notification.permission === "granted") new Notification("Radio Bingo", { body: "10 mins na lang, bola na!" }); lastNotifiedDraw = timeInput; } } }
+    function checkNotificationTime(timeInput) { if(lastNotifiedDraw == timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 10) { if(Notification.permission === "granted") new Notification("Radio Bingo", { body: "Only 10 minutes left until the draw!" }); lastNotifiedDraw = timeInput; } } }
 
     function initBingo() {
-        db.ref('gameState/latestWinner').on('value', s => { const win = s.val(); const banner = document.getElementById('winnerBanner'); const cardCont = document.getElementById('bingoCardContainer'); const gameOverlay = document.getElementById('gameOverOverlay'); cardCont.classList.remove('card-puro'); document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting')); if(win && win.name) { banner.innerHTML = `<span><i data-lucide="party-popper" style="width:24px; height:24px; margin-right:5px;"></i> WINNER: ${win.name.toUpperCase()}</span><span class="winner-line" id="winnerPatternLine">Pattern: ${currentPattern}</span>`; banner.style.display = 'block'; playSound('win'); lucide.createIcons(); if(win.uid === auth.currentUser.uid) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; spawnFlyingCoins(20); triggerScreenShake(); } else { cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; const nextTime = document.getElementById('nextDrawTime').innerText; document.getElementById('gameOverMsg').innerHTML = `Sayang! Si <b>${win.name.toUpperCase()}</b> ang nanalo.<br><br>Bawi tayo sa next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ${nextTime}</span>`; } } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); gameOverlay.style.display = 'none'; document.querySelectorAll('.cell').forEach(c => { c.classList.remove('win-glow', 'win-line-h', 'win-line-v', 'win-line-d1', 'win-line-d2'); }); } });
+        db.ref('gameState/latestWinner').on('value', s => { const win = s.val(); const banner = document.getElementById('winnerBanner'); const cardCont = document.getElementById('bingoCardContainer'); const gameOverlay = document.getElementById('gameOverOverlay'); cardCont.classList.remove('card-puro'); document.querySelectorAll('.cell').forEach(c => c.classList.remove('cell-waiting')); if(win && win.name) { banner.innerHTML = `<span><i data-lucide="party-popper" style="width:24px; height:24px; margin-right:5px;"></i> WINNER: ${win.name.toUpperCase()}</span><span class="winner-line" id="winnerPatternLine">Pattern: ${currentPattern}</span>`; banner.style.display = 'block'; playSound('win'); lucide.createIcons(); if(win.uid === auth.currentUser.uid) { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost'); gameOverlay.style.display = 'none'; spawnFlyingCoins(20); triggerScreenShake(); } else { cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win'); gameOverlay.style.display = 'flex'; const nextTime = document.getElementById('nextDrawTime').innerText; document.getElementById('gameOverMsg').innerHTML = `So close! <b>${win.name.toUpperCase()}</b> won this round.<br><br>Better luck next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ${nextTime}</span>`; } } else { banner.style.display = 'none'; cardCont.classList.remove('card-win', 'card-lost'); gameOverlay.style.display = 'none'; document.querySelectorAll('.cell').forEach(c => { c.classList.remove('win-glow', 'win-line-h', 'win-line-v', 'win-line-d1', 'win-line-d2'); }); } });
         db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternName').innerText = currentPattern; checkWin(); });
         db.ref('drawnNumbers').on('value', s => { const val = s.val(); const newGameDrawn = val ? Object.values(val).map(n => n.toString()) : []; if(newGameDrawn.length > 0 && gameDrawn.length > 0) { const newBalls = newGameDrawn.filter(x => !gameDrawn.includes(x)); if(newBalls.length > 0) { const latestBall = newBalls[newBalls.length - 1]; playSound('newBall'); showToast("BOLA: " + latestBall); } } gameDrawn = newGameDrawn; const btn = document.getElementById('newCardBtn'); if(gameDrawn.length > 0) { btn.disabled = true; btn.innerHTML = `<i data-lucide="lock" style="width:14px"></i> IN GAME`; } else { btn.disabled = false; btn.innerHTML = `<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD`; } lucide.createIcons(); checkLateJoiner(); updateGridHits(); renderPrevBalls(); checkWin(); checkPuroStatus(); });
         db.ref('gameState/lastCalled').on('value', s => { if(s.exists()) { const num = s.val(); document.getElementById('currentBall').innerText = num; if (num !== lastSpokenNumber) { speakNumber(num); lastSpokenNumber = num; } } else { document.getElementById('currentBall').innerText = "--"; lastSpokenNumber = null; } });
@@ -8223,7 +8222,7 @@
     function highlightWinningPattern(indices, patternType) { const cells = document.querySelectorAll('.cell'); indices.forEach(idx => { const cell = cells[idx]; cell.classList.add('win-glow'); if (currentPattern === 'Normal Bingo') { if (patternType < 5) cell.classList.add('win-line-h'); else if (patternType < 10) cell.classList.add('win-line-v'); else if (patternType === 10) cell.classList.add('win-line-d1'); else cell.classList.add('win-line-d2'); } }); }
 
     function triggerWin() { const uid = auth.currentUser.uid; let winPrize = 300; if (isJackpotActive) winPrize = currentJackpotAmount; db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize }); db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize); db.ref('users/' + uid + '/bingoWins').transaction(w => (w || 0) + 1); db.ref('users/' + uid).update({ hasWonCurrent: true }); userData.hasWonCurrent = true; if (isJackpotActive) { const jpModal = document.getElementById('grandJackpotModal'); document.getElementById('grandPrizeAmount').innerText = winPrize.toLocaleString() + " RB COINS"; document.getElementById('jpWinnerName').innerText = userData.name; jpModal.style.display = 'flex'; confetti({ particleCount: 500, spread: 120, startVelocity: 60 }); } }
-    function generateNewCard() { if(gameDrawn.length > 0) return showToast("Bawal magpalit habang may laro!"); let card = []; let cols = [[1,15],[16,30],[31,45],[46,60],[61,75]]; cols.forEach(r => { let nums = []; while(nums.length < 5) { let n = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0]; if(!nums.includes(n)) nums.push(n); } card.push(...nums); }); let finalCard = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) { finalCard.push(card[c*5 + r]); } } finalCard[12] = "FREE"; db.ref('users/' + auth.currentUser.uid).update({ currentCard: finalCard, cardTimestamp: Date.now(), hasWonCurrent: false }); cardNumbers = finalCard; renderCard(); playSound('cardFlip'); }
+    function generateNewCard() { if(gameDrawn.length > 0) return showToast("Cannot change card while a game is in progress!"); let card = []; let cols = [[1,15],[16,30],[31,45],[46,60],[61,75]]; cols.forEach(r => { let nums = []; while(nums.length < 5) { let n = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0]; if(!nums.includes(n)) nums.push(n); } card.push(...nums); }); let finalCard = []; for(let r=0; r<5; r++) { for(let c=0; c<5; c++) { finalCard.push(card[c*5 + r]); } } finalCard[12] = "FREE"; db.ref('users/' + auth.currentUser.uid).update({ currentCard: finalCard, cardTimestamp: Date.now(), hasWonCurrent: false }); cardNumbers = finalCard; renderCard(); playSound('cardFlip'); }
     function renderCard() { const grid = document.getElementById('bingoGrid'); grid.innerHTML = ""; cardNumbers.forEach((n, i) => { const div = document.createElement('div'); div.className = 'cell'; div.innerText = n === "FREE" ? "★" : n; if(n === "FREE") { div.classList.add('hit'); if(!marks.includes(12)) marks.push(12); } grid.appendChild(div); }); updateGridHits(); applySkin(userData.equippedSkin || 'default'); }
     function updateGridHits() { marks = [12]; const cells = document.querySelectorAll('.cell'); cells.forEach((c, i) => { const val = c.innerText; if(gameDrawn.includes(val) || val === "★") { c.classList.add('hit'); if(!marks.includes(i)) marks.push(i); } }); }
     function renderPrevBalls() { const row = document.getElementById('ballRow'); row.innerHTML = ""; const last5 = gameDrawn.slice(-5).reverse(); last5.forEach(n => { let d = document.createElement('div'); d.className = 'ball-small'; d.innerText = n; row.appendChild(d); }); }
@@ -12502,7 +12501,7 @@ Please explain why you want a verification badge:`;
             <div class="section-label">🎁 REDEEM VOUCHER — Para sa Partner Stores</div>
             <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:rgba(255,255,255,0.6);display:flex;align-items:center;gap:8px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <span>I-redeem sa aming <b style="color:#10b981;">Partner Stores</b> — para sa grocery, pagkain, at iba pang produkto. <b style="color:#fbbf24;">Hindi pera</b> ito, voucher para sa goods!</span>
+                <span>Redeem at our <b style="color:#10b981;">Partner Stores</b> — for groceries, food, and other products. This is <b style="color:#fbbf24;">not cash</b>, it's a voucher for goods!</span>
             </div>
 
             <!-- Store Voucher Cards -->
@@ -12585,7 +12584,7 @@ Please explain why you want a verification badge:`;
                     PAANO MAG-REDEEM
                 </div>
                 <div style="font-size:11px;color:rgba(255,255,255,0.6);line-height:1.9;">
-                    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:4px;"><span style="background:rgba(251,191,36,0.2);color:#fbbf24;font-weight:900;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;">1</span>Piliin ang halaga at i-click ang Redeem</div>
+                    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:4px;"><span style="background:rgba(251,191,36,0.2);color:#fbbf24;font-weight:900;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;">1</span>Select an amount and click Redeem</div>
                     <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:4px;"><span style="background:rgba(251,191,36,0.2);color:#fbbf24;font-weight:900;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;">2</span>Lalabas ang QR Code at Voucher Code</div>
                     <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:4px;"><span style="background:rgba(251,191,36,0.2);color:#fbbf24;font-weight:900;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;">3</span>Pumunta sa pinakamalapit na <b style="color:#fbbf24;">Partner Store Cashier</b> at ipakita ang voucher</div>
                     <div style="display:flex;gap:8px;align-items:flex-start;"><span style="background:rgba(251,191,36,0.2);color:#fbbf24;font-weight:900;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;">4</span>One-time use lang ang bawat voucher</div>
@@ -12602,8 +12601,8 @@ Please explain why you want a verification badge:`;
             <div id="rbVouchersList">
                 <div style="text-align:center;padding:50px 20px;opacity:0.4;">
                     <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                    <div style="font-size:14px;font-weight:700;">Wala ka pang voucher</div>
-                    <div style="font-size:12px;margin-top:6px;opacity:0.7;">Mag-redeem ng GCash o Maya para magsimula!</div>
+                    <div style="font-size:14px;font-weight:700;">You have no vouchers yet</div>
+                    <div style="font-size:12px;margin-top:6px;opacity:0.7;">Redeem GCash or Maya to get started!</div>
                 </div>
             </div>
         </div>
@@ -12651,7 +12650,7 @@ Please explain why you want a verification badge:`;
             <div style="margin-top:24px;">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
                     <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
-                    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:1.5px;text-transform:uppercase;">Gusto mong sumali?</div>
+                    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:1.5px;text-transform:uppercase;">Want to join?</div>
                     <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
                 </div>
                 <div style="background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(236,72,153,0.05));border:1px solid rgba(245,158,11,0.2);border-radius:20px;padding:18px;">
@@ -12670,7 +12669,7 @@ Please explain why you want a verification badge:`;
                         <div>
                             <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Uri ng Tindahan *</div>
                             <select id="pf_storeType" style="width:100%;background:rgba(15,23,42,0.9);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:11px 14px;color:white;font-size:13px;outline:none;-webkit-appearance:none;box-sizing:border-box;">
-                                <option value="" style="background:#1e293b;">Piliin ang uri ng tindahan</option>
+                                <option value="" style="background:#1e293b;">Select store type</option>
                                 <option value="sari-sari" style="background:#1e293b;">🛒 Sari-Sari Store</option>
                                 <option value="grocery" style="background:#1e293b;">🏬 Grocery / Supermarket</option>
                                 <option value="food" style="background:#1e293b;">🍜 Food / Restaurant / Karinderya</option>
@@ -12697,7 +12696,7 @@ Please explain why you want a verification badge:`;
                             </div>
                         </div>
                         <button onclick="submitPartnerApplication()" id="pfSubmitBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#ec4899);border:none;border-radius:14px;color:white;font-size:14px;font-weight:900;cursor:pointer;letter-spacing:0.5px;">
-                            📞 IPADALA ANG APLIKASYON
+                            📞 SUBMIT APPLICATION
                         </button>
                     </div>
                     <div id="partnerFormSuccess" style="display:none;text-align:center;padding:20px;">
@@ -12745,7 +12744,7 @@ Please explain why you want a verification badge:`;
                     </div>
                 </div>
             </div>
-            <div style="font-size:11px;color:rgba(255,255,255,0.3);text-align:center;margin-bottom:16px;">I-tap ang card para makita ang QR Code para sa partner store</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.3);text-align:center;margin-bottom:16px;">Tap the card to view the QR Code for the partner store</div>
 
             <!-- QR Panel -->
             <div id="walletQRPanel" style="display:none;text-align:center;padding:20px;background:rgba(30,41,59,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:16px;margin-bottom:16px;">
@@ -12765,7 +12764,7 @@ Please explain why you want a verification badge:`;
                 <button onclick="showReceiveInfo()" style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(5,150,105,0.15));border:1px solid rgba(16,185,129,0.3);border-radius:14px;padding:16px 12px;cursor:pointer;text-align:center;">
                     <div style="font-size:24px;margin-bottom:6px;">📥</div>
                     <div style="font-size:12px;font-weight:900;color:white;">RECEIVE</div>
-                    <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px;">Ibahagi ang iyong account no.</div>
+                    <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px;">Share your account number</div>
                 </button>
             </div>
 
@@ -12774,7 +12773,7 @@ Please explain why you want a verification badge:`;
             <div id="walletTxList">
                 <div style="text-align:center;padding:30px 20px;opacity:0.4;">
                     <div style="font-size:36px;margin-bottom:8px;">💳</div>
-                    <div style="font-size:13px;font-weight:700;">Walang transactions pa</div>
+                    <div style="font-size:13px;font-weight:700;">No transactions yet</div>
                 </div>
             </div>
         </div>
@@ -12788,8 +12787,8 @@ Please explain why you want a verification badge:`;
             <div id="rbCoinHistoryList">
                 <div style="text-align:center;padding:50px 20px;opacity:0.4;">
                     <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <div style="font-size:14px;font-weight:700;">Walang history pa</div>
-                    <div style="font-size:12px;margin-top:6px;opacity:0.7;">Mag-earn at mag-spend ng coins para lumabas dito</div>
+                    <div style="font-size:14px;font-weight:700;">No history yet</div>
+                    <div style="font-size:12px;margin-top:6px;opacity:0.7;">Earn and spend coins to see your history here</div>
                 </div>
             </div>
         </div>
@@ -13048,7 +13047,7 @@ function loadApprovedPartnerStores() {
         + '<div style="font-size:28px;margin-bottom:8px;animation:pulse 1.5s infinite;">🏪</div>'
         + '<div style="font-size:12px;color:rgba(255,255,255,0.35);font-weight:700;">Loading partner stores...</div>'
         + '</div>';
-    if (!window.db) { list.innerHTML = _psEmptyHTML('Hindi makonekta sa database.'); return; }
+    if (!window.db) { list.innerHTML = _psEmptyHTML('Unable to connect to the database.'); return; }
     db.ref('partnerApplications').orderByChild('status').equalTo('approved').once('value', function(snap) {
         _psAllStores = [];
         if (snap.exists()) {
@@ -13082,7 +13081,7 @@ function _psEsc(str) {
 function _psEmptyHTML(msg) {
     return '<div style="text-align:center;padding:50px 20px;">'
         + '<div style="font-size:40px;margin-bottom:10px;opacity:0.4;">🏪</div>'
-        + '<div style="font-size:13px;color:rgba(255,255,255,0.3);font-weight:700;">' + (msg || 'Walang partner stores na nahanap.') + '</div>'
+        + '<div style="font-size:13px;color:rgba(255,255,255,0.3);font-weight:700;">' + (msg || 'No partner stores found.') + '</div>'
         + '</div>';
 }
 
@@ -13100,7 +13099,7 @@ function _psRenderStores() {
             || (s.ownerName || '').toLowerCase().includes(searchVal);
         return catMatch && searchMatch;
     });
-    if (badge) badge.textContent = filtered.length + ' store' + (filtered.length !== 1 ? 's' : '') + ' na nag-aaccept ng vouchers';
+    if (badge) badge.textContent = filtered.length + ' store' + (filtered.length !== 1 ? 's' : '') + ' accepting vouchers';
     if (filtered.length === 0) { list.innerHTML = _psEmptyHTML(); return; }
     var html = '';
     filtered.forEach(function(store) {
@@ -13139,13 +13138,13 @@ function redeemGiftCard(brand, value, typeName, cost, emoji, color1, color2) {
     if (!_auth() || !_auth().currentUser) { showToast('Please log in first.'); return; }
     var pts = (_user() && _user().points) ? _user().points : 0;
     if (pts < cost) {
-        showToast('❌ Hindi sapat ang iyong RB Coins! Kailangan: ' + Number(cost).toLocaleString() + ' coins');
+        showToast('❌ Insufficient RB Coins! Required: ' + Number(cost).toLocaleString() + ' coins');
         return;
     }
     _rbStorePendingCard = { brand: brand, value: value, typeName: typeName, cost: cost, emoji: emoji, color1: color1, color2: color2 };
     showCustomConfirm(
         '🎁 I-Redeem ang ' + typeName + '?',
-        'Gagamitin ang ' + Number(cost).toLocaleString() + ' RB Coins mo para sa ' + value + ' Store Voucher. Maaaring gamitin sa mga Partner Stores para sa grocery o kahit anong produkto. Hindi na ito maibabalik!',
+        'This will use ' + Number(cost).toLocaleString() + ' of your RB Coins for a ' + value + ' Store Voucher. Can be used at Partner Stores for groceries or any product. This cannot be undone!',
         function() { processGiftCardRedemption(); }
     );
 }
@@ -13161,7 +13160,7 @@ function processGiftCardRedemption() {
         if (pts < cost) return; // abort if insufficient
         return pts - cost;
     }, function(err, committed, snap) {
-        if (err || !committed) { showToast('❌ May error. Subukan ulit.'); return; }
+        if (err || !committed) { showToast('❌ Something went wrong. Please try again.'); return; }
         // Generate voucher code
         var code = 'RBGC-' + Math.random().toString(36).toUpperCase().substr(2,4) + '-' + Math.random().toString(36).toUpperCase().substr(2,4) + '-' + Date.now().toString(36).toUpperCase().substr(-4);
         var voucherData = {
@@ -13197,7 +13196,7 @@ function processGiftCardRedemption() {
         // Show QR modal
         showQrModal(voucherData);
         _rbStorePendingCard = null;
-        showToast('🎉 Na-redeem na ang iyong Store Voucher! I-screenshot at gamitin sa Partner Stores.');
+        showToast('🎉 Your Store Voucher has been redeemed! Take a screenshot and use it at Partner Stores.');
         loadRbVouchers();
     });
 }
@@ -13255,7 +13254,7 @@ function closeQrModal() {
 function saveVoucherAndClose() {
     closeQrModal();
     switchStoreSection('vouchers');
-    showToast('✅ Na-save ang voucher sa "My Vouchers" tab!');
+    showToast('✅ Voucher saved to the "My Vouchers" tab!');
 }
 
 function loadRbVouchers() {
@@ -13266,7 +13265,7 @@ function loadRbVouchers() {
     list.innerHTML = '<div style="text-align:center;padding:30px;opacity:0.4;font-size:13px;">Loading...</div>';
     _db().ref('rbVouchers/' + uid).orderByChild('timestamp').once('value', function(snap) {
         if (!snap.exists()) {
-            list.innerHTML = '<div style="text-align:center;padding:50px 20px;opacity:0.4;"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><div style="font-size:14px;font-weight:700;">Wala ka pang voucher</div><div style="font-size:12px;margin-top:6px;opacity:0.7;">Mag-redeem ng GCash o Maya para magsimula!</div></div>';
+            list.innerHTML = '<div style="text-align:center;padding:50px 20px;opacity:0.4;"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><div style="font-size:14px;font-weight:700;">You have no vouchers yet</div><div style="font-size:12px;margin-top:6px;opacity:0.7;">Redeem GCash or Maya to get started!</div></div>';
             return;
         }
         var vouchers = [];
@@ -13308,7 +13307,7 @@ function loadCoinHistory() {
     list.innerHTML = '<div style="text-align:center;padding:30px;opacity:0.4;font-size:13px;">Loading...</div>';
     _db().ref('rbCoinHistory/' + uid).orderByChild('timestamp').limitToLast(30).once('value', function(snap) {
         if (!snap.exists()) {
-            list.innerHTML = '<div style="text-align:center;padding:50px 20px;opacity:0.4;"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div style="font-size:14px;font-weight:700;">Walang history pa</div><div style="font-size:12px;margin-top:6px;opacity:0.7;">Mag-earn at mag-spend ng coins para lumabas dito</div></div>';
+            list.innerHTML = '<div style="text-align:center;padding:50px 20px;opacity:0.4;"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div style="font-size:14px;font-weight:700;">No history yet</div><div style="font-size:12px;margin-top:6px;opacity:0.7;">Earn and spend coins to see your history here</div></div>';
             return;
         }
         var items = [];
@@ -13518,7 +13517,7 @@ function stopVoice2() {
             <input id="sendCoinsAmount" type="number" placeholder="Halimbawa: 1000" min="1" style="width:100%;background:rgba(15,23,42,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#fbbf24;font-size:18px;font-weight:900;outline:none;box-sizing:border-box;">
             <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:5px;">Iyong balance: <span id="sendModalBalance" style="color:#fbbf24;font-weight:800;">0</span> RB Coins</div>
         </div>
-        <button onclick="executeSendCoins()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#6366f1);border:none;border-radius:14px;color:white;font-size:14px;font-weight:900;cursor:pointer;">IPADALA ANG COINS</button>
+        <button onclick="executeSendCoins()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#6366f1);border:none;border-radius:14px;color:white;font-size:14px;font-weight:900;cursor:pointer;">SEND COINS</button>
     </div>
 </div>
 
@@ -13529,9 +13528,9 @@ function stopVoice2() {
         <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:14px;padding:20px;">
             <canvas id="receiveQRCanvas" style="border-radius:8px;background:white;padding:6px;display:block;margin:0 auto 12px;"></canvas>
             <div id="receiveAccNoText" style="font-family:'Courier New',monospace;font-size:15px;font-weight:900;color:white;letter-spacing:3px;margin-bottom:8px;"></div>
-            <div style="font-size:11px;color:rgba(255,255,255,0.4);">Ibahagi para matanggap ang RB Coins mula sa ibang user</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.4);">Share to receive RB Coins from other users</div>
         </div>
-        <button onclick="copyMyAccNo()" style="margin-top:14px;width:100%;padding:12px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:12px;color:#10b981;font-size:13px;font-weight:900;cursor:pointer;">📋 KOPYAHIN ANG ACCOUNT NUMBER</button>
+        <button onclick="copyMyAccNo()" style="margin-top:14px;width:100%;padding:12px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:12px;color:#10b981;font-size:13px;font-weight:900;cursor:pointer;">📋 COPY ACCOUNT NUMBER</button>
         <button onclick="document.getElementById('receiveInfoModal').style.display='none'" style="margin-top:8px;width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:rgba(255,255,255,0.4);font-size:12px;cursor:pointer;">Isara</button>
     </div>
 </div>
@@ -13683,7 +13682,7 @@ function lookupSendRecipient(val) {
                 var uid = Object.keys(snap.val())[0];
                 var u = snap.val()[uid];
                 if (window.auth && window.auth.currentUser && uid === window.auth.currentUser.uid) {
-                    prev.textContent = '⚠️ Hindi mo pwedeng ipadala sa sarili mo';
+                    prev.textContent = '⚠️ You cannot send coins to yourself';
                     window._rbSendToUid = null;
                 } else {
                     prev.textContent = '✓ ' + (u.name || 'Unknown User');
@@ -13691,7 +13690,7 @@ function lookupSendRecipient(val) {
                     window._rbSendToName = u.name;
                 }
             } else {
-                prev.textContent = '❌ Hindi nahanap ang account number';
+                prev.textContent = '❌ Account number not found';
                 window._rbSendToUid = null;
             }
             prev.style.display = 'block';
@@ -13700,18 +13699,18 @@ function lookupSendRecipient(val) {
 }
 
 function executeSendCoins() {
-    if (!window.auth || !window.auth.currentUser) return showToast('Login muna!');
-    if (!window._rbSendToUid) return showToast('❌ Walang valid na recipient!');
+    if (!window.auth || !window.auth.currentUser) return showToast('Please log in first!');
+    if (!window._rbSendToUid) return showToast('❌ No valid recipient found!');
     var amount = parseInt(document.getElementById('sendCoinsAmount').value);
-    if (!amount || amount < 1) return showToast('❌ Lagyan ng halaga!');
+    if (!amount || amount < 1) return showToast('❌ Please enter an amount!');
     var myPts = (window.userData && window.userData.points) ? Number(window.userData.points) : 0;
-    if (amount > myPts) return showToast('❌ Hindi sapat ang iyong RB Coins!');
+    if (amount > myPts) return showToast('❌ Insufficient RB Coins!');
     var myUid = window.auth.currentUser.uid;
     var toUid = window._rbSendToUid;
     var toName = window._rbSendToName || 'User';
     var myName = (window.userData && window.userData.name) || 'User';
     showCustomConfirm('SEND RB COINS?',
-        'Ipapadala ang ' + amount.toLocaleString() + ' RB Coins kay ' + toName + '. Hindi na ito maibabalik!',
+        'You are about to send ' + amount.toLocaleString() + ' RB Coins to ' + toName + '. This cannot be undone!',
         function() {
             var ts = Date.now();
             db.ref('users/' + myUid + '/points').transaction(function(p) { return Math.max(0,(p||0)-amount); });
@@ -13720,7 +13719,7 @@ function executeSendCoins() {
             db.ref('walletTx/' + toUid).push({ type:'receive', amount:amount, withUid:myUid, withName:myName, timestamp:ts, label:'From '+myName });
             db.ref('coinHistory/' + myUid).push({ label:'📤 Sent to '+toName, amount:amount, type:'spend', timestamp:ts });
             db.ref('coinHistory/' + toUid).push({ label:'📥 From '+myName, amount:amount, type:'earn', timestamp:ts });
-            showToast('✅ Na-send na! ' + amount.toLocaleString() + ' coins kay ' + toName);
+            showToast('✅ Sent! ' + amount.toLocaleString() + ' coins to ' + toName);
             closeSendCoinsModal();
             loadWalletTab();
         }
@@ -13742,7 +13741,7 @@ function showReceiveInfo() {
 function copyMyAccNo() {
     if (!window._rbMyAccNo) return;
     if (navigator.clipboard) {
-        navigator.clipboard.writeText(window._rbMyAccNo).then(function() { showToast('✅ Nakopya ang Account Number!'); });
+        navigator.clipboard.writeText(window._rbMyAccNo).then(function() { showToast('✅ Account Number copied!'); });
     } else { showToast(window._rbMyAccNo); }
 }
 
@@ -13753,34 +13752,34 @@ function submitPartnerApplication() {
     var addr  = (document.getElementById('pf_address').value||'').trim();
     var oName = (document.getElementById('pf_ownerName').value||'').trim();
     var cont  = (document.getElementById('pf_contact').value||'').trim();
-    if (!sName) return showToast('❌ Lagyan ng pangalan ng tindahan!');
-    if (!sType) return showToast('❌ Piliin ang uri ng tindahan!');
-    if (!addr)  return showToast('❌ Lagyan ng address!');
-    if (!oName) return showToast('❌ Lagyan ng pangalan ng may-ari!');
-    if (!cont)  return showToast('❌ Lagyan ng contact number!');
+    if (!sName) return showToast('❌ Please enter the store name!');
+    if (!sType) return showToast('❌ Please select the store type!');
+    if (!addr)  return showToast('❌ Please enter the address!');
+    if (!oName) return showToast('❌ Please enter the owner\'s name!');
+    if (!cont)  return showToast('❌ Please enter a contact number!');
     var btn = document.getElementById('pfSubmitBtn');
-    if (btn) { btn.textContent = 'Nagpapadala...'; btn.disabled = true; }
+    if (btn) { btn.textContent = 'Submitting...'; btn.disabled = true; }
     var uid = (window.auth && window.auth.currentUser) ? window.auth.currentUser.uid : 'guest';
     if (window.db) {
         db.ref('partnerApplications').push({ storeName:sName, storeType:sType, address:addr, ownerName:oName, contact:cont, uid:uid, status:'pending', timestamp:Date.now() }, function(err) {
             if (err) {
-                showToast('❌ May error. Subukan ulit!');
-                if (btn) { btn.textContent = '📞 IPADALA ANG APLIKASYON'; btn.disabled = false; }
+                showToast('❌ An error occurred. Please try again!');
+                if (btn) { btn.textContent = '📞 SUBMIT APPLICATION'; btn.disabled = false; }
             } else {
                 document.getElementById('partnerFormWrap').style.display = 'none';
                 document.getElementById('partnerFormSuccess').style.display = 'block';
             }
         });
     } else {
-        showToast('❌ Hindi konektado. Subukan ulit!');
-        if (btn) { btn.textContent = '📞 IPADALA ANG APLIKASYON'; btn.disabled = false; }
+        showToast('❌ Not connected. Please try again!');
+        if (btn) { btn.textContent = '📞 SUBMIT APPLICATION'; btn.disabled = false; }
     }
 }
 function resetPartnerForm() {
     ['pf_storeName','pf_address','pf_ownerName','pf_contact'].forEach(function(id) { var el=document.getElementById(id); if(el) el.value=''; });
     var st = document.getElementById('pf_storeType'); if(st) st.value='';
     var btn = document.getElementById('pfSubmitBtn');
-    if (btn) { btn.textContent = '📞 IPADALA ANG APLIKASYON'; btn.disabled = false; }
+    if (btn) { btn.textContent = '📞 SUBMIT APPLICATION'; btn.disabled = false; }
     document.getElementById('partnerFormWrap').style.display = 'flex';
     document.getElementById('partnerFormSuccess').style.display = 'none';
 }
@@ -13796,4 +13795,3 @@ function resetPartnerForm() {
 </script>
 </body>
 </html>
-
