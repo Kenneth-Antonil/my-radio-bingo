@@ -80,7 +80,7 @@
             background: #0f172a;
             color: var(--text); 
             margin: 0; 
-            padding-bottom: calc(60px + env(safe-area-inset-bottom)); 
+            padding-bottom: calc(90px + env(safe-area-inset-bottom)); 
             overflow-x: hidden; 
             min-height: 100vh;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -1435,14 +1435,76 @@
         #userImg { width: 45px; height: 45px; border-radius: 50%; cursor: pointer; border: 2px solid var(--accent); object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         
         /* BOTTOM NAVIGATION - OPTIMIZED FOR MOBILE */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(15, 23, 42, 0.97); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.08); height: calc(64px + env(safe-area-inset-bottom)); display: flex; justify-content: space-around; align-items: stretch; z-index: 5000; padding-bottom: env(safe-area-inset-bottom); padding-top: 0; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #64748b; flex: 1; border: none; background: none; cursor: pointer; transition: color 0.2s; position: relative; padding: 10px 4px 8px; min-width: 0; }
-        .nav-item:hover { color: #94a3b8; }
-        .nav-item.active { color: var(--accent-glow); }
-        .nav-item.active::after { content:''; position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:32px; height:2px; background:var(--accent-glow); border-radius:2px 2px 0 0; }
-        .nav-item.active .nav-icon { transform: translateY(-2px); filter: drop-shadow(0 0 6px var(--accent-glow)); }
-        .nav-icon { width: 22px; height: 22px; flex-shrink: 0; transition: transform 0.2s, filter 0.2s; }
-        .nav-label { font-size: 9px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        /* === RADIO PLAYER (replaces bottom-nav) === */
+        .bottom-nav { display: none !important; }
+        .nav-label { display: none; }
+        .nav-item { display: none; }
+        .nav-icon { width: 22px; height: 22px; flex-shrink: 0; }
+
+        .radio-player-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10,18,35,0.98); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-top: 1px solid rgba(255,255,255,0.08); height: calc(88px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); z-index: 5000; display: flex; flex-direction: column; overflow: hidden; }
+        .radio-progress-bar { height: 2px; width: 100%; background: rgba(255,255,255,0.06); flex-shrink: 0; }
+        .radio-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-glow)); width: 0%; transition: width 0.5s linear; }
+        .radio-inner { display: flex; align-items: center; gap: 12px; padding: 10px 16px 6px; flex: 1; }
+        .radio-vinyl { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #1e293b, #0f172a); border: 2px solid rgba(14,165,233,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; overflow: hidden; box-shadow: 0 0 14px rgba(14,165,233,0.2); }
+        .radio-vinyl.playing { animation: vinylSpin 3s linear infinite; border-color: var(--accent); box-shadow: 0 0 18px rgba(14,165,233,0.5); }
+        @keyframes vinylSpin { to { transform: rotate(360deg); } }
+        .radio-vinyl-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; position: absolute; }
+        .radio-vinyl-dot { width: 10px; height: 10px; background: #0f172a; border-radius: 50%; position: absolute; z-index: 2; border: 2px solid rgba(255,255,255,0.15); }
+        .radio-info { flex: 1; min-width: 0; }
+        .radio-title { font-size: 13px; font-weight: 700; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .radio-status { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.4); display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+        .radio-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #64748b; flex-shrink: 0; }
+        .radio-status-dot.live { background: #ef4444; animation: pulseDot 1.2s ease infinite; }
+        .radio-status-dot.countdown { background: var(--gold); animation: pulseDot 1.2s ease infinite; }
+        @keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .radio-controls { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .radio-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,0.06); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+        .radio-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.08); }
+        .radio-btn.play-btn { width: 46px; height: 46px; background: linear-gradient(135deg, var(--accent), #0369a1); box-shadow: 0 4px 14px rgba(14,165,233,0.4); }
+        .radio-btn.play-btn:hover { box-shadow: 0 6px 20px rgba(14,165,233,0.6); }
+        .radio-volume { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .radio-vol-slider { -webkit-appearance: none; width: 60px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.15); outline: none; }
+        .radio-vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+        .radio-countdown-toast { position: fixed; bottom: calc(96px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, rgba(251,191,36,0.15), rgba(251,191,36,0.05)); border: 1px solid rgba(251,191,36,0.4); color: var(--gold); font-size: 12px; font-weight: 700; padding: 8px 18px; border-radius: 30px; z-index: 5001; white-space: nowrap; display: none; animation: slideUpToast 0.4s ease; box-shadow: 0 4px 20px rgba(251,191,36,0.2); }
+        @keyframes slideUpToast { from{opacity:0;transform:translateX(-50%) translateY(20px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+        /* === HAMBURGER MENU === */
+        .hamburger-btn { width: 40px; height: 40px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-direction: column; gap: 4px; transition: all 0.2s; flex-shrink: 0; }
+        .hamburger-btn:hover { background: rgba(255,255,255,0.1); }
+        .hamburger-btn span { display: block; width: 18px; height: 2px; background: white; border-radius: 2px; transition: all 0.3s; }
+        .hamburger-btn.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+        .hamburger-btn.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+        .hamburger-btn.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+        .hamburger-overlay { display: none; position: fixed; inset: 0; z-index: 9990; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+        .hamburger-overlay.open { display: block; }
+        .hamburger-menu { position: fixed; top: 0; right: -290px; width: 290px; height: 100vh; background: rgba(10,18,35,0.99); backdrop-filter: blur(30px); border-left: 1px solid rgba(255,255,255,0.08); z-index: 9991; display: flex; flex-direction: column; transition: right 0.35s cubic-bezier(0.4,0,0.2,1); padding-top: max(20px, env(safe-area-inset-top)); overflow-y: auto; }
+        .hamburger-menu.open { right: 0; }
+        .hamburger-menu-header { padding: 16px 20px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 8px; }
+        .hamburger-menu-title { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.35); }
+        .hamburger-close-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .hamburger-nav-item { display: flex; align-items: center; gap: 14px; padding: 14px 20px; color: rgba(255,255,255,0.7); cursor: pointer; transition: all 0.2s; font-size: 15px; font-weight: 600; border: none; background: none; width: 100%; text-align: left; }
+        .hamburger-nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        .hamburger-nav-item.active { color: var(--accent-glow); background: rgba(14,165,233,0.08); }
+        .hamburger-nav-item i { width: 20px; height: 20px; flex-shrink: 0; }
+        .hamburger-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 6px 0; }
+        .hamburger-section-label { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.2); padding: 10px 20px 4px; }
+
+        /* === SIDE DRAWER (mapped from hamburger) === */
+        .drawer-overlay { display: none; position: fixed; inset: 0; z-index: 9990; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+        .drawer-overlay.open { display: block; }
+        .side-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: rgba(10,16,30,0.99); backdrop-filter: blur(30px); border-right: 1px solid rgba(255,255,255,0.08); z-index: 9991; transform: translateX(-100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column; padding-top: max(20px, env(safe-area-inset-top)); }
+        .side-drawer.open { transform: translateX(0); }
+        .drawer-header { padding: 16px 20px 14px; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; justify-content: space-between; }
+        .drawer-logo { font-weight: 900; font-size: 20px; }
+        .drawer-logo span { color: var(--accent-glow); }
+        .drawer-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .drawer-nav { padding: 8px 0; flex: 1; overflow-y: auto; }
+        .drawer-nav-item { display: flex; align-items: center; gap: 14px; padding: 14px 20px; color: rgba(255,255,255,0.7); cursor: pointer; transition: all 0.2s; font-size: 15px; font-weight: 600; border: none; background: none; width: 100%; text-align: left; }
+        .drawer-nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        .drawer-nav-item.active { color: var(--accent-glow); background: rgba(14,165,233,0.08); border-left: 3px solid var(--accent-glow); }
+        .drawer-nav-item i { width: 20px; height: 20px; flex-shrink: 0; }
+        .drawer-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 6px 0; }
+        .drawer-footer { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.07); }
 
         .next-draw-container { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.4); padding: var(--spacing-md); border-radius: var(--radius-xl); margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-md); box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
 
@@ -5790,7 +5852,48 @@
 </head>
 <body>
 
-<div class="bottom-nav">
+<!-- ===== DRAWER OVERLAY ===== -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
+<!-- ===== SIDE DRAWER MENU ===== -->
+<div class="side-drawer" id="sideDrawer">
+    <div class="drawer-header">
+        <div class="drawer-logo">RB <span>LIVE</span></div>
+        <button class="drawer-close" onclick="closeDrawer()">
+            <i data-lucide="x" style="width:16px;height:16px;"></i>
+        </button>
+    </div>
+    <div class="drawer-nav">
+        <button class="drawer-nav-item active" id="dnav-home" onclick="closeDrawer(); switchTab('home')">
+            <i data-lucide="home"></i> Home
+        </button>
+        <button class="drawer-nav-item" id="dnav-bingo" onclick="closeDrawer(); switchTab('bingo')">
+            <i data-lucide="play-circle"></i> Bingo
+        </button>
+        <button class="drawer-nav-item" id="dnav-store" onclick="closeDrawer(); openStorePage()">
+            <i data-lucide="shopping-bag"></i> Store
+        </button>
+        <button class="drawer-nav-item" id="dnav-beats" onclick="closeDrawer(); switchTab('beats')">
+            <i data-lucide="clapperboard"></i> Beats
+        </button>
+        <button class="drawer-nav-item" id="dnav-games" onclick="closeDrawer(); switchTab('games')">
+            <i data-lucide="gamepad-2"></i> Games
+        </button>
+        <button class="drawer-nav-item" id="dnav-news" onclick="closeDrawer(); window.location.href='news.html'">
+            <i data-lucide="newspaper"></i> News
+        </button>
+        <div class="drawer-divider"></div>
+        <button class="drawer-nav-item" onclick="closeDrawer(); openMyProfile()">
+            <i data-lucide="user"></i> My Profile
+        </button>
+    </div>
+    <div class="drawer-footer" style="font-size:10px; color:#334155; font-weight:700; text-align:center; letter-spacing:0.5px;">
+        RADIO BINGO LIVE · SOCIAL ECOSYSTEM
+    </div>
+</div>
+
+<!-- ===== OLD BOTTOM NAV (hidden, kept for JS compatibility) ===== -->
+<div class="bottom-nav" style="display:none!important;">
     <button class="nav-item active" onclick="switchTab('home')" id="nav-home">
         <i data-lucide="home" class="nav-icon"></i>
         <span class="nav-label">Home</span>
@@ -5820,6 +5923,45 @@
         <span class="nav-label">Me</span>
     </button>
 </div>
+
+<!-- ===== ONLINE RADIO PLAYER BAR ===== -->
+<div id="radioCountdownToast" class="radio-countdown-toast">🎯 Draw in 10 mins — Radio Auto-Play!</div>
+<div class="radio-player-bar" id="radioPlayerBar">
+    <div class="radio-progress-bar"><div class="radio-progress-fill" id="radioProgressFill"></div></div>
+    <div class="radio-inner">
+        <!-- Vinyl disc -->
+        <div class="radio-vinyl" id="radioWaveIcon">
+            <div class="radio-vinyl-dot"></div>
+        </div>
+        <!-- Info -->
+        <div class="radio-info">
+            <div class="radio-title" id="radioTitle">RB Live Radio</div>
+            <div class="radio-status">
+                <div class="radio-status-dot" id="radioWaveDot"></div>
+                <span id="radioStatusText">Offline</span>
+                <span class="radio-live-badge" id="radioLiveBadge" style="display:none;background:#ef444420;border:1px solid #ef444450;color:#ef4444;font-size:9px;font-weight:800;padding:1px 6px;border-radius:20px;letter-spacing:0.5px;">LIVE</span>
+                <span class="radio-auto-badge" id="radioAutoBadge" style="display:none;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);color:#fbbf24;font-size:9px;font-weight:800;padding:1px 6px;border-radius:20px;letter-spacing:0.5px;">AUTO</span>
+            </div>
+            <div id="radioCountdown" style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;margin-top:2px;"></div>
+        </div>
+        <!-- Controls -->
+        <div class="radio-controls">
+            <button class="radio-btn" id="radioVolBtn" onclick="toggleRadioMute()" title="Mute/Unmute">
+                <svg id="radioVolIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                </svg>
+            </button>
+            <button class="radio-btn play-btn" id="radioPlayBtn" onclick="toggleRadioPlay()">
+                <svg id="radioPlayIcon" viewBox="0 0 24 24" fill="currentColor" stroke="none" width="20" height="20">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden audio element for radio -->
+<audio id="radioAudio" preload="none"></audio>
 <div id="customPopupBanner">
     <div style="position:relative; max-width:400px; width:100%; animation: popScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
         <button onclick="closeCustomBanner()" style="position:absolute; top:-15px; right:-10px; background:linear-gradient(135deg, #ef4444, #b91c1c); color:white; border:2px solid white; border-radius:50%; width:36px; height:36px; font-weight:bold; cursor:pointer; z-index:10; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,0.3);"><i data-lucide="x" style="width:20px"></i></button>
@@ -6017,6 +6159,9 @@
 
 <div class="nav">
     <div style="display:flex; align-items:center; gap: var(--spacing-sm);">
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleHamburgerMenu()" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
         <span style="font-weight: 900; font-size: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.8);">RB <span style="color:var(--accent-glow)">LIVE</span></span>
     </div>
     <div id="userPanel" style="display:none; align-items: center; gap: var(--spacing-sm);">
@@ -6035,6 +6180,51 @@
         </div>
         <div id="userImgContainer" onclick="openMenuModal()"></div>
     </div>
+</div>
+
+<!-- HAMBURGER OVERLAY -->
+<div class="hamburger-overlay" id="hamburgerOverlay" onclick="closeHamburgerMenu()"></div>
+
+<!-- HAMBURGER SIDE MENU -->
+<div class="hamburger-menu" id="hamburgerMenu">
+    <div class="hamburger-menu-header">
+        <span class="hamburger-menu-title">Navigation</span>
+        <button class="hamburger-close-btn" onclick="closeHamburgerMenu()">
+            <i data-lucide="x" style="width:16px;height:16px;"></i>
+        </button>
+    </div>
+    <div class="hamburger-section-label">Main</div>
+    <button class="hamburger-nav-item active" id="hmenu-home" onclick="closeHamburgerMenu(); switchTab('home')">
+        <i data-lucide="home"></i> Home
+    </button>
+    <button class="hamburger-nav-item" id="hmenu-bingo" onclick="closeHamburgerMenu(); switchTab('bingo')">
+        <i data-lucide="play-circle"></i> Bingo
+    </button>
+    <button class="hamburger-nav-item" id="hmenu-beats" onclick="closeHamburgerMenu(); switchTab('beats')">
+        <i data-lucide="clapperboard"></i> Beats
+    </button>
+    <button class="hamburger-nav-item" id="hmenu-games" onclick="closeHamburgerMenu(); switchTab('games')">
+        <i data-lucide="gamepad-2"></i> Games
+    </button>
+    <div class="hamburger-divider"></div>
+    <div class="hamburger-section-label">More</div>
+    <button class="hamburger-nav-item" onclick="closeHamburgerMenu(); openStorePage()">
+        <i data-lucide="shopping-bag"></i> Store
+    </button>
+    <button class="hamburger-nav-item" onclick="closeHamburgerMenu(); window.location.href='news.html'">
+        <i data-lucide="newspaper"></i> News
+    </button>
+    <button class="hamburger-nav-item" onclick="closeHamburgerMenu(); window.location.href='radio_control.html'">
+        <i data-lucide="radio"></i> Radio Control
+    </button>
+    <div class="hamburger-divider"></div>
+    <div class="hamburger-section-label">Account</div>
+    <button class="hamburger-nav-item" onclick="closeHamburgerMenu(); openMyProfile()">
+        <i data-lucide="user"></i> My Profile
+    </button>
+    <button class="hamburger-nav-item" onclick="closeHamburgerMenu(); openMenuModal()">
+        <i data-lucide="settings"></i> Settings
+    </button>
 </div>
 
 <div class="container">
@@ -16895,6 +17085,295 @@ function loadMyOrders() {
         list.innerHTML = html;
     });
 }
+
+// ============================================================
+// ===== HAMBURGER DRAWER SYSTEM =====
+// ============================================================
+function toggleDrawer() {
+    var drawer = document.getElementById('sideDrawer');
+    var overlay = document.getElementById('drawerOverlay');
+    var btn = document.getElementById('hamburgerBtn');
+    var isOpen = drawer.classList.contains('open');
+    if (isOpen) {
+        closeDrawer();
+    } else {
+        drawer.classList.add('open');
+        overlay.classList.add('open');
+        btn.classList.add('open');
+        try { lucide.createIcons(); } catch(e) {}
+    }
+}
+function closeDrawer() {
+    var drawer = document.getElementById('sideDrawer');
+    var overlay = document.getElementById('drawerOverlay');
+    var btn = document.getElementById('hamburgerBtn');
+    drawer.classList.remove('open');
+    overlay.classList.remove('open');
+    if(btn) btn.classList.remove('open');
+}
+
+// Sync drawer active state with tab switches
+var _origSwitchTab = window.switchTab;
+if (typeof _origSwitchTab === 'function') {
+    window.switchTab = function(tab) {
+        _origSwitchTab(tab);
+        updateDrawerActiveState(tab);
+    };
+}
+function updateDrawerActiveState(tab) {
+    document.querySelectorAll('.drawer-nav-item').forEach(function(el) { el.classList.remove('active'); });
+    var target = document.getElementById('dnav-' + tab);
+    if (target) target.classList.add('active');
+}
+
+// ============================================================
+// ===== HAMBURGER MENU SYSTEM =====
+// ============================================================
+function toggleHamburgerMenu() {
+    var menu = document.getElementById('hamburgerMenu');
+    var overlay = document.getElementById('hamburgerOverlay');
+    var btn = document.getElementById('hamburgerBtn');
+    if (!menu) return;
+    var isOpen = menu.classList.contains('open');
+    if (isOpen) {
+        menu.classList.remove('open');
+        overlay.classList.remove('open');
+        btn.classList.remove('open');
+    } else {
+        menu.classList.add('open');
+        overlay.classList.add('open');
+        btn.classList.add('open');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+function closeHamburgerMenu() {
+    var menu = document.getElementById('hamburgerMenu');
+    var overlay = document.getElementById('hamburgerOverlay');
+    var btn = document.getElementById('hamburgerBtn');
+    if (menu) menu.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+    if (btn) btn.classList.remove('open');
+}
+// Sync hamburger active state with switchTab
+var _origSwitchTab = typeof switchTab === 'function' ? switchTab : null;
+document.addEventListener('DOMContentLoaded', function() {
+    // Patch switchTab to also update hamburger menu active state
+    var origST = window.switchTab;
+    if (typeof origST === 'function') {
+        window.switchTab = function(tab) {
+            origST(tab);
+            updateHamburgerActive(tab);
+        };
+    }
+});
+function updateHamburgerActive(tab) {
+    var items = document.querySelectorAll('.hamburger-nav-item[id^="hmenu-"]');
+    items.forEach(function(el) { el.classList.remove('active'); });
+    var target = document.getElementById('hmenu-' + tab);
+    if (target) target.classList.add('active');
+}
+// ============================================================
+
+// ============================================================
+// ===== ONLINE RADIO PLAYER SYSTEM =====
+// ============================================================
+(function() {
+    var RBRadio = {
+        audio: null,
+        isPlaying: false,
+        isMuted: false,
+        streamUrl: '',
+        title: 'RB Live Radio',
+        autoPlayTriggered: false,
+        autoPlayThresholdMs: 10 * 60 * 1000, // 10 minutes
+        checkInterval: null,
+        fbListener: null
+    };
+
+    function initRadio() {
+        RBRadio.audio = document.getElementById('radioAudio');
+        if (!RBRadio.audio) return;
+
+        RBRadio.audio.addEventListener('playing', function() {
+            setPlayState(true);
+        });
+        RBRadio.audio.addEventListener('pause', function() {
+            setPlayState(false);
+        });
+        RBRadio.audio.addEventListener('error', function() {
+            setPlayState(false);
+            updateRadioStatus('Signal lost. Retry?', false);
+        });
+
+        // Listen to Firebase radioState
+        if (window.db) {
+            window.db.ref('radioState').on('value', function(snap) {
+                var data = snap.val() || {};
+                RBRadio.streamUrl = data.streamUrl || '';
+                RBRadio.title = data.title || 'RB Live Radio';
+                var isLive = data.isLive || false;
+                var forceOff = data.forceOff || false;
+
+                document.getElementById('radioTitle').textContent = RBRadio.title;
+                var liveBadge = document.getElementById('radioLiveBadge');
+                if (liveBadge) liveBadge.style.display = isLive ? 'inline-block' : 'none';
+
+                if (forceOff) {
+                    stopRadio();
+                    updateRadioStatus('Offline', false);
+                } else if (isLive && RBRadio.streamUrl) {
+                    updateRadioStatus('Ready · Tap ▶ to listen', true);
+                } else {
+                    updateRadioStatus('Offline', false);
+                }
+            });
+        }
+
+        // Poll for draw time every 30 seconds
+        RBRadio.checkInterval = setInterval(checkDrawCountdown, 30000);
+        checkDrawCountdown(); // immediate check
+    }
+
+    function checkDrawCountdown() {
+        if (!window.db) return;
+        window.db.ref('gameState').once('value', function(snap) {
+            var gameData = snap.val() || {};
+            var now = Date.now();
+            var nextDrawTime = null;
+
+            if (gameData.schedules) {
+                var times = Object.values(gameData.schedules).map(function(val) {
+                    return (typeof val === 'object' && val.time) ? val.time : val;
+                });
+                var future = times.filter(function(t) { return t > now; }).sort(function(a,b){ return a-b; });
+                if (future.length > 0) nextDrawTime = future[0];
+            }
+            if (!nextDrawTime && gameData.nextDraw && gameData.nextDraw > now) {
+                nextDrawTime = gameData.nextDraw;
+            }
+
+            var countdown = document.getElementById('radioCountdown');
+            var autoBadge = document.getElementById('radioAutoBadge');
+
+            if (nextDrawTime) {
+                var diff = nextDrawTime - now;
+                var mins = Math.floor(diff / 60000);
+                var secs = Math.floor((diff % 60000) / 1000);
+
+                if (diff <= RBRadio.autoPlayThresholdMs && diff > 0) {
+                    // Within 10 minutes — show countdown
+                    if (countdown) {
+                        countdown.textContent = '🎯 Draw sa ' + mins + ':' + (secs < 10 ? '0' : '') + secs + ' · Auto-play';
+                        countdown.classList.add('show');
+                    }
+                    if (autoBadge) autoBadge.style.display = 'inline-block';
+
+                    // Auto-play if not already playing and not already triggered
+                    if (!RBRadio.isPlaying && !RBRadio.autoPlayTriggered && RBRadio.streamUrl) {
+                        RBRadio.autoPlayTriggered = true;
+                        showToast && showToast('📻 Auto-play Radio — Draw in ' + mins + ' mins!');
+                        playRadio();
+                    }
+                } else {
+                    if (diff > 0) {
+                        var hrsLeft = Math.floor(diff / 3600000);
+                        var minsLeft = Math.floor((diff % 3600000) / 60000);
+                        if (countdown) {
+                            countdown.textContent = '🎯 Next draw: ' + (hrsLeft > 0 ? hrsLeft + 'h ' : '') + minsLeft + 'm';
+                            countdown.classList.add('show');
+                        }
+                    }
+                    // Reset autoplay flag after draw
+                    if (diff < 0) RBRadio.autoPlayTriggered = false;
+                    if (autoBadge) autoBadge.style.display = 'none';
+                }
+            } else {
+                if (countdown) countdown.classList.remove('show');
+                if (autoBadge) autoBadge.style.display = 'none';
+                RBRadio.autoPlayTriggered = false;
+            }
+        });
+    }
+
+    function playRadio() {
+        if (!RBRadio.streamUrl) { updateRadioStatus('No stream URL', false); return; }
+        var audio = RBRadio.audio;
+        if (!audio) return;
+        audio.src = RBRadio.streamUrl;
+        audio.load();
+        audio.play().then(function() {
+            setPlayState(true);
+        }).catch(function(e) {
+            updateRadioStatus('Tap ▶ to play (autoplay blocked)', false);
+            setPlayState(false);
+        });
+    }
+
+    function stopRadio() {
+        var audio = RBRadio.audio;
+        if (!audio) return;
+        audio.pause();
+        audio.src = '';
+        setPlayState(false);
+    }
+
+    function setPlayState(playing) {
+        RBRadio.isPlaying = playing;
+        var playIcon = document.getElementById('radioPlayIcon');
+        var waveIcon = document.getElementById('radioWaveIcon');
+        var statusText = document.getElementById('radioStatusText');
+        var waveDot = document.getElementById('radioWaveDot');
+
+        if (playing) {
+            if (playIcon) playIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+            if (waveIcon) waveIcon.classList.add('playing');
+            if (waveDot) waveDot.style.background = '#10b981';
+            if (statusText) statusText.textContent = 'Playing';
+        } else {
+            if (playIcon) playIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+            if (waveIcon) waveIcon.classList.remove('playing');
+            if (waveDot) waveDot.style.background = '#64748b';
+        }
+    }
+
+    function updateRadioStatus(msg, isReady) {
+        var el = document.getElementById('radioStatusText');
+        if (el) el.textContent = msg;
+    }
+
+    window.toggleRadioPlay = function() {
+        if (RBRadio.isPlaying) {
+            stopRadio();
+        } else {
+            if (RBRadio.streamUrl) {
+                playRadio();
+            } else {
+                if(typeof showToast === 'function') showToast('📻 Radio is currently offline.');
+            }
+        }
+    };
+
+    window.toggleRadioMute = function() {
+        RBRadio.isMuted = !RBRadio.isMuted;
+        if (RBRadio.audio) RBRadio.audio.muted = RBRadio.isMuted;
+        var icon = document.getElementById('radioVolIcon');
+        if (icon) {
+            if (RBRadio.isMuted) {
+                icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
+            } else {
+                icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>';
+            }
+        }
+    };
+
+    // Init when DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRadio);
+    } else {
+        setTimeout(initRadio, 1000);
+    }
+})();
+// ============================================================
 </script>
 </body>
 </html>
