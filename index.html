@@ -5872,6 +5872,49 @@
     </div>
 </div>
 
+<!-- ===== SCHEDULE ANNOUNCEMENT POPUP ===== -->
+<div id="scheduleAnnouncementPopup" style="display:none; position:fixed; inset:0; z-index:9999998; background:rgba(0,0,0,0.88); align-items:center; justify-content:center; flex-direction:column; padding:20px; backdrop-filter:blur(8px);">
+    <div style="position:relative; max-width:400px; width:100%; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.98)); border:2px solid rgba(139,92,246,0.5); border-radius:24px; padding:24px; box-shadow:0 0 60px rgba(139,92,246,0.4), 0 20px 60px rgba(0,0,0,0.8); animation:popScale 0.5s cubic-bezier(0.175,0.885,0.32,1.275);">
+        
+        <!-- Top accent -->
+        <div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, #8b5cf6, #06b6d4, #fbbf24); border-radius:24px 24px 0 0;"></div>
+        
+        <!-- Header -->
+        <div style="text-align:center; margin-bottom:20px;">
+            <div style="font-size:44px; margin-bottom:8px; filter:drop-shadow(0 0 20px rgba(251,191,36,0.6));">📅</div>
+            <div id="schedAnnTitle" style="font-size:20px; font-weight:900; color:white; letter-spacing:-0.5px; line-height:1.2;">🆕 Draw Schedule Updated!</div>
+            <div style="font-size:11px; color:rgba(255,255,255,0.4); margin-top:4px; font-weight:600; letter-spacing:0.5px;">OFFICIAL SCHEDULE ANNOUNCEMENT</div>
+        </div>
+
+        <!-- Message Body -->
+        <div id="schedAnnMessage" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px; font-size:13px; color:rgba(255,255,255,0.85); line-height:1.7; white-space:pre-line; max-height:260px; overflow-y:auto; margin-bottom:18px;"></div>
+
+        <!-- Jackpot Highlights -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px;">
+            <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:12px; text-align:center;">
+                <div style="font-size:20px; margin-bottom:4px;">⚡</div>
+                <div style="font-size:10px; font-weight:800; color:rgba(255,255,255,0.4); letter-spacing:1px; text-transform:uppercase;">3:00 PM</div>
+                <div style="font-size:14px; font-weight:900; color:#fbbf24;" id="schedAnn3pmAmt">5,000 RB</div>
+                <div style="font-size:9px; color:rgba(255,255,255,0.35); font-weight:700;">JACKPOT ROUND</div>
+            </div>
+            <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:12px; text-align:center;">
+                <div style="font-size:20px; margin-bottom:4px;">⚡</div>
+                <div style="font-size:10px; font-weight:800; color:rgba(255,255,255,0.4); letter-spacing:1px; text-transform:uppercase;">8:00 PM</div>
+                <div style="font-size:14px; font-weight:900; color:#fbbf24;" id="schedAnn8pmAmt">5,000 RB</div>
+                <div style="font-size:9px; color:rgba(255,255,255,0.35); font-weight:700;">JACKPOT ROUND</div>
+            </div>
+        </div>
+
+        <!-- CTA Button -->
+        <button onclick="closeScheduleAnnouncement()" style="width:100%; padding:14px; background:linear-gradient(135deg, #8b5cf6, #6d28d9); border:none; border-radius:12px; color:white; font-size:15px; font-weight:900; cursor:pointer; letter-spacing:0.5px; box-shadow:0 6px 20px rgba(139,92,246,0.5);">
+            🎯 GOT IT — LET'S PLAY!
+        </button>
+        <div style="text-align:center; font-size:10px; color:rgba(255,255,255,0.3); margin-top:8px; font-weight:600;">
+            Draws every 30 minutes · 8:00 AM to 12:00 Midnight
+        </div>
+    </div>
+</div>
+
 <div id="installGate">
     <div class="gate-logo">RB<span>LIVE</span></div>
     <div class="gate-title">Install to Play</div>
@@ -6974,7 +7017,7 @@
        ============================================ */
     
     // === NOTIFICATION BLOCKER LOGIC ===
-    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); checkNotifGate(); checkInstallGate(); initBannerListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
+    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); checkNotifGate(); checkInstallGate(); initBannerListener(); initScheduleAnnouncementListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
     setTimeout(hideSplash, 5000);
     function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
     
@@ -8272,6 +8315,39 @@
     
     let bannerTargetUrl = "";
     function initBannerListener() { if(sessionStorage.getItem('bannerSeen')) return; db.ref('gameState/bannerSettings').once('value', s => { const d = s.val(); if(d && d.active && d.imageUrl) { document.getElementById('customBannerImg').src = d.imageUrl; bannerTargetUrl = d.targetUrl; document.getElementById('customPopupBanner').style.display = 'flex'; sessionStorage.setItem('bannerSeen', 'true'); playSound('pop'); } }); }
+
+    // ===== SCHEDULE ANNOUNCEMENT LISTENER =====
+    function initScheduleAnnouncementListener() {
+        db.ref('gameState/scheduleAnnouncement').on('value', s => {
+            if(!s.exists()) return;
+            const d = s.val();
+            if(!d || !d.version) return;
+            
+            const seenKey = 'schedAnn_seen_' + d.version;
+            if(sessionStorage.getItem(seenKey)) return;
+            
+            // Populate popup
+            document.getElementById('schedAnnTitle').textContent = d.title || '🆕 Draw Schedule Updated!';
+            document.getElementById('schedAnnMessage').textContent = d.message || '';
+            
+            // Load jackpot amounts
+            db.ref('gameState/autoScheduleConfig').once('value', cfg => {
+                const c = cfg.val() || {};
+                document.getElementById('schedAnn3pmAmt').textContent = (c.jp3pmAmount || 5000).toLocaleString() + ' RB Coins';
+                document.getElementById('schedAnn8pmAmt').textContent = (c.jp8pmAmount || 5000).toLocaleString() + ' RB Coins';
+            });
+            
+            sessionStorage.setItem(seenKey, '1');
+            setTimeout(() => {
+                document.getElementById('scheduleAnnouncementPopup').style.display = 'flex';
+                if(typeof playSound === 'function') playSound('pop');
+            }, 1500); // Small delay so user sees the app first
+        });
+    }
+    
+    function closeScheduleAnnouncement() {
+        document.getElementById('scheduleAnnouncementPopup').style.display = 'none';
+    }
     function closeCustomBanner() { document.getElementById('customPopupBanner').style.display = 'none'; }
     function clickCustomBanner() { if(bannerTargetUrl) window.open(bannerTargetUrl, '_blank'); }
 
@@ -8687,7 +8763,7 @@
     }
 
 
-        function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { const data = s.val(); const banner = document.getElementById('jackpotBanner'); if(data && data.active) { banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = data.amount + " RB COINS"; isJackpotActive = true; const rawAmount = parseInt(data.amount.replace(/[^0-9]/g, '')); currentJackpotAmount = isNaN(rawAmount) ? 500 : rawAmount; } else { banner.style.display = 'none'; isJackpotActive = false; currentJackpotAmount = 500; } }); }
+        function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { const data = s.val(); const banner = document.getElementById('jackpotBanner'); if(data && data.active) { const rawAmt = data.amount; const numAmt = typeof rawAmt === 'number' ? rawAmt : parseInt(String(rawAmt).replace(/[^0-9]/g, '')); banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = (numAmt || 5000).toLocaleString() + ' RB COINS'; isJackpotActive = true; currentJackpotAmount = isNaN(numAmt) ? 500 : numAmt; } else { banner.style.display = 'none'; isJackpotActive = false; currentJackpotAmount = 500; } }); }
 
     function listenVideoUpdate() { db.ref('gameState/videoSettings').on('value', s => { const v = s.val(); const iframe = document.getElementById('liveVideoFrame'); const offline = document.getElementById('videoOfflineState'); if (v && v.type === 'offline') { iframe.style.display = 'none'; iframe.src = ""; offline.style.display = 'flex'; } else if(v && v.url) { offline.style.display = 'none'; iframe.style.display = 'block'; const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/; const match = v.url.match(regExp); let videoId = (match && match[2].length === 11) ? match[2] : null; if(!videoId && v.url.length === 11) videoId = v.url; if (videoId) { const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1`; if(iframe.src !== embedUrl) { iframe.src = embedUrl; } } } }); }
 
