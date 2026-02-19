@@ -279,48 +279,98 @@
             padding: 0 2px; margin-bottom: 10px;
         }
 
-        /* === ACCESS DENIED === */
-        #accessDenied {
-            display: none; position: fixed; inset: 0; z-index: 9999;
+        /* === PASSWORD GATE === */
+        #passwordGate {
+            display: flex; position: fixed; inset: 0; z-index: 9999;
             background: #0f172a;
             flex-direction: column; align-items: center; justify-content: center;
             text-align: center; padding: 40px;
         }
-        #accessDenied.show { display: flex; }
+        #passwordGate.hidden { display: none; }
         #mainContent { display: none; }
         #mainContent.show { display: block; }
 
-        /* Loading overlay */
-        #loadingOverlay {
-            position: fixed; inset: 0; background: #0f172a;
-            z-index: 9998; display: flex; align-items: center; justify-content: center;
-            flex-direction: column; gap: 16px;
+        .gate-card {
+            background: rgba(30,41,59,0.9);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 36px 32px;
+            width: 100%; max-width: 360px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
-        #loadingOverlay.hidden { display: none; }
-        .spinner {
-            width: 40px; height: 40px; border-radius: 50%;
-            border: 3px solid rgba(14,165,233,0.2);
-            border-top-color: var(--accent);
-            animation: spin 0.8s linear infinite;
+        .gate-icon {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: linear-gradient(135deg, rgba(14,165,233,0.2), rgba(14,165,233,0.05));
+            border: 1px solid rgba(14,165,233,0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; margin: 0 auto 20px;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .gate-title { font-size: 22px; font-weight: 900; margin-bottom: 6px; }
+        .gate-subtitle { font-size: 13px; color: rgba(255,255,255,0.4); font-weight: 500; margin-bottom: 28px; }
+        .gate-input-wrap { position: relative; margin-bottom: 14px; }
+        .gate-input {
+            width: 100%; background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; padding: 14px 48px 14px 16px;
+            color: white; font-family: 'Inter', sans-serif;
+            font-size: 18px; font-weight: 700; letter-spacing: 6px;
+            outline: none; transition: border-color 0.2s; text-align: center;
+        }
+        .gate-input::placeholder { letter-spacing: 2px; font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.25); }
+        .gate-input:focus { border-color: rgba(14,165,233,0.5); }
+        .gate-input.error { border-color: rgba(239,68,68,0.6); animation: shake 0.4s ease; }
+        @keyframes shake {
+            0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)}
+        }
+        .gate-toggle-pw {
+            position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: rgba(255,255,255,0.35);
+            cursor: pointer; padding: 4px; display: flex; align-items: center;
+        }
+        .gate-toggle-pw:hover { color: rgba(255,255,255,0.7); }
+        .gate-error-msg {
+            font-size: 12px; color: var(--danger); font-weight: 600;
+            margin-bottom: 12px; min-height: 18px;
+        }
+        .gate-btn {
+            width: 100%; padding: 14px;
+            background: linear-gradient(135deg, var(--accent), #0369a1);
+            border: none; border-radius: 12px;
+            color: white; font-family: 'Inter', sans-serif;
+            font-size: 14px; font-weight: 800; cursor: pointer;
+            transition: all 0.2s; box-shadow: 0 4px 16px rgba(14,165,233,0.35);
+            letter-spacing: 0.3px;
+        }
+        .gate-btn:hover { box-shadow: 0 6px 22px rgba(14,165,233,0.5); transform: translateY(-1px); }
+        .gate-btn:active { transform: translateY(0); }
+        .gate-back {
+            margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.3);
+            background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif;
+            font-weight: 600; transition: color 0.2s;
+        }
+        .gate-back:hover { color: rgba(255,255,255,0.6); }
     </style>
 </head>
 <body>
 
-<!-- Loading overlay -->
-<div id="loadingOverlay">
-    <div style="font-size:28px;font-weight:900;letter-spacing:-1px;">RB <span style="color:#38bdf8">LIVE</span></div>
-    <div class="spinner"></div>
-    <div style="font-size:12px;color:rgba(255,255,255,0.3);font-weight:600;">Loading Radio Control...</div>
-</div>
-
-<!-- Access Denied -->
-<div id="accessDenied">
-    <div style="font-size:48px;margin-bottom:16px;">🔒</div>
-    <div style="font-size:20px;font-weight:900;margin-bottom:8px;">Admin Only</div>
-    <p style="color:rgba(255,255,255,0.4);font-size:14px;margin-bottom:24px;line-height:1.6;">You must be an admin to access Radio Control.</p>
-    <button onclick="window.location.href='index.html'" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);color:white;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">← Back to App</button>
+<!-- Password Gate -->
+<div id="passwordGate">
+    <div class="gate-card">
+        <div class="gate-icon">📻</div>
+        <div class="gate-title">Radio Control</div>
+        <div class="gate-subtitle">Enter password to continue</div>
+        <div class="gate-input-wrap">
+            <input class="gate-input" type="password" id="gateInput" placeholder="••••••" maxlength="20"
+                onkeydown="if(event.key==='Enter') checkPassword()">
+            <button class="gate-toggle-pw" onclick="toggleGateVisibility()" id="gateEyeBtn">
+                <i data-lucide="eye" style="width:18px;height:18px;" id="gateEyeIcon"></i>
+            </button>
+        </div>
+        <div class="gate-error-msg" id="gateError"></div>
+        <button class="gate-btn" onclick="checkPassword()">Unlock</button>
+        <button class="gate-back" onclick="window.location.href='index.html'">← Back to App</button>
+    </div>
 </div>
 
 <!-- Toast notification -->
@@ -510,7 +560,6 @@ var firebaseConfig = {
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var db = firebase.database();
-var auth = firebase.auth();
 
 // ── State ──
 var RC = {
@@ -523,37 +572,43 @@ var RC = {
     isAdmin: false
 };
 
+// ── Password Gate ──
+var RC_PASSWORD = '111198';
+var gateVisible = false;
+
+function checkPassword() {
+    var input = document.getElementById('gateInput').value;
+    var errorEl = document.getElementById('gateError');
+    if (input === RC_PASSWORD) {
+        document.getElementById('passwordGate').classList.add('hidden');
+        showMainContent();
+        initControls();
+    } else {
+        errorEl.textContent = 'Incorrect password. Try again.';
+        var inp = document.getElementById('gateInput');
+        inp.classList.add('error');
+        inp.value = '';
+        setTimeout(function() { inp.classList.remove('error'); errorEl.textContent = ''; }, 2000);
+    }
+}
+
+function toggleGateVisibility() {
+    gateVisible = !gateVisible;
+    var inp = document.getElementById('gateInput');
+    var icon = document.getElementById('gateEyeIcon');
+    inp.type = gateVisible ? 'text' : 'password';
+    icon.setAttribute('data-lucide', gateVisible ? 'eye-off' : 'eye');
+    lucide.createIcons();
+}
+
 // ── Init ──
 window.addEventListener('load', function() {
     RC.audio = document.getElementById('rcAudio');
     lucide.createIcons();
-
-    auth.onAuthStateChanged(function(user) {
-        if (!user) {
-            showAccessDenied();
-            return;
-        }
-        // Check admin flag
-        db.ref('users/' + user.uid + '/isAdmin').once('value', function(snap) {
-            var isAdmin = snap.val() === true;
-            if (!isAdmin) {
-                showAccessDenied();
-                return;
-            }
-            RC.isAdmin = true;
-            showMainContent();
-            initControls();
-        });
-    });
+    // Show password gate immediately — no auth needed
 });
 
-function showAccessDenied() {
-    document.getElementById('loadingOverlay').classList.add('hidden');
-    document.getElementById('accessDenied').classList.add('show');
-}
-
 function showMainContent() {
-    document.getElementById('loadingOverlay').classList.add('hidden');
     document.getElementById('mainContent').classList.add('show');
 }
 
