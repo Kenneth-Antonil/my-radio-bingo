@@ -5856,14 +5856,32 @@
             <span class="nav-label" style="color:#f59e0b;font-weight:800;margin-top:-4px;">Store</span>
         </div>
     </button>
-    <button class="nav-item" onclick="switchTab('beats')" id="nav-beats">
-        <i data-lucide="clapperboard" class="nav-icon"></i>
-        <span class="nav-label">Beats</span>
+    <button class="nav-item" onclick="openNotificationsInbox()" id="nav-notifs" style="position:relative;">
+        <i data-lucide="bell" class="nav-icon"></i>
+        <span class="nav-label">Notifs</span>
+        <span id="notifNavBadge" style="display:none; position:absolute; top:6px; right:12px; background:#ef4444; color:white; font-size:9px; font-weight:900; min-width:16px; height:16px; border-radius:8px; padding:0 4px; line-height:16px; text-align:center;"></span>
     </button>
     <button class="nav-item" onclick="openMyProfile()" id="nav-profile">
         <i data-lucide="user" class="nav-icon"></i>
         <span class="nav-label">Me</span>
     </button>
+</div>
+
+<!-- NOTIFICATIONS INBOX MODAL -->
+<div id="notifInboxModal" style="display:none; position:fixed; inset:0; z-index:9999985; background:rgba(0,0,0,0.88); align-items:flex-end; justify-content:center; backdrop-filter:blur(6px);">
+    <div style="width:100%; max-width:500px; background:linear-gradient(180deg,#1e293b,#0f172a); border-radius:24px 24px 0 0; padding:20px; max-height:80vh; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div>
+                <div style="font-size:16px; font-weight:900; color:white;">🔔 Notifications</div>
+                <div style="font-size:10px; color:rgba(255,255,255,0.4);">Tap to dismiss</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button onclick="clearAllNotifs()" style="padding:6px 12px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:8px; color:#ef4444; font-size:10px; font-weight:800; cursor:pointer;">CLEAR ALL</button>
+                <button onclick="closeNotificationsInbox()" style="background:rgba(255,255,255,0.08); border:none; color:white; border-radius:8px; padding:6px 10px; cursor:pointer;"><i data-lucide="x" style="width:16px;"></i></button>
+            </div>
+        </div>
+        <div id="notifInboxList" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:6px;"></div>
+    </div>
 </div>
 <div id="customPopupBanner">
     <div style="position:relative; max-width:400px; width:100%; animation: popScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
@@ -5872,50 +5890,74 @@
     </div>
 </div>
 
-<!-- ===== SCHEDULE ANNOUNCEMENT POPUP ===== -->
-<div id="scheduleAnnouncementPopup" style="display:none; position:fixed; inset:0; z-index:9999998; background:rgba(0,0,0,0.88); align-items:center; justify-content:center; flex-direction:column; padding:20px; backdrop-filter:blur(8px);">
-    <div style="position:relative; max-width:400px; width:100%; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.98)); border:2px solid rgba(139,92,246,0.5); border-radius:24px; padding:24px; box-shadow:0 0 60px rgba(139,92,246,0.4), 0 20px 60px rgba(0,0,0,0.8); animation:popScale 0.5s cubic-bezier(0.175,0.885,0.32,1.275);">
-        
-        <!-- Top accent -->
-        <div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, #8b5cf6, #06b6d4, #fbbf24); border-radius:24px 24px 0 0;"></div>
-        
-        <!-- Header -->
+<div id="installGate">
+
+<!-- ===== COUNTDOWN TIMER WIDGET (auto-appears on bingo screen) ===== -->
+<!-- Injected dynamically via JS -->
+
+<!-- ===== REFERRAL MODAL ===== -->
+<div id="referralModal" style="display:none; position:fixed; inset:0; z-index:9999990; background:rgba(0,0,0,0.88); align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(8px);">
+    <div style="max-width:360px; width:100%; background:linear-gradient(145deg,rgba(15,23,42,0.98),rgba(30,41,59,0.98)); border:2px solid rgba(6,182,212,0.4); border-radius:24px; padding:24px; box-shadow:0 0 40px rgba(6,182,212,0.3); animation:popScale 0.4s cubic-bezier(0.175,0.885,0.32,1.275);">
         <div style="text-align:center; margin-bottom:20px;">
-            <div style="font-size:44px; margin-bottom:8px; filter:drop-shadow(0 0 20px rgba(251,191,36,0.6));">📅</div>
-            <div id="schedAnnTitle" style="font-size:20px; font-weight:900; color:white; letter-spacing:-0.5px; line-height:1.2;">🆕 Draw Schedule Updated!</div>
-            <div style="font-size:11px; color:rgba(255,255,255,0.4); margin-top:4px; font-weight:600; letter-spacing:0.5px;">OFFICIAL SCHEDULE ANNOUNCEMENT</div>
+            <div style="font-size:44px; margin-bottom:8px;">🔗</div>
+            <div style="font-size:18px; font-weight:900; color:white;">Refer & Earn!</div>
+            <div style="font-size:11px; color:rgba(255,255,255,0.4); margin-top:4px;">Earn 200 🪙 for every friend who joins!</div>
         </div>
-
-        <!-- Message Body -->
-        <div id="schedAnnMessage" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px; font-size:13px; color:rgba(255,255,255,0.85); line-height:1.7; white-space:pre-line; max-height:260px; overflow-y:auto; margin-bottom:18px;"></div>
-
-        <!-- Jackpot Highlights -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px;">
-            <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:12px; text-align:center;">
-                <div style="font-size:20px; margin-bottom:4px;">⚡</div>
-                <div style="font-size:10px; font-weight:800; color:rgba(255,255,255,0.4); letter-spacing:1px; text-transform:uppercase;">3:00 PM</div>
-                <div style="font-size:14px; font-weight:900; color:#fbbf24;" id="schedAnn3pmAmt">5,000 RB</div>
-                <div style="font-size:9px; color:rgba(255,255,255,0.35); font-weight:700;">JACKPOT ROUND</div>
-            </div>
-            <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:12px; text-align:center;">
-                <div style="font-size:20px; margin-bottom:4px;">⚡</div>
-                <div style="font-size:10px; font-weight:800; color:rgba(255,255,255,0.4); letter-spacing:1px; text-transform:uppercase;">8:00 PM</div>
-                <div style="font-size:14px; font-weight:900; color:#fbbf24;" id="schedAnn8pmAmt">5,000 RB</div>
-                <div style="font-size:9px; color:rgba(255,255,255,0.35); font-weight:700;">JACKPOT ROUND</div>
+        <div style="background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); border-radius:14px; padding:16px; margin-bottom:16px; text-align:center;">
+            <div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:6px;">YOUR REFERRAL CODE</div>
+            <div id="myReferralCode" style="font-size:26px; font-weight:900; color:#06b6d4; letter-spacing:4px;">—</div>
+            <button onclick="copyReferralCode()" style="margin-top:10px; padding:8px 20px; background:rgba(6,182,212,0.2); border:1px solid rgba(6,182,212,0.4); border-radius:10px; color:#06b6d4; font-size:12px; font-weight:800; cursor:pointer;">📋 COPY CODE</button>
+        </div>
+        <div style="background:rgba(0,0,0,0.2); border-radius:12px; padding:12px; margin-bottom:16px;">
+            <div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:8px;">ENTER FRIEND'S CODE (First time only)</div>
+            <div style="display:flex; gap:8px;">
+                <input type="text" id="enterReferralCode" placeholder="e.g. ABC123" maxlength="8" style="flex:1; padding:9px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white; font-size:13px; font-weight:700; letter-spacing:2px; text-transform:uppercase;">
+                <button onclick="submitReferralCode()" style="padding:9px 14px; background:linear-gradient(135deg,#10b981,#059669); border:none; border-radius:8px; color:white; font-size:12px; font-weight:900; cursor:pointer;">✓</button>
             </div>
         </div>
+        <div style="background:rgba(251,191,36,0.08); border-radius:12px; padding:10px; margin-bottom:16px; font-size:11px; color:rgba(255,255,255,0.6);">
+            📊 <strong style="color:#fbbf24;" id="referralCount">0</strong> friends referred · Earned: <strong style="color:#fbbf24;" id="referralEarned">0</strong> 🪙
+        </div>
+        <button onclick="closeReferralModal()" style="width:100%; padding:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:white; font-size:14px; font-weight:800; cursor:pointer;">CLOSE</button>
+    </div>
+</div>
 
-        <!-- CTA Button -->
-        <button onclick="closeScheduleAnnouncement()" style="width:100%; padding:14px; background:linear-gradient(135deg, #8b5cf6, #6d28d9); border:none; border-radius:12px; color:white; font-size:15px; font-weight:900; cursor:pointer; letter-spacing:0.5px; box-shadow:0 6px 20px rgba(139,92,246,0.5);">
-            🎯 GOT IT — LET'S PLAY!
-        </button>
-        <div style="text-align:center; font-size:10px; color:rgba(255,255,255,0.3); margin-top:8px; font-weight:600;">
-            Draws every 30 minutes · 8:00 AM to 12:00 Midnight
+<!-- ===== COIN PACKAGES MODAL ===== -->
+<div id="coinPackagesModal" style="display:none; position:fixed; inset:0; z-index:9999989; background:rgba(0,0,0,0.88); align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(8px);">
+    <div style="max-width:400px; width:100%; background:linear-gradient(145deg,rgba(15,23,42,0.98),rgba(30,41,59,0.98)); border:2px solid rgba(251,191,36,0.4); border-radius:24px; padding:24px; max-height:90vh; overflow-y:auto; animation:popScale 0.4s cubic-bezier(0.175,0.885,0.32,1.275);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div>
+                <div style="font-size:18px; font-weight:900; color:white;">💎 Buy RB Coins</div>
+                <div style="font-size:11px; color:rgba(255,255,255,0.4);">Purchase via GCash</div>
+            </div>
+            <button onclick="closeCoinPackages()" style="background:rgba(255,255,255,0.08); border:none; color:white; border-radius:8px; padding:6px 10px; cursor:pointer;"><i data-lucide="x" style="width:16px;"></i></button>
+        </div>
+        <div id="coinPackagesList" style="margin-bottom:16px;"></div>
+        <div id="purchaseForm" style="display:none; background:rgba(0,0,0,0.3); border-radius:14px; padding:14px;">
+            <div style="font-size:12px; font-weight:800; color:white; margin-bottom:10px;">📋 Purchase: <span id="selectedPkgName">—</span></div>
+            <div style="font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:10px;">Send exact amount to GCash: <strong style="color:#fbbf24;" id="gcashNumber">Loading...</strong></div>
+            <input type="text" id="gcashRefInput" placeholder="GCash Reference # (13 digits)" style="width:100%; padding:10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:white; font-size:13px; margin-bottom:10px;">
+            <button onclick="submitPurchaseRequest()" style="width:100%; padding:12px; background:linear-gradient(135deg,#fbbf24,#d97706); border:none; border-radius:10px; color:#78350f; font-size:14px; font-weight:900; cursor:pointer;">📤 SUBMIT REQUEST</button>
+            <button onclick="document.getElementById('purchaseForm').style.display='none'" style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:rgba(255,255,255,0.5); font-size:12px; font-weight:700; cursor:pointer; margin-top:6px;">CANCEL</button>
         </div>
     </div>
 </div>
 
-<div id="installGate">
+<!-- ===== CONSOLATION PRIZE TOAST (shown automatically to PURO players) ===== -->
+<div id="consolationToast" style="display:none; position:fixed; bottom:100px; left:50%; transform:translateX(-50%); z-index:99999; background:linear-gradient(135deg,rgba(139,92,246,0.95),rgba(109,40,217,0.95)); border:1px solid rgba(255,255,255,0.2); border-radius:16px; padding:16px 24px; text-align:center; box-shadow:0 8px 32px rgba(139,92,246,0.5); animation:popScale 0.4s cubic-bezier(0.175,0.885,0.32,1.275);">
+    <div style="font-size:28px; margin-bottom:4px;">🎁</div>
+    <div style="font-size:14px; font-weight:900; color:white;">CONSOLATION PRIZE!</div>
+    <div style="font-size:12px; color:rgba(255,255,255,0.8);">You were PURO! +<span id="consolationAmt">50</span> 🪙 awarded!</div>
+</div>
+
+<!-- ===== EXTRA CARD DISPLAY (2nd card) ===== -->
+<div id="extraCard2Container" style="display:none; margin-top:12px;">
+    <div style="font-size:10px; font-weight:800; color:#fbbf24; text-align:center; margin-bottom:6px; letter-spacing:1px;">⚡ YOUR 2ND CARD</div>
+    <div class="card" id="extraBingoCardContainer" style="opacity:0.9; border:2px solid rgba(251,191,36,0.4);">
+        <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
+        <div class="grid" id="extraBingoGrid"></div>
+    </div>
+</div>
     <div class="gate-logo">RB<span>LIVE</span></div>
     <div class="gate-title">Install to Play</div>
     <p class="gate-desc">To access the full Radio Bingo experience, you must install the official App.</p>
@@ -6117,6 +6159,22 @@
             </div>
             <div style="font-size:12px;color:#fbbf24;font-weight:700;">▶ VIEW</div>
         </div>
+
+        <!-- 🪙 QUICK ACTION SHORTCUTS -->
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin:0 0 14px 0; padding: 0 2px;">
+            <button onclick="openCoinPackages()" style="background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(217,119,6,0.1)); border:1px solid rgba(251,191,36,0.35); border-radius:14px; padding:12px 8px; color:white; font-size:10px; font-weight:900; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; letter-spacing:0.5px;">
+                <span style="font-size:22px;">💎</span>
+                <span style="color:#fbbf24;">BUY COINS</span>
+            </button>
+            <button onclick="openReferralModal()" style="background:linear-gradient(135deg,rgba(6,182,212,0.12),rgba(6,182,212,0.06)); border:1px solid rgba(6,182,212,0.3); border-radius:14px; padding:12px 8px; color:white; font-size:10px; font-weight:900; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; letter-spacing:0.5px;">
+                <span style="font-size:22px;">🔗</span>
+                <span style="color:#06b6d4;">REFER &amp; EARN</span>
+            </button>
+            <button onclick="openMyProfile()" style="background:linear-gradient(135deg,rgba(139,92,246,0.12),rgba(139,92,246,0.06)); border:1px solid rgba(139,92,246,0.3); border-radius:14px; padding:12px 8px; color:white; font-size:10px; font-weight:900; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; letter-spacing:0.5px;">
+                <span style="font-size:22px;">🏅</span>
+                <span style="color:#a78bfa;">BADGES</span>
+            </button>
+        </div>
         
         <div class="post-creator-modern" id="mainPostCreator">
             <!-- Header with Avatar and Input -->
@@ -6294,7 +6352,10 @@
                     <div class="pattern-dot"></div>
                     <span class="pattern-text" id="patternName">Normal Bingo</span>
                 </div>
-                <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button id="extraCardBtn" onclick="buyExtraCard()" style="display:none; padding:6px 10px; background:rgba(251,191,36,0.15); border:1px solid rgba(251,191,36,0.4); border-radius:8px; color:#fbbf24; font-size:10px; font-weight:800; cursor:pointer;">⚡ +CARD (50🪙)</button>
+                    <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
+                </div>
             </div>
             <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
             <div class="grid" id="bingoGrid"></div>
@@ -6695,8 +6756,28 @@
                 <span class="stat-lbl"><i data-lucide="image" style="width:12px; vertical-align:middle;"></i> Posts</span>
             </div>
         </div>
+
+        <!-- VIP Badge + Lucky Number (own profile only) -->
+        <div id="profileExtrasRow" style="display:none; gap:8px; flex-wrap:wrap; justify-content:center; margin:10px 0;">
+            <div id="vipProfileBadge" style="display:none; background:linear-gradient(135deg,#fbbf24,#d97706); padding:5px 14px; border-radius:20px; font-size:11px; font-weight:900; color:#78350f;">⭐ VIP MEMBER</div>
+            <div id="luckyNumBadge" style="background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); padding:5px 14px; border-radius:20px; font-size:11px; font-weight:900; color:#a78bfa;">🍀 Lucky #<span id="luckyNumVal">—</span></div>
+            <div id="referralBadge" onclick="openReferralModal()" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); padding:5px 14px; border-radius:20px; font-size:11px; font-weight:900; color:#06b6d4; cursor:pointer;">🔗 Refer & Earn</div>
+        </div>
+
+        <!-- Achievement Badges -->
+        <div id="achievementBadgesSection" style="margin:10px 0; width:100%; display:none;">
+            <div style="font-size:10px; font-weight:800; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; text-align:center;">🏅 ACHIEVEMENTS</div>
+            <div id="badgesList" style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;"></div>
+        </div>
+
+        <!-- Profile Tabs: Posts | Win History -->
+        <div style="display:flex; gap:0; width:100%; margin:12px 0 0 0; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.08);">
+            <button id="profileTab-posts" onclick="switchProfileTab('posts')" style="flex:1; padding:10px; background:rgba(255,255,255,0.08); border:none; color:white; font-size:12px; font-weight:800; cursor:pointer;">📸 POSTS</button>
+            <button id="profileTab-wins" onclick="switchProfileTab('wins')" style="flex:1; padding:10px; background:transparent; border:none; color:rgba(255,255,255,0.5); font-size:12px; font-weight:800; cursor:pointer;">🏆 WIN HISTORY</button>
+        </div>
         
         <div id="pageProfileFeed" class="profile-feed-section"></div>
+        <div id="pageWinHistory" style="display:none; width:100%; padding:10px 0;"></div>
     </div>
 </div>
 
@@ -7017,7 +7098,7 @@
        ============================================ */
     
     // === NOTIFICATION BLOCKER LOGIC ===
-    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); checkNotifGate(); checkInstallGate(); initBannerListener(); initScheduleAnnouncementListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
+    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); checkNotifGate(); checkInstallGate(); initBannerListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
     setTimeout(hideSplash, 5000);
     function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
     
@@ -8315,39 +8396,6 @@
     
     let bannerTargetUrl = "";
     function initBannerListener() { if(sessionStorage.getItem('bannerSeen')) return; db.ref('gameState/bannerSettings').once('value', s => { const d = s.val(); if(d && d.active && d.imageUrl) { document.getElementById('customBannerImg').src = d.imageUrl; bannerTargetUrl = d.targetUrl; document.getElementById('customPopupBanner').style.display = 'flex'; sessionStorage.setItem('bannerSeen', 'true'); playSound('pop'); } }); }
-
-    // ===== SCHEDULE ANNOUNCEMENT LISTENER =====
-    function initScheduleAnnouncementListener() {
-        db.ref('gameState/scheduleAnnouncement').on('value', s => {
-            if(!s.exists()) return;
-            const d = s.val();
-            if(!d || !d.version) return;
-            
-            const seenKey = 'schedAnn_seen_' + d.version;
-            if(sessionStorage.getItem(seenKey)) return;
-            
-            // Populate popup
-            document.getElementById('schedAnnTitle').textContent = d.title || '🆕 Draw Schedule Updated!';
-            document.getElementById('schedAnnMessage').textContent = d.message || '';
-            
-            // Load jackpot amounts
-            db.ref('gameState/autoScheduleConfig').once('value', cfg => {
-                const c = cfg.val() || {};
-                document.getElementById('schedAnn3pmAmt').textContent = (c.jp3pmAmount || 5000).toLocaleString() + ' RB Coins';
-                document.getElementById('schedAnn8pmAmt').textContent = (c.jp8pmAmount || 5000).toLocaleString() + ' RB Coins';
-            });
-            
-            sessionStorage.setItem(seenKey, '1');
-            setTimeout(() => {
-                document.getElementById('scheduleAnnouncementPopup').style.display = 'flex';
-                if(typeof playSound === 'function') playSound('pop');
-            }, 1500); // Small delay so user sees the app first
-        });
-    }
-    
-    function closeScheduleAnnouncement() {
-        document.getElementById('scheduleAnnouncementPopup').style.display = 'none';
-    }
     function closeCustomBanner() { document.getElementById('customPopupBanner').style.display = 'none'; }
     function clickCustomBanner() { if(bannerTargetUrl) window.open(bannerTargetUrl, '_blank'); }
 
@@ -8763,7 +8811,7 @@
     }
 
 
-        function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { const data = s.val(); const banner = document.getElementById('jackpotBanner'); if(data && data.active) { const rawAmt = data.amount; const numAmt = typeof rawAmt === 'number' ? rawAmt : parseInt(String(rawAmt).replace(/[^0-9]/g, '')); banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = (numAmt || 5000).toLocaleString() + ' RB COINS'; isJackpotActive = true; currentJackpotAmount = isNaN(numAmt) ? 500 : numAmt; } else { banner.style.display = 'none'; isJackpotActive = false; currentJackpotAmount = 500; } }); }
+        function listenJackpot() { db.ref('gameState/jackpot').on('value', s => { const data = s.val(); const banner = document.getElementById('jackpotBanner'); if(data && data.active) { banner.style.display = 'block'; document.getElementById('jackpotDisplayVal').innerText = data.amount + " RB COINS"; isJackpotActive = true; const rawAmount = parseInt(data.amount.replace(/[^0-9]/g, '')); currentJackpotAmount = isNaN(rawAmount) ? 500 : rawAmount; } else { banner.style.display = 'none'; isJackpotActive = false; currentJackpotAmount = 500; } }); }
 
     function listenVideoUpdate() { db.ref('gameState/videoSettings').on('value', s => { const v = s.val(); const iframe = document.getElementById('liveVideoFrame'); const offline = document.getElementById('videoOfflineState'); if (v && v.type === 'offline') { iframe.style.display = 'none'; iframe.src = ""; offline.style.display = 'flex'; } else if(v && v.url) { offline.style.display = 'none'; iframe.style.display = 'block'; const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/; const match = v.url.match(regExp); let videoId = (match && match[2].length === 11) ? match[2] : null; if(!videoId && v.url.length === 11) videoId = v.url; if (videoId) { const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1`; if(iframe.src !== embedUrl) { iframe.src = embedUrl; } } } }); }
 
@@ -11957,7 +12005,9 @@ Please explain why you want a verification badge:`;
         }
 
         const dayIndex = Math.min(newStreak - 1, STREAK_REWARDS.length - 1);
-        const reward   = STREAK_REWARDS[dayIndex];
+        const baseReward = STREAK_REWARDS[dayIndex];
+        // ⭐ VIP gets 2x streak reward
+        const reward = userData.isVip ? baseReward * 2 : baseReward;
 
         db.ref('users/' + uid).update({
             loginStreak: newStreak,
@@ -11966,12 +12016,13 @@ Please explain why you want a verification badge:`;
             longestStreak: Math.max(userData.longestStreak || 0, newStreak)
         });
 
-        showStreakModal(newStreak, reward);
+        showStreakModal(newStreak, reward, userData.isVip);
     }
 
-    function showStreakModal(streak, reward) {
+    function showStreakModal(streak, reward, isVip) {
         const dayIndex = Math.min(streak - 1, STREAK_REWARDS.length - 1);
         const emoji    = STREAK_EMOJIS[dayIndex];
+        const vipBonus = isVip ? `<div style="display:inline-block;background:linear-gradient(135deg,#fbbf24,#d97706);color:#78350f;font-size:10px;font-weight:900;padding:3px 10px;border-radius:20px;margin-bottom:8px;">⭐ VIP 2× BONUS!</div>` : '';
 
         const dotsHtml = STREAK_REWARDS.map((r, i) => {
             let cls = '';
@@ -11987,6 +12038,7 @@ Please explain why you want a verification badge:`;
 
         document.getElementById('streakModalBody').innerHTML = `
             <div class="streak-flame">${emoji}</div>
+            ${vipBonus}
             <div class="streak-number">${streak}</div>
             <div class="streak-label">Day Streak <i data-lucide="flame" style="width:16px;height:16px;vertical-align:middle;color:#f59e0b;"></i></div>
             <div class="streak-days-row">${dotsHtml}</div>
@@ -14940,6 +14992,680 @@ function loadMyOrders() {
         list.innerHTML = html;
     });
 }
+
+// ============================================================
+// ⭐ VIP MEMBERSHIP
+// ============================================================
+function checkVipStatus(uid, uData) {
+    if (!uData.isVip) return;
+    const badge = document.getElementById('vipProfileBadge');
+    if (badge) badge.style.display = 'block';
+    // VIP gets 2x streak reward — handled in checkDailyStreak via multiplier
+}
+
+// ============================================================
+// 🍀 LUCKY NUMBER SYSTEM
+// ============================================================
+function initLuckyNumber(uid, uData) {
+    let lucky = uData.luckyNumber;
+    if (!lucky) {
+        lucky = Math.floor(Math.random() * 75) + 1;
+        db.ref('users/' + uid + '/luckyNumber').set(lucky);
+    }
+    const el = document.getElementById('luckyNumVal');
+    if (el) el.innerText = lucky;
+    return lucky;
+}
+
+let myLuckyNumber = 0;
+function checkLuckyNumberBonus(drawnNum) {
+    if (!myLuckyNumber || !auth.currentUser) return;
+    if (parseInt(drawnNum) === myLuckyNumber) {
+        const bonus = 10;
+        db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => (p || 0) + bonus);
+        showToast(`🍀 Lucky Number ${myLuckyNumber} drawn! +${bonus} 🪙 bonus!`);
+        if (typeof playSound === 'function') playSound('pop');
+    }
+}
+
+// ============================================================
+// 🎁 CONSOLATION PRIZE SYSTEM
+// ============================================================
+let consolationConfig = { amount: 50, enabled: true };
+db.ref('gameState/consolation').on('value', s => {
+    if (s.exists()) consolationConfig = s.val();
+});
+
+function checkAndAwardConsolation(uid, hadPuro) {
+    if (!hadPuro || !consolationConfig.enabled || !consolationConfig.amount) return;
+    db.ref('users/' + uid + '/points').transaction(p => (p || 0) + consolationConfig.amount);
+    db.ref('users/' + uid + '/consolationWins').transaction(w => (w || 0) + 1);
+    // Show toast
+    const toast = document.getElementById('consolationToast');
+    const amtEl = document.getElementById('consolationAmt');
+    if (toast && amtEl) {
+        amtEl.innerText = consolationConfig.amount;
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    }
+    // Log it
+    db.ref('winHistory/' + uid).push({
+        type: 'consolation', prize: consolationConfig.amount,
+        pattern: currentPattern, timestamp: Date.now()
+    });
+}
+
+// ============================================================
+// 🏆 WIN HISTORY
+// ============================================================
+function switchProfileTab(tab) {
+    const feed = document.getElementById('pageProfileFeed');
+    const wins = document.getElementById('pageWinHistory');
+    const tb1  = document.getElementById('profileTab-posts');
+    const tb2  = document.getElementById('profileTab-wins');
+    if (!feed || !wins) return;
+    if (tab === 'posts') {
+        feed.style.display = 'block'; wins.style.display = 'none';
+        if (tb1) { tb1.style.background = 'rgba(255,255,255,0.08)'; tb1.style.color = 'white'; }
+        if (tb2) { tb2.style.background = 'transparent'; tb2.style.color = 'rgba(255,255,255,0.5)'; }
+    } else {
+        feed.style.display = 'none'; wins.style.display = 'block';
+        if (tb1) { tb1.style.background = 'transparent'; tb1.style.color = 'rgba(255,255,255,0.5)'; }
+        if (tb2) { tb2.style.background = 'rgba(255,255,255,0.08)'; tb2.style.color = 'white'; }
+        loadWinHistory(window.currentProfileUid || (auth.currentUser ? auth.currentUser.uid : null));
+    }
+}
+
+function loadWinHistory(uid) {
+    const container = document.getElementById('pageWinHistory');
+    if (!container || !uid) return;
+    container.innerHTML = '<div style="text-align:center; padding:20px; opacity:0.5; font-size:12px;">Loading...</div>';
+    db.ref('winHistory/' + uid).orderByChild('timestamp').limitToLast(30).once('value', snap => {
+        if (!snap.exists()) {
+            container.innerHTML = '<div style="text-align:center; padding:30px; opacity:0.4;"><div style="font-size:32px; margin-bottom:8px;">🏆</div><div style="font-size:12px; font-weight:700;">No wins yet. Keep playing!</div></div>';
+            return;
+        }
+        const wins = [];
+        snap.forEach(c => wins.push(c.val()));
+        wins.reverse();
+        let html = '';
+        wins.forEach(w => {
+            const date = new Date(w.timestamp).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const isJP = w.isJackpot;
+            const isCons = w.type === 'consolation';
+            const color = isJP ? '#fbbf24' : isCons ? '#a78bfa' : '#10b981';
+            const icon  = isJP ? '⚡' : isCons ? '🎁' : '🏆';
+            html += `<div style="background:rgba(${isJP?'251,191,36':'16,185,129'},0.07); border:1px solid rgba(${isJP?'251,191,36':'16,185,129'},0.2); border-radius:12px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:13px; font-weight:800; color:white;">${icon} ${isCons ? 'Consolation Prize' : isJP ? 'JACKPOT WIN!' : 'BINGO WIN!'}</div>
+                    <div style="font-size:10px; color:rgba(255,255,255,0.4); margin-top:2px;">📅 ${date} · ${w.pattern || 'Normal Bingo'}</div>
+                </div>
+                <div style="font-size:16px; font-weight:900; color:${color};">+${(w.prize || 0).toLocaleString()} 🪙</div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    });
+}
+
+// Override triggerWin to store win history & check lucky jackpot
+const _origTriggerWin = window.triggerWin || function(){};
+window.triggerWin = function() {
+    if (typeof _origTriggerWin === 'function') _origTriggerWin();
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    db.ref('winHistory/' + uid).push({
+        type: isJackpotActive ? 'jackpot' : 'normal',
+        isJackpot: isJackpotActive,
+        prize: isJackpotActive ? currentJackpotAmount : 300,
+        pattern: currentPattern,
+        timestamp: Date.now()
+    });
+    checkAchievements(uid);
+};
+
+// ============================================================
+// 🏅 ACHIEVEMENT BADGES
+// ============================================================
+const ACHIEVEMENTS = [
+    { id: 'first_win',    label: '🏆 First Win',       check: u => (u.bingoWins||0) >= 1 },
+    { id: 'wins_5',       label: '🥇 5x Winner',       check: u => (u.bingoWins||0) >= 5 },
+    { id: 'wins_10',      label: '👑 10x Winner',      check: u => (u.bingoWins||0) >= 10 },
+    { id: 'wins_50',      label: '💎 50x Legend',      check: u => (u.bingoWins||0) >= 50 },
+    { id: 'streak_7',     label: '🔥 7-Day Streak',    check: u => (u.longestStreak||0) >= 7 },
+    { id: 'streak_30',    label: '⚡ 30-Day Streak',   check: u => (u.longestStreak||0) >= 30 },
+    { id: 'jackpot',      label: '⚡ Jackpot Winner',  check: u => (u.jackpotWins||0) >= 1 },
+    { id: 'consolation',  label: '🎁 PURO Survivor',   check: u => (u.consolationWins||0) >= 1 },
+    { id: 'referral',     label: '🔗 Recruiter',       check: u => (u.referralCount||0) >= 1 },
+    { id: 'vip',          label: '⭐ VIP Member',      check: u => !!u.isVip },
+    { id: 'coins_rich',   label: '💰 Rich Player',     check: u => (u.points||0) >= 10000 },
+];
+
+function checkAchievements(uid) {
+    db.ref('users/' + uid).once('value', snap => {
+        const u = snap.val() || {};
+        const earned = u.achievements || {};
+        const updates = {};
+        let newOnes = [];
+        ACHIEVEMENTS.forEach(a => {
+            if (!earned[a.id] && a.check(u)) {
+                updates[`users/${uid}/achievements/${a.id}`] = { earned: true, earnedAt: Date.now() };
+                newOnes.push(a.label);
+            }
+        });
+        if (Object.keys(updates).length) {
+            db.ref().update(updates);
+            newOnes.forEach(label => showToast(`🏅 Achievement Unlocked: ${label}!`));
+        }
+    });
+}
+
+function renderProfileBadges(uid) {
+    const section = document.getElementById('achievementBadgesSection');
+    const list    = document.getElementById('badgesList');
+    if (!section || !list) return;
+    db.ref('users/' + uid + '/achievements').once('value', snap => {
+        if (!snap.exists()) { section.style.display = 'none'; return; }
+        const earned = snap.val() || {};
+        let html = '';
+        ACHIEVEMENTS.forEach(a => {
+            if (earned[a.id]) {
+                html += `<span style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:5px 12px; font-size:11px; font-weight:700; color:white;">${a.label}</span>`;
+            }
+        });
+        if (html) { list.innerHTML = html; section.style.display = 'block'; }
+        else section.style.display = 'none';
+    });
+}
+
+// ============================================================
+// ⚡ EXTRA CARD SYSTEM (Card Upgrade)
+// ============================================================
+let extraCardNumbers = [];
+let extraCardActive  = false;
+
+function buyExtraCard() {
+    if (!auth.currentUser) return;
+    if (gameDrawn.length > 0) return showToast('Cannot buy an extra card while a game is in progress!');
+    if (extraCardActive) return showToast('You already have an extra card!');
+    const COST = 50;
+    if ((userData.points || 0) < COST) return showToast(`Not enough coins! You need ${COST} 🪙.`);
+    if (!confirm(`Buy an EXTRA BINGO CARD for ${COST} 🪙?`)) return;
+
+    db.ref('users/' + auth.currentUser.uid + '/points').transaction(p => {
+        if ((p || 0) < COST) return;
+        return (p || 0) - COST;
+    }, (err, committed) => {
+        if (!committed || err) return showToast('Transaction failed. Try again.');
+        generateExtraCard();
+        extraCardActive = true;
+        document.getElementById('extraCard2Container').style.display = 'block';
+        document.getElementById('extraCardBtn').innerText = '✅ EXTRA CARD ACTIVE';
+        document.getElementById('extraCardBtn').style.background = 'rgba(16,185,129,0.15)';
+        document.getElementById('extraCardBtn').style.borderColor = 'rgba(16,185,129,0.4)';
+        document.getElementById('extraCardBtn').style.color = '#10b981';
+        document.getElementById('extraCardBtn').disabled = true;
+        showToast('⚡ Extra card activated! -50 🪙');
+        if (typeof playSound === 'function') playSound('cardFlip');
+    });
+}
+
+function generateExtraCard() {
+    let card = [];
+    const cols = [[1,15],[16,30],[31,45],[46,60],[61,75]];
+    cols.forEach(r => {
+        let nums = [];
+        while (nums.length < 5) {
+            let n = Math.floor(Math.random() * (r[1] - r[0] + 1)) + r[0];
+            if (!nums.includes(n)) nums.push(n);
+        }
+        card.push(...nums);
+    });
+    let finalCard = [];
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) finalCard.push(card[c * 5 + r]);
+    finalCard[12] = 'FREE';
+    extraCardNumbers = finalCard;
+    renderExtraCard();
+    db.ref('users/' + auth.currentUser.uid).update({ extraCard: finalCard, extraCardTimestamp: Date.now() });
+}
+
+function renderExtraCard() {
+    const grid = document.getElementById('extraBingoGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    extraCardNumbers.forEach((n, i) => {
+        const div = document.createElement('div');
+        div.className = 'cell';
+        div.innerText = n === 'FREE' ? '★' : n;
+        if (n === 'FREE') div.classList.add('hit');
+        grid.appendChild(div);
+    });
+    updateExtraCardHits();
+}
+
+function updateExtraCardHits() {
+    const cells = document.querySelectorAll('#extraBingoGrid .cell');
+    cells.forEach((c, i) => {
+        const val = c.innerText;
+        if (gameDrawn.includes(val) || val === '★') c.classList.add('hit');
+        else c.classList.remove('hit');
+    });
+    checkExtraCardWin();
+}
+
+function checkExtraCardWin() {
+    if (!extraCardActive || userData.hasWonCurrent || gameDrawn.length === 0) return;
+    const extraMarks = [12];
+    extraCardNumbers.forEach((val, idx) => {
+        if (gameDrawn.includes(String(val)) || val === 'FREE') extraMarks.push(idx);
+    });
+    let winningWays = [];
+    if (currentPattern === 'Blackout') winningWays = [Array.from({length:25},(_,i)=>i)];
+    else if (currentPattern === 'Letter X') winningWays = [[0,4,6,8,12,16,18,20,24]];
+    else if (currentPattern === 'Four Corners') winningWays = [[0,4,20,24]];
+    else winningWays = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
+    for (let w of winningWays) {
+        if (w.every(idx => extraMarks.includes(idx))) {
+            db.ref('gameState/latestWinner').once('value', snap => {
+                if (!snap.exists()) { triggerWin(); showToast('🏆 BINGO on your 2nd Card!'); }
+            });
+            break;
+        }
+    }
+}
+
+// Reset extra card on new game
+db.ref('drawnNumbers').on('value', s => {
+    if (!s.exists() || s.numChildren() === 0) {
+        extraCardActive = false;
+        extraCardNumbers = [];
+        document.getElementById('extraCard2Container').style.display = 'none';
+        const btn = document.getElementById('extraCardBtn');
+        if (btn) {
+            btn.style.display = 'flex';
+            btn.innerText = '⚡ +CARD (50🪙)';
+            btn.style.background = 'rgba(251,191,36,0.15)';
+            btn.style.borderColor = 'rgba(251,191,36,0.4)';
+            btn.style.color = '#fbbf24';
+            btn.disabled = false;
+        }
+    } else {
+        // Update extra card hits on each draw
+        if (extraCardActive) updateExtraCardHits();
+        // Lucky number check
+        if (s.val()) {
+            const latest = Object.values(s.val()).pop();
+            checkLuckyNumberBonus(latest);
+        }
+        // Show extra card buy button only before game starts
+        const btn = document.getElementById('extraCardBtn');
+        if (btn && !extraCardActive) btn.style.display = 'none';
+    }
+});
+
+// ============================================================
+// 🔗 REFERRAL SYSTEM
+// ============================================================
+function generateReferralCode(uid) {
+    return uid.slice(0, 6).toUpperCase();
+}
+
+function openReferralModal() {
+    if (!auth.currentUser) return;
+    const uid  = auth.currentUser.uid;
+    const code = generateReferralCode(uid);
+    document.getElementById('myReferralCode').innerText = code;
+    db.ref('users/' + uid).once('value', snap => {
+        const u = snap.val() || {};
+        document.getElementById('referralCount').innerText  = u.referralCount  || 0;
+        document.getElementById('referralEarned').innerText = (u.referralEarned || 0).toLocaleString();
+    });
+    document.getElementById('referralModal').style.display = 'flex';
+}
+
+function closeReferralModal() {
+    document.getElementById('referralModal').style.display = 'none';
+}
+
+function copyReferralCode() {
+    const code = document.getElementById('myReferralCode').innerText;
+    navigator.clipboard?.writeText(code).then(() => showToast('📋 Code copied!')).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = code;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('📋 Code copied!');
+    });
+}
+
+function submitReferralCode() {
+    if (!auth.currentUser) return;
+    const code = document.getElementById('enterReferralCode').value.trim().toUpperCase();
+    if (!code || code.length < 4) return showToast('Enter a valid referral code!');
+    const myUid = auth.currentUser.uid;
+    if (userData.referredBy) return showToast('You already entered a referral code!');
+
+    // Find user with this referral code (code = first 6 chars of UID)
+    db.ref('users').once('value', snap => {
+        let referrerId = null;
+        snap.forEach(u => {
+            if (u.key.slice(0, 6).toUpperCase() === code && u.key !== myUid) {
+                referrerId = u.key;
+            }
+        });
+        if (!referrerId) return showToast('❌ Code not found. Check and try again.');
+        const REWARD = 200;
+        db.ref('users/' + myUid).update({ referredBy: referrerId });
+        db.ref('users/' + referrerId + '/points').transaction(p => (p || 0) + REWARD);
+        db.ref('users/' + referrerId + '/referralCount').transaction(c => (c || 0) + 1);
+        db.ref('users/' + referrerId + '/referralEarned').transaction(e => (e || 0) + REWARD);
+        db.ref('notifications/' + referrerId).push({ msg: `🔗 Someone used your referral code! +${REWARD} 🪙`, time: Date.now(), type: 'referral' });
+        showToast(`✅ Referral applied! Your friend earned +${REWARD} 🪙`);
+        document.getElementById('enterReferralCode').value = '';
+        closeReferralModal();
+        checkAchievements(referrerId);
+    });
+}
+
+// ============================================================
+// ⏱️ COUNTDOWN WIDGET
+// ============================================================
+let countdownInterval = null;
+
+function startCountdownWidget() {
+    const widget = document.getElementById('countdownWidget');
+    if (!widget) return;
+    if (countdownInterval) clearInterval(countdownInterval);
+    
+    countdownInterval = setInterval(() => {
+        const now = Date.now();
+        db.ref('gameState/schedules').once('value', snap => {
+            if (!snap.exists()) { widget.style.display = 'none'; return; }
+            const times = [];
+            snap.forEach(s => {
+                const v = s.val();
+                const t = typeof v === 'object' ? v.time : v;
+                if (t > now) times.push(t);
+            });
+            if (times.length === 0) { widget.style.display = 'none'; return; }
+            const next = Math.min(...times);
+            const diff = next - now;
+            if (diff <= 0) { widget.innerHTML = '🎯 STARTING NOW!'; return; }
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+            widget.style.display = 'flex';
+            widget.innerHTML = `<span style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;">NEXT DRAW</span><span style="font-size:16px;font-weight:900;color:${mins < 5 ? '#ef4444' : '#fbbf24'};">${timeStr}</span>`;
+        });
+    }, 1000);
+}
+
+// Inject countdown widget into bingo view
+document.addEventListener('DOMContentLoaded', () => {
+    const nextDrawBanner = document.getElementById('nextDrawBanner');
+    if (nextDrawBanner) {
+        const w = document.createElement('div');
+        w.id = 'countdownWidget';
+        w.style.cssText = 'display:none; flex-direction:column; align-items:center; justify-content:center; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:8px 16px; min-width:80px; flex-shrink:0;';
+        nextDrawBanner.appendChild(w);
+    }
+    startCountdownWidget();
+});
+
+// ============================================================
+// 💎 COIN PACKAGES (Player Side)
+// ============================================================
+let selectedPkgKey = null;
+let selectedPkgData = null;
+
+function openCoinPackages() {
+    document.getElementById('coinPackagesModal').style.display = 'flex';
+    document.getElementById('purchaseForm').style.display = 'none';
+    loadCoinPackagesPlayer();
+}
+function closeCoinPackages() {
+    document.getElementById('coinPackagesModal').style.display = 'none';
+}
+
+function loadCoinPackagesPlayer() {
+    const list = document.getElementById('coinPackagesList');
+    if (!list) return;
+    db.ref('gameState/gcashNumber').once('value', s => {
+        document.getElementById('gcashNumber').innerText = s.val() || 'Contact Admin';
+    });
+    db.ref('coinPackages').once('value', snap => {
+        if (!snap.exists()) { list.innerHTML = '<div style="opacity:0.4;text-align:center;padding:20px;">No packages available.</div>'; return; }
+        let html = '';
+        snap.forEach(c => {
+            const p = c.val();
+            if (p.active === false) return;
+            html += `<div onclick="selectPackage('${c.key}','${(p.name||'').replace(/'/g,"\\'")}',${p.coins},${p.price},'${p.emoji||'💎'}')" style="background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.2); border-radius:14px; padding:14px; margin-bottom:10px; cursor:pointer; display:flex; align-items:center; gap:14px; transition:all 0.2s;" onmouseover="this.style.borderColor='rgba(251,191,36,0.5)'" onmouseout="this.style.borderColor='rgba(251,191,36,0.2)'">
+                <div style="font-size:32px;">${p.emoji || '💎'}</div>
+                <div style="flex:1;">
+                    <div style="font-weight:900; color:white; font-size:14px;">${p.name}</div>
+                    <div style="font-size:16px; font-weight:900; color:#fbbf24;">🪙 ${(p.coins||0).toLocaleString()} coins</div>
+                </div>
+                <div style="font-size:18px; font-weight:900; color:white;">₱${p.price}</div>
+            </div>`;
+        });
+        list.innerHTML = html || '<div style="opacity:0.4;text-align:center;padding:20px;">No packages available.</div>';
+    });
+}
+
+function selectPackage(key, name, coins, price, emoji) {
+    selectedPkgKey = key; selectedPkgData = { name, coins, price, emoji };
+    document.getElementById('selectedPkgName').innerText = `${emoji} ${name} — 🪙 ${coins.toLocaleString()} (₱${price})`;
+    document.getElementById('purchaseForm').style.display = 'block';
+    document.getElementById('gcashRefInput').value = '';
+}
+
+function submitPurchaseRequest() {
+    if (!auth.currentUser || !selectedPkgData) return;
+    const ref = document.getElementById('gcashRefInput').value.trim();
+    if (!ref || ref.length < 8) return showToast('Enter a valid GCash reference number!');
+    db.ref('coinPurchaseRequests').push({
+        uid: auth.currentUser.uid,
+        userName: userData.name || 'Player',
+        packageName: selectedPkgData.name,
+        coins: selectedPkgData.coins,
+        price: selectedPkgData.price,
+        gcashRef: ref,
+        status: 'pending',
+        timestamp: Date.now()
+    }, err => {
+        if (err) return showToast('Error submitting. Try again.');
+        showToast('✅ Purchase request submitted! Admin will verify and award coins.');
+        closeCoinPackages();
+    });
+}
+
+// ============================================================
+// GAME STREAK BONUS (consecutive games played)
+// ============================================================
+let gameStreakCount = 0;
+let lastGameParticipated = null;
+
+function recordGameParticipation() {
+    if (!auth.currentUser || gameDrawn.length === 0) return;
+    const uid = auth.currentUser.uid;
+    db.ref('users/' + uid).once('value', snap => {
+        const u = snap.val() || {};
+        const lastGame = u.lastGameDate || 0;
+        const today = new Date().toDateString();
+        const gStreak = u.gameStreak || 0;
+        
+        if (u.lastGameDate === today) return; // Already counted today
+        
+        const newStreak = gStreak + 1;
+        db.ref('users/' + uid).update({ gameStreak: newStreak, lastGameDate: today });
+        
+        // Bonus every 5 games streak
+        if (newStreak % 5 === 0) {
+            const bonus = newStreak * 10;
+            db.ref('users/' + uid + '/points').transaction(p => (p || 0) + bonus);
+            showToast(`🔥 ${newStreak}-Game Streak! +${bonus} 🪙 BONUS!`);
+            confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 }, colors: ['#fbbf24', '#f59e0b'] });
+        }
+    });
+}
+
+// ============================================================
+// PROFILE PAGE INTEGRATION
+// ============================================================
+// Override openUserProfile to add new features
+const _origOpenUserProfile = window.openUserProfile || function(){};
+window.openUserProfile = function(uid) {
+    _origOpenUserProfile(uid);
+    // Extras for own profile
+    const extrasRow = document.getElementById('profileExtrasRow');
+    if (extrasRow) {
+        if (auth.currentUser && uid === auth.currentUser.uid) {
+            extrasRow.style.display = 'flex';
+            db.ref('users/' + uid).once('value', snap => {
+                const u = snap.val() || {};
+                const vipBadge = document.getElementById('vipProfileBadge');
+                if (vipBadge) vipBadge.style.display = u.isVip ? 'block' : 'none';
+                const luckyEl = document.getElementById('luckyNumVal');
+                if (luckyEl) luckyEl.innerText = u.luckyNumber || '—';
+            });
+        } else {
+            extrasRow.style.display = 'none';
+        }
+    }
+    renderProfileBadges(uid);
+    // Reset to posts tab
+    switchProfileTab('posts');
+};
+
+// Auth init hook: run new feature inits after user loads
+const _origAuthInit = window.initBingo || function(){};
+// After user data loads (auth.onAuthStateChanged → users listener), run:
+function initNewFeatures(uid, uData) {
+    myLuckyNumber = initLuckyNumber(uid, uData);
+    checkVipStatus(uid, uData);
+    checkAchievements(uid);
+    // GCash number for packages
+    db.ref('gameState/gcashNumber').once('value', s => {
+        const el = document.getElementById('gcashNumber');
+        if (el) el.innerText = s.val() || 'Contact Admin';
+    });
+}
+
+// Hook into winner announcement to award consolation
+db.ref('gameState/latestWinner').on('value', snap => {
+    if (!snap.exists() || !auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    if (snap.val().uid === uid) return; // Winner doesn't get consolation
+    // Check if this user was PURO
+    const cardCont = document.getElementById('bingoCardContainer');
+    if (cardCont && cardCont.classList.contains('card-puro')) {
+        setTimeout(() => checkAndAwardConsolation(uid, true), 500);
+    }
+});
+
+// Track game participation when balls are drawn
+db.ref('gameState/lastCalled').on('value', s => {
+    if (s.exists() && auth.currentUser && cardNumbers.length > 0) {
+        recordGameParticipation();
+    }
+});
+
+// Show extra card button when game hasn't started
+db.ref('gameState/status').on('value', s => {
+    const btn = document.getElementById('extraCardBtn');
+    if (!btn) return;
+    const status = s.val();
+    if (status === 'waiting') {
+        btn.style.display = 'flex';
+    }
+});
+
+// ============================================================
+// 🔔 NOTIFICATIONS INBOX (Player)
+// ============================================================
+function initNotificationsInbox(uid) {
+    db.ref('notifications/' + uid).on('value', snap => {
+        let unread = 0;
+        if (snap.exists()) {
+            snap.forEach(c => { if (!c.val().read) unread++; });
+        }
+        const badge = document.getElementById('notifNavBadge');
+        if (badge) {
+            badge.textContent = unread;
+            badge.style.display = unread > 0 ? 'block' : 'none';
+        }
+    });
+}
+
+function openNotificationsInbox() {
+    if (!auth.currentUser) return;
+    document.getElementById('notifInboxModal').style.display = 'flex';
+    const uid  = auth.currentUser.uid;
+    const list = document.getElementById('notifInboxList');
+    list.innerHTML = '<div style="opacity:0.4; text-align:center; padding:20px; font-size:12px;">Loading...</div>';
+
+    db.ref('notifications/' + uid).orderByChild('time').limitToLast(40).once('value', snap => {
+        if (!snap.exists()) {
+            list.innerHTML = '<div style="text-align:center; padding:40px; opacity:0.4;"><div style="font-size:32px; margin-bottom:8px;">🔔</div><div style="font-size:12px; font-weight:700;">No notifications yet.</div></div>';
+            return;
+        }
+        const items = [];
+        snap.forEach(c => items.push({ key: c.key, ...c.val() }));
+        items.reverse();
+        list.innerHTML = items.map(n => {
+            const icons = { ban:'🚫', suspend:'⚠️', unban:'✅', admin:'🎁', referral:'🔗', vip:'⭐', purchase:'💎', info:'ℹ️' };
+            const icon  = icons[n.type] || '🔔';
+            const time  = n.time ? new Date(n.time).toLocaleString('en-PH', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+            const unread = !n.read ? 'background:rgba(14,165,233,0.07); border-color:rgba(14,165,233,0.2);' : '';
+            return `<div onclick="markNotifRead('${n.key}')" style="background:rgba(255,255,255,0.03); ${unread} border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:12px; cursor:pointer; transition:all 0.2s;">
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                    <span style="font-size:20px;">${icon}</span>
+                    <div style="flex:1;">
+                        <div style="font-size:13px; color:white; font-weight:${n.read ? '500' : '800'};">${n.msg || '—'}</div>
+                        <div style="font-size:10px; color:rgba(255,255,255,0.3); margin-top:3px;">${time}</div>
+                    </div>
+                    ${!n.read ? '<span style="width:8px; height:8px; background:#0ea5e9; border-radius:50%; flex-shrink:0; margin-top:4px;"></span>' : ''}
+                </div>
+            </div>`;
+        }).join('');
+        // Mark all as read
+        const updates = {};
+        items.forEach(n => { updates[n.key + '/read'] = true; });
+        db.ref('notifications/' + uid).update(updates);
+        lucide.createIcons();
+    });
+}
+
+function markNotifRead(key) {
+    if (!auth.currentUser) return;
+    db.ref('notifications/' + auth.currentUser.uid + '/' + key + '/read').set(true);
+}
+
+function clearAllNotifs() {
+    if (!auth.currentUser) return;
+    if (!confirm('Clear all notifications?')) return;
+    db.ref('notifications/' + auth.currentUser.uid).remove(() => {
+        document.getElementById('notifInboxList').innerHTML = '<div style="text-align:center; padding:40px; opacity:0.4;"><div style="font-size:32px; margin-bottom:8px;">🔔</div><div style="font-size:12px; font-weight:700;">No notifications yet.</div></div>';
+    });
+}
+
+function closeNotificationsInbox() {
+    document.getElementById('notifInboxModal').style.display = 'none';
+}
+
+// ============================================================
+// CONSOLIDATED AUTH INIT
+// ============================================================
+auth.onAuthStateChanged(user => {
+    if (!user) return;
+    initNotificationsInbox(user.uid);
+    db.ref('users/' + user.uid).once('value', snap => {
+        const u = snap.val();
+        if (u) initNewFeatures(user.uid, u);
+    });
+});
+
 </script>
 </body>
 </html>
