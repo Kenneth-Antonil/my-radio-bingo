@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>RB Live · Radio Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: rgba(30,41,59,0.8);
+            --border: rgba(255,255,255,0.08);
+            --accent: #0ea5e9;
+            --accent-glow: #38bdf8;
+            --gold: #fbbf24;
+            --success: #10b981;
+            --danger: #ef4444;
+            --text: #ffffff;
+            --text-muted: rgba(255,255,255,0.4);
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 30px;
+        }
+
+        /* === TOP NAV === */
+        .top-nav {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(10,18,35,0.97);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 20px;
+            min-height: 60px;
+        }
+        .nav-back-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.05);
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .nav-back-btn:hover { background: rgba(255,255,255,0.1); }
+        .nav-title { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; }
+        .nav-title span { color: var(--accent-glow); }
+        .live-pill {
+            display: flex; align-items: center; gap: 5px;
+            background: rgba(16,185,129,0.1);
+            border: 1px solid rgba(16,185,129,0.3);
+            color: var(--success);
+            font-size: 11px; font-weight: 800;
+            padding: 4px 10px; border-radius: 20px;
+            letter-spacing: 0.5px;
+        }
+        .live-pill-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--success);
+            animation: pulseDot 1.2s ease infinite;
+        }
+        .live-pill.offline { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: var(--danger); }
+        .live-pill.offline .live-pill-dot { background: var(--danger); }
+        @keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* === LAYOUT === */
+        .page { max-width: 480px; margin: 0 auto; padding: 20px 16px; }
+
+        /* === PLAYER PREVIEW === */
+        .player-preview {
+            background: linear-gradient(145deg, rgba(14,165,233,0.08), rgba(30,41,59,0.6));
+            border: 1px solid rgba(14,165,233,0.2);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex; align-items: center; gap: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .player-preview::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-glow));
+        }
+        .preview-vinyl {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 2px solid rgba(14,165,233,0.4);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            position: relative;
+            box-shadow: 0 0 20px rgba(14,165,233,0.3);
+        }
+        .preview-vinyl.playing { animation: vinylSpin 3s linear infinite; }
+        @keyframes vinylSpin { to { transform: rotate(360deg); } }
+        .preview-vinyl-dot {
+            width: 14px; height: 14px; border-radius: 50%;
+            background: #0f172a; border: 2px solid rgba(255,255,255,0.15);
+        }
+        .preview-info { flex: 1; min-width: 0; }
+        .preview-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .preview-status { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+        .preview-controls { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+        .preview-btn {
+            width: 44px; height: 44px; border-radius: 50%;
+            border: none; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .preview-btn.mute { background: rgba(255,255,255,0.06); color: white; }
+        .preview-btn.mute:hover { background: rgba(255,255,255,0.12); }
+        .preview-btn.play { background: linear-gradient(135deg, var(--accent), #0369a1); color: white; box-shadow: 0 4px 14px rgba(14,165,233,0.4); }
+        .preview-btn.play:hover { box-shadow: 0 6px 20px rgba(14,165,233,0.6); transform: scale(1.05); }
+
+        /* === CARDS === */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin-bottom: 14px;
+            backdrop-filter: blur(10px);
+        }
+        .card-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 12px; font-weight: 800;
+            letter-spacing: 1px; text-transform: uppercase;
+            color: var(--text-muted);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .card-title i { width: 14px; height: 14px; }
+
+        /* === FORM ELEMENTS === */
+        .form-group { margin-bottom: 14px; }
+        .form-label {
+            display: block; font-size: 11px; font-weight: 700;
+            color: var(--text-muted); margin-bottom: 6px;
+            letter-spacing: 0.5px; text-transform: uppercase;
+        }
+        .form-input {
+            width: 100%; background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            color: white; font-family: 'Inter', sans-serif;
+            font-size: 14px; font-weight: 500;
+            outline: none; transition: border-color 0.2s;
+        }
+        .form-input::placeholder { color: var(--text-muted); }
+        .form-input:focus { border-color: rgba(14,165,233,0.5); }
+        .form-input:disabled { opacity: 0.4; cursor: not-allowed; }
+        .form-hint { font-size: 10px; color: var(--text-muted); margin-top: 4px; font-weight: 600; }
+
+        /* === TOGGLE SWITCH === */
+        .toggle-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 4px 0;
+        }
+        .toggle-info { flex: 1; }
+        .toggle-label { font-size: 14px; font-weight: 600; color: white; }
+        .toggle-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
+        .toggle-switch {
+            position: relative; width: 48px; height: 26px;
+            flex-shrink: 0; cursor: pointer;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .toggle-track {
+            position: absolute; inset: 0;
+            background: rgba(255,255,255,0.1); border-radius: 20px;
+            transition: background 0.3s;
+            border: 1px solid var(--border);
+        }
+        .toggle-switch input:checked + .toggle-track { background: var(--accent); border-color: var(--accent); }
+        .toggle-track::after {
+            content: ''; position: absolute;
+            top: 3px; left: 3px;
+            width: 18px; height: 18px;
+            border-radius: 50%; background: white;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+        .toggle-switch input:checked + .toggle-track::after { transform: translateX(22px); }
+
+        /* === BUTTONS === */
+        .btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 12px 20px; border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px; font-weight: 700;
+            cursor: pointer; transition: all 0.2s;
+            border: none; width: 100%;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--accent), #0369a1); color: white; box-shadow: 0 4px 14px rgba(14,165,233,0.3); }
+        .btn-primary:hover { box-shadow: 0 6px 20px rgba(14,165,233,0.5); transform: translateY(-1px); }
+        .btn-success { background: linear-gradient(135deg, var(--success), #059669); color: white; }
+        .btn-danger { background: linear-gradient(135deg, var(--danger), #b91c1c); color: white; }
+        .btn-ghost { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); border: 1px solid var(--border); }
+        .btn-ghost:hover { background: rgba(255,255,255,0.1); color: white; }
+        .btn-sm { padding: 8px 14px; font-size: 12px; width: auto; }
+        .btn i { width: 16px; height: 16px; }
+
+        /* === VOLUME BAR === */
+        .vol-row { display: flex; align-items: center; gap: 12px; }
+        .vol-icon { color: var(--text-muted); flex-shrink: 0; }
+        .vol-slider {
+            flex: 1; -webkit-appearance: none;
+            height: 4px; border-radius: 2px;
+            background: rgba(255,255,255,0.1);
+            outline: none;
+        }
+        .vol-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 16px; height: 16px;
+            border-radius: 50%; background: var(--accent); cursor: pointer;
+            box-shadow: 0 2px 8px rgba(14,165,233,0.5);
+        }
+        .vol-value { font-size: 12px; font-weight: 700; color: var(--accent); min-width: 32px; text-align: right; }
+
+        /* === COUNTDOWN INDICATOR === */
+        .countdown-box {
+            background: rgba(251,191,36,0.06);
+            border: 1px solid rgba(251,191,36,0.2);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .countdown-icon { font-size: 24px; flex-shrink: 0; }
+        .countdown-text { flex: 1; }
+        .countdown-label { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; }
+        .countdown-value { font-size: 20px; font-weight: 900; color: white; line-height: 1.2; }
+        .countdown-note { font-size: 10px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+
+        /* === STATUS BAR === */
+        .status-bar {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            font-size: 12px; font-weight: 600;
+            color: var(--text-muted);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .status-bar.success { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.25); color: var(--success); }
+        .status-bar.error { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.25); color: var(--danger); }
+        .status-bar.warning { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.25); color: var(--gold); }
+
+        /* === TOAST === */
+        #rcToast {
+            position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-150%);
+            background: rgba(15,23,42,0.97); border: 1px solid var(--accent);
+            padding: 12px 20px; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 600;
+            z-index: 9999; white-space: nowrap;
+            backdrop-filter: blur(12px);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+        }
+        #rcToast.show { transform: translateX(-50%) translateY(0); }
+
+        /* === SECTION DIVIDER === */
+        .section-gap { margin-bottom: 8px; }
+        .section-title {
+            font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
+            text-transform: uppercase; color: var(--text-muted);
+            padding: 0 2px; margin-bottom: 10px;
+        }
+
+        /* === ACCESS DENIED === */
+        #accessDenied {
+            display: none; position: fixed; inset: 0; z-index: 9999;
+            background: #0f172a;
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 40px;
+        }
+        #accessDenied.show { display: flex; }
+        #mainContent { display: none; }
+        #mainContent.show { display: block; }
+
+        /* Loading overlay */
+        #loadingOverlay {
+            position: fixed; inset: 0; background: #0f172a;
+            z-index: 9998; display: flex; align-items: center; justify-content: center;
+            flex-direction: column; gap: 16px;
+        }
+        #loadingOverlay.hidden { display: none; }
+        .spinner {
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 3px solid rgba(14,165,233,0.2);
+            border-top-color: var(--accent);
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay">
+    <div style="font-size:28px;font-weight:900;letter-spacing:-1px;">RB <span style="color:#38bdf8">LIVE</span></div>
+    <div class="spinner"></div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.3);font-weight:600;">Loading Radio Control...</div>
+</div>
+
+<!-- Access Denied -->
+<div id="accessDenied">
+    <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+    <div style="font-size:20px;font-weight:900;margin-bottom:8px;">Admin Only</div>
+    <p style="color:rgba(255,255,255,0.4);font-size:14px;margin-bottom:24px;line-height:1.6;">You must be an admin to access Radio Control.</p>
+    <button onclick="window.location.href='index.html'" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);color:white;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">← Back to App</button>
+</div>
+
+<!-- Toast notification -->
+<div id="rcToast"></div>
+
+<!-- Main Content -->
+<div id="mainContent">
+
+    <!-- Top Nav -->
+    <div class="top-nav">
+        <button class="nav-back-btn" onclick="window.location.href='index.html'">
+            <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
+        </button>
+        <div class="nav-title">📻 Radio <span>Control</span></div>
+        <div class="live-pill offline" id="navLivePill">
+            <div class="live-pill-dot"></div>
+            <span id="navLiveText">OFFLINE</span>
+        </div>
+    </div>
+
+    <div class="page">
+
+        <!-- ── PLAYER PREVIEW ── -->
+        <div class="player-preview">
+            <div class="preview-vinyl" id="previewVinyl">
+                <div class="preview-vinyl-dot"></div>
+            </div>
+            <div class="preview-info">
+                <div class="preview-title" id="previewTitle">RB Live Radio</div>
+                <div class="preview-status" id="previewStatus">Not playing</div>
+            </div>
+            <div class="preview-controls">
+                <button class="preview-btn mute" onclick="toggleMute()" id="muteBtn">
+                    <i data-lucide="volume-2" style="width:18px;height:18px;" id="muteIcon"></i>
+                </button>
+                <button class="preview-btn play" onclick="togglePlay()" id="playBtn">
+                    <i data-lucide="play" style="width:20px;height:20px;" id="playIcon"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ── COUNTDOWN TO NEXT DRAW ── -->
+        <div class="countdown-box" id="countdownBox" style="margin-bottom:20px;">
+            <div class="countdown-icon">🎯</div>
+            <div class="countdown-text">
+                <div class="countdown-label">Next Bingo Draw</div>
+                <div class="countdown-value" id="ctdValue">--:--</div>
+                <div class="countdown-note" id="ctdNote">Auto-play activates 10 mins before draw</div>
+            </div>
+        </div>
+
+        <!-- ── STREAM SETTINGS ── -->
+        <div class="section-title">Stream Settings</div>
+        <div class="card">
+            <div class="form-group">
+                <label class="form-label">Stream URL</label>
+                <input type="url" class="form-input" id="streamUrlInput" placeholder="https://stream.example.com/live.mp3">
+                <div class="form-hint">Supports MP3, AAC, Icecast, Shoutcast, HLS streams</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Station Name</label>
+                <input type="text" class="form-input" id="stationNameInput" placeholder="RB Live Radio" maxlength="50">
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary" onclick="saveStreamSettings()">
+                    <i data-lucide="save"></i> Save Settings
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="testStream()" style="width:auto;flex-shrink:0;">
+                    <i data-lucide="radio" style="width:14px;height:14px;"></i> Test
+                </button>
+            </div>
+        </div>
+
+        <!-- ── ON/OFF CONTROL ── -->
+        <div class="section-title">Broadcast Control</div>
+        <div class="card">
+            <div style="margin-bottom:14px;">
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-label">Go Live</div>
+                        <div class="toggle-desc">Enable stream for all users</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="isLiveToggle" onchange="toggleLiveState(this.checked)">
+                        <div class="toggle-track"></div>
+                    </label>
+                </div>
+            </div>
+            <div style="margin-bottom:14px;">
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <div class="toggle-label">Force Off</div>
+                        <div class="toggle-desc">Override — mute radio for all users</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="forceOffToggle" onchange="toggleForceOff(this.checked)">
+                        <div class="toggle-track"></div>
+                    </label>
+                </div>
+            </div>
+            <div class="toggle-row">
+                <div class="toggle-info">
+                    <div class="toggle-label">Auto-Play on Draw</div>
+                    <div class="toggle-desc">Radio auto-plays 10 mins before bingo draw</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoPlayToggle" checked onchange="toggleAutoPlay(this.checked)">
+                    <div class="toggle-track"></div>
+                </label>
+            </div>
+        </div>
+
+        <!-- ── VOLUME CONTROL ── -->
+        <div class="section-title">Local Volume</div>
+        <div class="card">
+            <div class="vol-row" style="margin-bottom:12px;">
+                <i data-lucide="volume" class="vol-icon" style="width:16px;height:16px;"></i>
+                <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="80" oninput="changeVolume(this.value)">
+                <i data-lucide="volume-2" class="vol-icon" style="width:16px;height:16px;"></i>
+                <span class="vol-value" id="volValue">80%</span>
+            </div>
+            <div class="status-bar" id="volStatusBar">
+                <i data-lucide="info" style="width:14px;height:14px;"></i>
+                Volume affects only your local preview playback
+            </div>
+        </div>
+
+        <!-- ── NOW PLAYING INFO ── -->
+        <div class="section-title">Now Playing</div>
+        <div class="card">
+            <div class="form-group">
+                <label class="form-label">Song / Program Title (Optional)</label>
+                <input type="text" class="form-input" id="nowPlayingInput" placeholder="e.g. Bingo Beats with DJ Rico">
+                <div class="form-hint">Displayed in the radio bar on the main page</div>
+            </div>
+            <button class="btn btn-ghost" onclick="updateNowPlaying()">
+                <i data-lucide="music"></i> Update Now Playing
+            </button>
+        </div>
+
+        <!-- ── STREAM STATUS ── -->
+        <div class="section-title">Connection Status</div>
+        <div class="card">
+            <div class="status-bar" id="connStatusBar">
+                <i data-lucide="wifi-off" style="width:14px;height:14px;"></i>
+                Not connected to any stream
+            </div>
+            <div style="margin-top:10px; display:flex; gap:8px;">
+                <button class="btn btn-ghost" onclick="checkConnection()" style="flex:1;">
+                    <i data-lucide="refresh-cw"></i> Refresh Status
+                </button>
+            </div>
+        </div>
+
+        <!-- ── SCHEDULE QUICK VIEW ── -->
+        <div class="section-title">Today's Draws</div>
+        <div class="card">
+            <div id="scheduleList" style="color:var(--text-muted);font-size:13px;font-weight:600;text-align:center;padding:10px;">
+                Loading schedule...
+            </div>
+        </div>
+
+        <!-- Back Button -->
+        <div style="margin-top:10px;">
+            <button class="btn btn-ghost" onclick="window.location.href='index.html'">
+                <i data-lucide="arrow-left"></i> Back to RB Live
+            </button>
+        </div>
+
+    </div><!-- /page -->
+</div><!-- /mainContent -->
+
+<!-- Hidden audio for preview -->
+<audio id="rcAudio" preload="none"></audio>
+
+<script>
+// Firebase config
+var firebaseConfig = {
+    apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
+    authDomain: "radiobingo-9ac29.firebaseapp.com",
+    databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "radiobingo-9ac29",
+    storageBucket: "radiobingo-9ac29.firebasestorage.app",
+    messagingSenderId: "965903993397",
+    appId: "1:965903993397:web:f6646fa05225f147eebf7c"
+};
+
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+var auth = firebase.auth();
+
+// ── State ──
+var RC = {
+    audio: null,
+    isPlaying: false,
+    isMuted: false,
+    volume: 0.8,
+    streamUrl: '',
+    checkInterval: null,
+    isAdmin: false
+};
+
+// ── Init ──
+window.addEventListener('load', function() {
+    RC.audio = document.getElementById('rcAudio');
+    lucide.createIcons();
+
+    auth.onAuthStateChanged(function(user) {
+        if (!user) {
+            showAccessDenied();
+            return;
+        }
+        // Check admin flag
+        db.ref('users/' + user.uid + '/isAdmin').once('value', function(snap) {
+            var isAdmin = snap.val() === true;
+            if (!isAdmin) {
+                showAccessDenied();
+                return;
+            }
+            RC.isAdmin = true;
+            showMainContent();
+            initControls();
+        });
+    });
+});
+
+function showAccessDenied() {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    document.getElementById('accessDenied').classList.add('show');
+}
+
+function showMainContent() {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    document.getElementById('mainContent').classList.add('show');
+}
+
+function initControls() {
+    // Listen to radioState from Firebase
+    db.ref('radioState').on('value', function(snap) {
+        var data = snap.val() || {};
+        RC.streamUrl = data.streamUrl || '';
+        var title = data.title || 'RB Live Radio';
+        var isLive = data.isLive || false;
+        var forceOff = data.forceOff || false;
+        var autoPlay = data.autoPlay !== false; // default true
+
+        // Update inputs
+        document.getElementById('streamUrlInput').value = RC.streamUrl;
+        document.getElementById('stationNameInput').value = title;
+        document.getElementById('previewTitle').textContent = title;
+        if (data.nowPlaying) document.getElementById('nowPlayingInput').value = data.nowPlaying;
+
+        // Update toggles
+        document.getElementById('isLiveToggle').checked = isLive;
+        document.getElementById('forceOffToggle').checked = forceOff;
+        document.getElementById('autoPlayToggle').checked = autoPlay;
+
+        // Update live pill
+        var pill = document.getElementById('navLivePill');
+        var pillText = document.getElementById('navLiveText');
+        if (isLive && !forceOff) {
+            pill.classList.remove('offline');
+            pillText.textContent = 'LIVE';
+        } else {
+            pill.classList.add('offline');
+            pillText.textContent = forceOff ? 'FORCE OFF' : 'OFFLINE';
+        }
+
+        // Update connection status bar
+        updateConnStatusBar(isLive, forceOff, RC.streamUrl);
+    });
+
+    // Poll draw schedule every 30 sec
+    loadSchedule();
+    RC.checkInterval = setInterval(loadSchedule, 30000);
+    updateCountdown();
+    setInterval(updateCountdown, 10000);
+
+    // Audio events
+    if (RC.audio) {
+        RC.audio.addEventListener('playing', function() {
+            setPlayState(true);
+        });
+        RC.audio.addEventListener('pause', function() {
+            setPlayState(false);
+        });
+        RC.audio.addEventListener('error', function() {
+            setPlayState(false);
+            updateConnStatus('error', '⚠️ Stream error — check URL and try again');
+        });
+    }
+}
+
+// ── Stream Settings ──
+function saveStreamSettings() {
+    var url = document.getElementById('streamUrlInput').value.trim();
+    var name = document.getElementById('stationNameInput').value.trim() || 'RB Live Radio';
+    if (!url) { rcToast('⚠️ Please enter a stream URL'); return; }
+
+    db.ref('radioState').update({ streamUrl: url, title: name }, function(err) {
+        if (err) { rcToast('❌ Error saving: ' + err.message); }
+        else { rcToast('✅ Stream settings saved!'); }
+    });
+}
+
+function testStream() {
+    var url = document.getElementById('streamUrlInput').value.trim();
+    if (!url) { rcToast('⚠️ Enter a URL to test'); return; }
+    if (RC.audio) {
+        RC.audio.src = url;
+        RC.audio.volume = RC.volume;
+        RC.audio.play().then(function() {
+            rcToast('✅ Stream OK — playing!');
+            setPlayState(true);
+        }).catch(function(e) {
+            rcToast('❌ Cannot play stream: ' + e.message);
+        });
+    }
+}
+
+// ── On/Off Toggles ──
+function toggleLiveState(val) {
+    db.ref('radioState').update({ isLive: val }, function(err) {
+        if (!err) rcToast(val ? '📡 Radio is now LIVE' : '📴 Radio taken offline');
+    });
+}
+
+function toggleForceOff(val) {
+    db.ref('radioState').update({ forceOff: val }, function(err) {
+        if (!err) rcToast(val ? '🚫 Force Off activated' : '✅ Force Off removed');
+    });
+}
+
+function toggleAutoPlay(val) {
+    db.ref('radioState').update({ autoPlay: val }, function(err) {
+        if (!err) rcToast(val ? '⏯️ Auto-play enabled' : '⏸️ Auto-play disabled');
+    });
+}
+
+// ── Now Playing ──
+function updateNowPlaying() {
+    var np = document.getElementById('nowPlayingInput').value.trim();
+    db.ref('radioState').update({ nowPlaying: np }, function(err) {
+        if (!err) rcToast('🎵 Now Playing updated!');
+    });
+}
+
+// ── Local Preview Play/Pause ──
+function togglePlay() {
+    if (!RC.audio) return;
+    if (RC.isPlaying) {
+        RC.audio.pause();
+        RC.audio.src = '';
+    } else {
+        var url = RC.streamUrl || document.getElementById('streamUrlInput').value.trim();
+        if (!url) { rcToast('No stream URL set'); return; }
+        RC.audio.src = url;
+        RC.audio.volume = RC.volume;
+        RC.audio.muted = RC.isMuted;
+        RC.audio.play().catch(function(e) {
+            rcToast('Cannot play: ' + e.message);
+        });
+    }
+}
+
+function toggleMute() {
+    RC.isMuted = !RC.isMuted;
+    if (RC.audio) RC.audio.muted = RC.isMuted;
+    var icon = document.getElementById('muteIcon');
+    if (icon) icon.setAttribute('data-lucide', RC.isMuted ? 'volume-x' : 'volume-2');
+    lucide.createIcons();
+}
+
+function setPlayState(playing) {
+    RC.isPlaying = playing;
+    var vinyl = document.getElementById('previewVinyl');
+    var icon = document.getElementById('playIcon');
+    var status = document.getElementById('previewStatus');
+    if (vinyl) { playing ? vinyl.classList.add('playing') : vinyl.classList.remove('playing'); }
+    if (icon) icon.setAttribute('data-lucide', playing ? 'pause' : 'play');
+    if (status) status.textContent = playing ? '● Playing' : 'Not playing';
+    lucide.createIcons();
+}
+
+// ── Volume ──
+function changeVolume(val) {
+    RC.volume = val / 100;
+    document.getElementById('volValue').textContent = val + '%';
+    if (RC.audio) RC.audio.volume = RC.volume;
+}
+
+// ── Connection Status ──
+function updateConnStatusBar(isLive, forceOff, url) {
+    var bar = document.getElementById('connStatusBar');
+    if (!bar) return;
+    if (forceOff) {
+        bar.className = 'status-bar error';
+        bar.innerHTML = '<i data-lucide="x-circle" style="width:14px;height:14px;"></i> Force Off is active — stream blocked for all users';
+    } else if (isLive && url) {
+        bar.className = 'status-bar success';
+        bar.innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px;"></i> Live & streaming — users can play radio';
+    } else if (!url) {
+        bar.className = 'status-bar error';
+        bar.innerHTML = '<i data-lucide="alert-circle" style="width:14px;height:14px;"></i> No stream URL configured';
+    } else {
+        bar.className = 'status-bar warning';
+        bar.innerHTML = '<i data-lucide="wifi-off" style="width:14px;height:14px;"></i> Stream set but not live yet';
+    }
+    lucide.createIcons();
+}
+
+function updateConnStatus(type, msg) {
+    var bar = document.getElementById('connStatusBar');
+    if (!bar) return;
+    var types = { success: 'success', error: 'error', warning: 'warning' };
+    bar.className = 'status-bar ' + (types[type] || '');
+    bar.textContent = msg;
+}
+
+function checkConnection() {
+    if (!RC.streamUrl) { rcToast('No URL set'); return; }
+    rcToast('🔍 Checking stream...');
+    if (RC.audio) {
+        var testAudio = new Audio();
+        testAudio.src = RC.streamUrl;
+        testAudio.volume = 0;
+        testAudio.play().then(function() {
+            testAudio.pause();
+            testAudio.src = '';
+            updateConnStatus('success', '✅ Stream is reachable and working!');
+            rcToast('✅ Stream OK');
+        }).catch(function(e) {
+            updateConnStatus('error', '❌ Cannot reach stream: ' + e.message);
+            rcToast('❌ Stream unreachable');
+        });
+    }
+}
+
+// ── Countdown to next draw ──
+function updateCountdown() {
+    db.ref('gameState').once('value', function(snap) {
+        var gameData = snap.val() || {};
+        var now = Date.now();
+        var nextDrawTime = null;
+        if (gameData.schedules) {
+            var times = Object.values(gameData.schedules).map(function(val) {
+                return (typeof val === 'object' && val.time) ? val.time : val;
+            });
+            var future = times.filter(function(t) { return t > now; }).sort(function(a, b) { return a - b; });
+            if (future.length > 0) nextDrawTime = future[0];
+        }
+        if (!nextDrawTime && gameData.nextDraw && gameData.nextDraw > now) {
+            nextDrawTime = gameData.nextDraw;
+        }
+
+        var ctdValue = document.getElementById('ctdValue');
+        var ctdNote = document.getElementById('ctdNote');
+        var box = document.getElementById('countdownBox');
+
+        if (nextDrawTime) {
+            var diff = nextDrawTime - now;
+            var hrs = Math.floor(diff / 3600000);
+            var mins = Math.floor((diff % 3600000) / 60000);
+            var secs = Math.floor((diff % 60000) / 1000);
+            var display = (hrs > 0 ? hrs + 'h ' : '') + mins + 'm ' + secs + 's';
+            if (ctdValue) ctdValue.textContent = display;
+            if (diff <= 10 * 60 * 1000) {
+                if (box) box.style.borderColor = 'rgba(239,68,68,0.4)';
+                if (ctdNote) ctdNote.textContent = '🔴 Radio will auto-play NOW!';
+            } else {
+                if (box) box.style.borderColor = 'rgba(251,191,36,0.2)';
+                if (ctdNote) ctdNote.textContent = 'Auto-play activates 10 mins before draw';
+            }
+        } else {
+            if (ctdValue) ctdValue.textContent = 'No draw scheduled';
+            if (ctdNote) ctdNote.textContent = 'Waiting for next schedule';
+        }
+    });
+}
+
+// ── Schedule ──
+function loadSchedule() {
+    db.ref('gameState/schedules').once('value', function(snap) {
+        var list = document.getElementById('scheduleList');
+        if (!list) return;
+        if (!snap.exists()) {
+            list.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;">No schedules found in Firebase.</div>';
+            return;
+        }
+        var now = Date.now();
+        var times = [];
+        snap.forEach(function(c) {
+            var val = c.val();
+            var t = (typeof val === 'object' && val.time) ? val.time : val;
+            times.push(t);
+        });
+        times.sort(function(a, b) { return a - b; });
+        var html = '';
+        times.forEach(function(t) {
+            var isPast = t < now;
+            var isNext = !isPast && times.filter(function(x) { return x > now; })[0] === t;
+            var dt = new Date(t);
+            var timeStr = dt.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+            var color = isPast ? 'rgba(255,255,255,0.2)' : isNext ? '#fbbf24' : 'rgba(255,255,255,0.7)';
+            var badge = isPast ? '✓' : isNext ? '▶' : '·';
+            html += '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);color:' + color + ';font-size:13px;font-weight:' + (isNext ? '800' : '600') + ';">' +
+                '<span style="width:16px;text-align:center;">' + badge + '</span>' +
+                '<span>' + timeStr + '</span>' +
+                (isNext ? '<span style="font-size:9px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);padding:1px 6px;border-radius:10px;color:#fbbf24;font-weight:800;">NEXT</span>' : '') +
+                '</div>';
+        });
+        list.innerHTML = html || '<div style="color:rgba(255,255,255,0.3);">No schedules.</div>';
+    });
+}
+
+// ── Toast ──
+function rcToast(msg) {
+    var el = document.getElementById('rcToast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+</script>
+</body>
+</html>
