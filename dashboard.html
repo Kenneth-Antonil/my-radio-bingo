@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -874,13 +875,56 @@
         <div style="font-size:10px; margin-top:5px; opacity:0.7;">Offline = Shows "Waiting for Live" to players.</div>
     </div>
 
-    <div class="input-group">
-        <label>Game Schedule Manager</label>
-        <div style="display: flex; gap: 8px;">
-            <input type="datetime-local" id="schedInput" style="padding:10px;">
-            <button class="btn btn-primary" onclick="addSchedule()" style="width: auto; margin-top: 0; padding:0 15px;">+</button>
+    <!-- ===== ENHANCED AUTO SCHEDULE MANAGER ===== -->
+    <div style="background:rgba(139,92,246,0.07); border:1.5px solid rgba(139,92,246,0.25); border-radius:16px; padding:14px; margin-bottom:10px;">
+        <div style="font-size:12px; font-weight:900; color:var(--accent); margin-bottom:10px; display:flex; align-items:center; gap:6px; letter-spacing:0.5px;">
+            <span>🕐</span> AUTO DRAW SCHEDULE
         </div>
-        <div id="scheduleList" style="margin-top:10px; max-height:100px; overflow-y:auto;"></div>
+
+        <!-- Jackpot Round Settings -->
+        <div style="background:rgba(251,191,36,0.07); border:1px solid rgba(251,191,36,0.2); border-radius:10px; padding:10px; margin-bottom:10px;">
+            <div style="font-size:10px; font-weight:800; color:#fbbf24; margin-bottom:8px; letter-spacing:0.5px;">⚡ JACKPOT ROUNDS</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px;">
+                <div>
+                    <label style="font-size:9px; color:rgba(255,255,255,0.4); font-weight:700; text-transform:uppercase;">3:00 PM Prize</label>
+                    <input type="number" id="jp3pmAmount" value="5000" min="100" style="padding:7px; font-size:12px; font-weight:900; color:#fbbf24; text-align:center; background:rgba(0,0,0,0.3); border:1px solid rgba(251,191,36,0.3); border-radius:8px;">
+                </div>
+                <div>
+                    <label style="font-size:9px; color:rgba(255,255,255,0.4); font-weight:700; text-transform:uppercase;">8:00 PM Prize</label>
+                    <input type="number" id="jp8pmAmount" value="5000" min="100" style="padding:7px; font-size:12px; font-weight:900; color:#fbbf24; text-align:center; background:rgba(0,0,0,0.3); border:1px solid rgba(251,191,36,0.3); border-radius:8px;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Generate Button -->
+        <button class="btn btn-gold" onclick="generateAutoSchedule()" style="padding:10px; font-size:11px; margin-bottom:8px;">
+            <i data-lucide="calendar-plus"></i> GENERATE TODAY'S SCHEDULE (8AM–12MN)
+        </button>
+
+        <!-- Clear All -->
+        <button onclick="clearAllSchedules()" style="width:100%; padding:7px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:8px; color:#ef4444; font-size:10px; font-weight:800; cursor:pointer; margin-bottom:10px;">
+            🗑️ CLEAR ALL SCHEDULES
+        </button>
+
+        <!-- Manual Add -->
+        <div style="font-size:10px; font-weight:800; color:rgba(255,255,255,0.4); margin-bottom:5px; letter-spacing:0.5px;">+ ADD SINGLE SCHEDULE</div>
+        <div style="display: flex; gap: 8px;">
+            <input type="datetime-local" id="schedInput" style="padding:8px; font-size:11px; flex:1;">
+            <button class="btn btn-primary" onclick="addSchedule()" style="width: auto; margin-top: 0; padding:0 12px; font-size:11px;">+</button>
+        </div>
+        
+        <!-- Override Panel -->
+        <div style="margin-top:10px; background:rgba(6,182,212,0.06); border:1px solid rgba(6,182,212,0.2); border-radius:10px; padding:10px;">
+            <div style="font-size:10px; font-weight:800; color:var(--cyan); margin-bottom:8px; letter-spacing:0.5px;">🔧 JACKPOT OVERRIDE</div>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <input type="number" id="overrideJpAmount" placeholder="Amount..." min="100" style="flex:1; padding:7px; font-size:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(6,182,212,0.3); border-radius:8px; color:#fbbf24; font-weight:900;">
+                <button onclick="applyJackpotOverride(true)" style="padding:7px 10px; background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); border-radius:8px; color:#10b981; font-size:10px; font-weight:800; cursor:pointer; white-space:nowrap;">⚡ FORCE ON</button>
+                <button onclick="applyJackpotOverride(false)" style="padding:7px 10px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; color:#ef4444; font-size:10px; font-weight:800; cursor:pointer; white-space:nowrap;">OFF</button>
+            </div>
+        </div>
+
+        <!-- Schedule List -->
+        <div id="scheduleList" style="margin-top:10px; max-height:160px; overflow-y:auto;"></div>
     </div>
 
     <div class="card" style="padding: 15px; background: rgba(0,0,0,0.2); flex:1; overflow:hidden; display:flex; flex-direction:column; margin:0;">
@@ -889,37 +933,7 @@
     </div>
 
     <button class="btn btn-danger" onclick="resetGame()"><i data-lucide="refresh-ccw"></i> RESET GAME</button>
-
-    <!-- AUTO-RESET TOGGLE -->
-    <div style="background:rgba(239,68,68,0.07); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:12px; margin-top:4px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <div style="font-size:11px; font-weight:800; color:#f87171;">⚡ AUTO-RESET</div>
-                <div style="font-size:9px; color:rgba(255,255,255,0.35); margin-top:2px;">Reset <input type="number" id="autoResetDelay" value="30" min="5" max="300" style="width:40px; padding:2px 4px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; font-size:9px; text-align:center;"> sec after winner</div>
-            </div>
-            <div onclick="toggleAutoReset()" id="autoResetKnobBg" style="width:44px; height:24px; background:rgba(0,0,0,0.3); border-radius:20px; cursor:pointer; position:relative; border:1px solid rgba(255,255,255,0.1); transition:background 0.3s;">
-                <div id="autoResetKnob" style="width:18px; height:18px; background:white; border-radius:50%; position:absolute; top:3px; left:3px; transition:left 0.3s; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>
-            </div>
-        </div>
-        <div id="autoResetStatus" style="font-size:9px; color:rgba(255,255,255,0.3); margin-top:4px; font-weight:700;">OFF — Manual reset required</div>
-    </div>
-
-    <!-- BULK COIN DISTRIBUTION -->
-    <div style="background:rgba(251,191,36,0.07); border:1px solid rgba(251,191,36,0.2); border-radius:12px; padding:12px;">
-        <div style="font-size:11px; font-weight:800; color:#fbbf24; margin-bottom:8px;">🪙 BULK COIN DISTRIBUTION</div>
-        <select id="bulkTarget" style="width:100%; padding:7px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white; font-size:11px; margin-bottom:6px;">
-            <option value="all">All Users</option>
-            <option value="online">Online Users Only</option>
-            <option value="top10">Top 10 (by Wins)</option>
-        </select>
-        <div style="display:flex; gap:6px; margin-bottom:6px;">
-            <input type="number" id="bulkAmount" placeholder="Amount..." min="1" style="flex:1; padding:7px; background:rgba(0,0,0,0.3); border:1px solid rgba(251,191,36,0.2); border-radius:8px; color:#fbbf24; font-size:12px; font-weight:900;">
-            <button onclick="doBulkCoins()" style="padding:7px 12px; background:linear-gradient(135deg,#fbbf24,#d97706); border:none; border-radius:8px; color:#78350f; font-size:11px; font-weight:900; cursor:pointer;">SEND</button>
-        </div>
-        <input type="text" id="bulkReason" placeholder="Reason (optional)" style="width:100%; padding:6px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:8px; color:white; font-size:10px;">
-    </div>
-
-</div><!-- END SIDEBAR -->
+</div>
 
 <div class="main-section">
     <div id="winnerAnnounce" class="winner-marquee">
@@ -937,8 +951,6 @@
         <button class="tab-btn" onclick="openTab('tournament-tab', this)"><i data-lucide="trophy" width="16"></i> TOURNAMENTS</button>
         <button class="tab-btn" id="partnersTabBtn" onclick="openTab('partners-tab', this)"><i data-lucide="store" width="16"></i> PARTNERS <span id="partnersBadge" style="display:none;background:#ef4444;color:white;font-size:9px;font-weight:900;padding:1px 7px;border-radius:20px;margin-left:4px;vertical-align:middle;"></span></button>
         <button class="tab-btn" onclick="openTab('myshop-tab', this)"><i data-lucide="shopping-bag" width="16"></i> MY SHOP</button>
-        <button class="tab-btn" onclick="openTab('revenue-tab', this)"><i data-lucide="bar-chart-2" width="16"></i> REVENUE</button>
-        <button class="tab-btn" onclick="openTab('moderation-tab', this)"><i data-lucide="shield-alert" width="16"></i> MODERATION</button>
     </div>
 
     <div id="settings-tab" class="tab-content">
@@ -966,19 +978,6 @@
                 <p style="font-size:11px; color:#fca5a5; margin:0 0 10px 0;"><i data-lucide="alert-triangle" style="width:12px"></i> <b>IMPORTANT:</b> The Legacy API is disabled. Paste your Firebase Service Account JSON here to enable push notifications (HTTP v1).</p>
                 <textarea id="serviceAccountJson" rows="5" placeholder='Paste contents of service-account.json here...' style="font-family:monospace; font-size:10px;"></textarea>
                 <button class="btn btn-primary" onclick="saveServiceAccount()">SAVE CREDENTIALS</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2><i data-lucide="smartphone"></i> GCash Payment Settings</h2>
-            <div class="card-settings" style="background:rgba(6,182,212,0.05); border-color:rgba(6,182,212,0.3);">
-                <p style="font-size:11px; opacity:0.6; margin:0 0 12px 0;">This GCash number will be shown to players when they purchase Coin Packages.</p>
-                <label>GCash Number (e.g. 09xxxxxxxxx)</label>
-                <input type="tel" id="gcashNumberSetting" placeholder="09xxxxxxxxx" maxlength="11" style="font-size:18px; font-weight:900; letter-spacing:2px;">
-                <label style="margin-top:10px;">GCash Account Name</label>
-                <input type="text" id="gcashNameSetting" placeholder="e.g. Juan D.">
-                <button class="btn btn-primary" onclick="saveGcashSettings()" style="margin-top:10px;"><i data-lucide="save"></i> SAVE GCASH INFO</button>
-                <div id="gcashSaveStatus" style="font-size:11px; color:#10b981; margin-top:6px; display:none;">✅ Saved!</div>
             </div>
         </div>
         <div class="card">
@@ -1290,8 +1289,6 @@
             </div>
         </div>
     </div>
-
-    <div id="support-tab" class="tab-content">
         <div class="card">
             <h2><i data-lucide="message-square"></i> Support Messages</h2>
             <div style="font-size:11px; opacity:0.6; margin-bottom:15px;">User support requests and inquiries</div>
@@ -1450,147 +1447,6 @@
 
     </div>
 
-    <!-- =================== REVENUE DASHBOARD TAB =================== -->
-    <div id="revenue-tab" class="tab-content">
-        <div class="card">
-            <h2><i data-lucide="trending-up"></i> Revenue Overview</h2>
-            <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
-                <div class="stat-card"><div class="stat-val" id="rev-totalCoins">—</div><div class="stat-lbl">Total Coins (All Users)</div></div>
-                <div class="stat-card"><div class="stat-val" id="rev-totalWins">—</div><div class="stat-lbl">Total Bingo Wins</div></div>
-                <div class="stat-card"><div class="stat-val" id="rev-pendingCash">—</div><div class="stat-lbl">Pending Cashouts</div></div>
-                <div class="stat-card"><div class="stat-val" id="rev-vipCount">—</div><div class="stat-lbl">VIP Members</div></div>
-            </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-            <div class="card">
-                <h2><i data-lucide="crown"></i> Top 10 Richest Players</h2>
-                <div id="rev-richList" style="max-height:400px; overflow-y:auto;"></div>
-            </div>
-            <div class="card">
-                <h2><i data-lucide="trophy"></i> Top 10 Most Wins</h2>
-                <div id="rev-winList" style="max-height:400px; overflow-y:auto;"></div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-top:0;">
-            <h2><i data-lucide="activity"></i> Coin Flow Breakdown</h2>
-            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
-                <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:14px; padding:16px; text-align:center;">
-                    <div style="font-size:28px; font-weight:900; color:#10b981;" id="rev-awardsTotal">—</div>
-                    <div style="font-size:10px; color:rgba(255,255,255,0.5); font-weight:700; margin-top:4px;">COINS AWARDED (Admin)</div>
-                </div>
-                <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:14px; padding:16px; text-align:center;">
-                    <div style="font-size:28px; font-weight:900; color:#ef4444;" id="rev-cashoutTotal">—</div>
-                    <div style="font-size:10px; color:rgba(255,255,255,0.5); font-weight:700; margin-top:4px;">COINS REDEEMED (Cashout)</div>
-                </div>
-                <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:14px; padding:16px; text-align:center;">
-                    <div style="font-size:28px; font-weight:900; color:#fbbf24;" id="rev-shopTotal">—</div>
-                    <div style="font-size:10px; color:rgba(255,255,255,0.5); font-weight:700; margin-top:4px;">SHOP ORDERS VALUE</div>
-                </div>
-            </div>
-            <button class="btn btn-primary" onclick="loadRevenueDashboard()" style="margin-top:16px;"><i data-lucide="refresh-cw"></i> REFRESH DATA</button>
-        </div>
-
-        <div class="card">
-            <h2><i data-lucide="package"></i> Coin Package Manager</h2>
-            <p style="font-size:11px; opacity:0.6; margin-bottom:14px;">Define RB Coin packages players can purchase. Players submit a request, you verify payment & manually award coins.</p>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; margin-bottom:14px;">
-                <div><label style="font-size:10px; text-transform:uppercase; color:rgba(255,255,255,0.4);">Name</label><input type="text" id="pkg-name" placeholder="e.g. Starter Pack" style="padding:9px;"></div>
-                <div><label style="font-size:10px; text-transform:uppercase; color:rgba(255,255,255,0.4);">RB Coins</label><input type="number" id="pkg-coins" placeholder="e.g. 1000" style="padding:9px;"></div>
-                <div><label style="font-size:10px; text-transform:uppercase; color:rgba(255,255,255,0.4);">Price (PHP ₱)</label><input type="number" id="pkg-price" placeholder="e.g. 100" style="padding:9px;"></div>
-                <div><label style="font-size:10px; text-transform:uppercase; color:rgba(255,255,255,0.4);">Emoji</label><input type="text" id="pkg-emoji" placeholder="💎" maxlength="2" style="padding:9px; font-size:20px;"></div>
-            </div>
-            <button class="btn btn-primary" onclick="saveCoinPackage()" style="margin-bottom:14px;"><i data-lucide="plus-circle"></i> ADD PACKAGE</button>
-            <div id="pkg-list"><div style="opacity:0.4; text-align:center; padding:20px; font-size:12px;">Loading...</div></div>
-        </div>
-
-        <div class="card">
-            <h2><i data-lucide="inbox"></i> Coin Purchase Requests <span id="pkgReqBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:900; padding:2px 8px; border-radius:12px; margin-left:8px;">0</span></h2>
-            <div id="pkg-requests"><div style="opacity:0.4; text-align:center; padding:20px; font-size:12px;">Loading...</div></div>
-        </div>
-    </div>
-
-    <!-- =================== MODERATION TAB =================== -->
-    <div id="moderation-tab" class="tab-content">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-            <div class="card">
-                <h2><i data-lucide="user-x"></i> Blacklist / Suspend User</h2>
-                <div class="input-group">
-                    <label>Search User</label>
-                    <input type="text" id="mod-search" placeholder="Type user name..." oninput="searchUsersForMod()">
-                    <div id="mod-results" style="max-height:220px; overflow-y:auto; margin-top:6px; background:rgba(0,0,0,0.2); border-radius:10px; padding:4px;"></div>
-                </div>
-                <div id="mod-selected-user" style="display:none; background:rgba(239,68,68,0.07); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:14px; margin-bottom:14px;">
-                    <div style="font-weight:800; font-size:14px; color:white; margin-bottom:10px;" id="mod-selected-name">—</div>
-                    <div class="input-group" style="margin-bottom:8px;">
-                        <label>Action</label>
-                        <select id="mod-action" style="padding:9px;">
-                            <option value="suspend_1d">Suspend 1 Day</option>
-                            <option value="suspend_3d">Suspend 3 Days</option>
-                            <option value="suspend_7d">Suspend 7 Days</option>
-                            <option value="suspend_30d">Suspend 30 Days</option>
-                            <option value="blacklist">Permanent Blacklist (Ban)</option>
-                            <option value="lift">✅ Lift Suspension / Unban</option>
-                        </select>
-                    </div>
-                    <div class="input-group" style="margin-bottom:10px;">
-                        <label>Reason</label>
-                        <textarea id="mod-reason" rows="2" placeholder="e.g. Cheating, Abusive behavior..."></textarea>
-                    </div>
-                    <button class="btn btn-danger" onclick="applyModAction()"><i data-lucide="shield-alert"></i> APPLY ACTION</button>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2><i data-lucide="list-x"></i> Blacklisted / Suspended Users</h2>
-                <div id="mod-banlist" style="max-height:500px; overflow-y:auto;"></div>
-                <button class="btn btn-primary" onclick="loadModBanList()" style="margin-top:10px;"><i data-lucide="refresh-cw"></i> REFRESH</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2><i data-lucide="star"></i> VIP Membership Manager</h2>
-            <p style="font-size:11px; opacity:0.6; margin-bottom:14px;">VIP members get: 2x daily streak reward, 🌟 VIP badge, priority notifications, and exclusive draws.</p>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                <div>
-                    <div class="input-group">
-                        <label>Grant/Revoke VIP — Search User</label>
-                        <input type="text" id="vip-search" placeholder="Type user name..." oninput="searchUsersForVip()">
-                        <div id="vip-results" style="max-height:200px; overflow-y:auto; margin-top:6px; background:rgba(0,0,0,0.2); border-radius:10px; padding:4px;"></div>
-                    </div>
-                    <div style="display:flex; gap:8px; margin-top:10px;">
-                        <button onclick="grantVIP()" style="flex:1; padding:10px; background:linear-gradient(135deg,#fbbf24,#d97706); border:none; border-radius:10px; color:#78350f; font-weight:900; font-size:12px; cursor:pointer;">⭐ GRANT VIP</button>
-                        <button onclick="revokeVIP()" style="flex:1; padding:10px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; color:#ef4444; font-weight:900; font-size:12px; cursor:pointer;">REVOKE VIP</button>
-                    </div>
-                </div>
-                <div>
-                    <label style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:8px;">Current VIP Members</label>
-                    <div id="vip-list" style="max-height:220px; overflow-y:auto; background:rgba(0,0,0,0.2); border-radius:10px; padding:8px;"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2><i data-lucide="eye"></i> Consolation Prize Settings</h2>
-            <p style="font-size:11px; opacity:0.6; margin-bottom:14px;">Players who were PURO (1 number away) automatically receive a consolation prize when the round ends.</p>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:end;">
-                <div class="input-group" style="margin:0;">
-                    <label>Consolation Prize Amount (RB Coins)</label>
-                    <input type="number" id="consolationAmount" value="50" min="0" placeholder="e.g. 50">
-                </div>
-                <div class="input-group" style="margin:0;">
-                    <label>Enabled</label>
-                    <select id="consolationEnabled">
-                        <option value="true">✅ YES — Award consolation to PURO players</option>
-                        <option value="false">❌ NO — Disabled</option>
-                    </select>
-                </div>
-            </div>
-            <button class="btn btn-primary" onclick="saveConsolationSettings()" style="margin-top:14px;"><i data-lucide="save"></i> SAVE SETTINGS</button>
-        </div>
-    </div>
-
 </div>
 
 <div class="activity-panel">
@@ -1645,28 +1501,6 @@
         const val = document.getElementById('serviceAccountJson').value.trim();
         try { const json = JSON.parse(val); if(!json.private_key || !json.client_email) throw new Error("Invalid JSON"); serviceAccount = json; localStorage.setItem('rb_service_account', val); alert("Service Account Saved! Push notifications enabled."); } catch(e) { alert("Error: Invalid Service Account JSON. Please copy the whole file."); }
     }
-
-    function saveGcashSettings() {
-        const num  = document.getElementById('gcashNumberSetting').value.trim();
-        const name = document.getElementById('gcashNameSetting').value.trim();
-        if (!num) return alert('Enter your GCash number!');
-        db.ref('gameState').update({ gcashNumber: num, gcashName: name }, () => {
-            const el = document.getElementById('gcashSaveStatus');
-            if (el) { el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 2500); }
-            if (typeof addActivityItem === 'function') addActivityItem('💳 GCash settings updated: ' + num);
-        });
-    }
-    function loadGcashSettings() {
-        db.ref('gameState').once('value', s => {
-            const d = s.val() || {};
-            const numEl  = document.getElementById('gcashNumberSetting');
-            const nameEl = document.getElementById('gcashNameSetting');
-            if (numEl && d.gcashNumber)  numEl.value  = d.gcashNumber;
-            if (nameEl && d.gcashName)   nameEl.value = d.gcashName;
-        });
-    }
-    // Auto-load GCash settings on page ready
-    document.addEventListener('DOMContentLoaded', () => { setTimeout(loadGcashSettings, 1500); });
     // (JWT Generation using jsrsasign)
     function getAccessToken() {
         return new Promise((resolve, reject) => {
@@ -1737,20 +1571,195 @@
             db.ref('gameState/videoSettings').set({ type: 'offline', url: '', updatedAt: Date.now() }).then(() => { alert("Stream set to OFFLINE."); document.getElementById('videoUrlInput').value = ""; });
         }
     }
+    // JACKPOT ROUND TIMES (hour in 24h)
+    const JACKPOT_HOURS = [15, 20]; // 3PM and 8PM
+    
     db.ref('gameState/schedules').on('value', s => { schedules = s.val() || {}; renderSchedules(); });
-    function addSchedule() { const input = document.getElementById('schedInput'); if(!input.value) return; const time = new Date(input.value).getTime(); const key = db.ref('gameState/schedules').push().key; db.ref('gameState/schedules/' + key).set({ time: time, notified5min: false }); input.value = ""; }
-    function removeSchedule(key) { db.ref('gameState/schedules/' + key).remove(); }
-    function renderSchedules() {
-        const list = document.getElementById('scheduleList'); list.innerHTML = "";
-        const sorted = Object.entries(schedules).sort(([,a], [,b]) => { const timeA = typeof a === 'object' ? a.time : a; const timeB = typeof b === 'object' ? b.time : b; return timeA - timeB; });
-        sorted.forEach(([key, val]) => { let timeVal = typeof val === 'object' ? val.time : val; const date = new Date(timeVal); const str = date.toLocaleDateString('en-PH', { month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString('en-PH', {hour:'2-digit', minute:'2-digit'}); list.innerHTML += `<div style="display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; margin-bottom:5px; font-size:11px;"><span>${str}</span><button style="background:var(--danger); border:none; color:white; border-radius:4px; cursor:pointer;" onclick="removeSchedule('${key}')">X</button></div>`; });
+
+    function addSchedule() { 
+        const input = document.getElementById('schedInput'); 
+        if(!input.value) return; 
+        const time = new Date(input.value).getTime(); 
+        const hr = new Date(time).getHours();
+        const isJP = JACKPOT_HOURS.includes(hr);
+        const key = db.ref('gameState/schedules').push().key; 
+        db.ref('gameState/schedules/' + key).set({ time: time, notified5min: false, notified10min: false, isJackpot: isJP }); 
+        input.value = ""; 
     }
+
+    function removeSchedule(key) { db.ref('gameState/schedules/' + key).remove(); }
+
+    function clearAllSchedules() { 
+        if(confirm("Clear ALL scheduled draws?")) { 
+            db.ref('gameState/schedules').remove(); 
+        } 
+    }
+
+    function generateAutoSchedule() {
+        const jp3pm = parseInt(document.getElementById('jp3pmAmount').value) || 5000;
+        const jp8pm = parseInt(document.getElementById('jp8pmAmount').value) || 5000;
+
+        if(!confirm(`Generate today's full schedule?\n\n• 8:00 AM → 12:00 Midnight (every 30 mins)\n• 3:00 PM Jackpot: ${jp3pm.toLocaleString()} RB Coins\n• 8:00 PM Jackpot: ${jp8pm.toLocaleString()} RB Coins\n\nExisting schedules will be cleared!`)) return;
+
+        // Clear old then write new
+        db.ref('gameState/schedules').remove(() => {
+            const now = new Date();
+            const base = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0); // 8:00 AM today
+            const end  = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 24, 0, 0); // 12:00 MN
+
+            const updates = {};
+            let cursor = base.getTime();
+            let count = 0;
+            while(cursor <= end.getTime()) {
+                const hr = new Date(cursor).getHours();
+                const isJP = JACKPOT_HOURS.includes(hr);
+                const jpAmt = hr === 15 ? jp3pm : (hr === 20 ? jp8pm : null);
+                const key = db.ref('gameState/schedules').push().key;
+                updates['gameState/schedules/' + key] = { 
+                    time: cursor, 
+                    notified5min: false, 
+                    notified10min: false,
+                    isJackpot: isJP,
+                    jackpotAmount: jpAmt
+                };
+                cursor += 30 * 60 * 1000; // +30 minutes
+                count++;
+            }
+
+            // Save jackpot override amounts for reference
+            updates['gameState/autoScheduleConfig'] = { jp3pmAmount: jp3pm, jp8pmAmount: jp8pm, generatedAt: Date.now() };
+
+            db.ref().update(updates, (err) => {
+                if(err) { alert("Error: " + err.message); return; }
+                
+                // Push announcement to players
+                const msg = `📅 NEW BINGO SCHEDULE!\n\nDraws every 30 minutes, 8:00 AM – 12:00 Midnight!\n\n⚡ JACKPOT ROUNDS:\n• 3:00 PM — ${jp3pm.toLocaleString()} RB Coins\n• 8:00 PM — ${jp8pm.toLocaleString()} RB Coins\n\nGood luck to everyone! 🍀`;
+                db.ref('gameState/scheduleAnnouncement').set({ 
+                    message: msg, 
+                    title: "🆕 Draw Schedule Updated!",
+                    createdAt: Date.now(),
+                    version: Date.now()
+                });
+                
+                // Broadcast push notification
+                sendPushToAll("📅 NEW BINGO SCHEDULE!", `Draws every 30 mins from 8AM to 12MN! Jackpot rounds at 3PM & 8PM. ${jp3pm.toLocaleString()} RB Coins jackpot prize!`);
+                
+                if(typeof addActivityItem === 'function') addActivityItem(`📅 Auto Schedule generated: ${count} draws (Jackpot 3PM: ${jp3pm} | 8PM: ${jp8pm})`);
+                alert(`✅ ${count} draw slots generated!\n\nPlayers will see an announcement popup.`);
+            });
+        });
+    }
+
+    function applyJackpotOverride(isOn) {
+        const amount = parseInt(document.getElementById('overrideJpAmount').value) || 0;
+        if(isOn && amount < 100) return alert("Enter a valid jackpot amount first!");
+        db.ref('gameState/jackpot').set({ amount: isOn ? amount : 0, active: isOn });
+        if(isOn) {
+            sendPushToAll("⚡ JACKPOT ROUND!", `JACKPOT is now ACTIVE! Prize: ${amount.toLocaleString()} RB Coins! Join the draw NOW! 🏆`);
+            if(typeof addActivityItem === 'function') addActivityItem(`⚡ Jackpot OVERRIDE ON: ${amount.toLocaleString()} RB Coins`);
+            // Update toggle UI
+            jackpotVisible = true;
+            document.getElementById('jackpotKnob').style.left = "23px";
+            document.getElementById('jackpotKnobBg').style.background = "var(--success)";
+            document.getElementById('jackpotStatusText').innerText = "VISIBLE";
+            document.getElementById('jackpotAmount').value = amount;
+        } else {
+            jackpotVisible = false;
+            document.getElementById('jackpotKnob').style.left = "3px";
+            document.getElementById('jackpotKnobBg').style.background = "rgba(0,0,0,0.3)";
+            document.getElementById('jackpotStatusText').innerText = "HIDDEN";
+            if(typeof addActivityItem === 'function') addActivityItem(`🔕 Jackpot override OFF`);
+        }
+    }
+
+    function renderSchedules() {
+        const list = document.getElementById('scheduleList'); 
+        list.innerHTML = "";
+        const now = Date.now();
+        const sorted = Object.entries(schedules).sort(([,a], [,b]) => { 
+            const tA = typeof a === 'object' ? a.time : a; 
+            const tB = typeof b === 'object' ? b.time : b; 
+            return tA - tB; 
+        });
+        // Show only future + recent (last 2)
+        const future = sorted.filter(([,v]) => (typeof v === 'object' ? v.time : v) >= now - 120000);
+        if(future.length === 0) { list.innerHTML = '<div style="font-size:10px; opacity:0.4; text-align:center; padding:8px;">No upcoming schedules.</div>'; return; }
+        future.forEach(([key, val]) => { 
+            let timeVal = typeof val === 'object' ? val.time : val; 
+            const isJP = typeof val === 'object' && val.isJackpot;
+            const jpAmt = typeof val === 'object' ? val.jackpotAmount : null;
+            const date = new Date(timeVal); 
+            const str = date.toLocaleTimeString('en-PH', {hour:'2-digit', minute:'2-digit', hour12:true}); 
+            const isPast = timeVal < now;
+            list.innerHTML += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:${isJP ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${isJP ? 'rgba(251,191,36,0.3)' : 'rgba(255,255,255,0.05)'}; padding:6px 8px; border-radius:8px; margin-bottom:4px; font-size:11px; opacity:${isPast ? 0.4 : 1};">
+                    <span style="font-weight:800; color:${isJP ? '#fbbf24' : 'white'};">
+                        ${isJP ? '⚡ ' : '🎯 '}${str}${isJP ? ` <span style="font-size:9px; color:#fbbf24;">(${(jpAmt||5000).toLocaleString()} RB)</span>` : ''}
+                    </span>
+                    <button style="background:rgba(239,68,68,0.2); border:none; color:#f87171; border-radius:4px; cursor:pointer; padding:2px 6px; font-size:9px;" onclick="removeSchedule('${key}')">✕</button>
+                </div>`;
+        });
+        // Show count
+        const totalFuture = sorted.filter(([,v]) => (typeof v === 'object' ? v.time : v) > now).length;
+        list.innerHTML += `<div style="text-align:center; font-size:9px; opacity:0.4; padding:4px; font-weight:700;">${totalFuture} more draws today</div>`;
+    }
+
+    // ===== AUTOMATED SCHEDULE CHECKER (every 5 seconds) =====
     setInterval(() => {
         const now = Date.now();
         Object.entries(schedules).forEach(([key, val]) => { 
-            let time = val; let notified = false; if(typeof val === 'object') { time = val.time; notified = val.notified5min; }
-            if(!notified && (time - now) <= 300000 && (time - now) > 0) { sendPushToAll("RB LIVE ALERT", "⚠️ Starting in 5 minutes! The Bingo draw is about to begin!"); if(typeof val === 'object') { db.ref('gameState/schedules/' + key).update({ notified5min: true }); } }
-            if(now >= time && now < time + 60000) { db.ref('gameState/latestWinner').once('value', w => { if(!w.exists() && !isAutoDrawing) { db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() }); startAutoDrawLogic(); } }); removeSchedule(key); } 
+            let time = val; 
+            let notified5 = false; 
+            let notified10 = false;
+            let isJP = false;
+            let jpAmt = null;
+            if(typeof val === 'object') { 
+                time = val.time; 
+                notified5 = val.notified5min; 
+                notified10 = val.notified10min;
+                isJP = val.isJackpot || false;
+                jpAmt = val.jackpotAmount || null;
+            }
+            
+            const diff = time - now;
+            
+            // 10-minute warning
+            if(!notified10 && diff <= 600000 && diff > 540000) { 
+                const msg = isJP ? `⚡ JACKPOT ROUND in 10 minutes! Prize: ${(jpAmt||5000).toLocaleString()} RB Coins! Get ready! 🏆` : "⏰ Bingo draw in 10 minutes! Prepare your cards!";
+                sendPushToAll("🎯 DRAW REMINDER", msg); 
+                if(typeof val === 'object') db.ref('gameState/schedules/' + key).update({ notified10min: true }); 
+            }
+            
+            // 5-minute warning
+            if(!notified5 && diff <= 300000 && diff > 240000) { 
+                const msg = isJP ? `⚡ JACKPOT ROUND starts in 5 minutes! ${(jpAmt||5000).toLocaleString()} RB Coins on the line! 🔥` : "⚠️ Starting in 5 minutes! The Bingo draw is about to begin!";
+                sendPushToAll("🎯 DRAW ALERT", msg); 
+                if(typeof val === 'object') db.ref('gameState/schedules/' + key).update({ notified5min: true }); 
+            }
+            
+            // TIME TO DRAW
+            if(now >= time && now < time + 60000) { 
+                db.ref('gameState/latestWinner').once('value', w => { 
+                    if(!w.exists() && !isAutoDrawing) { 
+                        // AUTO-SET JACKPOT if this is a jackpot round
+                        if(isJP && jpAmt) {
+                            db.ref('gameState/jackpot').set({ amount: jpAmt, active: true });
+                            jackpotVisible = true;
+                            document.getElementById('jackpotKnob').style.left = "23px";
+                            document.getElementById('jackpotKnobBg').style.background = "var(--success)";
+                            document.getElementById('jackpotStatusText').innerText = "VISIBLE";
+                            document.getElementById('jackpotAmount').value = jpAmt;
+                            sendPushToAll("⚡ JACKPOT ROUND STARTING!", `The JACKPOT draw is LIVE! Prize: ${jpAmt.toLocaleString()} RB Coins! Open the app NOW! 🏆🔥`);
+                        } else {
+                            // Turn off jackpot for normal rounds
+                            db.ref('gameState/jackpot').update({ active: false });
+                        }
+                        db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() }); 
+                        startAutoDrawLogic(); 
+                    } 
+                }); 
+                removeSchedule(key); 
+            } 
         });
     }, 5000);
 
@@ -3977,437 +3986,6 @@ db.ref('partnerApplications').orderByChild('status').equalTo('pending').on('valu
         badge.style.display = count > 0 ? 'inline-block' : 'none';
     }
 });
-
-// ================================================================
-// ⚡ AUTO-RESET GAME SYSTEM
-// ================================================================
-let autoResetEnabled = false;
-let autoResetTimer = null;
-
-function toggleAutoReset() {
-    autoResetEnabled = !autoResetEnabled;
-    const knob = document.getElementById('autoResetKnob');
-    const bg   = document.getElementById('autoResetKnobBg');
-    const stat = document.getElementById('autoResetStatus');
-    if (autoResetEnabled) {
-        knob.style.left = '23px';
-        bg.style.background = 'var(--success)';
-        const delay = document.getElementById('autoResetDelay').value || 30;
-        stat.style.color = '#10b981';
-        stat.innerText = `ON — Resets ${delay}s after winner`;
-    } else {
-        knob.style.left = '3px';
-        bg.style.background = 'rgba(0,0,0,0.3)';
-        stat.style.color = 'rgba(255,255,255,0.3)';
-        stat.innerText = 'OFF — Manual reset required';
-        if (autoResetTimer) { clearTimeout(autoResetTimer); autoResetTimer = null; }
-    }
-}
-
-// Watch for winner and auto-reset
-db.ref('gameState/latestWinner').on('value', s => {
-    if (s.exists() && autoResetEnabled) {
-        const delay = parseInt(document.getElementById('autoResetDelay')?.value || 30) * 1000;
-        if (autoResetTimer) clearTimeout(autoResetTimer);
-        autoResetTimer = setTimeout(() => {
-            db.ref('drawnNumbers').remove();
-            db.ref('gameState/latestWinner').remove();
-            db.ref('gameState/gameStartTime').remove();
-            db.ref('gameState/lastCalled').remove();
-            db.ref('gameState').update({ status: 'waiting' });
-            db.ref('users').once('value', snap => {
-                let updates = {};
-                snap.forEach(u => { updates[u.key + '/hasWonCurrent'] = false; });
-                db.ref('users').update(updates);
-            });
-            stopAutoDrawLogic();
-            if (typeof addActivityItem === 'function') addActivityItem('🔄 AUTO-RESET triggered!');
-            autoResetTimer = null;
-        }, delay);
-        if (typeof addActivityItem === 'function') addActivityItem(`⏱️ Auto-reset scheduled in ${delay/1000}s`);
-    }
-});
-
-// ================================================================
-// 🪙 BULK COIN DISTRIBUTION
-// ================================================================
-function doBulkCoins() {
-    const amount = parseInt(document.getElementById('bulkAmount').value);
-    const target = document.getElementById('bulkTarget').value;
-    const reason = document.getElementById('bulkReason').value.trim() || 'Bulk Admin Award';
-    if (!amount || amount < 1) return alert('Enter a valid amount!');
-    if (!confirm(`Award ${amount.toLocaleString()} coins to ${target}?\nReason: ${reason}`)) return;
-
-    db.ref('users').once('value', snap => {
-        let userList = [];
-        snap.forEach(u => { userList.push({ uid: u.key, ...u.val() }); });
-
-        if (target === 'online') {
-            userList = userList.filter(u => globalStatusData[u.uid]?.state === 'online');
-        } else if (target === 'top10') {
-            userList.sort((a, b) => (b.bingoWins || 0) - (a.bingoWins || 0));
-            userList = userList.slice(0, 10);
-        }
-
-        const updates = {};
-        userList.forEach(u => {
-            updates[`users/${u.uid}/points`] = (u.points || 0) + amount;
-        });
-        db.ref().update(updates, err => {
-            if (err) return alert('Error: ' + err.message);
-            // Log for each user
-            userList.forEach(u => {
-                db.ref(`pointLogs/${u.uid}`).push({ amount, reason, timestamp: Date.now(), by: 'Admin/Bulk' });
-                db.ref(`notifications/${u.uid}`).push({ msg: `🎁 You received ${amount.toLocaleString()} RB Coins! (${reason})`, time: Date.now(), type: 'admin' });
-            });
-            sendPushToAll('🎁 COINS RECEIVED!', `You received ${amount.toLocaleString()} RB Coins! ${reason}`);
-            if (typeof addActivityItem === 'function') addActivityItem(`🪙 Bulk: ${amount} coins → ${userList.length} users (${target})`);
-            alert(`✅ Sent ${amount.toLocaleString()} coins to ${userList.length} users!`);
-            document.getElementById('bulkAmount').value = '';
-            document.getElementById('bulkReason').value = '';
-        });
-    });
-}
-
-// ================================================================
-// 📊 REVENUE DASHBOARD
-// ================================================================
-function loadRevenueDashboard() {
-    document.getElementById('rev-totalCoins').innerText = '...';
-    document.getElementById('rev-totalWins').innerText  = '...';
-    document.getElementById('rev-pendingCash').innerText = '...';
-    document.getElementById('rev-vipCount').innerText   = '...';
-
-    db.ref('users').once('value', snap => {
-        let totalCoins = 0, totalWins = 0, vipCount = 0;
-        const rich = [], winners = [];
-        snap.forEach(u => {
-            const d = u.val();
-            totalCoins += d.points || 0;
-            totalWins  += d.bingoWins || 0;
-            if (d.isVip) vipCount++;
-            rich.push({ name: d.name || 'Guest', pts: d.points || 0 });
-            winners.push({ name: d.name || 'Guest', wins: d.bingoWins || 0 });
-        });
-        document.getElementById('rev-totalCoins').innerText = totalCoins.toLocaleString();
-        document.getElementById('rev-totalWins').innerText  = totalWins.toLocaleString();
-        document.getElementById('rev-vipCount').innerText   = vipCount;
-
-        rich.sort((a,b)=>b.pts-a.pts);
-        winners.sort((a,b)=>b.wins-a.wins);
-
-        const richHtml = rich.slice(0,10).map((u,i) => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;">
-                <span style="font-size:16px;font-weight:900;color:${i===0?'#fbbf24':i===1?'#94a3b8':i===2?'#cd7c2a':'rgba(255,255,255,0.5)'};">#${i+1}</span>
-                <span style="flex:1;margin:0 10px;font-size:12px;font-weight:700;">${u.name}</span>
-                <span style="font-size:13px;font-weight:900;color:#fbbf24;">🪙 ${u.pts.toLocaleString()}</span>
-            </div>`).join('');
-        const winsHtml = winners.slice(0,10).map((u,i) => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;">
-                <span style="font-size:16px;font-weight:900;color:${i===0?'#fbbf24':i===1?'#94a3b8':i===2?'#cd7c2a':'rgba(255,255,255,0.5)'};">#${i+1}</span>
-                <span style="flex:1;margin:0 10px;font-size:12px;font-weight:700;">${u.name}</span>
-                <span style="font-size:13px;font-weight:900;color:#10b981;">🏆 ${u.wins} wins</span>
-            </div>`).join('');
-        document.getElementById('rev-richList').innerHTML = richHtml || '<div style="opacity:0.4;text-align:center;padding:20px;">No data</div>';
-        document.getElementById('rev-winList').innerHTML  = winsHtml || '<div style="opacity:0.4;text-align:center;padding:20px;">No data</div>';
-    });
-
-    db.ref('redemptions').orderByChild('status').equalTo('pending').once('value', snap => {
-        let total = 0;
-        snap.forEach(r => { total += r.val().cost || 0; });
-        document.getElementById('rev-pendingCash').innerText = total.toLocaleString();
-    });
-
-    db.ref('pointLogs').once('value', snap => {
-        let awarded = 0;
-        snap.forEach(user => { user.forEach(log => { if ((log.val().amount||0) > 0) awarded += log.val().amount; }); });
-        document.getElementById('rev-awardsTotal').innerText = awarded.toLocaleString();
-    });
-
-    db.ref('redemptions').orderByChild('status').equalTo('sent').once('value', snap => {
-        let total = 0;
-        snap.forEach(r => { total += r.val().cost || 0; });
-        document.getElementById('rev-cashoutTotal').innerText = total.toLocaleString();
-    });
-
-    db.ref('shopOrders').orderByChild('status').equalTo('completed').once('value', snap => {
-        let total = 0;
-        snap.forEach(o => { total += o.val().totalCoins || 0; });
-        document.getElementById('rev-shopTotal').innerText = total.toLocaleString();
-    });
-
-    loadCoinPackages();
-    loadPkgRequests();
-}
-
-// Tab auto-load
-window.openTab = (function(orig) {
-    return function(tabId, btn) {
-        orig(tabId, btn);
-        if (tabId === 'revenue-tab')    { loadRevenueDashboard(); }
-        if (tabId === 'moderation-tab') { loadModBanList(); loadVipList(); loadConsolationSettings(); searchUsersForMod(); searchUsersForVip(); }
-        if (tabId === 'myshop-tab')     { loadShopProducts(); loadShopVouchers(); loadShopOrders('all'); }
-    };
-})(window.openTab || function(id,btn){
-    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    btn.classList.add('active');
-});
-
-// ================================================================
-// 💎 COIN PACKAGES
-// ================================================================
-function saveCoinPackage() {
-    const name  = document.getElementById('pkg-name').value.trim();
-    const coins = parseInt(document.getElementById('pkg-coins').value);
-    const price = parseFloat(document.getElementById('pkg-price').value);
-    const emoji = document.getElementById('pkg-emoji').value.trim() || '💎';
-    if (!name||!coins||!price) return alert('Fill all fields!');
-    const key = db.ref('coinPackages').push().key;
-    db.ref('coinPackages/'+key).set({ name, coins, price, emoji, active:true, createdAt:Date.now() }, err => {
-        if(err) return alert(err.message);
-        ['pkg-name','pkg-coins','pkg-price','pkg-emoji'].forEach(id => document.getElementById(id).value='');
-        loadCoinPackages();
-        alert('✅ Package added!');
-    });
-}
-
-function loadCoinPackages() {
-    const list = document.getElementById('pkg-list');
-    if(!list) return;
-    db.ref('coinPackages').once('value', snap => {
-        if(!snap.exists()) { list.innerHTML='<div style="opacity:0.4;text-align:center;padding:20px;font-size:12px;">No packages yet.</div>'; return; }
-        let html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">';
-        snap.forEach(c=>{
-            const p=c.val(); const active=p.active!==false;
-            html+=`<div style="background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,${active?'0.3':'0.1'});border-radius:12px;padding:14px;opacity:${active?1:0.5};">
-                <div style="font-size:28px;text-align:center;">${p.emoji||'💎'}</div>
-                <div style="font-weight:900;color:white;text-align:center;margin:6px 0;">${p.name}</div>
-                <div style="text-align:center;font-size:16px;font-weight:900;color:#fbbf24;">🪙 ${(p.coins||0).toLocaleString()}</div>
-                <div style="text-align:center;font-size:12px;color:rgba(255,255,255,0.5);margin:4px 0;">₱${p.price}</div>
-                <div style="display:flex;gap:6px;margin-top:8px;">
-                    <button onclick="togglePkg('${c.key}',${active})" style="flex:1;padding:5px;background:rgba(${active?'16,185,129':'255,255,255'},0.1);border:1px solid rgba(${active?'16,185,129':'255,255,255'},0.2);border-radius:6px;color:${active?'#10b981':'rgba(255,255,255,0.4)'};font-size:9px;font-weight:800;cursor:pointer;">${active?'ACTIVE':'OFF'}</button>
-                    <button onclick="deletePkg('${c.key}')" style="flex:1;padding:5px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:6px;color:#ef4444;font-size:9px;font-weight:800;cursor:pointer;">DELETE</button>
-                </div>
-            </div>`;
-        });
-        html+='</div>';
-        list.innerHTML=html;
-    });
-}
-function togglePkg(key, cur) { db.ref('coinPackages/'+key+'/active').set(!cur, ()=>loadCoinPackages()); }
-function deletePkg(key) { if(confirm('Delete package?')) db.ref('coinPackages/'+key).remove(()=>loadCoinPackages()); }
-
-function loadPkgRequests() {
-    const list = document.getElementById('pkg-requests');
-    if(!list) return;
-    db.ref('coinPurchaseRequests').orderByChild('status').equalTo('pending').once('value', snap => {
-        const badge = document.getElementById('pkgReqBadge');
-        const count = snap.numChildren();
-        if(badge) { badge.textContent=count; badge.style.display=count>0?'inline-block':'none'; }
-        if(!snap.exists()) { list.innerHTML='<div style="opacity:0.4;text-align:center;padding:20px;font-size:12px;">No pending requests.</div>'; return; }
-        let html='';
-        snap.forEach(c=>{
-            const r=c.val();
-            const date=new Date(r.timestamp).toLocaleString('en-PH',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-            html+=`<div style="background:rgba(15,23,42,0.5);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    <div style="font-weight:800;color:white;">${r.userName||'Unknown'}</div>
-                    <div style="font-size:11px;color:rgba(255,255,255,0.4);">${date} · ${r.packageName} · ₱${r.price}</div>
-                    <div style="font-size:13px;color:#fbbf24;font-weight:900;">🪙 +${(r.coins||0).toLocaleString()} coins</div>
-                    <div style="font-size:10px;color:#94a3b8;margin-top:2px;">GCash Ref: ${r.gcashRef||'—'}</div>
-                </div>
-                <div style="display:flex;gap:6px;">
-                    <button onclick="approvePkgRequest('${c.key}')" style="padding:8px 14px;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);border-radius:8px;color:#10b981;font-size:11px;font-weight:700;cursor:pointer;">✅ APPROVE</button>
-                    <button onclick="denyPkgRequest('${c.key}')" style="padding:8px 14px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;">❌ DENY</button>
-                </div>
-            </div>`;
-        });
-        list.innerHTML=html;
-    });
-}
-
-function approvePkgRequest(key) {
-    db.ref('coinPurchaseRequests/'+key).once('value', snap=>{
-        const r=snap.val(); if(!r) return;
-        db.ref('users/'+r.uid+'/points').transaction(p=>(p||0)+r.coins);
-        db.ref('coinPurchaseRequests/'+key).update({status:'approved', approvedAt:Date.now()});
-        db.ref('pointLogs/'+r.uid).push({amount:r.coins,reason:'Coin Package: '+r.packageName,timestamp:Date.now(),by:'Admin'});
-        db.ref('notifications/'+r.uid).push({msg:`✅ Your coin purchase was approved! +${(r.coins||0).toLocaleString()} 🪙`,time:Date.now(),type:'purchase'});
-        alert('✅ Approved! Coins awarded.');
-        loadPkgRequests();
-    });
-}
-function denyPkgRequest(key) {
-    if(!confirm('Deny this purchase request?')) return;
-    db.ref('coinPurchaseRequests/'+key).update({status:'denied',deniedAt:Date.now()},()=>{
-        db.ref('coinPurchaseRequests/'+key).once('value',s=>{
-            const r=s.val()||{};
-            db.ref('notifications/'+(r.uid||'')).push({msg:'❌ Your coin purchase request was denied.',time:Date.now(),type:'purchase'});
-        });
-        loadPkgRequests();
-    });
-}
-
-// ================================================================
-// 🛡️ MODERATION SYSTEM
-// ================================================================
-let selectedModUid = null;
-let selectedVipUid = null;
-
-function searchUsersForMod() {
-    const term = document.getElementById('mod-search')?.value.toLowerCase().trim();
-    const res  = document.getElementById('mod-results');
-    if(!res) return;
-    db.ref('users').once('value', snap=>{
-        let html='';
-        snap.forEach(u=>{
-            const d=u.val(); const name=(d.name||d.username||u.key).toLowerCase();
-            if(!term || name.includes(term)){
-                const isBanned=d.isBanned||d.isSuspended;
-                html+=`<div onclick="selectModUser('${u.key}','${(d.name||'User').replace(/'/g,"\\'")}','${isBanned?'banned':'active'}')" style="padding:8px 10px;border-radius:8px;cursor:pointer;background:rgba(255,255,255,0.03);margin-bottom:3px;font-size:12px;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
-                    <span>${d.name||'Guest'}</span>
-                    ${isBanned?'<span style="font-size:9px;color:#ef4444;font-weight:700;">🚫 BANNED</span>':''}
-                </div>`;
-            }
-        });
-        res.innerHTML=html||'<div style="opacity:0.4;font-size:11px;padding:8px;">No users found.</div>';
-    });
-}
-
-function selectModUser(uid, name, status) {
-    selectedModUid=uid;
-    document.getElementById('mod-selected-user').style.display='block';
-    document.getElementById('mod-selected-name').innerText='👤 '+name+' ('+status+')';
-}
-
-function applyModAction() {
-    if(!selectedModUid) return alert('Select a user first!');
-    const action=document.getElementById('mod-action').value;
-    const reason=document.getElementById('mod-reason').value.trim()||'No reason';
-    const name=document.getElementById('mod-selected-name').innerText;
-
-    if(!confirm(`Apply "${action}" to ${name}?\nReason: ${reason}`)) return;
-
-    const updates={};
-    if(action==='blacklist') {
-        updates.isBanned=true; updates.banReason=reason; updates.bannedAt=Date.now(); updates.isSuspended=false;
-        db.ref('notifications/'+selectedModUid).push({msg:`🚫 Your account has been permanently banned. Reason: ${reason}`,time:Date.now(),type:'ban'});
-    } else if(action==='lift') {
-        updates.isBanned=false; updates.isSuspended=false; updates.suspendedUntil=null;
-        db.ref('notifications/'+selectedModUid).push({msg:'✅ Your suspension/ban has been lifted.',time:Date.now(),type:'unban'});
-    } else {
-        const days={suspend_1d:1,suspend_3d:3,suspend_7d:7,suspend_30d:30}[action]||1;
-        updates.isSuspended=true; updates.suspendedUntil=Date.now()+days*86400000; updates.banReason=reason; updates.suspendedAt=Date.now();
-        db.ref('notifications/'+selectedModUid).push({msg:`⚠️ Your account is suspended for ${days} day(s). Reason: ${reason}`,time:Date.now(),type:'suspend'});
-    }
-
-    db.ref('users/'+selectedModUid).update(updates, err=>{
-        if(err) return alert(err.message);
-        if(typeof addActivityItem==='function') addActivityItem(`🛡️ Moderation: ${action} → ${name}`);
-        alert('✅ Action applied!');
-        selectedModUid=null;
-        document.getElementById('mod-selected-user').style.display='none';
-        document.getElementById('mod-reason').value='';
-        loadModBanList();
-    });
-}
-
-function loadModBanList() {
-    const list=document.getElementById('mod-banlist');
-    if(!list) return;
-    list.innerHTML='<div style="opacity:0.4;text-align:center;padding:20px;font-size:12px;">Loading...</div>';
-    db.ref('users').once('value', snap=>{
-        let html='';
-        snap.forEach(u=>{
-            const d=u.val();
-            if(!d.isBanned && !d.isSuspended) return;
-            const isBan=d.isBanned;
-            const untilStr=d.suspendedUntil?new Date(d.suspendedUntil).toLocaleDateString():'—';
-            html+=`<div style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    <div style="font-weight:800;color:white;font-size:13px;">${d.name||'Guest'}</div>
-                    <div style="font-size:10px;color:#ef4444;font-weight:700;">${isBan?'🚫 BANNED':'⏸️ SUSPENDED until '+untilStr}</div>
-                    <div style="font-size:10px;color:rgba(255,255,255,0.4);">Reason: ${d.banReason||'—'}</div>
-                </div>
-                <button onclick="db.ref('users/${u.key}').update({isBanned:false,isSuspended:false,suspendedUntil:null}).then(()=>{loadModBanList();alert('Lifted!');db.ref('notifications/${u.key}').push({msg:'✅ Your restriction has been lifted.',time:Date.now(),type:'unban'})})" style="padding:7px 12px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:8px;color:#10b981;font-size:10px;font-weight:800;cursor:pointer;">LIFT</button>
-            </div>`;
-        });
-        list.innerHTML=html||'<div style="opacity:0.4;text-align:center;padding:20px;font-size:12px;">No banned/suspended users.</div>';
-    });
-}
-
-// ================================================================
-// ⭐ VIP MEMBERSHIP MANAGER
-// ================================================================
-function searchUsersForVip() {
-    const term=document.getElementById('vip-search')?.value.toLowerCase().trim();
-    const res=document.getElementById('vip-results');
-    if(!res) return;
-    db.ref('users').once('value', snap=>{
-        let html='';
-        snap.forEach(u=>{
-            const d=u.val(); const name=(d.name||u.key).toLowerCase();
-            if(!term||name.includes(term)){
-                html+=`<div onclick="selectedVipUid='${u.key}'; document.getElementById('vip-results').querySelectorAll('div').forEach(x=>x.style.background='rgba(255,255,255,0.03)'); this.style.background='rgba(139,92,246,0.2)';" style="padding:8px 10px;border-radius:8px;cursor:pointer;background:rgba(255,255,255,0.03);margin-bottom:3px;font-size:12px;display:flex;justify-content:space-between;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="if(selectedVipUid!=='${u.key}')this.style.background='rgba(255,255,255,0.03)'">
-                    <span>${d.name||'Guest'}</span>
-                    ${d.isVip?'<span style="font-size:9px;color:#fbbf24;font-weight:700;">⭐ VIP</span>':''}
-                </div>`;
-            }
-        });
-        res.innerHTML=html||'<div style="opacity:0.4;font-size:11px;padding:8px;">No users.</div>';
-    });
-}
-
-function grantVIP() {
-    if(!selectedVipUid) return alert('Select a user!');
-    db.ref('users/'+selectedVipUid).update({isVip:true,vipGrantedAt:Date.now()},()=>{
-        db.ref('notifications/'+selectedVipUid).push({msg:'⭐ Congratulations! You are now a VIP member! Enjoy exclusive perks.',time:Date.now(),type:'vip'});
-        if(typeof addActivityItem==='function') addActivityItem('⭐ VIP granted to UID: '+selectedVipUid.slice(0,8));
-        alert('✅ VIP granted!'); selectedVipUid=null; loadVipList();
-    });
-}
-
-function revokeVIP() {
-    if(!selectedVipUid) return alert('Select a user!');
-    db.ref('users/'+selectedVipUid).update({isVip:false,vipRevokedAt:Date.now()},()=>{
-        db.ref('notifications/'+selectedVipUid).push({msg:'⚠️ Your VIP membership has been revoked.',time:Date.now(),type:'vip'});
-        if(typeof addActivityItem==='function') addActivityItem('🔕 VIP revoked from UID: '+selectedVipUid.slice(0,8));
-        alert('✅ VIP revoked!'); selectedVipUid=null; loadVipList();
-    });
-}
-
-function loadVipList() {
-    const list=document.getElementById('vip-list');
-    if(!list) return;
-    db.ref('users').orderByChild('isVip').equalTo(true).once('value', snap=>{
-        if(!snap.exists()) { list.innerHTML='<div style="opacity:0.4;text-align:center;padding:14px;font-size:11px;">No VIP members yet.</div>'; return; }
-        let html='';
-        snap.forEach(u=>{ const d=u.val(); html+=`<div style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;display:flex;align-items:center;gap:6px;"><span style="color:#fbbf24;">⭐</span><span style="font-weight:700;">${d.name||'Guest'}</span></div>`; });
-        list.innerHTML=html;
-    });
-}
-
-// ================================================================
-// 🎁 CONSOLATION PRIZE SETTINGS
-// ================================================================
-function saveConsolationSettings() {
-    const amount=parseInt(document.getElementById('consolationAmount').value)||50;
-    const enabled=document.getElementById('consolationEnabled').value==='true';
-    db.ref('gameState/consolation').set({amount,enabled},()=>{
-        alert('✅ Consolation settings saved!');
-        if(typeof addActivityItem==='function') addActivityItem(`🎁 Consolation: ${enabled?amount+' coins ENABLED':'DISABLED'}`);
-    });
-}
-function loadConsolationSettings() {
-    db.ref('gameState/consolation').once('value', s=>{
-        if(!s.exists()) return;
-        const d=s.val();
-        if(document.getElementById('consolationAmount')) document.getElementById('consolationAmount').value=d.amount||50;
-        if(document.getElementById('consolationEnabled')) document.getElementById('consolationEnabled').value=d.enabled?'true':'false';
-    });
-}
 
 </script>
 </body>
