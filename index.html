@@ -16535,6 +16535,332 @@ function processShopOrder(costs, addr) {
     });
 }
 
+// ============================================================
+// ██████╗ ██████╗       ███████╗██╗  ██╗██╗███████╗██╗     ██████╗
+// ██╔══██╗██╔══██╗      ██╔════╝██║  ██║██║██╔════╝██║     ██╔══██╗
+// ██████╔╝██████╔╝█████╗███████╗███████║██║█████╗  ██║     ██║  ██║
+// ██╔══██╗██╔══██╗╚════╝╚════██║██╔══██║██║██╔══╝  ██║     ██║  ██║
+// ██║  ██║██████╔╝      ███████║██║  ██║██║███████╗███████╗██████╔╝
+// ╚═╝  ╚═╝╚═════╝       ╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚═════╝
+// ANTI-BUG SYSTEM v2.0 — Radio Bingo Live
+// Protects against: JS errors, Promise rejections, Firebase drops,
+// Network issues, DOM failures, memory leaks, and more.
+// ============================================================
+(function() {
+    'use strict';
+
+    // ── CONFIGURATION ──────────────────────────────────────────
+    var ABS = {
+        version: '2.0',
+        maxErrorsPerMin: 5,       // max toasts per minute
+        reconnectDelay: 3000,     // ms before reconnect attempt
+        maxReconnectAttempts: 10,
+        heartbeatInterval: 30000, // ms between Firebase pings
+        errorLog: [],             // rolling error log
+        errorCount: 0,
+        errorResetTimer: null,
+        reconnectAttempts: 0,
+        isOnline: navigator.onLine,
+        firebaseConnected: false,
+        heartbeatTimer: null,
+        suppressedErrors: [
+            'ResizeObserver loop',
+            'Non-Error promise rejection',
+            'Script error.',
+            'NetworkError when attempting to fetch',
+            'Load failed',
+            'cancelled',
+            'AbortError'
+        ]
+    };
+
+    // ── UTILITY: Safe toast caller (won't crash if showToast not ready) ──
+    function absToast(msg, isError) {
+        if (ABS.errorCount >= ABS.maxErrorsPerMin) return;
+        try {
+            if (typeof showToast === 'function') {
+                showToast(msg);
+            } else {
+                console.warn('[ABS] Toast not ready:', msg);
+            }
+        } catch(e) { /* silent */ }
+    }
+
+    // ── UTILITY: Throttle error toasts ──────────────────────────
+    function absThrottledError(msg) {
+        ABS.errorCount++;
+        if (!ABS.errorResetTimer) {
+            ABS.errorResetTimer = setTimeout(function() {
+                ABS.errorCount = 0;
+                ABS.errorResetTimer = null;
+            }, 60000);
+        }
+        if (ABS.errorCount <= ABS.maxErrorsPerMin) {
+            absToast(msg);
+        } else if (ABS.errorCount === ABS.maxErrorsPerMin + 1) {
+            absToast('⚠️ Maraming errors ang nangyari. Tingnan ang console.');
+        }
+    }
+
+    // ── UTILITY: Log to internal error log ──────────────────────
+    function absLog(type, msg, detail) {
+        var entry = {
+            type: type,
+            msg: msg,
+            detail: detail || '',
+            ts: new Date().toISOString()
+        };
+        ABS.errorLog.push(entry);
+        if (ABS.errorLog.length > 100) ABS.errorLog.shift(); // keep last 100
+        console.warn('[ABS][' + type + '] ' + msg, detail || '');
+    }
+
+    // ── UTILITY: Check if error is suppressed ───────────────────
+    function isSuppressed(msg) {
+        if (!msg) return true;
+        var s = String(msg);
+        for (var i = 0; i < ABS.suppressedErrors.length; i++) {
+            if (s.indexOf(ABS.suppressedErrors[i]) !== -1) return true;
+        }
+        return false;
+    }
+
+    // ── 1. GLOBAL JS ERROR HANDLER ──────────────────────────────
+    var _origOnerror = window.onerror;
+    window.onerror = function(msg, src, line, col, err) {
+        if (isSuppressed(msg)) return false;
+        absLog('JS_ERROR', msg, src + ':' + line);
+        // Only show toast for truly unexpected errors
+        if (msg && String(msg).indexOf('undefined') !== -1) {
+            absThrottledError('⚠️ May natuklasang bug. Nire-refresh ang ilang bahagi...');
+            absAutoRecover();
+        }
+        if (typeof _origOnerror === 'function') _origOnerror.apply(this, arguments);
+        return false; // don't suppress browser default behavior
+    };
+
+    // ── 2. UNHANDLED PROMISE REJECTION HANDLER ──────────────────
+    window.addEventListener('unhandledrejection', function(e) {
+        var reason = e.reason ? (e.reason.message || String(e.reason)) : 'Unknown';
+        if (isSuppressed(reason)) return;
+        absLog('PROMISE_REJECTION', reason);
+        // Firebase permission errors
+        if (reason.indexOf('permission') !== -1 || reason.indexOf('PERMISSION_DENIED') !== -1) {
+            absLog('FIREBASE_PERM', 'Permission denied - user may need to re-login');
+            absThrottledError('🔒 Permission denied. Subukan mag-login ulit.');
+        } else if (reason.indexOf('network') !== -1 || reason.indexOf('fetch') !== -1) {
+            absLog('NETWORK_ERR', 'Network error in promise');
+        }
+    });
+
+    // ── 3. NETWORK MONITORING ────────────────────────────────────
+    window.addEventListener('online', function() {
+        ABS.isOnline = true;
+        absLog('NETWORK', 'Connection restored');
+        absToast('✅ Nakabalik na ang internet!');
+        absReconnectFirebase();
+    });
+
+    window.addEventListener('offline', function() {
+        ABS.isOnline = false;
+        absLog('NETWORK', 'Connection lost');
+        absToast('📡 Nawala ang internet connection. Naghihintay...');
+    });
+
+    // ── 4. FIREBASE CONNECTION MONITORING ───────────────────────
+    function absInitFirebaseMonitor() {
+        if (!window.db) {
+            setTimeout(absInitFirebaseMonitor, 2000);
+            return;
+        }
+        try {
+            window.db.ref('.info/connected').on('value', function(snap) {
+                var connected = snap.val();
+                if (connected === true) {
+                    if (!ABS.firebaseConnected) {
+                        ABS.firebaseConnected = true;
+                        ABS.reconnectAttempts = 0;
+                        absLog('FIREBASE', 'Connected to Firebase');
+                        if (ABS.reconnectAttempts > 0) {
+                            absToast('🔥 Nakakonekta na ulit sa Firebase!');
+                        }
+                    }
+                } else {
+                    if (ABS.firebaseConnected) {
+                        ABS.firebaseConnected = false;
+                        absLog('FIREBASE', 'Disconnected from Firebase');
+                        if (ABS.isOnline) {
+                            absThrottledError('🔄 Nawala ang koneksyon sa server. Nagre-reconnect...');
+                        }
+                        absScheduleReconnect();
+                    }
+                }
+            });
+            absStartHeartbeat();
+        } catch(e) {
+            absLog('FIREBASE_MONITOR_ERR', e.message);
+        }
+    }
+
+    function absScheduleReconnect() {
+        if (ABS.reconnectAttempts >= ABS.maxReconnectAttempts) {
+            absLog('FIREBASE', 'Max reconnect attempts reached');
+            absThrottledError('❌ Hindi makakonekta sa server. I-refresh ang page.');
+            return;
+        }
+        var delay = ABS.reconnectDelay * Math.pow(1.5, Math.min(ABS.reconnectAttempts, 5));
+        ABS.reconnectAttempts++;
+        setTimeout(absReconnectFirebase, delay);
+    }
+
+    function absReconnectFirebase() {
+        if (!window.db) return;
+        try {
+            absLog('FIREBASE', 'Attempting reconnect #' + ABS.reconnectAttempts);
+            // Firebase auto-reconnects but we can force a ping
+            window.db.ref('.info/serverTimeOffset').once('value', function(snap) {
+                absLog('FIREBASE', 'Reconnect ping successful');
+            }, function(err) {
+                absLog('FIREBASE_ERR', 'Reconnect ping failed: ' + err.message);
+                absScheduleReconnect();
+            });
+        } catch(e) {
+            absScheduleReconnect();
+        }
+    }
+
+    // ── 5. HEARTBEAT (keeps Firebase alive) ─────────────────────
+    function absStartHeartbeat() {
+        if (ABS.heartbeatTimer) clearInterval(ABS.heartbeatTimer);
+        ABS.heartbeatTimer = setInterval(function() {
+            if (!ABS.isOnline || !window.db) return;
+            try {
+                window.db.ref('.info/serverTimeOffset').once('value', function() {
+                    // heartbeat ok
+                }, function(err) {
+                    absLog('HEARTBEAT_FAIL', err.message);
+                });
+            } catch(e) { /* silent */ }
+        }, ABS.heartbeatInterval);
+    }
+
+    // ── 6. SAFE DOM WRAPPER ──────────────────────────────────────
+    window.safeQuery = function(selector, parent) {
+        try {
+            return (parent || document).querySelector(selector);
+        } catch(e) {
+            absLog('DOM_ERR', 'safeQuery failed: ' + selector, e.message);
+            return null;
+        }
+    };
+
+    window.safeQueryAll = function(selector, parent) {
+        try {
+            return (parent || document).querySelectorAll(selector);
+        } catch(e) {
+            absLog('DOM_ERR', 'safeQueryAll failed: ' + selector, e.message);
+            return [];
+        }
+    };
+
+    // ── 7. SAFE FIREBASE OPERATION WRAPPER ──────────────────────
+    window.safeFirebase = function(fn, fallback) {
+        if (!window.db) {
+            absLog('FIREBASE_ERR', 'DB not ready for operation');
+            if (typeof fallback === 'function') fallback(new Error('DB not ready'));
+            return;
+        }
+        try {
+            fn();
+        } catch(e) {
+            absLog('FIREBASE_OP_ERR', e.message);
+            if (typeof fallback === 'function') fallback(e);
+        }
+    };
+
+    // ── 8. AUTO-RECOVERY SYSTEM ──────────────────────────────────
+    function absAutoRecover() {
+        try {
+            // Re-render Lucide icons if they got wiped
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                setTimeout(function() {
+                    try { lucide.createIcons(); } catch(e) {}
+                }, 500);
+            }
+        } catch(e) { /* silent */ }
+    }
+
+    // ── 9. MEMORY LEAK GUARD — Warn on excessive listeners ──────
+    var _listenerCounts = {};
+    var _origDbRef = null;
+    function absMonitorListeners() {
+        if (!window.db) { setTimeout(absMonitorListeners, 3000); return; }
+        // Simple: track .on() calls count per path
+        var _origOn = firebase.database.Reference.prototype.on;
+        firebase.database.Reference.prototype.on = function(event, cb, cancelCb, context) {
+            var path = this.toString();
+            _listenerCounts[path] = (_listenerCounts[path] || 0) + 1;
+            if (_listenerCounts[path] > 20) {
+                absLog('MEMORY_WARN', 'High listener count on: ' + path + ' (' + _listenerCounts[path] + ')');
+            }
+            return _origOn.call(this, event, cb, cancelCb, context);
+        };
+        var _origOff = firebase.database.Reference.prototype.off;
+        firebase.database.Reference.prototype.off = function(event, cb, context) {
+            var path = this.toString();
+            if (_listenerCounts[path] > 0) _listenerCounts[path]--;
+            return _origOff.call(this, event, cb, context);
+        };
+    }
+
+    // ── 10. PAGE VISIBILITY — Reconnect when tab comes back ─────
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden && !ABS.firebaseConnected && ABS.isOnline) {
+            absLog('VISIBILITY', 'Tab active, attempting Firebase reconnect');
+            absReconnectFirebase();
+        }
+        if (!document.hidden) {
+            absAutoRecover();
+        }
+    });
+
+    // ── 11. CONSOLE ERROR INTERCEPTOR ────────────────────────────
+    var _origConsoleError = console.error;
+    console.error = function() {
+        var args = Array.prototype.slice.call(arguments);
+        var msg = args.join(' ');
+        if (!isSuppressed(msg)) {
+            absLog('CONSOLE_ERR', msg.substring(0, 200));
+        }
+        _origConsoleError.apply(console, arguments);
+    };
+
+    // ── 12. ABS DIAGNOSTICS (accessible via console) ─────────────
+    window.ABSDiagnostics = function() {
+        return {
+            version: ABS.version,
+            online: ABS.isOnline,
+            firebaseConnected: ABS.firebaseConnected,
+            reconnectAttempts: ABS.reconnectAttempts,
+            errorCount: ABS.errorCount,
+            recentErrors: ABS.errorLog.slice(-10),
+            listenerCounts: _listenerCounts
+        };
+    };
+
+    // ── INIT ─────────────────────────────────────────────────────
+    window.addEventListener('load', function() {
+        absInitFirebaseMonitor();
+        setTimeout(absMonitorListeners, 4000);
+        absLog('SYSTEM', 'Anti-Bug Shield v' + ABS.version + ' initialized ✅');
+    });
+
+    console.log('%c🛡️ Anti-Bug System v2.0 Loaded', 'color:#10b981;font-weight:bold;font-size:14px;');
+    console.log('%cType ABSDiagnostics() sa console para makita ang status.', 'color:#94a3b8;font-size:11px;');
+
+})(); // End of Anti-Bug System
+// ============================================================
+
 // --- MY ORDERS ---
 function loadMyOrders() {
     var list = document.getElementById('myShopOrdersList');
