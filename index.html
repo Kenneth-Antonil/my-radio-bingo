@@ -6519,9 +6519,14 @@ async function aiGenerate(prompt, hint) {
     try {
         const res = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': window._RBAI_KEY || '',
+                'anthropic-version': '2023-06-01',
+                'anthropic-dangerous-direct-browser-access': 'true'
+            },
             body: JSON.stringify({
-                model: 'claude-sonnet-4-20250514',
+                model: 'claude-haiku-4-5-20251001',
                 max_tokens: 1000,
                 messages: [{ role: 'user', content: prompt }]
             })
@@ -6534,6 +6539,28 @@ async function aiGenerate(prompt, hint) {
         document.getElementById('aiLoadingOverlay').style.display = 'none';
         return null;
     }
+}
+
+// ============================================================
+// GAME POINTS HELPER — Awards coins to the current user
+// ============================================================
+function awardGamePoints(pts, reason) {
+    if (!pts || pts <= 0) return;
+    var db = window.db; var auth = window.auth;
+    if (!db || !auth || !auth.currentUser) return;
+    var uid = auth.currentUser.uid;
+    db.ref('users/' + uid + '/points').transaction(function(p) { return (p || 0) + pts; });
+    db.ref('coinHistory/' + uid).push({ label: '🎮 ' + (reason || 'Mini-Game Reward'), amount: pts, type: 'earn', timestamp: Date.now() });
+    // Update in-memory and display
+    if (window.userData) {
+        window.userData.points = (window.userData.points || 0) + pts;
+        document.querySelectorAll('#rbStoreCoins, #gamesCoinsAmt, #gamesRbCoins').forEach(function(el) {
+            if (el) el.textContent = Number(window.userData.points).toLocaleString();
+        });
+    }
+    // Visual feedback
+    if (typeof spawnFlyingCoins === 'function') spawnFlyingCoins(Math.min(pts, 30));
+    if (typeof showToast === 'function') showToast('🎮 +' + pts + ' RB Coins! ' + (reason || ''));
 }
 
 function parseAIJson(text) {
@@ -6618,11 +6645,14 @@ where "a" is the index (0-3) of the correct answer. Make questions fun and educa
         if (idx >= questions.length) {
             _sfx.win();
             gScore('');
+            const earnedPts = score * 5;
+            awardGamePoints(earnedPts, 'Trivia Quiz (' + score + '/' + questions.length + ')');
             gHTML(`<div style="text-align:center;padding:40px 20px;">
                 <div style="font-size:64px;margin-bottom:16px;">${score >= questions.length*0.8?'🏆':score>=questions.length*0.5?'🌟':'😊'}</div>
                 <div style="font-size:26px;font-weight:900;color:white;margin-bottom:8px;">TAPOS!</div>
                 <div style="font-size:20px;color:#fbbf24;font-weight:800;margin-bottom:6px;">${score} / ${questions.length}</div>
-                <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:28px;">${score>=questions.length*0.8?'Kahanga-hanga! Expert ka!':score>=questions.length*0.5?'Magaling! Subukan pa ulit!':'Mag-aral pa, subukan ulit!'}</div>
+                <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:8px;">${score>=questions.length*0.8?'Kahanga-hanga! Expert ka!':score>=questions.length*0.5?'Magaling! Subukan pa ulit!':'Mag-aral pa, subukan ulit!'}</div>
+                <div style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:10px 16px;margin-bottom:24px;font-size:15px;font-weight:800;color:#fbbf24;">🪙 +${earnedPts} RB Coins nakuha!</div>
                 <button onclick="loadTrivia()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);border:none;color:white;font-size:14px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;margin-bottom:12px;width:100%;">🤖 Bagong AI Questions</button>
                 <button onclick="closeGame()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);font-size:13px;font-weight:700;padding:12px 24px;border-radius:12px;cursor:pointer;width:100%;">← Bumalik sa Games</button>
             </div>`);
@@ -6687,7 +6717,7 @@ function loadMemory() {
             locked = true; moves++;
             if (flipping[0].emoji === flipping[1].emoji) {
                 _sfx.match(); flipping[0].matched=true; flipping[1].matched=true; matched+=2; flipping=[]; locked=false;
-                if(matched===emojis.length*2) _sfx.win();
+                if(matched===emojis.length*2) { _sfx.win(); awardGamePoints(30, 'Memory Flip'); }
                 render();
             } else {
                 setTimeout(()=>{ flipping.forEach(f=>f.flipped=false); flipping=[]; locked=false; render(); }, 900);
@@ -6731,10 +6761,13 @@ Use uppercase Filipino words only, 4-12 letters. Varied topics: nature, food, em
     function render() {
         if (idx >= words.length) {
             _sfx.win(); gScore('');
+            const earnedPts = score * 8;
+            awardGamePoints(earnedPts, 'Word Scramble (' + score + '/' + words.length + ')');
             gHTML(`<div style="text-align:center;padding:40px 20px;">
                 <div style="font-size:64px;margin-bottom:16px;">🔤</div>
                 <div style="font-size:22px;font-weight:900;color:white;margin-bottom:8px;">TAPOS!</div>
-                <div style="font-size:20px;color:#fbbf24;font-weight:800;margin-bottom:24px;">${score} / ${words.length}</div>
+                <div style="font-size:20px;color:#fbbf24;font-weight:800;margin-bottom:8px;">${score} / ${words.length}</div>
+                <div style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:10px 16px;margin-bottom:20px;font-size:15px;font-weight:800;color:#fbbf24;">🪙 +${earnedPts} RB Coins nakuha!</div>
                 <button onclick="loadScramble()" style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:white;font-size:14px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;width:100%;margin-bottom:10px;">🤖 Bagong AI Words</button>
                 <button onclick="closeGame()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);font-size:13px;padding:12px 24px;border-radius:12px;cursor:pointer;width:100%;">← Bumalik</button>
             </div>`);
@@ -6793,13 +6826,16 @@ function loadReaction() {
             const avg=Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
             const best=Math.min(...scores);
             const grade=avg<200?'⚡ SUPERHERO':avg<300?'🔥 ULTRA FAST':avg<450?'😎 MABILIS':avg<600?'👍 AVERAGE':'🐢 MABAGAL';
+            const earnedPts = avg<200?50:avg<300?40:avg<450?30:avg<600?20:10;
             _sfx.win(); gScore('');
+            awardGamePoints(earnedPts, 'Reaction Tap (' + avg + 'ms avg)');
             gHTML(`<div style="text-align:center;padding:30px 20px;">
                 <div style="font-size:48px;margin-bottom:12px;">⚡</div>
                 <div style="font-size:22px;font-weight:900;color:white;margin-bottom:4px;">RESULTA</div>
                 <div style="font-size:40px;font-weight:900;color:#fbbf24;margin-bottom:4px;">${avg}ms</div>
                 <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px;">Average</div>
                 <div style="font-size:20px;font-weight:900;margin:16px 0;color:#8b5cf6;">${grade}</div>
+                <div style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:10px 16px;margin-bottom:16px;font-size:15px;font-weight:800;color:#fbbf24;">🪙 +${earnedPts} RB Coins nakuha!</div>
                 <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:24px;max-width:260px;margin-left:auto;margin-right:auto;">
                     ${scores.map((s,i)=>`<div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:8px 16px;display:flex;justify-content:space-between;"><span style="color:rgba(255,255,255,0.4);font-size:12px;">Round ${i+1}</span><span style="font-weight:800;font-size:13px;color:${s<300?'#10b981':s<500?'#fbbf24':'#ef4444'}">${s}ms</span></div>`).join('')}
                 </div>
@@ -6879,7 +6915,7 @@ function load2048() {
         else if(dir==='up'){let t=board[0].map((_,c)=>board.map(r=>r[c]));t=proc(t);board=board.map((_,r)=>t.map(col=>col[r]));}
         else{let t=board[0].map((_,c)=>board.map(r=>r[c]).reverse());t=proc(t);board=board.map((_,r)=>t.map(col=>col.reverse()[r]));}
         if(moved){_sfx.merge();addTile();if(score>best){best=score;window._2048Best=best;}render();}
-        if(!canMove()){gameOver=true;_sfx.lose();render();}
+        if(!canMove()){gameOver=true;_sfx.lose();awardGamePoints(Math.max(5, Math.floor(score/100)), '2048 Tiles (score:'+score+')');render();}
     }
     function canMove(){
         for(let r=0;r<4;r++)for(let c=0;c<4;c++){
@@ -6960,7 +6996,7 @@ function loadSnake(){
         dir={...nDir};
         const h={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
         if(h.x<0||h.x>=C||h.y<0||h.y>=R||snake.some(s=>s.x===h.x&&s.y===h.y)){
-            alive=false;_sfx.lose();draw();
+            alive=false;_sfx.lose();awardGamePoints(Math.max(5, Math.floor(score/10)), 'Snake Game (score:'+score+')');draw();
             if(score>best){best=score;window._snakeBest=best;const el=document.getElementById('sBs');if(el)el.textContent=best;}
             return;
         }
@@ -7012,10 +7048,13 @@ Mix: Hollywood movies, Disney, Filipino movies/phrases, popular songs. Make them
     function render(){
         if(idx>=puzzles.length){
             _sfx.win();gScore('');
+            const earnedPts = score * 8;
+            awardGamePoints(earnedPts, 'Emoji Guessing (' + score + '/' + puzzles.length + ')');
             gHTML(`<div style="text-align:center;padding:40px 20px;">
                 <div style="font-size:64px;margin-bottom:16px;">😀</div>
                 <div style="font-size:22px;font-weight:900;color:white;margin-bottom:8px;">TAPOS!</div>
-                <div style="font-size:20px;color:#fbbf24;font-weight:800;margin-bottom:24px;">${score} / ${puzzles.length}</div>
+                <div style="font-size:20px;color:#fbbf24;font-weight:800;margin-bottom:8px;">${score} / ${puzzles.length}</div>
+                <div style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:10px 16px;margin-bottom:20px;font-size:15px;font-weight:800;color:#fbbf24;">🪙 +${earnedPts} RB Coins nakuha!</div>
                 <button onclick="loadEmoji()" style="background:linear-gradient(135deg,#f472b6,#db2777);border:none;color:white;font-size:14px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;width:100%;margin-bottom:10px;">🤖 Bagong AI Puzzles</button>
                 <button onclick="closeGame()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);font-size:13px;padding:12px 24px;border-radius:12px;cursor:pointer;width:100%;">← Bumalik</button>
             </div>`);
@@ -7087,8 +7126,10 @@ function loadNumGuess(){
         if(!val||val<1||val>100){input.style.borderColor='#ef4444';setTimeout(()=>input.style.borderColor='rgba(255,255,255,0.15)',500);return;}
         attempts++;
         if(val===target){
+            const earnedPts = Math.max(10, (maxAttempts - attempts + 1) * 10);
             _sfx.win();gameOver=true;gScore('');
-            render(`🎉 TAMA! Ang sagot ay ${target}! (${attempts} tries)`,'#10b981');
+            awardGamePoints(earnedPts, 'Number Guess ('+attempts+' tries)');
+            render(`🎉 TAMA! Ang sagot ay ${target}! (+${earnedPts} coins) (${attempts} tries)`,'#10b981');
         } else if(attempts>=maxAttempts){
             _sfx.lose();gameOver=true;gScore('');
             render(`😢 Talo ka! Ang sagot ay ${target}. Better luck next time!`,'#ef4444');
@@ -7135,10 +7176,13 @@ Use authentic Filipino bugtong style. Varied topics: nature, household items, bo
     function render(){
         if(idx>=riddles.length){
             _sfx.win();gScore('');
+            const earnedPts = score * 8;
+            awardGamePoints(earnedPts, 'Pinoy Riddles (' + score + '/' + riddles.length + ')');
             gHTML(`<div style="text-align:center;padding:40px 20px;">
                 <div style="font-size:64px;margin-bottom:16px;">🤔</div>
                 <div style="font-size:22px;font-weight:900;color:white;margin-bottom:8px;">TAPOS!</div>
-                <div style="font-size:20px;color:#fbbf24;font-weight:800;margin-bottom:24px;">${score} / ${riddles.length}</div>
+                <div style="font-size:20px;color:#fbbf24;font-weight:800;margin-bottom:8px;">${score} / ${riddles.length}</div>
+                <div style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:10px 16px;margin-bottom:20px;font-size:15px;font-weight:800;color:#fbbf24;">🪙 +${earnedPts} RB Coins nakuha!</div>
                 <button onclick="loadRiddles()" style="background:linear-gradient(135deg,#34d399,#059669);border:none;color:white;font-size:14px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;width:100%;margin-bottom:10px;">🤖 Bagong AI Riddles</button>
                 <button onclick="closeGame()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);font-size:13px;padding:12px 24px;border-radius:12px;cursor:pointer;width:100%;">← Bumalik</button>
             </div>`);
@@ -7240,12 +7284,15 @@ function loadWhack(){
     }
     
     function showResult(){
+        const earnedPts = Math.max(5, score * 2);
+        awardGamePoints(earnedPts, 'Whack-a-Mole (score:' + score + ')');
         el.innerHTML=`<div style="text-align:center;padding:40px 20px;">
             <div style="font-size:64px;margin-bottom:16px;">🔨</div>
             <div style="font-size:22px;font-weight:900;color:white;margin-bottom:8px;">TAPOS NA!</div>
             <div style="font-size:36px;font-weight:900;color:#fbbf24;margin-bottom:4px;">${score}</div>
             <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:8px;">moles na na-whack</div>
-            ${score>best?`<div style="font-size:13px;color:#10b981;font-weight:700;margin-bottom:16px;">🏆 Bagong record!</div>`:`<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:16px;">Best: ${best}</div>`}
+            ${score>best?`<div style="font-size:13px;color:#10b981;font-weight:700;margin-bottom:8px;">🏆 Bagong record!</div>`:`<div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:8px;">Best: ${best}</div>`}
+            <div style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:10px 16px;margin-bottom:20px;font-size:15px;font-weight:800;color:#fbbf24;">🪙 +${earnedPts} RB Coins nakuha!</div>
             <button onclick="loadWhack()" style="background:linear-gradient(135deg,#fb923c,#ea580c);border:none;color:white;font-size:14px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;width:100%;">🔄 Laruin Ulit</button>
         </div>`;
     }
@@ -7455,23 +7502,42 @@ function closeGame() {
 
 // Helper: AI call
 function callAI(prompt, cb) {
-    var el = document.getElementById('gameModalContent');
+    if (!window._RBAI_KEY) {
+        console.warn('[AI] No API key set (window._RBAI_KEY). Using fallback data.');
+        cb(new Error('No API key'), null);
+        return;
+    }
     fetch('https://api.anthropic.com/v1/messages', {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{
+            'Content-Type':'application/json',
+            'x-api-key': window._RBAI_KEY,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+        },
         body: JSON.stringify({
-            model:'claude-sonnet-4-20250514',
+            model:'claude-haiku-4-5-20251001',
             max_tokens:1000,
             messages:[{role:'user',content:prompt}]
         })
     }).then(function(r){ return r.json(); })
     .then(function(d){
         try {
+            if (d.error) throw new Error(d.error.message || 'AI Error');
             var txt = d.content.map(function(x){ return x.text||''; }).join('');
             var clean = txt.replace(/```json|```/g,'').trim();
             cb(null, JSON.parse(clean));
         } catch(e) { cb(e, null); }
     }).catch(function(e){ cb(e,null); });
+}
+
+function shuffleArray(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
 }
 
 function showLoading(msg) {
@@ -7485,8 +7551,8 @@ function loadTrivia() {
     showLoading('🤖 AI ay gumagawa ng bagong mga tanong...');
     callAI('Generate 10 unique Filipino trivia questions. Mix topics: Philippine history, geography, culture, famous Filipinos, food, and fun facts. Return ONLY valid JSON array: [{"q":"question","choices":["A","B","C","D"],"a":0}] where "a" is the 0-based index of the correct answer. Make them interesting and educational. No markdown, no extra text.', function(err, data) {
         if (err || !data || !data.length) {
-            // fallback
-            data = [
+            // fallback - shuffled so order varies each play
+            var fallback = [
                 {q:"Sino ang unang Pangulo ng Pilipinas?",choices:["Manuel Quezon","Emilio Aguinaldo","Sergio Osmeña","Jose Laurel"],a:1},
                 {q:"Alin ang pinakamalaking lawa sa Pilipinas?",choices:["Laguna de Bay","Taal Lake","Lanao Lake","Buhi Lake"],a:0},
                 {q:"Ano ang pambansang ibon ng Pilipinas?",choices:["Maya","Philippine Eagle","Kalapati","Ibis"],a:1},
@@ -7496,8 +7562,14 @@ function loadTrivia() {
                 {q:"Ilang bituin ang bandila ng Pilipinas?",choices:["3","5","8","12"],a:2},
                 {q:"Saan matatagpuan ang Mayon Volcano?",choices:["Batangas","Albay","Cavite","Quezon"],a:1},
                 {q:"Ano ang kabisera ng Pilipinas?",choices:["Cebu","Manila","Davao","Quezon City"],a:1},
-                {q:"Alin ang pinakamalaking rehiyon sa Pilipinas?",choices:["NCR","CALABARZON","BARMM","Cagayan Valley"],a:2}
+                {q:"Alin ang pinakamalaking rehiyon sa Pilipinas?",choices:["NCR","CALABARZON","BARMM","Cagayan Valley"],a:2},
+                {q:"Sino ang tinaguriang Bayani ng Pilipinas?",choices:["Andres Bonifacio","Jose Rizal","Apolinario Mabini","Emilio Aguinaldo"],a:1},
+                {q:"Ano ang pambansang bulaklak ng Pilipinas?",choices:["Rosal","Sampaguita","Gumamela","Ilang-Ilang"],a:1},
+                {q:"Saan isinilang si Jose Rizal?",choices:["Manila","Laguna","Cavite","Batangas"],a:1},
+                {q:"Ano ang pinakamahal na tawiran sa Pilipinas?",choices:["San Juanico Bridge","Marcelo Fernan Bridge","Matnog","Kawit Bridge"],a:0},
+                {q:"Ilang probinsya ang mayroon sa Pilipinas?",choices:["81","72","95","68"],a:0}
             ];
+            data = shuffleArray(fallback).slice(0, 10);
         }
         runTrivia(data);
     });
@@ -7510,7 +7582,9 @@ function runTrivia(questions) {
     function render() {
         if (idx >= questions.length) {
             SFX.win();
-            el.innerHTML = '<div style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">' + (score>=8?'🏆':score>=5?'🌟':'😊') + '</div><div style="font-size:26px;font-weight:900;color:white;margin-bottom:8px;">TAPOS NA!</div><div style="font-size:22px;color:#fbbf24;font-weight:800;margin-bottom:6px;">' + score + ' / ' + questions.length + '</div><div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:28px;">' + (score>=8?'Kahanga-hanga! 🇵🇭':score>=5?'Magaling! Alam mo ang marami!':'Subukan ulit!') + '</div><button onclick="loadTrivia()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🤖 Bagong Tanong ng AI</button></div>';
+            var trivPts = score >= 8 ? 50 : score >= 5 ? 30 : score >= 3 ? 10 : 0;
+            if (trivPts > 0) awardGamePoints(trivPts, 'Trivia Quiz (' + score + '/' + questions.length + ')');
+            el.innerHTML = '<div style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">' + (score>=8?'🏆':score>=5?'🌟':'😊') + '</div><div style="font-size:26px;font-weight:900;color:white;margin-bottom:8px;">TAPOS NA!</div><div style="font-size:22px;color:#fbbf24;font-weight:800;margin-bottom:6px;">' + score + ' / ' + questions.length + '</div>' + (trivPts>0?'<div style="font-size:14px;color:#fbbf24;font-weight:800;margin-bottom:8px;">+'+trivPts+' RB Coins! 🪙</div>':'') + '<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:28px;">' + (score>=8?'Kahanga-hanga! 🇵🇭':score>=5?'Magaling! Alam mo ang marami!':'Subukan ulit!') + '</div><button onclick="loadTrivia()" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🤖 Bagong Tanong ng AI</button></div>';
             return;
         }
         var q = questions[idx];
@@ -7558,7 +7632,7 @@ function loadMemory() {
                 flipped[0].matched=true; flipped[1].matched=true;
                 matched+=2; flipped=[]; locked=false;
                 render();
-                if (matched===emojis.length*2) SFX.win();
+                if (matched===emojis.length*2) { SFX.win(); awardGamePoints(30, 'Memory Flip'); }
             } else {
                 setTimeout(function(){ SFX.wrong(); flipped.forEach(function(f){ f.flipped=false; }); flipped=[]; locked=false; render(); }, 800);
             }
@@ -7602,7 +7676,9 @@ function runScramble(words) {
     function render() {
         if (idx >= words.length) {
             SFX.win();
-            el.innerHTML = '<div style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">🔤</div><div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;">TAPOS NA!</div><div style="font-size:22px;color:#fbbf24;font-weight:800;margin-bottom:24px;">Score: '+score+' / '+words.length+'</div><button onclick="loadScramble()" style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🤖 Bagong AI Words</button></div>';
+            var scPts = score >= 6 ? 40 : score >= 4 ? 20 : score >= 2 ? 10 : 0;
+            if (scPts > 0) awardGamePoints(scPts, 'Word Scramble (' + score + '/' + words.length + ')');
+            el.innerHTML = '<div style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">🔤</div><div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;">TAPOS NA!</div><div style="font-size:22px;color:#fbbf24;font-weight:800;margin-bottom:8px;">Score: '+score+' / '+words.length+'</div>' + (scPts>0?'<div style="font-size:14px;color:#fbbf24;font-weight:800;margin-bottom:16px;">+'+scPts+' RB Coins! 🪙</div>':'') + '<button onclick="loadScramble()" style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🤖 Bagong AI Words</button></div>';
             return;
         }
         var item = words[idx];
@@ -7646,8 +7722,9 @@ function loadReaction() {
             var avg=Math.round(scores.reduce(function(a,b){return a+b;},0)/scores.length);
             var best=Math.min.apply(null,scores);
             var grade=avg<200?'SUPERHERO ⚡':avg<350?'NAPAKABILIS 🔥':avg<500?'MAGALING 👍':avg<700?'AVERAGE 😊':'MABAGAL 🐢';
-            SFX.win();
-            el.innerHTML='<div style="text-align:center;padding:28px 16px;"><div style="font-size:48px;margin-bottom:12px;">⚡</div><div style="font-size:20px;font-weight:900;color:white;margin-bottom:6px;">RESULTA</div><div style="font-size:38px;font-weight:900;color:#fbbf24;margin-bottom:4px;">'+avg+'<span style="font-size:18px;">ms</span></div><div style="font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:8px;">Average Reaction Time</div><div style="font-size:12px;color:#10b981;font-weight:700;margin-bottom:6px;">Best: '+best+'ms</div><div style="font-size:20px;font-weight:900;margin:12px 0;color:#8b5cf6;">'+grade+'</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:24px;">'+scores.map(function(s,i){ return '<div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:8px 16px;display:flex;justify-content:space-between;"><span style="color:rgba(255,255,255,0.4);font-size:12px;">Round '+(i+1)+'</span><span style="font-weight:800;color:'+(s<300?'#10b981':s<500?'#fbbf24':'#ef4444')+'">'+s+'ms</span></div>'; }).join('')+'</div><button onclick="loadReaction()" style="background:linear-gradient(135deg,#10b981,#059669);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🔄 Subukan Ulit</button></div>';
+            var rPts = avg<200?50:avg<350?35:avg<500?20:avg<700?10:5;
+            SFX.win(); awardGamePoints(rPts, 'Reaction Tap (' + avg + 'ms avg)');
+            el.innerHTML='<div style="text-align:center;padding:28px 16px;"><div style="font-size:48px;margin-bottom:12px;">⚡</div><div style="font-size:20px;font-weight:900;color:white;margin-bottom:6px;">RESULTA</div><div style="font-size:38px;font-weight:900;color:#fbbf24;margin-bottom:4px;">'+avg+'<span style="font-size:18px;">ms</span></div><div style="font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:8px;">Average Reaction Time</div><div style="font-size:12px;color:#10b981;font-weight:700;margin-bottom:6px;">Best: '+best+'ms</div><div style="font-size:20px;font-weight:900;margin:12px 0;color:#8b5cf6;">'+grade+'</div><div style="font-size:14px;color:#fbbf24;font-weight:800;margin-bottom:10px;">+'+rPts+' RB Coins! 🪙</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:24px;">'+scores.map(function(s,i){ return '<div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:8px 16px;display:flex;justify-content:space-between;"><span style="color:rgba(255,255,255,0.4);font-size:12px;">Round '+(i+1)+'</span><span style="font-weight:800;color:'+(s<300?'#10b981':s<500?'#fbbf24':'#ef4444')+'">'+s+'ms</span></div>'; }).join('')+'</div><button onclick="loadReaction()" style="background:linear-gradient(135deg,#10b981,#059669);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🔄 Subukan Ulit</button></div>';
             return;
         }
         el.innerHTML='<div style="text-align:center;padding:16px;"><div style="font-size:12px;color:rgba(255,255,255,0.35);font-weight:700;margin-bottom:16px;">Round '+(round+1)+' / 5</div><div id="rBox" style="background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.4);border-radius:20px;padding:55px 20px;cursor:pointer;transition:all 0.2s;" onclick="tapR()"><div id="rEmoji" style="font-size:60px;margin-bottom:10px;">🔴</div><div id="rTxt" style="font-size:15px;font-weight:800;color:rgba(255,255,255,0.5);">Hintayin ang GREEN...</div></div><div style="margin-top:14px;display:flex;gap:6px;justify-content:center;">'+scores.map(function(s,i){ return '<div style="background:'+(s<300?'rgba(16,185,129,0.3)':s<500?'rgba(251,191,36,0.3)':'rgba(239,68,68,0.3)')+';border-radius:8px;padding:3px 10px;font-size:11px;font-weight:800;color:white;">'+s+'ms</div>'; }).join('')+'</div></div>';
@@ -7752,7 +7829,7 @@ function loadEmojiGuess() {
 function runEmoji(puzzles) {
     var idx=0,score=0,el=document.getElementById('gameModalContent');
     function render(){
-        if(idx>=puzzles.length){SFX.win();el.innerHTML='<div style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">😀</div><div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;">TAPOS NA!</div><div style="font-size:22px;color:#fbbf24;font-weight:800;margin-bottom:24px;">Score: '+score+' / '+puzzles.length+'</div><button onclick="loadEmojiGuess()" style="background:linear-gradient(135deg,#f472b6,#db2777);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🤖 Bagong AI Puzzles</button></div>';return;}
+        if(idx>=puzzles.length){SFX.win();var ePts=score>=8?40:score>=5?25:score>=3?10:0;if(ePts>0)awardGamePoints(ePts,'Emoji Guessing ('+score+'/'+puzzles.length+')');el.innerHTML='<div style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">😀</div><div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;">TAPOS NA!</div><div style="font-size:22px;color:#fbbf24;font-weight:800;margin-bottom:8px;">Score: '+score+' / '+puzzles.length+'</div>'+(ePts>0?'<div style="font-size:14px;color:#fbbf24;font-weight:800;margin-bottom:16px;">+'+ePts+' RB Coins! 🪙</div>':'')+'<button onclick="loadEmojiGuess()" style="background:linear-gradient(135deg,#f472b6,#db2777);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🤖 Bagong AI Puzzles</button></div>';return;}
         var p=puzzles[idx];
         el.innerHTML='<div><div style="display:flex;justify-content:space-between;margin-bottom:18px;"><div style="font-size:11px;color:rgba(255,255,255,0.35);font-weight:700;">Puzzle '+(idx+1)+' / '+puzzles.length+'</div><div style="background:rgba(244,114,182,0.2);border:1px solid rgba(244,114,182,0.3);border-radius:20px;padding:3px 12px;font-size:12px;font-weight:800;color:#f472b6;">Score: '+score+'</div></div><div style="text-align:center;margin-bottom:22px;"><div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:10px;">'+p.hint+'</div><div style="font-size:52px;background:rgba(244,114,182,0.08);border:1px solid rgba(244,114,182,0.25);border-radius:18px;padding:22px;letter-spacing:6px;">'+p.emojis+'</div></div><div style="display:flex;gap:10px;margin-bottom:10px;"><input id="emIn" type="text" placeholder="Ano ito?" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:13px;color:white;font-size:15px;font-weight:700;text-transform:uppercase;outline:none;" onkeydown="if(event.key===\'Enter\')checkEm()"><button onclick="checkEm()" style="background:linear-gradient(135deg,#f472b6,#db2777);border:none;color:white;font-size:14px;font-weight:800;padding:13px 16px;border-radius:12px;cursor:pointer;">GO!</button></div><button onclick="skipEm()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.35);font-size:12px;font-weight:700;padding:11px;border-radius:12px;cursor:pointer;">⏭️ Skip</button><div id="emMsg" style="text-align:center;margin-top:10px;font-size:14px;font-weight:700;min-height:18px;"></div></div>';
         setTimeout(function(){ var i=document.getElementById('emIn'); if(i) i.focus(); }, 100);
@@ -7785,7 +7862,7 @@ function loadHangman() {
 function runHangman(words) {
     var idx=0,score=0,el=document.getElementById('gameModalContent');
     function render(){
-        if(idx>=words.length){SFX.win();el.innerHTML='<div style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">🪢</div><div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;">TAPOS NA!</div><div style="font-size:22px;color:#fbbf24;font-weight:800;margin-bottom:24px;">Score: '+score+' / '+words.length+'</div><button onclick="loadHangman()" style="background:linear-gradient(135deg,#60a5fa,#3b82f6);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🤖 Bagong AI Words</button></div>';return;}
+        if(idx>=words.length){SFX.win();var hPts=score>=6?40:score>=4?25:score>=2?10:0;if(hPts>0)awardGamePoints(hPts,'Hangman ('+score+'/'+words.length+')');el.innerHTML='<div style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">🪢</div><div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;">TAPOS NA!</div><div style="font-size:22px;color:#fbbf24;font-weight:800;margin-bottom:8px;">Score: '+score+' / '+words.length+'</div>'+(hPts>0?'<div style="font-size:14px;color:#fbbf24;font-weight:800;margin-bottom:16px;">+'+hPts+' RB Coins! 🪙</div>':'')+'<button onclick="loadHangman()" style="background:linear-gradient(135deg,#60a5fa,#3b82f6);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🤖 Bagong AI Words</button></div>';return;}
         runHangmanRound(words[idx],function(won){if(won)score++;idx++;render();});
     }
     render();
@@ -7862,7 +7939,7 @@ function runMathBlitz(problems) {
     var idx=0,score=0,timeLeft=10,streak=0;
 
     function render(){
-        if(idx>=problems.length){SFX.win();el.innerHTML='<div style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">➕</div><div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;">TAPOS NA!</div><div style="font-size:22px;color:#fbbf24;font-weight:800;margin-bottom:6px;">Score: '+score+' / '+problems.length+'</div><button onclick="loadMathBlitz()" style="background:linear-gradient(135deg,#34d399,#059669);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🤖 Bagong AI Problems</button></div>';return;}
+        if(idx>=problems.length){SFX.win();var mPts=score>=10?50:score>=7?35:score>=4?20:score>=2?10:0;if(mPts>0)awardGamePoints(mPts,'Math Blitz ('+score+'/'+problems.length+')');el.innerHTML='<div style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">➕</div><div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;">TAPOS NA!</div><div style="font-size:22px;color:#fbbf24;font-weight:800;margin-bottom:6px;">Score: '+score+' / '+problems.length+'</div>'+(mPts>0?'<div style="font-size:14px;color:#fbbf24;font-weight:800;margin-bottom:16px;">+'+mPts+' RB Coins! 🪙</div>':'')+'<button onclick="loadMathBlitz()" style="background:linear-gradient(135deg,#34d399,#059669);border:none;color:white;font-size:15px;font-weight:800;padding:14px 32px;border-radius:14px;cursor:pointer;">🤖 Bagong AI Problems</button></div>';return;}
         var p=problems[idx];timeLeft=10;
         el.innerHTML='<div style="max-width:320px;margin:0 auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-size:11px;color:rgba(255,255,255,0.35);font-weight:700;">'+(idx+1)+' / '+problems.length+'</div><div style="font-size:12px;font-weight:800;color:#10b981;">Score: '+score+'</div><div id="mbTime" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);border-radius:20px;padding:3px 12px;font-size:14px;font-weight:900;color:#6ee7b7;">10s</div></div><div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:18px;padding:28px;text-align:center;margin-bottom:20px;"><div style="font-size:32px;font-weight:900;color:white;margin-bottom:4px;">'+p.q+' = ?</div>'+(streak>=3?'<div style="font-size:11px;color:#fbbf24;font-weight:700;">🔥 Streak x'+streak+'</div>':'')+'</div><div style="display:flex;gap:10px;margin-bottom:12px;"><input id="mbIn" type="number" placeholder="Sagot..." style="flex:1;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:14px;color:white;font-size:20px;font-weight:800;outline:none;text-align:center;" onkeydown="if(event.key===\'Enter\')checkMB()"><button onclick="checkMB()" style="background:linear-gradient(135deg,#34d399,#059669);border:none;color:white;font-size:14px;font-weight:800;padding:14px 18px;border-radius:12px;cursor:pointer;">GO</button></div><div id="mbMsg" style="text-align:center;font-size:14px;font-weight:700;min-height:18px;"></div></div>';
         setTimeout(function(){ var i=document.getElementById('mbIn'); if(i)i.focus(); },100);
@@ -8659,6 +8736,10 @@ function runMathBlitz(problems) {
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
     window.db = db; window.auth = auth;
+    // Load AI API key from Firebase (stored at /config/aiKey)
+    db.ref('config/aiKey').once('value', function(snap) {
+        if (snap.exists()) window._RBAI_KEY = snap.val();
+    });
     let messaging; try { messaging = firebase.messaging(); } catch(e) { console.log("Messaging failed to init", e); }
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; let lastNotifiedDraw = ""; let selectedReplyId = null;
     let currentJackpotAmount = 500; let isJackpotActive = false;
