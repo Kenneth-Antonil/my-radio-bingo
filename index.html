@@ -1477,8 +1477,8 @@
         .hamburger-btn.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
         .hamburger-overlay { display: none; position: fixed; inset: 0; z-index: 9990; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
         .hamburger-overlay.open { display: block; }
-        .hamburger-menu { position: fixed; top: 0; right: -290px; width: 290px; height: 100vh; background: rgba(10,18,35,0.99); backdrop-filter: blur(30px); border-left: 1px solid rgba(255,255,255,0.08); z-index: 9991; display: flex; flex-direction: column; transition: right 0.35s cubic-bezier(0.4,0,0.2,1); padding-top: max(20px, env(safe-area-inset-top)); overflow-y: auto; }
-        .hamburger-menu.open { right: 0; }
+        .hamburger-menu { position: fixed; top: 0; left: -290px; width: 290px; height: 100vh; background: rgba(10,18,35,0.99); backdrop-filter: blur(30px); border-right: 1px solid rgba(255,255,255,0.08); z-index: 9991; display: flex; flex-direction: column; transition: left 0.35s cubic-bezier(0.4,0,0.2,1); padding-top: max(20px, env(safe-area-inset-top)); overflow-y: auto; }
+        .hamburger-menu.open { left: 0; }
         .hamburger-menu-header { padding: 16px 20px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 8px; }
         .hamburger-menu-title { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.35); }
         .hamburger-close-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -6214,9 +6214,6 @@
     <button class="hamburger-nav-item" onclick="closeHamburgerMenu(); window.location.href='news.html'">
         <i data-lucide="newspaper"></i> News
     </button>
-    <button class="hamburger-nav-item" onclick="closeHamburgerMenu(); window.location.href='radio_control.html'">
-        <i data-lucide="radio"></i> Radio Control
-    </button>
     <div class="hamburger-divider"></div>
     <div class="hamburger-section-label">Account</div>
     <button class="hamburger-nav-item" onclick="closeHamburgerMenu(); openMyProfile()">
@@ -8977,7 +8974,12 @@ function runMathBlitz(problems) {
             document.getElementById('nav-games').classList.add('active');
         }
         playSound('click');
+        // Sync drawer and hamburger active states
+        if (typeof updateDrawerActiveState === 'function') updateDrawerActiveState(tab);
+        if (typeof updateHamburgerActive === 'function') updateHamburgerActive(tab);
     }
+    // Expose globally so inline onclick handlers can call it
+    window.switchTab = switchTab;
 
     function openPostCreator() {
         switchTab('home');
@@ -17112,14 +17114,7 @@ function closeDrawer() {
     if(btn) btn.classList.remove('open');
 }
 
-// Sync drawer active state with tab switches
-var _origSwitchTab = window.switchTab;
-if (typeof _origSwitchTab === 'function') {
-    window.switchTab = function(tab) {
-        _origSwitchTab(tab);
-        updateDrawerActiveState(tab);
-    };
-}
+// Sync drawer active state with tab switches (handled directly inside switchTab now)
 function updateDrawerActiveState(tab) {
     document.querySelectorAll('.drawer-nav-item').forEach(function(el) { el.classList.remove('active'); });
     var target = document.getElementById('dnav-' + tab);
@@ -17154,18 +17149,7 @@ function closeHamburgerMenu() {
     if (overlay) overlay.classList.remove('open');
     if (btn) btn.classList.remove('open');
 }
-// Sync hamburger active state with switchTab
-var _origSwitchTab = typeof switchTab === 'function' ? switchTab : null;
-document.addEventListener('DOMContentLoaded', function() {
-    // Patch switchTab to also update hamburger menu active state
-    var origST = window.switchTab;
-    if (typeof origST === 'function') {
-        window.switchTab = function(tab) {
-            origST(tab);
-            updateHamburgerActive(tab);
-        };
-    }
-});
+// updateHamburgerActive is called directly inside switchTab
 function updateHamburgerActive(tab) {
     var items = document.querySelectorAll('.hamburger-nav-item[id^="hmenu-"]');
     items.forEach(function(el) { el.classList.remove('active'); });
