@@ -174,6 +174,30 @@
         .mchip { background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:8px; padding:7px 14px; font-size:11px; font-weight:700; color:var(--muted); text-align:center; }
         .mchip .mv { font-size:16px; font-weight:900; color:#fff; display:block; margin-bottom:1px; }
 
+        /* DJ MIXER */
+        .mixer-card { background:linear-gradient(135deg,rgba(14,165,233,0.08),rgba(30,41,59,0.6)); border:1px solid rgba(14,165,233,0.2); border-radius:var(--radius); padding:16px; margin-bottom:14px; position:relative; overflow:hidden; }
+        .mixer-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--err),var(--accent),var(--ok)); }
+        .mixer-title { font-size:10px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
+        .mixer-channels { display:flex; gap:10px; }
+        .mixer-ch { flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; padding:12px 8px; min-width:0; }
+        .mixer-ch-icon { font-size:18px; }
+        .mixer-ch-label { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); }
+        .mixer-fader-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; width:100%; }
+        .mixer-fader { -webkit-appearance:none; appearance:none; width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; outline:none; cursor:pointer; }
+        .mixer-fader.music::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg,var(--accent),#0369a1); border:2px solid rgba(255,255,255,0.3); box-shadow:0 2px 8px rgba(14,165,233,0.5); cursor:pointer; }
+        .mixer-fader.sfx::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg,var(--ok),#059669); border:2px solid rgba(255,255,255,0.3); box-shadow:0 2px 8px rgba(16,185,129,0.5); cursor:pointer; }
+        .mixer-fader.mic::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg,var(--err),#b91c1c); border:2px solid rgba(255,255,255,0.3); box-shadow:0 2px 8px rgba(239,68,68,0.5); cursor:pointer; }
+        .mixer-fader.music::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg,var(--accent),#0369a1); border:2px solid rgba(255,255,255,0.3); cursor:pointer; }
+        .mixer-fader.sfx::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg,var(--ok),#059669); border:2px solid rgba(255,255,255,0.3); cursor:pointer; }
+        .mixer-fader.mic::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg,var(--err),#b91c1c); border:2px solid rgba(255,255,255,0.3); cursor:pointer; }
+        .mixer-vol-pct { font-size:13px; font-weight:900; color:#fff; min-width:36px; text-align:center; }
+        .mixer-ch.music .mixer-ch-icon { color:var(--accent); }
+        .mixer-ch.sfx .mixer-ch-icon { color:var(--ok); }
+        .mixer-ch.mic .mixer-ch-icon { color:var(--err); }
+        .sfx-live-bar { display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:var(--rsm); padding:10px 13px; margin-bottom:12px; font-size:11px; font-weight:700; color:var(--muted); }
+        .sfx-live-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); margin-right:6px; display:inline-block; }
+        .sfx-live-dot.active { background:var(--ok); box-shadow:0 0 6px var(--ok); animation:blink 1s ease infinite; }
+
         /* SOUNDBOARD */
         .pgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
         .pad { position:relative; aspect-ratio:1; border-radius:var(--rsm); border:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:all .15s; overflow:hidden; }
@@ -363,6 +387,15 @@
             </div>
             <div class="card">
                 <div class="ct"><i data-lucide="settings"></i> Mic Settings</div>
+                <div class="f" style="margin-bottom:14px;">
+                    <label>🎤 Mic Gain / Volume</label>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+                        <input class="mixer-fader mic" type="range" min="0" max="200" value="100" id="volMic" oninput="setMicVol(this.value)" style="flex:1;">
+                        <span style="font-size:13px;font-weight:900;min-width:40px;text-align:right;" id="volMicPct">100%</span>
+                    </div>
+                    <div class="fh">100% = normal · 200% = boosted · 0% = muted</div>
+                </div>
+                <div class="dv"></div>
                 <div class="trow">
                     <div class="tinfo"><div class="tl">Noise Suppression</div><div class="td">Reduce background noise</div></div>
                     <label class="tsw"><input type="checkbox" id="ns" checked><div class="ttr"></div></label>
@@ -386,12 +419,47 @@
     <!-- SOUNDS TAB -->
     <div class="tp" id="psfx">
         <div class="pg">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                <div class="sl" style="margin-bottom:0;">Sound Pads</div>
-                <span style="font-size:9px;font-weight:800;background:rgba(14,165,233,0.15);border:1px solid rgba(14,165,233,0.3);color:var(--glow);padding:2px 8px;border-radius:20px;letter-spacing:.5px;">TAP TO BROADCAST</span>
+            <!-- DJ MIXER -->
+            <div class="mixer-card">
+                <div class="mixer-title"><i data-lucide="sliders-horizontal" style="width:12px;height:12px;"></i> DJ Mixer — Volume Control</div>
+                <div class="mixer-channels">
+                    <!-- MUSIC -->
+                    <div class="mixer-ch music">
+                        <div class="mixer-ch-icon">🎵</div>
+                        <div class="mixer-ch-label">Music</div>
+                        <div class="mixer-fader-wrap">
+                            <input class="mixer-fader music" type="range" min="0" max="100" value="80" id="volMusic" oninput="setMusicVol(this.value)">
+                        </div>
+                        <div class="mixer-vol-pct" id="volMusicPct">80%</div>
+                    </div>
+                    <!-- MIC -->
+                    <div class="mixer-ch mic">
+                        <div class="mixer-ch-icon">🎤</div>
+                        <div class="mixer-ch-label">Mic</div>
+                        <div class="mixer-fader-wrap">
+                            <input class="mixer-fader mic" type="range" min="0" max="200" value="100" id="volMic" oninput="setMicVol(this.value)">
+                        </div>
+                        <div class="mixer-vol-pct" id="volMicPct">100%</div>
+                    </div>
+                    <!-- SFX -->
+                    <div class="mixer-ch sfx">
+                        <div class="mixer-ch-icon">🔊</div>
+                        <div class="mixer-ch-label">SFX</div>
+                        <div class="mixer-fader-wrap">
+                            <input class="mixer-fader sfx" type="range" min="0" max="100" value="80" id="volSfx" oninput="setSfxVol(this.value)">
+                        </div>
+                        <div class="mixer-vol-pct" id="volSfxPct">80%</div>
+                    </div>
+                </div>
             </div>
+            <!-- LIVE STATUS -->
+            <div class="sfx-live-bar" id="sfxLiveBar">
+                <div><span class="sfx-live-dot" id="sfxLiveDot"></span><span id="sfxLiveStatus">Click a pad to trigger</span></div>
+                <span id="sfxLiveMicTag" style="display:none;font-size:9px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:var(--err);padding:2px 8px;border-radius:20px;letter-spacing:.5px;">🎤 MIC ON</span>
+            </div>
+            <!-- PADS -->
+            <div class="sl" style="margin-bottom:10px;">Sound Pads</div>
             <div class="pgrid" id="pgrid"></div>
-            <div class="sb" id="sfxsb" style="margin-top:14px;"><i data-lucide="speaker"></i> Click a pad to trigger sound for all listeners</div>
         </div>
     </div>
 
@@ -443,7 +511,6 @@
 </div>
 
 <audio id="rca" preload="none"></audio>
-<audio id="sfxa" preload="none"></audio>
 
 <script>
 // ── FIREBASE ──
@@ -500,7 +567,8 @@ function togEye() {
 
 // ── STATE ──
 var S = {
-    audio: null, sfxa: null,
+    audio: null,
+    musicVol: 0.8, sfxVol: 0.8, micGainNode: null,
     lib: {}, queue: [], qidx: -1, qplaying: false,
     micOn: false, micStream: null, mr: null, mseq: 0, mstart: 0,
     mdtimer: null, analyser: null, actx: null, vuraf: null,
@@ -514,7 +582,7 @@ var EMOJIS = ['🎵','🥁','🎺','📯','🔔','🎊','👏','😂','🔥','�
 // ── INIT ──
 function init() {
     S.audio = document.getElementById('rca');
-    S.sfxa = document.getElementById('sfxa');
+    S.audio.volume = S.musicVol;
     lucide.createIcons();
     buildVU(); buildGrid(); buildEP(); buildCP();
     listenState();
@@ -792,11 +860,18 @@ function startMic() {
         S.micStream = stream; S.micOn = true; S.mseq = 0; S.mstart = Date.now();
         S.actx = new (window.AudioContext||window.webkitAudioContext)();
         var src = S.actx.createMediaStreamSource(stream);
+        // GainNode for mic volume control
+        S.micGainNode = S.actx.createGain();
+        S.micGainNode.gain.value = parseFloat(document.getElementById('volMic').value) / 100;
+        src.connect(S.micGainNode);
         S.analyser = S.actx.createAnalyser(); S.analyser.fftSize = 64;
-        src.connect(S.analyser); animVU();
+        S.micGainNode.connect(S.analyser); animVU();
+        // Route gain -> destination stream for recording
+        var dest = S.actx.createMediaStreamDestination();
+        S.micGainNode.connect(dest);
         var chkms = parseInt(document.getElementById('cksz').value)||800;
         var mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/ogg;codecs=opus';
-        S.mr = new MediaRecorder(stream,{mimeType:mime,audioBitsPerSecond:64000});
+        S.mr = new MediaRecorder(dest.stream,{mimeType:mime,audioBitsPerSecond:64000});
         S.mr.ondataavailable = function(e) {
             if (e.data&&e.data.size>10) {
                 var r = new FileReader();
@@ -828,9 +903,15 @@ function stopMic() {
     if(S.vuraf){cancelAnimationFrame(S.vuraf);S.vuraf=null;}
     if(S.mdtimer){clearInterval(S.mdtimer);S.mdtimer=null;}
     S.micOn=false;
+    S.micGainNode = null;
     db.ref('liveBroadcast').update({active:false});
     db.ref('radioState').update({mode:'off',isLive:false});
     setMicUI(false); resetVU(); updMicSB('','Mic stopped');
+    // Update SFX tab mic indicator
+    var dot = document.getElementById('sfxLiveDot');
+    var tag = document.getElementById('sfxLiveMicTag');
+    if(dot) dot.classList.remove('active');
+    if(tag) tag.style.display = 'none';
 }
 
 function setMicUI(on) {
@@ -838,6 +919,10 @@ function setMicUI(on) {
     var lbl=document.getElementById('mlbl'),sub=document.getElementById('msub');
     if(on){btn.classList.add('on');ic.setAttribute('data-lucide','mic-off');lbl.textContent='🔴 LIVE — Broadcasting';sub.textContent='Tap to stop';}
     else{btn.classList.remove('on');ic.setAttribute('data-lucide','mic');lbl.textContent='Ready to Broadcast';sub.textContent='Tap the mic to go live';document.getElementById('mcdur').textContent='0:00';document.getElementById('mclis').textContent='0';}
+    // Update SFX tab mic indicator
+    var tag = document.getElementById('sfxLiveMicTag');
+    var dot = document.getElementById('sfxLiveDot');
+    if(tag) tag.style.display = on ? 'inline-block' : 'none';
     lucide.createIcons();
 }
 function updMicSB(t,m) {
@@ -906,12 +991,19 @@ function rendPad(i) {
 
 function trigPad(i) {
     var d=S.pads[i]; if(!d||!d.url){openPadEdit(null,i);return;}
-    S.sfxa.src=d.url; S.sfxa.play().catch(function(){});
+    // Create a fresh Audio instance per trigger so multiple can overlap
+    var sfxAudio = new Audio(d.url);
+    sfxAudio.volume = S.sfxVol;
+    sfxAudio.play().catch(function(){});
     db.ref('radioSoundboard/trigger').set({url:d.url,label:d.label||'',ts:Date.now()});
     var pad=document.getElementById('pad'+i);
     pad.classList.add('pfx'); setTimeout(function(){pad.classList.remove('pfx');},280);
-    document.getElementById('sfxsb').innerHTML='<i data-lucide="speaker" style="width:13px;height:13px;"></i> 🔊 Triggered: '+(d.label||'Sound '+(i+1));
-    lucide.createIcons(); toast('🔊 '+(d.label||'Sound '+(i+1)));
+    // Update live bar
+    var dot = document.getElementById('sfxLiveDot');
+    var stat = document.getElementById('sfxLiveStatus');
+    if(dot){ dot.classList.add('active'); setTimeout(function(){ dot.classList.remove('active'); }, 2500); }
+    if(stat) stat.textContent = '🔊 Triggered: '+(d.label||'Sound '+(i+1));
+    toast('🔊 '+(d.label||'Sound '+(i+1)));
 }
 
 function selEm(em) {
@@ -957,6 +1049,27 @@ function savePad() {
     if(!url){toast('⚠️ Upload a sound file first');return;}
     db.ref('radioSoundboard/pads/'+i).set({label:label,url:url,color:S.selColor,emoji:S.selEmoji});
     closeMo(); toast('✅ Pad saved!');
+}
+
+// ── VOLUME CONTROLS ──
+function setMusicVol(v) {
+    S.musicVol = v / 100;
+    if(S.audio) S.audio.volume = S.musicVol;
+    document.getElementById('volMusicPct').textContent = v + '%';
+    // Sync the Sounds tab slider if changed from elsewhere
+    var sl = document.getElementById('volMusic'); if(sl) sl.value = v;
+}
+function setSfxVol(v) {
+    S.sfxVol = v / 100;
+    document.getElementById('volSfxPct').textContent = v + '%';
+    var sl = document.getElementById('volSfx'); if(sl) sl.value = v;
+}
+function setMicVol(v) {
+    // Update gain node if mic is active
+    if(S.micGainNode) S.micGainNode.gain.value = v / 100;
+    // Sync both sliders (mic tab + sounds tab)
+    document.querySelectorAll('#volMic').forEach(function(el){ el.value = v; });
+    document.querySelectorAll('#volMicPct').forEach(function(el){ el.textContent = v + '%'; });
 }
 
 // ── SETTINGS ──
