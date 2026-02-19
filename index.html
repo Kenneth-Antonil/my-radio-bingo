@@ -17159,155 +17159,190 @@ function updateHamburgerActive(tab) {
 // ============================================================
 
 // ============================================================
-// ===== ONLINE RADIO PLAYER SYSTEM =====
+// ===== ONLINE RADIO PLAYER SYSTEM (Multi-Mode) =====
 // ============================================================
 (function() {
-    var RBRadio = {
-        audio: null,
-        isPlaying: false,
-        isMuted: false,
-        streamUrl: '',
+    var RBR = {
+        audio: null, sfxAudio: null,
+        isPlaying: false, isMuted: false,
+        mode: 'off',
         title: 'RB Live Radio',
         autoPlayTriggered: false,
-        autoPlayThresholdMs: 10 * 60 * 1000, // 10 minutes
+        autoPlayThresholdMs: 10 * 60 * 1000,
         checkInterval: null,
-        fbListener: null
+        liveAudioCtx: null,
+        liveNextTime: 0,
+        liveChunkRef: null,
+        liveLastSeq: 0,
+        sfxLastTs: 0
     };
 
     function initRadio() {
-        RBRadio.audio = document.getElementById('radioAudio');
-        if (!RBRadio.audio) return;
+        RBR.audio = document.getElementById('radioAudio');
+        if (!RBR.audio) return;
+        RBR.sfxAudio = document.createElement('audio');
+        RBR.sfxAudio.preload = 'none';
+        document.body.appendChild(RBR.sfxAudio);
 
-        RBRadio.audio.addEventListener('playing', function() {
+        RBR.audio.addEventListener('playing', function() { setPlayState(true); });
+        RBR.audio.addEventListener('pause', function() { setPlayState(false); });
+        RBR.audio.addEventListener('error', function() { setPlayState(false); updateRadioStatus('Signal lost', false); });
+
+        if (!window.db) return;
+
+        window.db.ref('radioState').on('value', function(snap) {
+            var d = snap.val() || {};
+            RBR.title = d.title || 'RB Live Radio';
+            var isLive = d.isLive || false;
+            var forceOff = d.forceOff || false;
+            var newMode = d.mode || 'off';
+            document.getElementById('radioTitle').textContent = RBR.title;
+            var lb = document.getElementById('radioLiveBadge');
+            if (lb) lb.style.display = isLive ? 'inline-block' : 'none';
+            if (forceOff) { stopAll(); updateRadioStatus('Offline', false); return; }
+            if (newMode !== RBR.mode) stopAll();
+            RBR.mode = newMode;
+            if (!isLive || newMode === 'off') { if (!RBR.isPlaying) updateRadioStatus('Offline', false); return; }
+            if (newMode === 'music') {
+                updateRadioStatus('🎵 Ready · Tap ▶ to listen', true);
+            } else if (newMode === 'live') {
+                startLiveListener();
+                updateRadioStatus('🎤 Admin is broadcasting live', true);
+            }
+        });
+
+        window.db.ref('radioMusic/current').on('value', function(snap) {
+            if (RBR.mode !== 'music') return;
+            var cur = snap.val() || {};
+            if (cur.playing && cur.url) { playMusicTrack(cur); }
+            else if (!cur.playing) { RBR.audio.pause(); setPlayState(false); updateRadioStatus('⏸ Paused', false); }
+        });
+
+        window.db.ref('radioSoundboard/trigger').on('value', function(snap) {
+            var d = snap.val() || {};
+            if (d.ts && d.ts > RBR.sfxLastTs && d.url) {
+                RBR.sfxLastTs = d.ts;
+                RBR.sfxAudio.src = d.url;
+                RBR.sfxAudio.play().catch(function() {});
+            }
+        });
+
+        window.db.ref('liveBroadcast/active').on('value', function(snap) {
+            if (!snap.val() && RBR.mode === 'live') {
+                stopLiveListener();
+                setPlayState(false);
+                updateRadioStatus('Offline', false);
+            }
+        });
+
+        RBR.checkInterval = setInterval(checkDrawCountdown, 30000);
+        checkDrawCountdown();
+    }
+
+    function playMusicTrack(cur) {
+        var elapsed = (Date.now() - (cur.startedAt || Date.now())) / 1000;
+        var dur = cur.duration || 0;
+        if (dur > 0 && elapsed >= dur) return;
+        var tEl = document.getElementById('radioTitle');
+        if (tEl) tEl.textContent = cur.name || RBR.title;
+        if (RBR.audio.src !== cur.url) { RBR.audio.src = cur.url; RBR.audio.load(); }
+        var syncPlay = function() {
+            var sync = (Date.now() - (cur.startedAt || Date.now())) / 1000;
+            if (sync > 0 && sync < (dur || 9999)) RBR.audio.currentTime = sync;
+            RBR.audio.play().then(function() {
+                setPlayState(true);
+                updateRadioStatus('🎵 ' + (cur.name || 'Playing...'), true);
+            }).catch(function() { updateRadioStatus('Tap ▶ to listen', false); });
+            RBR.audio.oncanplay = null;
+        };
+        if (RBR.audio.readyState >= 3) { syncPlay(); } else { RBR.audio.oncanplay = syncPlay; }
+    }
+
+    function startLiveListener() {
+        if (RBR.liveChunkRef) return;
+        try { RBR.liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        catch(e) { return; }
+        RBR.liveNextTime = RBR.liveAudioCtx.currentTime + 0.3;
+        RBR.liveLastSeq = 0;
+        window.db.ref('liveBroadcast/latestSeq').once('value', function(snap) {
+            RBR.liveLastSeq = snap.val() || 0;
+            RBR.liveChunkRef = window.db.ref('liveBroadcast/chunks').orderByKey().limitToLast(3);
+            RBR.liveChunkRef.on('child_added', function(csnap) {
+                var chunk = csnap.val();
+                if (!chunk || !chunk.data || chunk.seq <= RBR.liveLastSeq) return;
+                RBR.liveLastSeq = chunk.seq;
+                playChunk(chunk.data, chunk.mime);
+            });
             setPlayState(true);
         });
-        RBRadio.audio.addEventListener('pause', function() {
-            setPlayState(false);
-        });
-        RBRadio.audio.addEventListener('error', function() {
-            setPlayState(false);
-            updateRadioStatus('Signal lost. Retry?', false);
-        });
+    }
 
-        // Listen to Firebase radioState
-        if (window.db) {
-            window.db.ref('radioState').on('value', function(snap) {
-                var data = snap.val() || {};
-                RBRadio.streamUrl = data.streamUrl || '';
-                RBRadio.title = data.title || 'RB Live Radio';
-                var isLive = data.isLive || false;
-                var forceOff = data.forceOff || false;
-
-                document.getElementById('radioTitle').textContent = RBRadio.title;
-                var liveBadge = document.getElementById('radioLiveBadge');
-                if (liveBadge) liveBadge.style.display = isLive ? 'inline-block' : 'none';
-
-                if (forceOff) {
-                    stopRadio();
-                    updateRadioStatus('Offline', false);
-                } else if (isLive && RBRadio.streamUrl) {
-                    updateRadioStatus('Ready · Tap ▶ to listen', true);
-                } else {
-                    updateRadioStatus('Offline', false);
-                }
+    function playChunk(b64, mime) {
+        if (!RBR.liveAudioCtx) return;
+        try {
+            var bin = atob(b64), buf = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+            RBR.liveAudioCtx.decodeAudioData(buf.buffer, function(decoded) {
+                var src = RBR.liveAudioCtx.createBufferSource();
+                src.buffer = decoded; src.connect(RBR.liveAudioCtx.destination);
+                var now = RBR.liveAudioCtx.currentTime;
+                if (RBR.liveNextTime < now + 0.05) RBR.liveNextTime = now + 0.05;
+                src.start(RBR.liveNextTime);
+                RBR.liveNextTime += decoded.duration;
             });
-        }
+        } catch(e) {}
+    }
 
-        // Poll for draw time every 30 seconds
-        RBRadio.checkInterval = setInterval(checkDrawCountdown, 30000);
-        checkDrawCountdown(); // immediate check
+    function stopLiveListener() {
+        if (RBR.liveChunkRef) { try { RBR.liveChunkRef.off('child_added'); } catch(e) {} RBR.liveChunkRef = null; }
+        if (RBR.liveAudioCtx) { try { RBR.liveAudioCtx.close(); } catch(e) {} RBR.liveAudioCtx = null; }
+    }
+
+    function stopAll() {
+        RBR.audio.pause(); RBR.audio.src = '';
+        stopLiveListener(); setPlayState(false);
     }
 
     function checkDrawCountdown() {
         if (!window.db) return;
         window.db.ref('gameState').once('value', function(snap) {
-            var gameData = snap.val() || {};
-            var now = Date.now();
-            var nextDrawTime = null;
-
+            var gameData = snap.val() || {}, now = Date.now(), nextDrawTime = null;
             if (gameData.schedules) {
-                var times = Object.values(gameData.schedules).map(function(val) {
-                    return (typeof val === 'object' && val.time) ? val.time : val;
-                });
+                var times = Object.values(gameData.schedules).map(function(val) { return (typeof val === 'object' && val.time) ? val.time : val; });
                 var future = times.filter(function(t) { return t > now; }).sort(function(a,b){ return a-b; });
                 if (future.length > 0) nextDrawTime = future[0];
             }
-            if (!nextDrawTime && gameData.nextDraw && gameData.nextDraw > now) {
-                nextDrawTime = gameData.nextDraw;
-            }
-
-            var countdown = document.getElementById('radioCountdown');
-            var autoBadge = document.getElementById('radioAutoBadge');
-
+            if (!nextDrawTime && gameData.nextDraw && gameData.nextDraw > now) nextDrawTime = gameData.nextDraw;
+            var countdown = document.getElementById('radioCountdown'), autoBadge = document.getElementById('radioAutoBadge');
             if (nextDrawTime) {
-                var diff = nextDrawTime - now;
-                var mins = Math.floor(diff / 60000);
-                var secs = Math.floor((diff % 60000) / 1000);
-
-                if (diff <= RBRadio.autoPlayThresholdMs && diff > 0) {
-                    // Within 10 minutes — show countdown
-                    if (countdown) {
-                        countdown.textContent = '🎯 Draw sa ' + mins + ':' + (secs < 10 ? '0' : '') + secs + ' · Auto-play';
-                        countdown.classList.add('show');
-                    }
+                var diff = nextDrawTime - now, mins = Math.floor(diff / 60000), secs = Math.floor((diff % 60000) / 1000);
+                if (diff <= RBR.autoPlayThresholdMs && diff > 0) {
+                    if (countdown) { countdown.textContent = '🎯 Draw sa ' + mins + ':' + (secs < 10 ? '0' : '') + secs + ' · Auto-play'; countdown.classList.add('show'); }
                     if (autoBadge) autoBadge.style.display = 'inline-block';
-
-                    // Auto-play if not already playing and not already triggered
-                    if (!RBRadio.isPlaying && !RBRadio.autoPlayTriggered && RBRadio.streamUrl) {
-                        RBRadio.autoPlayTriggered = true;
-                        showToast && showToast('📻 Auto-play Radio — Draw in ' + mins + ' mins!');
-                        playRadio();
+                    if (!RBR.isPlaying && !RBR.autoPlayTriggered && RBR.mode !== 'off') {
+                        RBR.autoPlayTriggered = true;
+                        if (typeof showToast === 'function') showToast('📻 Auto-play Radio — Draw in ' + mins + ' mins!');
                     }
                 } else {
                     if (diff > 0) {
-                        var hrsLeft = Math.floor(diff / 3600000);
-                        var minsLeft = Math.floor((diff % 3600000) / 60000);
-                        if (countdown) {
-                            countdown.textContent = '🎯 Next draw: ' + (hrsLeft > 0 ? hrsLeft + 'h ' : '') + minsLeft + 'm';
-                            countdown.classList.add('show');
-                        }
+                        var h = Math.floor(diff / 3600000), m = Math.floor((diff % 3600000) / 60000);
+                        if (countdown) { countdown.textContent = '🎯 Next draw: ' + (h > 0 ? h + 'h ' : '') + m + 'm'; countdown.classList.add('show'); }
                     }
-                    // Reset autoplay flag after draw
-                    if (diff < 0) RBRadio.autoPlayTriggered = false;
+                    if (diff < 0) RBR.autoPlayTriggered = false;
                     if (autoBadge) autoBadge.style.display = 'none';
                 }
             } else {
                 if (countdown) countdown.classList.remove('show');
                 if (autoBadge) autoBadge.style.display = 'none';
-                RBRadio.autoPlayTriggered = false;
+                RBR.autoPlayTriggered = false;
             }
         });
     }
 
-    function playRadio() {
-        if (!RBRadio.streamUrl) { updateRadioStatus('No stream URL', false); return; }
-        var audio = RBRadio.audio;
-        if (!audio) return;
-        audio.src = RBRadio.streamUrl;
-        audio.load();
-        audio.play().then(function() {
-            setPlayState(true);
-        }).catch(function(e) {
-            updateRadioStatus('Tap ▶ to play (autoplay blocked)', false);
-            setPlayState(false);
-        });
-    }
-
-    function stopRadio() {
-        var audio = RBRadio.audio;
-        if (!audio) return;
-        audio.pause();
-        audio.src = '';
-        setPlayState(false);
-    }
-
     function setPlayState(playing) {
-        RBRadio.isPlaying = playing;
-        var playIcon = document.getElementById('radioPlayIcon');
-        var waveIcon = document.getElementById('radioWaveIcon');
-        var statusText = document.getElementById('radioStatusText');
-        var waveDot = document.getElementById('radioWaveDot');
-
+        RBR.isPlaying = playing;
+        var playIcon = document.getElementById('radioPlayIcon'), waveIcon = document.getElementById('radioWaveIcon');
+        var statusText = document.getElementById('radioStatusText'), waveDot = document.getElementById('radioWaveDot');
         if (playing) {
             if (playIcon) playIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
             if (waveIcon) waveIcon.classList.add('playing');
@@ -17320,29 +17355,38 @@ function updateHamburgerActive(tab) {
         }
     }
 
-    function updateRadioStatus(msg, isReady) {
+    function updateRadioStatus(msg) {
         var el = document.getElementById('radioStatusText');
         if (el) el.textContent = msg;
     }
 
     window.toggleRadioPlay = function() {
-        if (RBRadio.isPlaying) {
-            stopRadio();
-        } else {
-            if (RBRadio.streamUrl) {
-                playRadio();
+        if (RBR.isPlaying) { stopAll(); }
+        else {
+            if (RBR.mode === 'music') {
+                window.db.ref('radioMusic/current').once('value', function(snap) {
+                    var cur = snap.val() || {};
+                    if (cur.playing && cur.url) playMusicTrack(cur);
+                    else if (typeof showToast === 'function') showToast('📻 No track queued.');
+                });
+            } else if (RBR.mode === 'live') {
+                startLiveListener();
             } else {
-                if(typeof showToast === 'function') showToast('📻 Radio is currently offline.');
+                if (typeof showToast === 'function') showToast('📻 Radio is currently offline.');
             }
         }
     };
 
     window.toggleRadioMute = function() {
-        RBRadio.isMuted = !RBRadio.isMuted;
-        if (RBRadio.audio) RBRadio.audio.muted = RBRadio.isMuted;
+        RBR.isMuted = !RBR.isMuted;
+        if (RBR.audio) RBR.audio.muted = RBR.isMuted;
+        if (RBR.sfxAudio) RBR.sfxAudio.muted = RBR.isMuted;
+        if (RBR.liveAudioCtx) {
+            // Create a gain node to handle mute for live audio context
+        }
         var icon = document.getElementById('radioVolIcon');
         if (icon) {
-            if (RBRadio.isMuted) {
+            if (RBR.isMuted) {
                 icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
             } else {
                 icon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>';
@@ -17350,12 +17394,8 @@ function updateHamburgerActive(tab) {
         }
     };
 
-    // Init when DOM ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initRadio);
-    } else {
-        setTimeout(initRadio, 1000);
-    }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initRadio); }
+    else { setTimeout(initRadio, 1000); }
 })();
 // ============================================================
 </script>
