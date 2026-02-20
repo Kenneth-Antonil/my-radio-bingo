@@ -493,8 +493,9 @@
             </div>
             <!-- Playback mode -->
             <div class="pb-modes">
-                <div class="pbmode on" id="pbm-seq" onclick="setPBMode('sequential')">Sequential</div>
-                <div class="pbmode" id="pbm-rep" onclick="setPBMode('repeat')">🔁 Repeat</div>
+                <div class="pbmode on" id="pbm-seq" onclick="setPBMode('sequential')">▶ Sequential</div>
+                <div class="pbmode" id="pbm-loop" onclick="setPBMode('loop')">🔄 Loop Queue</div>
+                <div class="pbmode" id="pbm-rep" onclick="setPBMode('repeat')">🔁 Repeat 1</div>
                 <div class="pbmode" id="pbm-shuf" onclick="setPBMode('shuffle')">🔀 Random</div>
             </div>
         </div>
@@ -504,8 +505,8 @@
 
         <!-- Queue Footer -->
         <div class="q-footer" id="q-footer" style="display:none;">
-            <div class="q-footer-info">Total: <strong id="q-total-tracks">0</strong> tracks</div>
-            <div class="q-footer-info">Runtime: <strong id="q-total-time">0:00</strong></div>
+            <div class="q-footer-info">Total: <strong id="q-total-tracks">0</strong> tracks · <strong id="q-total-time">0:00</strong></div>
+            <div class="q-footer-info" id="q-loop-badge" style="background:rgba(14,165,233,0.12);border:1px solid rgba(14,165,233,0.3);padding:3px 10px;border-radius:20px;font-size:9px;font-weight:800;color:var(--glow);display:none;">🔄 LOOP ON</div>
         </div>
     </div>
 
@@ -852,14 +853,17 @@ function addQ(tid){
 }
 
 // ── QUEUE ──
-var pbModes={sequential:'Sequential',repeat:'🔁 Repeat',shuffle:'🔀 Random'};
+var pbModes={sequential:'▶ Sequential',loop:'🔄 Loop Queue',repeat:'🔁 Repeat 1',shuffle:'🔀 Random'};
 function setPBMode(m){
     S.pbMode=m;
     Object.keys(pbModes).forEach(function(k){
-        var el=document.getElementById('pbm-'+k.replace('sequential','seq').replace('repeat','rep').replace('shuffle','shuf'));
+        var el=document.getElementById('pbm-'+k.replace('sequential','seq').replace('loop','loop').replace('repeat','rep').replace('shuffle','shuf'));
         if(el)el.className='pbmode'+(k===m?' on':'');
     });
     toast('Mode: '+pbModes[m]);
+    // Save to Firebase so it persists across refreshes
+    db.ref('radioMusic/pbMode').set(m);
+    updQBadge();
 }
 function loadQ(){
     db.ref('radioMusic/queue').on('value',function(snap){
@@ -868,6 +872,11 @@ function loadQ(){
         rendQ();updQBadge();
     });
     db.ref('radioMusic/current').on('value',function(snap){updCurrentBar(snap.val()||{});});
+    // Restore saved playback mode
+    db.ref('radioMusic/pbMode').once('value',function(snap){
+        var m=snap.val();
+        if(m&&pbModes[m]){S.pbMode=m;setPBMode(m);}
+    });
 }
 function updQBadge(){
     var cnt=S.queue.length;
@@ -881,6 +890,13 @@ function updQBadge(){
         var total=S.queue.reduce(function(acc,i){return acc+(i.duration||0);},0);
         document.getElementById('q-total-time').textContent=fmt(total);
     } else footer.style.display='none';
+    // Show loop badge
+    var lb=document.getElementById('q-loop-badge');
+    if(lb)lb.style.display=(S.pbMode==='loop'||S.pbMode==='repeat'||S.pbMode==='shuffle')?'':'none';
+    if(lb){
+        var modeIcons={loop:'🔄 LOOP ON',repeat:'🔁 REPEAT 1',shuffle:'🔀 SHUFFLE'};
+        lb.textContent=modeIcons[S.pbMode]||'';
+    }
 }
 function rendQ(){
     var el=document.getElementById('qlist');
@@ -947,16 +963,23 @@ function playNext(){
     if(S.pbMode==='shuffle'){playIdx(Math.floor(Math.random()*S.queue.length));return;}
     var n=S.qidx+1;
     if(n<S.queue.length)playIdx(n);
-    else if(S.pbMode==='repeat')playIdx(0);
+    else if(S.pbMode==='repeat'||S.pbMode==='loop'){playIdx(0);toast('🔄 Back to start!');}
     else{toast('📋 End of queue');stopQ();}
 }
 function playPrev(){var p=S.qidx-1;if(p>=0)playIdx(p);else S.audio.currentTime=0;}
 function onEnd(){
     if(S.pbMode==='repeat'&&S.qidx>=0){setTimeout(function(){playIdx(S.qidx);},400);return;}
     if(S.pbMode==='shuffle'){setTimeout(function(){playIdx(Math.floor(Math.random()*S.queue.length));},400);return;}
+    if(S.pbMode==='loop'){
+        // Loop: wrap back to start when queue ends
+        var n=S.qidx+1;
+        if(n<S.queue.length)setTimeout(function(){playIdx(n);},400);
+        else{toast('🔄 Looping queue from start...');setTimeout(function(){playIdx(0);},600);}
+        return;
+    }
     var n=S.qidx+1;
     if(n<S.queue.length)setTimeout(function(){playIdx(n);},400);
-    else{stopQ();toast('📋 Queue finished');}
+    else{stopQ();toast('📋 Queue finished — use 🔄 Loop Queue mode to keep playing!');}
 }
 function stopQ(){S.audio.pause();S.audio.src='';S.qplaying=false;S.qidx=-1;db.ref('radioMusic/current').set({playing:false,name:'',url:''});db.ref('radioState').update({mode:'off',isLive:false});document.getElementById('npDisc').classList.remove('spin');}
 function remQ(qid){db.ref('radioMusic/queue/'+qid).remove();toast('🗑 Removed');}
