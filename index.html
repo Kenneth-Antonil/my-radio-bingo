@@ -9813,7 +9813,21 @@ function runMathBlitz(problems) {
                     document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || ""); 
                     if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none'; 
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash; 
-                    if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); } 
+                    if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
+                    // Load extra cards if any
+                    if (userData.extraCards) {
+                        const savedExtras = userData.extraCards;
+                        const keys = Object.keys(savedExtras).sort((a,b) => parseInt(a) - parseInt(b));
+                        keys.forEach(k => {
+                            const cardData = savedExtras[k];
+                            if (!cardData) return;
+                            const cardIdx = extraCards.length;
+                            extraCards.push({ numbers: cardData, marks: [12], won: false });
+                            addExtraCardToDOM(cardIdx);
+                            renderExtraCard(cardIdx);
+                        });
+                        updateBuyCardUI();
+                    }
                     
                     const displayName = userData.name || u.displayName;
                     const displayPhoto = userData.photo || u.photoURL;
@@ -10916,6 +10930,8 @@ function runMathBlitz(problems) {
             const newCard = generateExtraCardNumbers();
             const cardIdx = extraCards.length;
             extraCards.push({ numbers: newCard, marks: [12], won: false });
+            // Save to Firebase so dashboard can see it
+            db.ref('users/' + uid + '/extraCards/' + cardIdx).set(newCard);
             addExtraCardToDOM(cardIdx);
             renderExtraCard(cardIdx);
             updateBuyCardUI();
@@ -10954,6 +10970,8 @@ function runMathBlitz(problems) {
         extraCards[cardIdx].numbers = newCard;
         extraCards[cardIdx].marks = [12];
         extraCards[cardIdx].won = false;
+        // Sync to Firebase
+        db.ref('users/' + auth.currentUser.uid + '/extraCards/' + cardIdx).set(newCard);
         renderExtraCard(cardIdx);
         playSound('cardFlip');
     }
