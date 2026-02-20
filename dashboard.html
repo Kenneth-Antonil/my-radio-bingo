@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1775,7 +1774,7 @@
     function toggleAutoDraw() { if(!isAutoDrawing) { db.ref('gameState/latestWinner').once('value', s => { if(s.exists()) { alert("May Winner Na! Reset Game muna bago mag start ulit."); return; } startAutoDrawLogic(); }); } else { stopAutoDrawLogic(); } }
     function startAutoDrawLogic() { if(isAutoDrawing) return; db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() }); const btn = document.getElementById('btnAutoDraw'); const speed = document.getElementById('drawSpeed').value * 1000; isAutoDrawing = true; btn.innerHTML = `<i data-lucide="pause"></i> STOP AUTO DRAW`; btn.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)"; autoDrawLogic(); autoDrawInterval = setInterval(autoDrawLogic, speed); lucide.createIcons(); }
     function stopAutoDrawLogic() { const btn = document.getElementById('btnAutoDraw'); clearInterval(autoDrawInterval); isAutoDrawing = false; btn.innerHTML = `<i data-lucide="play"></i> START AUTO DRAW`; btn.style.background = "linear-gradient(135deg, #059669, #047857)"; lucide.createIcons(); }
-    function autoDrawLogic() { if(drawnNumbers.length >= 75) { stopAutoDrawLogic(); return alert("Game Over! All numbers drawn."); } db.ref('gameState/latestWinner').once('value', s => { if(s.exists()) { stopAutoDrawLogic(); return; } let nextNum; do { nextNum = Math.floor(Math.random() * 75) + 1; } while (drawnNumbers.includes(nextNum)); toggleBall(nextNum); }); }
+    function autoDrawLogic() { if(drawnNumbers.length >= 75) { stopAutoDrawLogic(); autoResetGame("Lahat ng numbers na-draw!"); return; } db.ref('gameState/latestWinner').once('value', s => { if(s.exists()) { stopAutoDrawLogic(); return; } let nextNum; do { nextNum = Math.floor(Math.random() * 75) + 1; } while (drawnNumbers.includes(nextNum)); toggleBall(nextNum); }); }
     function speakNumber(num) { if ('speechSynthesis' in window) { let letter = "B"; if (num > 15) letter = "I"; if (num > 30) letter = "N"; if (num > 45) letter = "G"; if (num > 60) letter = "O"; const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 0.9; window.speechSynthesis.speak(msg); } }
     function toggleBall(num) { const ref = db.ref('drawnNumbers/' + num); ref.once('value', s => { if(s.exists()) { ref.remove(); } else { ref.set(num); db.ref('gameState/lastCalled').set(num); db.ref('gameState/gameStartTime').once('value', ss => { if(!ss.exists()) db.ref('gameState/gameStartTime').set(Date.now()); }); } }); }
 
@@ -1952,7 +1951,7 @@
             const winData = s.val(); const safeWinnerName = cleanName(winData.name);
             let msg = `🎉 BINGO WINNER: ${safeWinnerName.toUpperCase()}!`; if(winData.prize) msg += ` WON ${formatCurrency(winData.prize)}! 💰`; else msg += ` CONGRATULATIONS! 🎉`;
             marquee.style.display = 'block'; document.getElementById('winnerMarqueeText').innerText = msg;
-            if(isAutoDrawing) { stopAutoDrawLogic(); alert("AUTO STOP: We have a winner!"); }
+            if(isAutoDrawing) { stopAutoDrawLogic(); autoResetGame("May BINGO winner!"); }
         } else { marquee.style.display = 'none'; updateMonitorCards(); } 
     });
 
@@ -2049,6 +2048,33 @@
             db.ref('users').once('value', s => { let updates = {}; s.forEach(u => { updates[u.key + '/hasWonCurrent'] = false; }); db.ref('users').update(updates); });
             stopAutoDrawLogic(); setTimeout(updateMonitorCards, 500); document.getElementById('lastBall').innerText = "--"; lastSpokenNumber = null;
         }
+    }
+
+    // AUTO RESET — called automatically when a winner is found OR all numbers are drawn
+    let autoResetTimer = null;
+    function autoResetGame(reason) {
+        // Prevent duplicate timers
+        if(autoResetTimer) return;
+        const DELAY = 10000; // 10 seconds
+        if(typeof addActivityItem === 'function') addActivityItem('🔄 ' + reason + ' Auto-reset in 10 seconds...');
+        autoResetTimer = setTimeout(function() {
+            autoResetTimer = null;
+            stopAutoDrawLogic();
+            db.ref('drawnNumbers').remove();
+            db.ref('gameState/latestWinner').remove();
+            db.ref('gameState/gameStartTime').remove();
+            db.ref('gameState/lastCalled').remove();
+            db.ref('gameState').update({ status: 'waiting' });
+            db.ref('users').once('value', function(s) {
+                let updates = {};
+                s.forEach(function(u) { updates[u.key + '/hasWonCurrent'] = false; });
+                db.ref('users').update(updates);
+            });
+            setTimeout(updateMonitorCards, 500);
+            document.getElementById('lastBall').innerText = "--";
+            lastSpokenNumber = null;
+            if(typeof addActivityItem === 'function') addActivityItem('✅ Game auto-reset complete. Ready for next draw!');
+        }, DELAY);
     }
 
     db.ref('redemptions').on('value', s => {
