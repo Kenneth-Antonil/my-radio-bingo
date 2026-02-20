@@ -5870,7 +5870,6 @@
 
     /* ── TOP SLOT SECTION ── */
     #gcuTopSlotSection {
-        display:none;
         background:linear-gradient(165deg,#0a1525 0%,#0c1e3a 50%,#0a1525 100%);
         border:2px solid rgba(251,191,36,0.4);
         border-radius:24px; padding:20px 14px;
@@ -5927,7 +5926,6 @@
 
     /* ── LOBBY MINI-GAME ── */
     #gcuLobbySection {
-        display:none;
         background:linear-gradient(165deg,#0f0a1e 0%,#1a0d35 50%,#0f0a1e 100%);
         border:2px solid rgba(244,113,181,0.3);
         border-radius:24px; padding:18px 14px;
@@ -6555,7 +6553,7 @@
     <div id="view-bingo" style="display:none;">
 
         <!-- GCU Phase Strip -->
-        <div class="gcu-phase-strip" id="gcuPhaseStrip" style="display:none;">
+        <div class="gcu-phase-strip" id="gcuPhaseStrip">
             <div class="gcu-phase-dot" id="gcuPhaseDot"></div>
             <span class="gcu-phase-label" id="gcuPhaseLabel">Connecting…</span>
             <span class="gcu-game-id" id="gcuGameId"></span>
@@ -6590,7 +6588,7 @@
         </div>
 
         <!-- ═══ TOP SLOT SECTION ═══ -->
-        <div id="gcuTopSlotSection">
+        <div id="gcuTopSlotSection" style="display:none;">
             <div class="gcu-ts-bg"></div>
             <div class="gcu-ts-title">✦ TOP SLOT — SPECIAL BALL REVEAL ✦</div>
             <div class="gcu-ts-machine">
@@ -6609,7 +6607,7 @@
         </div>
 
         <!-- ═══ LOBBY MINI-GAME ═══ -->
-        <div id="gcuLobbySection">
+        <div id="gcuLobbySection" class="show" style="display:block;">
             <div class="gcu-lobby-bg"></div>
             <div class="gcu-lobby-hdr">
                 <div class="gcu-lobby-title">🎡 LUCKY WHEEL — WIN COINS!</div>
@@ -9223,6 +9221,10 @@ function runMathBlitz(problems) {
         } else if(tab === 'bingo') {
             document.getElementById('view-bingo').style.display = 'block';
             document.getElementById('nav-bingo').classList.add('active');
+            // Draw the lucky wheel canvas every time the tab is opened
+            if (typeof gcuDrawWheelCanvas === 'function') gcuDrawWheelCanvas();
+            // Show lobby if no game is currently active
+            if (typeof gcuAutoShowLobby === 'function') gcuAutoShowLobby();
         } else if(tab === 'beats') {
             document.getElementById('view-beats').style.display = 'block';
             document.getElementById('nav-beats').classList.add('active');
@@ -10883,6 +10885,35 @@ function runMathBlitz(problems) {
 
     // ── Load Socket.io script then connect ──────────────────
     function initBingoGCU() {
+        // Show default state immediately — no socket needed
+        gcuUpdatePhase('lobby', null);
+        gcuShowLobby();
+        gcuDrawWheelCanvas();
+
+        // Hook into Firebase drawnNumbers to auto-toggle lobby/playing UI
+        // This works even when socket server is offline
+        db.ref('drawnNumbers').on('value', snap => {
+            const nums = snap.val() ? Object.values(snap.val()) : [];
+            if (nums.length > 0) {
+                // Game in progress — hide lobby, show playing phase
+                gcuHideLobby();
+                gcuHideTopSlot();
+                gcuUpdatePhase('playing', null);
+            } else {
+                // No game — show lobby wheel
+                gcuShowLobby();
+                gcuUpdatePhase('lobby', null);
+                gcuDrawWheelCanvas();
+            }
+        });
+
+        // Also listen for latestWinner to show game_over phase
+        db.ref('gameState/latestWinner').on('value', snap => {
+            if (snap.exists() && snap.val() && snap.val().name) {
+                gcuUpdatePhase('game_over', null);
+            }
+        });
+
         const s1 = document.createElement('script');
         s1.src = GCU_SERVER + '/socket.io/socket.io.js';
         s1.onload  = gcuConnect;
@@ -10894,14 +10925,13 @@ function runMathBlitz(problems) {
             document.head.appendChild(s2);
         };
         document.head.appendChild(s1);
-        gcuDrawWheelCanvas();
     }
 
     function gcuConnect() {
         try {
             gcuSocket = io(GCU_SERVER, { transports:['websocket','polling'], reconnectionAttempts:5, timeout:5000 });
-            gcuSocket.on('connect',    () => { gcuConnected=true; gcuShowPhaseStrip(); showToast('⚡ Real-time connected!'); });
-            gcuSocket.on('disconnect', () => { gcuConnected=false; });
+            gcuSocket.on('connect',    () => { gcuConnected=true; showToast('⚡ Real-time connected!'); });
+            gcuSocket.on('disconnect', () => { gcuConnected=false; gcuUpdatePhase('lobby', null); });
             gcuSocket.on('game_state',      gcuOnGameState);
             gcuSocket.on('phase_change',    gcuOnPhaseChange);
             gcuSocket.on('ball_drawn',      gcuOnBallDrawn);
@@ -10914,10 +10944,21 @@ function runMathBlitz(problems) {
         } catch(e) { console.warn('GCU connect failed', e); }
     }
 
-    function gcuShowPhaseStrip() {
-        const el = document.getElementById('gcuPhaseStrip');
-        if (el) el.style.display = 'flex';
+    function gcuShowPhaseStrip() { /* always visible now */ }
+
+    // Show lobby wheel when no game is active (works with or without socket)
+    function gcuAutoShowLobby() {
+        // If a game is in progress (drawnNumbers exist), hide lobby
+        if (gameDrawn && gameDrawn.length > 0) {
+            gcuHideLobby();
+            gcuUpdatePhase('playing', null);
+        } else {
+            gcuShowLobby();
+            gcuUpdatePhase('lobby', null);
+        }
+        gcuDrawWheelCanvas();
     }
+    window.gcuAutoShowLobby = gcuAutoShowLobby;
 
     function gcuUpdatePhase(phase, gameId) {
         gcuPhase = phase;
@@ -10925,10 +10966,16 @@ function runMathBlitz(problems) {
         const label = document.getElementById('gcuPhaseLabel');
         const gid   = document.getElementById('gcuGameId');
         if (!dot) return;
-        dot.className = 'gcu-phase-dot ' + (phase || '');
-        const labels = { lobby:'⏳ LOBBY — Next game starting soon', top_slot:'🎰 TOP SLOT — Special ball reveal!', playing:'🎱 LIVE — Auto-daub active', game_over:'🏁 GAME OVER — New round soon' };
-        if (label) label.textContent = labels[phase] || phase;
+        dot.className = 'gcu-phase-dot ' + (phase || 'lobby');
+        const labels = {
+            lobby:     '⏳ LOBBY — Wheel open, next game soon',
+            top_slot:  '🎰 TOP SLOT — Special ball reveal!',
+            playing:   '🎱 LIVE GAME — Auto-daub active',
+            game_over: '🏁 GAME OVER — New round soon'
+        };
+        if (label) label.textContent = labels[phase] || '⏳ LOBBY — Wheel open';
         if (gid && gameId) gid.textContent = '#' + gameId;
+        else if (gid && !gameId) gid.textContent = '';
     }
 
     // ── GCU Socket event handlers ────────────────────────────
@@ -11031,25 +11078,21 @@ function runMathBlitz(problems) {
     // ── Show / Hide lobby & top slot ─────────────────────────
     function gcuShowLobby() {
         const el = document.getElementById('gcuLobbySection');
-        if (el) el.classList.add('show');
-        const dp = document.querySelector('.draw-panel');
-        if (dp) { dp.style.opacity='.4'; dp.style.pointerEvents='none'; }
+        if (el) el.style.display = 'block';
     }
     function gcuHideLobby() {
         const el = document.getElementById('gcuLobbySection');
-        if (el) el.classList.remove('show');
-        const dp = document.querySelector('.draw-panel');
-        if (dp) { dp.style.opacity='1'; dp.style.pointerEvents=''; }
+        if (el) el.style.display = 'none';
     }
     function gcuShowTopSlot() {
         const el = document.getElementById('gcuTopSlotSection');
-        if (el) el.classList.add('show');
+        if (el) el.style.display = 'block';
         const rev = document.getElementById('gcuTsReveal');
-        if (rev) rev.classList.remove('show');
+        if (rev) rev.style.display = 'none';
     }
     function gcuHideTopSlot() {
         const el = document.getElementById('gcuTopSlotSection');
-        if (el) el.classList.remove('show');
+        if (el) el.style.display = 'none';
     }
 
     // ── Top Slot Animation ───────────────────────────────────
@@ -11060,7 +11103,8 @@ function runMathBlitz(problems) {
         const multR   = document.getElementById('gcuTsMultReel');
         const reveal  = document.getElementById('gcuTsReveal');
         if (!reel || !multR) return;
-        reveal.classList.remove('show');
+        reveal.style.display = 'none';
+        reveal.style.animation = '';
 
         const ballPool = gcuShuffle([...GCU_ALL_BALLS,...GCU_ALL_BALLS,...GCU_ALL_BALLS]);
         ballPool.push(result);
@@ -11099,7 +11143,8 @@ function runMathBlitz(problems) {
                 reel.style.transform  = `translateY(-${targetBallPx}px)`;
                 multR.style.transform = `translateY(-${targetMultPx}px)`;
                 setTimeout(() => {
-                    reveal.classList.add('show');
+                    reveal.style.display = 'block';
+                    reveal.style.animation = 'gcuRevealIn .5s cubic-bezier(0.175,.885,.32,1.275)';
                     document.getElementById('gcuTsRevealMain').innerHTML =
                         `<span class="gcu-hl">${result.ball}</span> × <span class="gcu-hl">${result.multiplier}x</span>`;
                     document.getElementById('gcuTsRevealSub').textContent =
@@ -18104,6 +18149,13 @@ function updateHamburgerActive(tab) {
     if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initRadio); }
     else { setTimeout(initRadio, 1000); }
 })();
+
+// Draw Lucky Wheel canvas as soon as DOM is ready (no auth needed)
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        if (typeof gcuDrawWheelCanvas === 'function') gcuDrawWheelCanvas();
+    }, 300);
+});
 // ============================================================
 </script>
 </body>
