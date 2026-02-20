@@ -853,40 +853,6 @@
         <div class="stat-card"><div class="stat-val" id="countUsers">0</div><div class="stat-lbl">TOTAL</div></div>
     </div>
 
-    <!-- MULTIPLIER ROULETTE PANEL -->
-    <div class="card" style="padding:15px; margin:0; background:linear-gradient(145deg,rgba(251,191,36,0.12),rgba(0,0,0,0)); border:1.5px solid rgba(251,191,36,0.4);">
-        <div style="font-size:12px; font-weight:900; color:#fbbf24; margin-bottom:12px; display:flex; align-items:center; gap:6px; letter-spacing:0.5px;">
-            <span>&#9889;</span> MULTIPLIER ROULETTE
-        </div>
-        <div style="font-size:10px; color:rgba(255,255,255,0.5); margin-bottom:10px;">
-            I-trigger bago mag-draw. Pipili ng number + multiplier. Kung ang player ay may ganung number sa winning pattern, multiply ang prize!
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
-            <div>
-                <label style="font-size:9px; color:rgba(255,255,255,0.4); font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Number (1-75)</label>
-                <input type="number" id="multNumber" placeholder="e.g. 42" min="1" max="75" style="padding:8px; font-size:14px; font-weight:900; color:white; text-align:center; background:rgba(0,0,0,0.4); border:1px solid rgba(251,191,36,0.3); border-radius:8px; width:100%;">
-            </div>
-            <div>
-                <label style="font-size:9px; color:rgba(255,255,255,0.4); font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Multiplier</label>
-                <select id="multValue" style="padding:8px; font-size:14px; font-weight:900; color:#fbbf24; background:rgba(0,0,0,0.4); border:1px solid rgba(251,191,36,0.3); border-radius:8px; width:100%;">
-                    <option value="2">2x</option>
-                    <option value="3">3x</option>
-                    <option value="5">5x</option>
-                    <option value="10" selected>10x</option>
-                </select>
-            </div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <button onclick="triggerMultiplierRoulette()" style="padding:10px; background:linear-gradient(135deg,#b45309,#d97706); border:none; border-radius:10px; color:white; font-weight:900; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
-                &#9889; SPIN ROULETTE
-            </button>
-            <button onclick="clearMultiplierRoulette()" style="padding:10px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); border-radius:10px; color:#ef4444; font-weight:800; font-size:12px; cursor:pointer;">
-                &#10005; CLEAR
-            </button>
-        </div>
-        <div id="multStatus" style="margin-top:8px; font-size:10px; color:rgba(255,255,255,0.4); text-align:center; min-height:14px;"></div>
-    </div>
-
     <div class="card" style="padding: 15px; margin: 0; background: linear-gradient(145deg, rgba(245, 158, 11, 0.1), rgba(0,0,0,0)); border: 1px solid rgba(245, 158, 11, 0.3);">
         <label style="color:var(--gold)"><i data-lucide="trophy" style="width:12px"></i> Jackpot Prize</label>
         <input type="text" id="jackpotAmount" placeholder="e.g. 5000" style="margin-bottom:10px; text-align:center; font-weight:900; color:var(--gold); font-size:18px;">
@@ -1820,49 +1786,6 @@
     db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternSelect').value = currentPattern; renderPatternPreview(currentPattern); updatePatternBadge(currentPattern); updateMonitorCards(); });
     
     function toggleJackpot() { jackpotVisible = !jackpotVisible; const amount = document.getElementById('jackpotAmount').value; const knob = document.getElementById('jackpotKnob'); const bg = document.getElementById('jackpotKnobBg'); if(jackpotVisible) { knob.style.left = "23px"; bg.style.background = "var(--success)"; document.getElementById('jackpotStatusText').innerText = "VISIBLE"; db.ref('gameState/jackpot').set({ amount: amount, active: true }); } else { knob.style.left = "3px"; bg.style.background = "rgba(0,0,0,0.3)"; document.getElementById('jackpotStatusText').innerText = "HIDDEN"; db.ref('gameState/jackpot').set({ amount: amount, active: false }); } }
-
-    // === MULTIPLIER ROULETTE ===
-    function triggerMultiplierRoulette() {
-        const numInput = document.getElementById('multNumber');
-        const multInput = document.getElementById('multValue');
-        const statusEl = document.getElementById('multStatus');
-        let number = parseInt(numInput.value);
-        const multiplier = parseInt(multInput.value);
-        // If no number specified, pick random
-        if (!number || number < 1 || number > 75) {
-            number = Math.floor(Math.random() * 75) + 1;
-            numInput.value = number;
-        }
-        statusEl.innerText = 'Spinning roulette...';
-        statusEl.style.color = '#fbbf24';
-        // Phase 1: set spinning state
-        db.ref('gameState/multiplierRoulette').set({ active: true, spinning: true, number: null, multiplier: null })
-        .then(() => {
-            // Phase 2: after 3 seconds, reveal result
-            setTimeout(() => {
-                db.ref('gameState/multiplierRoulette').set({ active: true, spinning: false, number: number, multiplier: multiplier })
-                .then(() => {
-                    statusEl.innerText = 'ACTIVE: Number ' + number + ' x' + multiplier + ' multiplier!';
-                    statusEl.style.color = '#10b981';
-                });
-            }, 3000);
-        });
-    }
-    function clearMultiplierRoulette() {
-        db.ref('gameState/multiplierRoulette').remove();
-        document.getElementById('multStatus').innerText = 'Multiplier cleared.';
-        document.getElementById('multStatus').style.color = '#94a3b8';
-        document.getElementById('multNumber').value = '';
-    }
-    // Listen to multiplier state for status display
-    db.ref('gameState/multiplierRoulette').on('value', s => {
-        const data = s.val();
-        const statusEl = document.getElementById('multStatus');
-        if(!statusEl) return;
-        if(!data || !data.active) { statusEl.innerText = 'No active multiplier.'; statusEl.style.color = '#64748b'; }
-        else if(data.spinning) { statusEl.innerText = 'Spinning...'; statusEl.style.color = '#fbbf24'; }
-        else if(data.number) { statusEl.innerText = 'ACTIVE: #' + data.number + ' \u00d7' + data.multiplier; statusEl.style.color = '#10b981'; document.getElementById('multNumber').value = data.number; document.getElementById('multValue').value = data.multiplier; }
-    });
     db.ref('gameState/jackpot').once('value', s => { if(s.exists()){ const d = s.val(); document.getElementById('jackpotAmount').value = d.amount || ""; if(d.active) { jackpotVisible = true; document.getElementById('jackpotKnob').style.left = "23px"; document.getElementById('jackpotKnobBg').style.background = "var(--success)"; document.getElementById('jackpotStatusText').innerText = "VISIBLE"; } } });
     document.getElementById('jackpotAmount').addEventListener('input', (e) => { if(jackpotVisible) { db.ref('gameState/jackpot').update({ amount: e.target.value }); } });
 
@@ -2013,18 +1936,52 @@
             return bOnline - aOnline;
         });
         usersArray.forEach(user => {
-            const card = user.currentCard || user.card; 
-            const check = checkCardStatus(card, currentPattern, drawnNumbers); 
+            const card = user.currentCard || user.card;
+            const check = checkCardStatus(card, currentPattern, drawnNumbers);
             // FIXED: must have state === 'online', not just any record in status
             const isOnline = globalStatusData[user.uid] && globalStatusData[user.uid].state === 'online';
             // Try multiple possible name fields
             const displayName = user.name || user.username || user.displayName || user.email || user.uid.substring(0, 10);
             const safeName = cleanName(displayName);
             let isBingo = check.isBingo; let isPuro = check.isPuro; if(!isOnline) { isBingo = false; isPuro = false; } else { if(user.hasWonCurrent && drawnNumbers.length > 0) isBingo = true; if(isBingo) isPuro = false; }
+
+            // Wrapper for this user (main card + extra cards grouped)
+            const userWrap = document.createElement('div');
+            userWrap.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
+
+            // Main card
             const cardDiv = document.createElement('div'); cardDiv.className = `user-card-monitor ${!isOnline ? 'offline' : ''} ${isBingo ? 'bingo' : ''} ${isPuro ? 'puro' : ''}`;
             let gridHtml = '<div class="mini-bingo-grid">'; card.forEach((n, idx) => { const marked = drawnNumbers.includes(n) || n === "FREE"; const isWinningCell = check.winningCells.includes(idx); const visualHit = isOnline && isWinningCell; gridHtml += `<div class="mini-cell ${marked ? 'marked' : ''} ${visualHit ? 'hit' : ''}">${n === "FREE" ? '★' : n}</div>`; }); gridHtml += '</div>';
             cardDiv.innerHTML = `<div class="monitor-badge">${isBingo ? "BINGO!" : "PURO!"}</div><div style="font-size:12px; font-weight:800; display:flex; justify-content:space-between; color:white; align-items:center;"><span style="display:flex; align-items:center; gap:5px;"><span class="${isOnline ? 'online-dot' : 'offline-dot'}"></span>${safeName}</span><span style="font-size:9px; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">${user.points || 0} pts</span></div>${gridHtml}`;
-            if(isBingo && isOnline) container.prepend(cardDiv); else if(isPuro && isOnline) container.insertBefore(cardDiv, container.children[1] || null); else container.appendChild(cardDiv);
+            userWrap.appendChild(cardDiv);
+
+            // Extra cards
+            if (user.extraCards && isOnline) {
+                const extraKeys = Object.keys(user.extraCards).sort((a,b) => parseInt(a)-parseInt(b));
+                extraKeys.forEach((k, ei) => {
+                    const ec = user.extraCards[k];
+                    if (!ec || !Array.isArray(ec)) return;
+                    const ecCheck = checkCardStatus(ec, currentPattern, drawnNumbers);
+                    let ecIsBingo = ecCheck.isBingo && drawnNumbers.length > 0;
+                    let ecIsPuro = ecCheck.isPuro;
+                    if(ecIsBingo) ecIsPuro = false;
+                    const ecDiv = document.createElement('div');
+                    ecDiv.className = `user-card-monitor ${ecIsBingo ? 'bingo' : ''} ${ecIsPuro ? 'puro' : ''}`;
+                    ecDiv.style.cssText = 'border-top: 2px solid rgba(251,191,36,0.3); margin-top: 2px; opacity: 0.9;';
+                    let ecGridHtml = '<div class="mini-bingo-grid">';
+                    ec.forEach((n, idx) => {
+                        const marked = drawnNumbers.includes(n) || n === "FREE";
+                        const isWinningCell = ecCheck.winningCells.includes(idx);
+                        const visualHit = isWinningCell;
+                        ecGridHtml += `<div class="mini-cell ${marked ? 'marked' : ''} ${visualHit ? 'hit' : ''}">${n === "FREE" ? '★' : n}</div>`;
+                    });
+                    ecGridHtml += '</div>';
+                    ecDiv.innerHTML = `<div class="monitor-badge">${ecIsBingo ? "BINGO!" : "PURO!"}</div><div style="font-size:10px; font-weight:800; display:flex; justify-content:space-between; color:rgba(255,255,255,0.7); align-items:center; margin-bottom:4px;"><span style="display:flex; align-items:center; gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block;"></span>Card ${parseInt(k)+2}</span></div>${ecGridHtml}`;
+                    userWrap.appendChild(ecDiv);
+                });
+            }
+
+            if(isBingo && isOnline) container.prepend(userWrap); else if(isPuro && isOnline) container.insertBefore(userWrap, container.children[1] || null); else container.appendChild(userWrap);
         });
     }
 
