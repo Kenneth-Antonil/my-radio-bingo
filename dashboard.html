@@ -1006,13 +1006,27 @@
             <div class="card">
                 <h2><i data-lucide="settings"></i> Game Control</h2>
                 <div class="input-group">
-                    <label>Winning Pattern</label>
+                    <label>Winning Pattern <span id="patternBadge" style="margin-left:8px; font-size:9px; background:rgba(139,92,246,0.3); color:#a78bfa; padding:2px 8px; border-radius:10px; font-weight:800; letter-spacing:0.5px;"></span></label>
                     <select id="patternSelect" onchange="setPattern(this.value)">
-                        <option value="Normal Bingo">Normal Bingo</option>
-                        <option value="Blackout">Blackout</option>
-                        <option value="Letter X">Letter X</option>
-                        <option value="Four Corners">Four Corners</option>
+                        <option value="Normal Bingo">🎯 Normal Bingo (Any Line)</option>
+                        <option value="Blackout">⬛ Blackout (All 25)</option>
+                        <option value="Letter X">✖️ Letter X (Both Diagonals)</option>
+                        <option value="Four Corners">🔲 Four Corners</option>
+                        <option value="Letter T">🔡 Letter T (Top + Mid Col)</option>
+                        <option value="Letter L">🔡 Letter L (Left Col + Bottom)</option>
+                        <option value="Letter C">🔡 Letter C (Left + Top + Bottom)</option>
+                        <option value="Plus Sign">➕ Plus / Cross</option>
+                        <option value="Diamond">💎 Diamond</option>
+                        <option value="Letter Z">🔡 Letter Z</option>
+                        <option value="Double Bingo">2️⃣ Double Bingo (2 Lines)</option>
+                        <option value="Outside Border">🔳 Outside Border (Frame)</option>
                     </select>
+                    <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+                        <button onclick="randomizePatternForGame()" style="flex:1; padding:8px 12px; background:linear-gradient(135deg,rgba(139,92,246,0.2),rgba(99,102,241,0.2)); border:1px solid rgba(139,92,246,0.4); border-radius:10px; color:#a78bfa; font-size:11px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; justify-content:center;">
+                            🎲 RANDOM PATTERN
+                        </button>
+                    </div>
+                    <div id="patternPreviewBox" style="margin-top:8px; background:rgba(0,0,0,0.3); border:1px solid rgba(139,92,246,0.2); border-radius:12px; padding:10px; display:grid; grid-template-columns:repeat(5,1fr); gap:3px;"></div>
                 </div>
                 <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.3); padding: 15px; border-radius: 16px; margin-bottom: 20px;">
                     <label style="color:var(--success); margin-bottom:8px; display:flex; justify-content:space-between;">
@@ -1748,10 +1762,14 @@
                             document.getElementById('jackpotKnobBg').style.background = "var(--success)";
                             document.getElementById('jackpotStatusText').innerText = "VISIBLE";
                             document.getElementById('jackpotAmount').value = jpAmt;
+                            // ⚡ JACKPOT = BLACKOUT PATTERN
+                            randomizePatternForGame(true); // Force Blackout
+                            document.getElementById('patternSelect').value = "Blackout";
                             sendPushToAll("⚡ JACKPOT ROUND STARTING!", `The JACKPOT draw is LIVE! Prize: ${jpAmt.toLocaleString()} RB Coins! Open the app NOW! 🏆🔥`);
                         } else {
-                            // Turn off jackpot for normal rounds
+                            // Turn off jackpot for normal rounds + randomize pattern
                             db.ref('gameState/jackpot').update({ active: false });
+                            randomizePatternForGame(false); // Random pattern for normal rounds
                         }
                         db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() }); 
                         startAutoDrawLogic(); 
@@ -1765,7 +1783,7 @@
     // --- GAME LOGIC ---
     db.ref('drawnNumbers').on('value', s => { drawnNumbers = s.val() ? Object.values(s.val()) : []; document.querySelectorAll('.ball').forEach(b => b.classList.remove('drawn')); drawnNumbers.forEach(n => document.getElementById('ball-'+n).classList.add('drawn')); updateMonitorCards(); });
     db.ref('gameState/lastCalled').on('value', s => { if(s.exists()) { const num = s.val(); document.getElementById('lastBall').innerText = num; if (num !== lastSpokenNumber) { speakNumber(num); lastSpokenNumber = num; } } else { document.getElementById('lastBall').innerText = "--"; lastSpokenNumber = null; } });
-    db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternSelect').value = currentPattern; updateMonitorCards(); });
+    db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternSelect').value = currentPattern; renderPatternPreview(currentPattern); updatePatternBadge(currentPattern); updateMonitorCards(); });
     
     function toggleJackpot() { jackpotVisible = !jackpotVisible; const amount = document.getElementById('jackpotAmount').value; const knob = document.getElementById('jackpotKnob'); const bg = document.getElementById('jackpotKnobBg'); if(jackpotVisible) { knob.style.left = "23px"; bg.style.background = "var(--success)"; document.getElementById('jackpotStatusText').innerText = "VISIBLE"; db.ref('gameState/jackpot').set({ amount: amount, active: true }); } else { knob.style.left = "3px"; bg.style.background = "rgba(0,0,0,0.3)"; document.getElementById('jackpotStatusText').innerText = "HIDDEN"; db.ref('gameState/jackpot').set({ amount: amount, active: false }); } }
     db.ref('gameState/jackpot').once('value', s => { if(s.exists()){ const d = s.val(); document.getElementById('jackpotAmount').value = d.amount || ""; if(d.active) { jackpotVisible = true; document.getElementById('jackpotKnob').style.left = "23px"; document.getElementById('jackpotKnobBg').style.background = "var(--success)"; document.getElementById('jackpotStatusText').innerText = "VISIBLE"; } } });
@@ -1936,10 +1954,54 @@
     function checkCardStatus(card, pattern, drawn) {
         let markedIndices = [12]; card.forEach((val, idx) => { if(drawn.includes(val) && idx !== 12) markedIndices.push(idx); });
         let patterns = [];
-        if (pattern === "Blackout") { patterns = [[...Array(25).keys()]]; }
-        else if (pattern === "Letter X") { patterns = [[0,4,6,8,12,16,18,20,24]]; }
-        else if (pattern === "Four Corners") { patterns = [[0,4,20,24]]; }
-        else { patterns = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; }
+        if (pattern === "Blackout") { 
+            patterns = [[...Array(25).keys()]]; 
+        } else if (pattern === "Letter X") { 
+            patterns = [[0,4,6,8,12,16,18,20,24]]; 
+        } else if (pattern === "Four Corners") { 
+            patterns = [[0,4,20,24]]; 
+        } else if (pattern === "Letter T") { 
+            // Top row + middle column
+            patterns = [[0,1,2,3,4, 7,12,17,22]]; 
+        } else if (pattern === "Letter L") { 
+            // Left column + bottom row
+            patterns = [[0,5,10,15,20, 21,22,23,24]]; 
+        } else if (pattern === "Letter C") { 
+            // Left col + top row + bottom row (no right side)
+            patterns = [[0,1,2,3,4, 5,10,15,20, 21,22,23,24]]; 
+        } else if (pattern === "Plus Sign") { 
+            // Middle row + middle column
+            patterns = [[10,11,12,13,14, 2,7,17,22]]; 
+        } else if (pattern === "Diamond") { 
+            // Diamond shape around center
+            patterns = [[2, 6,8, 11,12,13, 16,18, 22]]; 
+        } else if (pattern === "Letter Z") { 
+            // Top row + reverse diagonal + bottom row
+            patterns = [[0,1,2,3,4, 8,12,16, 20,21,22,23,24]]; 
+        } else if (pattern === "Double Bingo") { 
+            // Need any 2 complete lines (rows/cols/diags)
+            const allLines = [
+                [0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],
+                [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],
+                [0,6,12,18,24],[4,8,12,16,20]
+            ];
+            const completedLines = allLines.filter(line => line.every(idx => markedIndices.includes(idx)));
+            let isBingo = completedLines.length >= 2;
+            // For isPuro - one complete + one line needing 1 more
+            const almostLines = allLines.filter(line => {
+                const hits = line.filter(idx => markedIndices.includes(idx));
+                return hits.length === line.length - 1;
+            });
+            let isPuro = completedLines.length >= 1 && almostLines.length >= 1;
+            let winningCells = isBingo ? [...new Set(completedLines.slice(0,2).flat())] : [];
+            return { isBingo, isPuro, winningCells };
+        } else if (pattern === "Outside Border") { 
+            // All 16 cells on the border (outer frame)
+            patterns = [[0,1,2,3,4, 5,9, 10,14, 15,19, 20,21,22,23,24]]; 
+        } else { 
+            // Normal Bingo - any line
+            patterns = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]]; 
+        }
         let isBingo = false; let isPuro = false; let winningCells = [];
         for (let p of patterns) { const hits = p.filter(idx => markedIndices.includes(idx)); const needed = p.length; const got = hits.length; if (got === needed) { isBingo = true; winningCells = p; break; } else if (needed - got === 1) { isPuro = true; } }
         return { isBingo, isPuro, winningCells };
@@ -2040,13 +2102,80 @@
         document.getElementById('notifMessage').value = ""; 
     }
 
-    function setPattern(p) { db.ref('gameState/currentPattern').set(p); }
+    function setPattern(p) { db.ref('gameState/currentPattern').set(p); renderPatternPreview(p); updatePatternBadge(p); }
+    
+    // ===== PATTERN PREVIEW & RANDOM PICK =====
+    const ALL_GAME_PATTERNS = [
+        "Normal Bingo", "Letter X", "Four Corners", "Letter T",
+        "Letter L", "Letter C", "Plus Sign", "Diamond",
+        "Letter Z", "Double Bingo", "Outside Border"
+    ]; // Blackout is excluded — reserved for jackpot draws only
+    
+    function randomizePatternForGame(forceBlackout) {
+        let picked;
+        if (forceBlackout) {
+            picked = "Blackout";
+        } else {
+            picked = ALL_GAME_PATTERNS[Math.floor(Math.random() * ALL_GAME_PATTERNS.length)];
+        }
+        setPattern(picked);
+        document.getElementById('patternSelect').value = picked;
+        if(typeof addActivityItem === 'function') addActivityItem(`🎲 Pattern randomized: ${picked}`);
+        // Show a brief notification
+        const badge = document.getElementById('patternBadge');
+        if(badge) { badge.innerText = '🎲 RANDOMLY PICKED!'; badge.style.background = 'rgba(251,191,36,0.3)'; badge.style.color = '#fbbf24'; setTimeout(() => { badge.innerText = ''; }, 3000); }
+    }
+    
+    function updatePatternBadge(p) {
+        const badge = document.getElementById('patternBadge');
+        if(badge && p === 'Blackout') { badge.innerText = '⚡ JACKPOT PATTERN'; badge.style.background = 'rgba(251,191,36,0.3)'; badge.style.color = '#fbbf24'; }
+        else if(badge) { badge.innerText = ''; }
+    }
+    
+    function renderPatternPreview(p) {
+        const box = document.getElementById('patternPreviewBox');
+        if(!box) return;
+        
+        // Define which cells are highlighted per pattern
+        const patternCells = {
+            "Normal Bingo": [0,1,2,3,4], // show first line as example
+            "Blackout": [...Array(25).keys()],
+            "Letter X": [0,4,6,8,12,16,18,20,24],
+            "Four Corners": [0,4,20,24],
+            "Letter T": [0,1,2,3,4,7,12,17,22],
+            "Letter L": [0,5,10,15,20,21,22,23,24],
+            "Letter C": [0,1,2,3,4,5,10,15,20,21,22,23,24],
+            "Plus Sign": [2,7,10,11,12,13,14,17,22],
+            "Diamond": [2,6,8,11,12,13,16,18,22],
+            "Letter Z": [0,1,2,3,4,8,12,16,20,21,22,23,24],
+            "Double Bingo": [0,1,2,3,4,5,6,7,8,9], // show 2 rows
+            "Outside Border": [0,1,2,3,4,5,9,10,14,15,19,20,21,22,23,24]
+        };
+        const letters = ['B','I','N','G','O'];
+        const highlighted = patternCells[p] || [];
+        box.innerHTML = '';
+        for(let i = 0; i < 25; i++) {
+            const col = i % 5;
+            const isHit = highlighted.includes(i);
+            const isFree = i === 12;
+            const cell = document.createElement('div');
+            cell.style.cssText = `aspect-ratio:1; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:800;
+                background:${isHit ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'rgba(255,255,255,0.04)'};
+                color:${isHit ? 'white' : 'rgba(255,255,255,0.15)'};
+                border:1px solid ${isHit ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.05)'};
+                box-shadow:${isHit ? '0 0 6px rgba(139,92,246,0.4)' : 'none'};`;
+            cell.innerText = isFree ? '★' : letters[col];
+            box.appendChild(cell);
+        }
+    }
     function resetGame() {
         if(confirm("WARNING: Reset entire board?")){
             db.ref('drawnNumbers').remove(); db.ref('gameState/latestWinner').remove(); db.ref('gameState/gameStartTime').remove(); db.ref('gameState/lastCalled').remove();
             db.ref('gameState').update({ status: 'waiting' });
             db.ref('users').once('value', s => { let updates = {}; s.forEach(u => { updates[u.key + '/hasWonCurrent'] = false; }); db.ref('users').update(updates); });
             stopAutoDrawLogic(); setTimeout(updateMonitorCards, 500); document.getElementById('lastBall').innerText = "--"; lastSpokenNumber = null;
+            // Randomize pattern for next game
+            randomizePatternForGame(false);
         }
     }
 
@@ -2073,6 +2202,8 @@
             setTimeout(updateMonitorCards, 500);
             document.getElementById('lastBall').innerText = "--";
             lastSpokenNumber = null;
+            // Randomize pattern for next game (non-jackpot)
+            randomizePatternForGame(false);
             if(typeof addActivityItem === 'function') addActivityItem('✅ Game auto-reset complete. Ready for next draw!');
         }, DELAY);
     }
