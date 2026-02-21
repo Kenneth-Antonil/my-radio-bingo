@@ -10799,15 +10799,32 @@ function runMathBlitz(problems) {
                 banner.style.display = 'block'; playSound('win'); lucide.createIcons();
                 if(win.uid === auth.currentUser.uid) {
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-                    cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost');
-                    gameOverlay.style.display = 'none';
                     spawnFlyingCoins(20); triggerScreenShake();
+                    // Mark the WINNING card(s) as card-win — check main card and all extra cards
+                    const mainWon = win.winCard === 'main' || win.winCard == null;
+                    if(mainWon) {
+                        cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost');
+                        gameOverlay.style.display = 'none';
+                    } else {
+                        // Main card didn't win, mark as lost but don't show overlay yet
+                        cardCont.classList.remove('card-win', 'card-lost');
+                        gameOverlay.style.display = 'none';
+                    }
+                    // Mark extra cards: won ones get card-win, others nothing (game still technically over)
+                    extraCards.forEach((ec, idx) => {
+                        const c = document.getElementById('bingoCard-extra-' + idx);
+                        const o = document.getElementById('gameOverOverlay-extra-' + idx);
+                        if(ec.won || win.winCard === 'extra-' + idx) {
+                            if(c) { c.classList.add('card-win'); c.classList.remove('card-lost'); }
+                            if(o) o.style.display = 'none';
+                        }
+                    });
                 } else {
                     cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win');
                     gameOverlay.style.display = 'flex';
                     const nextTime = document.getElementById('nextDrawTime').innerText;
                     document.getElementById('gameOverMsg').innerHTML = 'So close! <b>' + win.name.toUpperCase() + '</b> won this round.<br><br>Better luck next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ' + nextTime + '</span>';
-                    // Mark extra cards as lost too
+                    // Mark all extra cards as lost too
                     extraCards.forEach((ec, idx) => {
                         const c = document.getElementById('bingoCard-extra-' + idx);
                         if(c) { c.classList.add('card-lost'); c.classList.remove('card-win'); }
@@ -10834,7 +10851,7 @@ function runMathBlitz(problems) {
         db.ref('gameState/currentPattern').on('value', s => {
             currentPattern = s.val() || "Normal Bingo";
             document.getElementById('patternName').innerText = currentPattern;
-            checkWin();
+            checkWin(); checkWinExtra();
         });
         db.ref('drawnNumbers').on('value', s => {
             const val = s.val();
@@ -10894,12 +10911,12 @@ function runMathBlitz(problems) {
             const winningWays = getWinningWays(currentPattern);
             if (currentPattern === "Double Bingo") {
                 const completed = winningWays.filter(w => w.every(idx => marks.includes(idx)));
-                if (completed.length >= 2) { const allCells = [...new Set(completed.slice(0,2).flat())]; highlightWinningPattern(allCells, 0); triggerWin(); }
+                if (completed.length >= 2) { const allCells = [...new Set(completed.slice(0,2).flat())]; highlightWinningPattern(allCells, 0); triggerWin('main'); }
                 return;
             }
             for(let i = 0; i < winningWays.length; i++) {
                 let w = winningWays[i];
-                if(w.every(idx => marks.includes(idx))) { highlightWinningPattern(w, i); triggerWin(); break; }
+                if(w.every(idx => marks.includes(idx))) { highlightWinningPattern(w, i); triggerWin('main'); break; }
             }
         });
     }
@@ -10915,7 +10932,7 @@ function runMathBlitz(problems) {
                     if (completed.length >= 2) {
                         const allCells = [...new Set(completed.slice(0,2).flat())];
                         highlightWinningPatternExtra(cardIdx, allCells, 0);
-                        ec.won = true; triggerWin();
+                        ec.won = true; triggerWin('extra-' + cardIdx);
                     }
                     return;
                 }
@@ -10923,7 +10940,7 @@ function runMathBlitz(problems) {
                     let w = winningWays[i];
                     if(w.every(idx => ec.marks.includes(idx))) {
                         highlightWinningPatternExtra(cardIdx, w, i);
-                        ec.won = true; triggerWin(); break;
+                        ec.won = true; triggerWin('extra-' + cardIdx); break;
                     }
                 }
             });
@@ -10984,11 +11001,12 @@ function runMathBlitz(problems) {
             }
         });
     }
-    function triggerWin() {
+    function triggerWin(cardId) {
         const uid = auth.currentUser.uid;
         let winPrize = 300;
         if (isJackpotActive) winPrize = currentJackpotAmount;
-        db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize });
+        // cardId: 'main' or 'extra-0', 'extra-1', etc.
+        db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize, winCard: cardId || 'main' });
         db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize);
         db.ref('users/' + uid + '/bingoWins').transaction(w => (w || 0) + 1);
         db.ref('users/' + uid).update({ hasWonCurrent: true });
