@@ -4551,24 +4551,17 @@
         .bento-grid.cards-2 {
             grid-template-columns: 1fr 1fr;
         }
-        /* 3 cards: main card spans 2 cols, 2 small below */
+        /* 3 cards: all equal 2-col */
         .bento-grid.cards-3 {
             grid-template-columns: 1fr 1fr;
-            grid-template-rows: auto auto;
-        }
-        .bento-grid.cards-3 .bento-slot:first-child {
-            grid-column: 1 / -1;
         }
         /* 4 cards: 2x2 grid */
         .bento-grid.cards-4 {
             grid-template-columns: 1fr 1fr;
         }
-        /* 5 cards: main spans full top, 4 below in 2x2 */
+        /* 5 cards: all equal 2x2 */
         .bento-grid.cards-5 {
             grid-template-columns: 1fr 1fr;
-        }
-        .bento-grid.cards-5 .bento-slot:first-child {
-            grid-column: 1 / -1;
         }
 
         /* Each slot */
@@ -4621,11 +4614,7 @@
         .bento-grid.cards-4 .btn-change,
         .bento-grid.cards-5 .btn-change { font-size: 9px !important; padding: 3px 7px !important; }
 
-        /* Main card in 3/5 layout stays bigger text */
-        .bento-grid.cards-3 .bento-slot:first-child .cell,
-        .bento-grid.cards-5 .bento-slot:first-child .cell { font-size: 14px !important; }
-        .bento-grid.cards-3 .bento-slot:first-child .letter,
-        .bento-grid.cards-5 .bento-slot:first-child .letter { font-size: 20px !important; }
+        /* All cards equal size in multi-card layout */
 
         /* Card number badge */
         .card-num-badge {
@@ -9940,8 +9929,8 @@ function runMathBlitz(problems) {
                     if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none'; 
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash; 
                     if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
-                    // Load extra cards if any
-                    if (userData.extraCards) {
+                    // Load extra cards if any (only once on initial load)
+                    if (userData.extraCards && extraCards.length === 0) {
                         const savedExtras = userData.extraCards;
                         const keys = Object.keys(savedExtras).sort((a,b) => parseInt(a) - parseInt(b));
                         keys.forEach(k => {
@@ -10824,13 +10813,14 @@ function runMathBlitz(problems) {
             }
             // Detect game reset (all balls cleared)
             if(newGameDrawn.length === 0 && gameDrawn.length > 0) {
-                // Clear all marks
+                // Clear all marks on main card
                 marks = [12];
                 document.querySelectorAll('#bingoGrid .cell').forEach((c, i) => {
                     c.classList.remove('hit', 'win-glow', 'win-line-h', 'win-line-v', 'win-line-d1', 'win-line-d2', 'cell-waiting');
                     if(i === 12) c.classList.add('hit');
                 });
-                resetAllExtraCardMarks();
+                // Remove all purchased extra cards (they must buy again next game)
+                removeAllExtraCardsFromDOM();
             }
             gameDrawn = newGameDrawn;
             const btn = document.getElementById('newCardBtn');
@@ -11111,6 +11101,8 @@ function runMathBlitz(problems) {
         if(countEl) countEl.innerText = total + ' extra card' + (total !== 1 ? 's' : '') + ' (' + (total + 1) + '/5 total)';
         if(total >= MAX_EXTRA_CARDS) {
             if(btn) { btn.disabled = true; btn.innerHTML = '<div class="buy-icon">&#10003;</div><div class="buy-label">MAX CARDS NA!<br>5/5 cards</div>'; }
+        } else {
+            if(btn) { btn.disabled = false; btn.innerHTML = '<div class="buy-icon">&#10133;</div><div class="buy-label">DAGDAG CARD</div><div class="buy-cost">100 RB Coins &bull; Max 5</div><div id="extraCardCount" style="font-size:10px; margin-top:1px; opacity:0.6;">' + total + ' extra card' + (total !== 1 ? 's' : '') + ' (' + (total + 1) + '/5 total)</div>'; }
         }
     }
     function regenExtraCard(cardIdx) {
@@ -11124,12 +11116,24 @@ function runMathBlitz(problems) {
         renderExtraCard(cardIdx);
         playSound('cardFlip');
     }
-    function updateBuyCardUI() {
+    function removeAllExtraCardsFromDOM() {
+        // Remove all extra card slots from DOM
+        extraCards.forEach((ec, cardIdx) => {
+            const slot = document.getElementById('bentoSlot' + (cardIdx + 1));
+            if(slot) slot.remove();
+        });
+        extraCards = [];
+        updateBentoLayout();
+        // Reset buy button to initial state
         const btn = document.getElementById('buyExtraCardBtn');
-        const countEl = document.getElementById('extraCardCount');
-        const total = extraCards.length;
-        if(countEl) countEl.innerText = total + ' extra card' + (total !== 1 ? 's' : '') + ' (' + (total + 1) + '/5 total)';
-        if(total >= MAX_EXTRA_CARDS && btn) { btn.disabled = true; btn.innerHTML = '<div style="font-size:24px;">&#10003;</div><div>MAX CARDS NA!</div><div style="font-size:11px; opacity:0.7;">5/5 cards</div>'; }
+        if(btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<div class="buy-icon">&#10133;</div><div class="buy-label">DAGDAG CARD</div><div class="buy-cost">100 RB Coins &bull; Max 5</div><div id="extraCardCount" style="font-size:10px; margin-top:1px; opacity:0.6;">0 extra cards</div>';
+        }
+        // Clear from Firebase
+        if(auth && auth.currentUser) {
+            db.ref('users/' + auth.currentUser.uid + '/extraCards').remove();
+        }
     }
     function resetAllExtraCardMarks() {
         // Clear all extra card marks and win states
