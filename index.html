@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebase.com https://*.firebaseapp.com https://*.googleapis.com https://*.gstatic.com https://unpkg.com https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://www.gstatic.com https://cdnjs.cloudflare.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src * data: blob:; connect-src 'self' wss://*.firebaseio.com https://*.googleapis.com https://*.firebase.com https://fcm.googleapis.com https://oauth2.googleapis.com; frame-src https://www.youtube.com https://player.vimeo.com; media-src blob: https:;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-visual">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -6907,6 +6908,12 @@ function awardGamePoints(pts, reason) {
     if (!pts || pts <= 0) return;
     var db = window.db; var auth = window.auth;
     if (!db || !auth || !auth.currentUser) return;
+    // Security: clamp points to reasonable per-award max
+    pts = Math.min(Math.abs(parseInt(pts) || 0), 200);
+    if (pts <= 0) return;
+    // Security: daily earnings cap (client-side soft limit)
+    if (!canEarnPoints(pts)) { console.log('[Security] Daily point cap reached.'); return; }
+    trackPointsEarned(pts);
     var uid = auth.currentUser.uid;
     db.ref('users/' + uid + '/points').transaction(function(p) { return (p || 0) + pts; });
     db.ref('coinHistory/' + uid).push({ label: '🎮 ' + (reason || 'Mini-Game Reward'), amount: pts, type: 'earn', timestamp: Date.now() });
@@ -10099,6 +10106,42 @@ function runMathBlitz(problems) {
         div.textContent = text;
         return div.innerHTML;
     }
+
+    // ===== SECURITY UTILITIES =====
+    // Rate limiter — prevents spam on key actions
+    const _rl = {};
+    function rateLimit(key, ms) {
+        const now = Date.now();
+        if (_rl[key] && (now - _rl[key]) < ms) return false;
+        _rl[key] = now;
+        return true;
+    }
+
+    // Strict input sanitizer — strips HTML tags, limits length
+    function sanitizeInput(str, maxLen) {
+        maxLen = maxLen || 200;
+        if (!str) return '';
+        return String(str)
+            .replace(/<[^>]*>/g, '')
+            .replace(/[<>"'`\\]/g, '')
+            .trim()
+            .substring(0, maxLen);
+    }
+
+    // Max points per day guard (client-side soft limit)
+    const _pointsToday = { date: new Date().toDateString(), earned: 0 };
+    const MAX_DAILY_POINTS = 2000;
+    function canEarnPoints(amt) {
+        const today = new Date().toDateString();
+        if (_pointsToday.date !== today) { _pointsToday.date = today; _pointsToday.earned = 0; }
+        return (_pointsToday.earned + amt) <= MAX_DAILY_POINTS;
+    }
+    function trackPointsEarned(amt) {
+        const today = new Date().toDateString();
+        if (_pointsToday.date !== today) { _pointsToday.date = today; _pointsToday.earned = 0; }
+        _pointsToday.earned += amt;
+    }
+    // ===== END SECURITY UTILITIES =====
     
     // === UTILITY: FORMAT FOLLOWER COUNT ===
     // Formats large numbers with K suffix
@@ -11266,6 +11309,7 @@ function runMathBlitz(problems) {
     }
     // === BUY EXTRA CARD ===
     function buyExtraCard() {
+        if(!rateLimit('buyCard', 3000)) return showToast('Sandali lang!');
         if (extraCards.length >= MAX_EXTRA_CARDS) return showToast("Maximum na! 5 cards lang ang allowed.");
         // Block buying only when game is ACTIVELY in progress (balls drawn but no winner yet)
         // Allow buying after game ends (winner declared) so users can prepare for next round
@@ -11429,7 +11473,7 @@ function runMathBlitz(problems) {
 
         function isUserMuted(uid) { const muted = localStorage.getItem('muted_users'); if(!muted) return false; return JSON.parse(muted).includes(uid); }
     function muteUser(uid) { let muted = JSON.parse(localStorage.getItem('muted_users') || "[]"); if(!muted.includes(uid)) { muted.push(uid); localStorage.setItem('muted_users', JSON.stringify(muted)); showToast("User muted locally."); } }
-    function sendChat() { const inp = document.getElementById('chatIn'); const msg = inp.value.trim(); if(!msg) return; const payload = { name: userData.name, msg: msg, pfp: userData.photo, uid: userData.uid, time: Date.now() }; if(selectedReplyId) { payload.replyTo = selectedReplyId; payload.replyMsg = document.getElementById('replyText').innerText.replace("Replying to: ", ""); cancelReply(); } db.ref('chats').push(payload); inp.value = ""; }
+    function sendChat() { if(!rateLimit('chat', 1500)) return showToast('Sandali lang! Huwag mag-spam.'); const inp = document.getElementById('chatIn'); const msg = sanitizeInput(inp.value.trim(), 300); if(!msg) return; const payload = { name: sanitizeInput(userData.name, 50), msg: msg, pfp: userData.photo, uid: userData.uid, time: Date.now() }; if(selectedReplyId) { payload.replyTo = selectedReplyId; payload.replyMsg = document.getElementById('replyText').innerText.replace("Replying to: ", ""); cancelReply(); } db.ref('chats').push(payload); inp.value = ""; }
     function replyTo(key, msg) { selectedReplyId = key; document.getElementById('replyText').innerText = "Replying to: " + msg.substring(0, 20) + "..."; document.getElementById('replyIndicator').style.display = 'flex'; document.getElementById('chatIn').focus(); }
     function cancelReply() { selectedReplyId = null; document.getElementById('replyIndicator').style.display = 'none'; }
 
@@ -11972,7 +12016,7 @@ function runMathBlitz(problems) {
 
     function openMenuModal() { document.getElementById('menuModal').style.display='flex'; }
     function saveGcash() { const num = document.getElementById('gcashInput').value; if(num.length > 3) { db.ref('users/'+auth.currentUser.uid).update({ gcash: num }); showToast("Info Saved!"); } else showToast("Invalid Details"); }
-    function redeemItem(name, cost) { if(userData.points >= cost) { if(!userData.gcash) return showToast("Save redemption info first!"); showCustomConfirm("REDEEM REWARD?", "Exchange " + cost + " RB Coins for " + name + "?", () => { deductPoints(cost); db.ref('redemptions').push({ uid: userData.uid, name: userData.name, gcash: userData.gcash, item: name, cost: cost, status: 'pending', timestamp: Date.now() }); showToast("Request Sent!"); loadHistory(); }); } else { showToast("Insufficient RB Coins"); } }
+    function redeemItem(name, cost) { if(!rateLimit('redeem', 10000)) return showToast('Sandali lang! Huwag mag-spam ng redeem.'); const safeName = sanitizeInput(name, 100); const safeCost = parseInt(cost); if(!safeName || isNaN(safeCost) || safeCost <= 0 || safeCost > 500000) return showToast('Invalid redemption.'); if(userData.points >= safeCost) { if(!userData.gcash) return showToast("Save redemption info first!"); showCustomConfirm("REDEEM REWARD?", "Exchange " + safeCost + " RB Coins for " + safeName + "?", () => { deductPoints(safeCost); db.ref('redemptions').push({ uid: userData.uid, name: sanitizeInput(userData.name, 50), gcash: sanitizeInput(userData.gcash, 50), item: safeName, cost: safeCost, status: 'pending', timestamp: Date.now() }); showToast("Request Sent!"); loadHistory(); }); } else { showToast("Insufficient RB Coins"); } }
     function loadHistory() { const list = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { list.innerHTML = ""; s.forEach(r => { const d = r.val(); let color = '#fbbf24'; if(d.status === 'sent') color = '#10b981'; if(d.status === 'denied') color = '#ef4444'; list.innerHTML += `<div class="history-item"><div><div style="font-weight:700; font-size:12px;">${d.item}</div><div style="font-size:10px; opacity:0.6;">${fixDate(d.timestamp)}</div></div><div style="font-size:10px; font-weight:800; color:${color}; text-transform:uppercase; border:1px solid ${color}; padding:2px 6px; border-radius:4px;">${d.status}</div></div>`; }); }); }
 
     // === SUPPORT CONTACT FUNCTIONS ===
