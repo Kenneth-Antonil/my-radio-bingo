@@ -1,99 +1,73 @@
 // ============================================================
 // firebase-messaging-sw.js
-// I-REPLACE ang laman ng existing firebase-messaging-sw.js mo
+// I-lagay ito sa ROOT ng project (katabi ng index.html)
+// Handles background push notifications (app closed / tab hidden)
 // ============================================================
 
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
+importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
-// ⚠️ I-PASTE ang Firebase config mo dito
 firebase.initializeApp({
-  apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
-  authDomain: "radiobingo-9ac29.firebaseapp.com",
-  databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "radiobingo-9ac29",
-  storageBucket: "radiobingo-9ac29.firebasestorage.app",
-  messagingSenderId: "965903993397",
-  appId: "1:965903993397:web:f6646fa05225f147eebf7c",
-  measurementId: "G-RR2EG93C43"
-
+    apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
+    authDomain: "radiobingo-9ac29.firebaseapp.com",
+    databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "radiobingo-9ac29",
+    storageBucket: "radiobingo-9ac29.firebasestorage.app",
+    messagingSenderId: "965903993397",
+    appId: "1:965903993397:web:f6646fa05225f147eebf7c"
 });
 
 const messaging = firebase.messaging();
 
-// ----------------------------------------------------------
-// BACKGROUND NOTIFICATIONS
-// Tinatawag ito kapag NAKASARA o NAKA-BACKGROUND ang app
-// ----------------------------------------------------------
-messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] Background message received:', payload);
+// Notification icons
+const ICON = 'https://i.imgur.com/7D8u8h6.png';
+const BADGE = 'https://i.imgur.com/7D8u8h6.png';
 
-  const notificationData = payload.notification || {};
-  const extraData       = payload.data || {};
+// ── Handle background push messages ─────────────────────────
+messaging.onBackgroundMessage(payload => {
+    console.log('[SW] Background push received:', payload);
 
-  const title   = notificationData.title || '📣 Radio Bingo';
-  const options = {
-    body:               notificationData.body || '',
-    icon:               notificationData.icon || '/icon-192x192.png',
-    badge:              '/icon-192x192.png',
-    image:              notificationData.image  || null,
-    vibrate:            [200, 100, 200, 100, 200],
-    requireInteraction: false,
-    tag:                extraData.type || 'general',   // prevents duplicate notifs of same type
-    renotify:           true,
-    data: {
-      url:  extraData.url  || '/',
-      type: extraData.type || 'general'
-    },
-    actions: getActions(extraData.type)
-  };
+    const data = payload.data || {};
+    const title = data.title || payload.notification?.title || '🎯 Radio Bingo Live';
+    const body  = data.body  || payload.notification?.body  || 'May bagong notification!';
+    const icon  = data.icon  || ICON;
+    const url   = data.url   || '/';
 
-  return self.registration.showNotification(title, options);
+    return self.registration.showNotification(title, {
+        body,
+        icon,
+        badge: BADGE,
+        tag: data.tag || 'rbl-notif',         // collapse same-type notifs
+        renotify: true,
+        data: { url },
+        vibrate: [200, 100, 200],
+        actions: [
+            { action: 'open', title: '👀 Buksan' },
+            { action: 'dismiss', title: 'Dismiss' }
+        ]
+    });
 });
 
-// ----------------------------------------------------------
-// NOTIFICATION CLICK HANDLER
-// ----------------------------------------------------------
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
+// ── Notification click handler ────────────────────────────────
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
 
-  const url = event.notification.data?.url || '/';
+    if (event.action === 'dismiss') return;
 
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Kung may bukas na tab, i-focus na lang
-      for (const client of windowClients) {
-        if ('focus' in client) {
-          client.focus();
-          if (client.navigate) client.navigate(url);
-          return;
-        }
-      }
-      // Walang bukas na tab — mag-open ng bago
-      if (clients.openWindow) return clients.openWindow(url);
-    })
-  );
+    const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+            // If app already open, focus it
+            for (const client of clientList) {
+                if (client.url.includes(self.location.origin) && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // Otherwise open a new window
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
 });
-
-// ----------------------------------------------------------
-// HELPER: Notification action buttons base sa type
-// ----------------------------------------------------------
-function getActions(type) {
-  switch (type) {
-    case 'friend_request':
-      return [
-        { action: 'accept', title: '✅ Accept' },
-        { action: 'ignore', title: '❌ Ignore' }
-      ];
-    case 'draw_reminder':
-      return [
-        { action: 'open', title: '🎯 Join Now' }
-      ];
-    case 'new_message':
-      return [
-        { action: 'open', title: '💬 Reply' }
-      ];
-    default:
-      return [];
-  }
-}
