@@ -1033,6 +1033,7 @@
         <button class="tab-btn" onclick="openTab('tournament-tab', this)"><i data-lucide="trophy" width="16"></i> TOURNAMENTS</button>
         <button class="tab-btn" id="partnersTabBtn" onclick="openTab('partners-tab', this)"><i data-lucide="store" width="16"></i> PARTNERS <span id="partnersBadge" style="display:none;background:#ef4444;color:white;font-size:9px;font-weight:900;padding:1px 7px;border-radius:20px;margin-left:4px;vertical-align:middle;"></span></button>
         <button class="tab-btn" onclick="openTab('myshop-tab', this)"><i data-lucide="shopping-bag" width="16"></i> MY SHOP</button>
+        <button class="tab-btn" onclick="openTab('push-tab', this); loadPushHistory();"><i data-lucide="bell" width="16"></i> PUSH</button>
     </div>
 
     <div id="settings-tab" class="tab-content">
@@ -1546,6 +1547,79 @@
                 <div style="text-align:center;padding:40px;opacity:0.35;font-size:13px;font-weight:700;">Loading orders...</div>
             </div>
         </div>
+
+
+    <!-- ===== PUSH NOTIFICATIONS TAB ===== -->
+    <div id="push-tab" class="tab-content">
+
+        <!-- Broadcast Form -->
+        <div class="card" style="margin-bottom:20px;">
+            <h2><i data-lucide="bell" style="width:18px;"></i> 📣 Broadcast Push Notification</h2>
+            <p style="font-size:12px;color:rgba(255,255,255,0.45);margin:0 0 20px 0;">Ipadala ang push notification sa LAHAT ng users na naka-allow ng notifications.</p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                <div>
+                    <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-bottom:6px;text-transform:uppercase;">Title *</label>
+                    <input id="pushTitle" type="text" placeholder="e.g. 🎯 Bingo Night Tonight!" maxlength="80"
+                        style="width:100%;padding:11px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:white;font-size:13px;font-weight:600;outline:none;">
+                </div>
+                <div>
+                    <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-bottom:6px;text-transform:uppercase;">Type / Tag</label>
+                    <select id="pushType"
+                        style="width:100%;padding:11px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:white;font-size:13px;font-weight:600;outline:none;cursor:pointer;">
+                        <option value="announcement">📣 Announcement</option>
+                        <option value="bingo_win">🎉 Bingo Event</option>
+                        <option value="coin">🪙 Coin Reward</option>
+                        <option value="like">❤️ Engagement</option>
+                        <option value="support">🛠️ System</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-bottom:6px;text-transform:uppercase;">Message *</label>
+                <textarea id="pushBody" placeholder="Ilagay ang mensahe dito..." maxlength="200" rows="3"
+                    style="width:100%;padding:11px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:white;font-size:13px;font-weight:600;outline:none;resize:vertical;font-family:inherit;"></textarea>
+                <div id="pushCharCount" style="font-size:10px;color:rgba(255,255,255,0.3);text-align:right;margin-top:4px;">0 / 200</div>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-bottom:6px;text-transform:uppercase;">Icon URL (optional)</label>
+                <input id="pushIcon" type="text" placeholder="https://... (default: Radio Bingo icon)"
+                    style="width:100%;padding:11px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:white;font-size:13px;font-weight:600;outline:none;">
+            </div>
+
+            <!-- Preview -->
+            <div id="pushPreviewBox" style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:12px;padding:14px;margin-bottom:18px;display:none;">
+                <div style="font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:1px;margin-bottom:10px;">PREVIEW</div>
+                <div style="display:flex;align-items:flex-start;gap:12px;">
+                    <img id="pushPreviewIcon" src="https://i.imgur.com/7D8u8h6.png" style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;">
+                    <div>
+                        <div id="pushPreviewTitle" style="font-size:13px;font-weight:800;color:white;margin-bottom:3px;">Title</div>
+                        <div id="pushPreviewBody" style="font-size:12px;color:rgba(255,255,255,0.6);">Message</div>
+                        <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px;">Radio Bingo Live · now</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:10px;align-items:center;">
+                <button onclick="sendBroadcastPush()"
+                    style="padding:13px 28px;background:linear-gradient(135deg,#8b5cf6,#6366f1);border:none;border-radius:12px;color:white;font-size:13px;font-weight:900;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(139,92,246,0.4);transition:all 0.2s;">
+                    <i data-lucide="send" style="width:16px;height:16px;"></i> SEND TO ALL USERS
+                </button>
+                <div id="pushSendStatus" style="font-size:12px;font-weight:700;"></div>
+            </div>
+        </div>
+
+        <!-- Push History -->
+        <div class="card">
+            <h2><i data-lucide="clock" style="width:18px;"></i> 📋 Broadcast History</h2>
+            <div id="pushHistoryList">
+                <div style="text-align:center;padding:40px;opacity:0.35;font-size:13px;font-weight:700;">Loading history...</div>
+            </div>
+        </div>
+
+    </div>
 
     </div>
 
@@ -4287,6 +4361,121 @@ db.ref('partnerApplications').orderByChild('status').equalTo('pending').on('valu
         badge.style.display = count > 0 ? 'inline-block' : 'none';
     }
 });
+
+// ============================================================
+// ===== PUSH NOTIFICATION BROADCAST SYSTEM =====
+// ============================================================
+
+// Live preview updater
+document.getElementById('pushTitle').addEventListener('input', updatePushPreview);
+document.getElementById('pushBody').addEventListener('input', function() {
+    document.getElementById('pushCharCount').textContent = this.value.length + ' / 200';
+    updatePushPreview();
+});
+document.getElementById('pushIcon').addEventListener('input', updatePushPreview);
+
+function updatePushPreview() {
+    var title = document.getElementById('pushTitle').value.trim();
+    var body  = document.getElementById('pushBody').value.trim();
+    var icon  = document.getElementById('pushIcon').value.trim() || 'https://i.imgur.com/7D8u8h6.png';
+    var box   = document.getElementById('pushPreviewBox');
+
+    if (!title && !body) { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    document.getElementById('pushPreviewTitle').textContent = title || '(no title)';
+    document.getElementById('pushPreviewBody').textContent  = body  || '(no message)';
+    document.getElementById('pushPreviewIcon').src = icon;
+}
+
+function sendBroadcastPush() {
+    var title = document.getElementById('pushTitle').value.trim();
+    var body  = document.getElementById('pushBody').value.trim();
+    var icon  = document.getElementById('pushIcon').value.trim() || 'https://i.imgur.com/7D8u8h6.png';
+    var type  = document.getElementById('pushType').value;
+    var status = document.getElementById('pushSendStatus');
+
+    if (!title) { alert('Title is required!'); return; }
+    if (!body)  { alert('Message is required!'); return; }
+
+    if (!confirm('Send push notification to ALL users?\n\nTitle: ' + title + '\nMessage: ' + body)) return;
+
+    status.textContent = '⏳ Sending...';
+    status.style.color = '#fbbf24';
+
+    // Write to adminBroadcast — Cloud Function picks this up and fans out to all FCM tokens
+    db.ref('adminBroadcast').push({
+        title: title,
+        body: body,
+        icon: icon,
+        type: type,
+        sentAt: Date.now(),
+        sentBy: 'admin'
+    }, function(err) {
+        if (err) {
+            status.textContent = '❌ Error: ' + err.message;
+            status.style.color = '#ef4444';
+            return;
+        }
+        status.textContent = '✅ Queued! Cloud Function is sending to all users...';
+        status.style.color = '#10b981';
+
+        // Clear form
+        document.getElementById('pushTitle').value = '';
+        document.getElementById('pushBody').value = '';
+        document.getElementById('pushIcon').value = '';
+        document.getElementById('pushCharCount').textContent = '0 / 200';
+        document.getElementById('pushPreviewBox').style.display = 'none';
+
+        setTimeout(function() { status.textContent = ''; }, 8000);
+        loadPushHistory();
+    });
+}
+
+function loadPushHistory() {
+    var list = document.getElementById('pushHistoryList');
+    if (!list) return;
+
+    db.ref('adminBroadcast').orderByChild('sentAt').limitToLast(20).once('value', function(snap) {
+        if (!snap.exists()) {
+            list.innerHTML = '<div style="text-align:center;padding:40px;opacity:0.35;font-size:13px;font-weight:700;">No broadcasts yet.</div>';
+            return;
+        }
+
+        var items = [];
+        snap.forEach(function(c) { var d = c.val(); d._key = c.key; items.push(d); });
+        items.reverse();
+
+        var typeEmoji = {
+            announcement: '📣', bingo_win: '🎉', coin: '🪙',
+            like: '❤️', support: '🛠️'
+        };
+
+        var html = '';
+        items.forEach(function(b) {
+            var date = b.sentAt ? new Date(b.sentAt).toLocaleString('en-PH', {
+                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            }) : '—';
+            var emoji = typeEmoji[b.type] || '📣';
+            html += '<div style="background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.12);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px;">';
+            html += '<div style="font-size:28px;flex-shrink:0;">' + emoji + '</div>';
+            html += '<div style="flex:1;">';
+            html += '<div style="font-size:13px;font-weight:900;color:white;margin-bottom:3px;">' + _paEsc(b.title || '') + '</div>';
+            html += '<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-bottom:6px;">' + _paEsc(b.body || '') + '</div>';
+            html += '<div style="font-size:10px;color:rgba(255,255,255,0.3);">📅 ' + date + ' · ' + (b.type || 'announcement') + '</div>';
+            html += '</div>';
+            html += '<button onclick="deleteBroadcast('' + b._key + '')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#ef4444;font-size:10px;font-weight:800;padding:5px 10px;cursor:pointer;flex-shrink:0;">DELETE</button>';
+            html += '</div>';
+        });
+        list.innerHTML = html;
+        try { lucide.createIcons(); } catch(e) {}
+    });
+}
+
+function deleteBroadcast(key) {
+    if (!confirm('Delete this broadcast record?')) return;
+    db.ref('adminBroadcast/' + key).remove(function() { loadPushHistory(); });
+}
+
 
 </script>
 </body>
