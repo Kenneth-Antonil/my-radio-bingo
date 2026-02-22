@@ -6581,6 +6581,8 @@
             <span><i data-lucide="party-popper" style="width:24px; height:24px;"></i> BINGO WINNER!</span>
             <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
         </div>
+        <!-- Hidden pattern tracker (keeps JS working) -->
+        <span id="patternName" style="display:none;">Normal Bingo</span>
 
         <div class="draw-panel">
             <div class="prev-balls" id="ballRow"></div>
@@ -6609,12 +6611,8 @@
                             <div class="late-text">Game Finished</div>
                             <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
                         </div>
-                        <div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
-                            <div class="pattern-box">
-                                <div class="pattern-dot"></div>
-                                <span class="pattern-text" id="patternName">Normal Bingo</span>
-                            </div>
-                            <button class="btn-change" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>
+                        <div class="change-card-wrapper" style="display:flex; justify-content:center; align-items:center; padding-bottom:15px;">
+                            <button class="btn-change" id="newCardBtn" onclick="generateNewCard()" style="width:100%;"><i data-lucide="refresh-cw" style="width:14px"></i> CHANGE CARD</button>
                         </div>
                         <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
                         <div class="grid" id="bingoGrid"></div>
@@ -10937,22 +10935,21 @@ function runMathBlitz(problems) {
 
     function _hdeAutoReset(reason) {
         setTimeout(() => {
-            db.ref('gameState/latestWinner').once('value', wSnap => {
-                // Only reset if WE still hold the draw lock
-                db.ref('gameState/drawLock').once('value', lockSnap => {
-                    const lock = lockSnap.val();
-                    const myUid = auth.currentUser ? auth.currentUser.uid : null;
-                    if(!lock || lock.by !== myUid) return; // someone else owns the lock now
+            // Only reset if WE still hold the draw lock
+            db.ref('gameState/drawLock').once('value', lockSnap => {
+                const lock = lockSnap.val();
+                const myUid = auth.currentUser ? auth.currentUser.uid : null;
+                if(!lock || lock.by !== myUid) return; // someone else owns the lock now
 
-                    db.ref('drawnNumbers').remove();
-                    db.ref('gameState/latestWinner').remove();
-                    db.ref('gameState/gameStartTime').remove();
-                    db.ref('gameState/lastCalled').remove();
-                    db.ref('gameState').update({ status: 'waiting' });
-                    _hdeStopDraw(true); // release lock
-                });
+                db.ref('drawnNumbers').remove();
+                db.ref('gameState/latestWinner').remove();
+                db.ref('gameState/winners').remove(); // clear multi-winner list
+                db.ref('gameState/gameStartTime').remove();
+                db.ref('gameState/lastCalled').remove();
+                db.ref('gameState').update({ status: 'waiting' });
+                _hdeStopDraw(true); // release lock
             });
-        }, 10000); // 10 second delay before reset
+        }, 5000); // 5 second delay before reset
     }
     // ===== END HEADLESS DRAW ENGINE =====
 
@@ -10963,39 +10960,45 @@ function runMathBlitz(problems) {
     function checkNotificationTime(timeInput) { if(lastNotifiedDraw == timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 10) { if(Notification.permission === "granted") new Notification("Radio Bingo", { body: "Only 10 minutes left until the draw!" }); lastNotifiedDraw = timeInput; } } }
 
     function initBingo() {
-        db.ref('gameState/latestWinner').on('value', s => {
-            const win = s.val();
+        // Listen to gameState/winners (multi-winner support) for banner display
+        db.ref('gameState/winners').on('value', wSnap => {
+            const winnersObj = wSnap.val();
             const banner = document.getElementById('winnerBanner');
             const cardCont = document.getElementById('bingoCardContainer');
             const gameOverlay = document.getElementById('gameOverOverlay');
             cardCont.classList.remove('card-puro');
             document.querySelectorAll('#bingoGrid .cell').forEach(c => c.classList.remove('cell-waiting'));
-            if(win && win.name) {
-                // AUTO-DEDUCT EXTRA CARDS when game ends so users can rebuy for next game
-                // Short delay so win/loss animation plays first, then cards are cleared
-                setTimeout(() => {
-                    removeAllExtraCardsFromDOM(); // clears DOM + Firebase + local array
-                }, 3000);
-                banner.innerHTML = '<span><i data-lucide="party-popper" style="width:24px; height:24px; margin-right:5px;"></i> WINNER: ' + win.name.toUpperCase() + '</span><span class="winner-line" id="winnerPatternLine">Pattern: ' + currentPattern + '</span>';
+            if(winnersObj) {
+                const winnersList = Object.values(winnersObj);
+                // AUTO-DEDUCT EXTRA CARDS when game ends
+                setTimeout(() => { removeAllExtraCardsFromDOM(); }, 3000);
+                // Build winner announcement — show ALL winners
+                const namesList = winnersList.map(w => w.name.toUpperCase()).join(' &amp; ');
+                const winnersCount = winnersList.length;
+                banner.innerHTML =
+                    '<span><i data-lucide="party-popper" style="width:24px; height:24px; margin-right:5px;"></i> ' +
+                    (winnersCount > 1 ? 'WINNERS: ' : 'WINNER: ') + namesList + '</span>' +
+                    '<span class="winner-line" id="winnerPatternLine">Pattern: ' + currentPattern +
+                    ' &nbsp;|&nbsp; ' + winnersCount + (winnersCount > 1 ? ' WINNERS' : ' WINNER') + ' 🏆</span>';
                 banner.style.display = 'block'; playSound('win'); lucide.createIcons();
-                if(win.uid === auth.currentUser.uid) {
+                // Check if current user is among winners
+                const myUid = auth.currentUser.uid;
+                const myWin = winnersList.find(w => w.uid === myUid);
+                if(myWin) {
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                     spawnFlyingCoins(20); triggerScreenShake();
-                    // Mark the WINNING card(s) as card-win — check main card and all extra cards
-                    const mainWon = win.winCard === 'main' || win.winCard == null;
+                    const mainWon = myWin.winCard === 'main' || myWin.winCard == null;
                     if(mainWon) {
                         cardCont.classList.add('card-win'); cardCont.classList.remove('card-lost');
                         gameOverlay.style.display = 'none';
                     } else {
-                        // Main card didn't win, mark as lost but don't show overlay yet
                         cardCont.classList.remove('card-win', 'card-lost');
                         gameOverlay.style.display = 'none';
                     }
-                    // Mark extra cards: won ones get card-win, others nothing (game still technically over)
                     extraCards.forEach((ec, idx) => {
                         const c = document.getElementById('bingoCard-extra-' + idx);
                         const o = document.getElementById('gameOverOverlay-extra-' + idx);
-                        if(ec.won || win.winCard === 'extra-' + idx) {
+                        if(ec.won || myWin.winCard === 'extra-' + idx) {
                             if(c) { c.classList.add('card-win'); c.classList.remove('card-lost'); }
                             if(o) o.style.display = 'none';
                         }
@@ -11004,8 +11007,7 @@ function runMathBlitz(problems) {
                     cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win');
                     gameOverlay.style.display = 'flex';
                     const nextTime = document.getElementById('nextDrawTime').innerText;
-                    document.getElementById('gameOverMsg').innerHTML = 'So close! <b>' + win.name.toUpperCase() + '</b> won this round.<br><br>Better luck next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ' + nextTime + '</span>';
-                    // Mark all extra cards as lost too
+                    document.getElementById('gameOverMsg').innerHTML = 'So close! <b>' + namesList + '</b> won this round.<br><br>Better luck next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ' + nextTime + '</span>';
                     extraCards.forEach((ec, idx) => {
                         const c = document.getElementById('bingoCard-extra-' + idx);
                         if(c) { c.classList.add('card-lost'); c.classList.remove('card-win'); }
@@ -11187,7 +11189,9 @@ function runMathBlitz(problems) {
         let winPrize = 300;
         if (isJackpotActive) winPrize = currentJackpotAmount;
         // cardId: 'main' or 'extra-0', 'extra-1', etc.
-        db.ref('gameState/latestWinner').set({ name: userData.name, uid: uid, prize: winPrize, winCard: cardId || 'main' });
+        const winnerData = { name: userData.name, uid: uid, prize: winPrize, winCard: cardId || 'main' };
+        db.ref('gameState/latestWinner').set(winnerData);
+        db.ref('gameState/winners/' + uid).set(winnerData); // multi-winner support
         db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize);
         db.ref('users/' + uid + '/bingoWins').transaction(w => (w || 0) + 1);
         db.ref('users/' + uid).update({ hasWonCurrent: true });
@@ -11308,9 +11312,8 @@ function runMathBlitz(problems) {
                     '<div class="late-text">Game Finished</div>' +
                     '<div class="late-subtext">Better luck next time!</div>' +
                 '</div>' +
-                '<div class="change-card-wrapper" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">' +
-                    '<div class="pattern-box"><div class="pattern-dot"></div><span class="pattern-text">Normal Bingo</span></div>' +
-                    '<button class="btn-change" onclick="regenExtraCard(' + cardIdx + ')"><i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD</button>' +
+                '<div class="change-card-wrapper" style="display:flex; justify-content:center; align-items:center; padding-bottom:15px;">' +
+                    '<button class="btn-change" style="width:100%;" onclick="regenExtraCard(' + cardIdx + ')"><i data-lucide="refresh-cw" style="width:14px"></i> CHANGE CARD</button>' +
                 '</div>' +
                 '<div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>' +
                 '<div class="grid" id="bingoGrid-extra-' + cardIdx + '"></div>' +
