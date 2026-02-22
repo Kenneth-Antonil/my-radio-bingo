@@ -244,3 +244,124 @@ exports.cleanStaleFcmTokens = functions
         console.log(`✅ FCM token cleanup done.`);
         return null;
     });
+
+
+// ============================================================
+// TRIGGER: adminBroadcast/{broadcastId}  onCreate
+// Admin writes here from dashboard → fans out to ALL users
+// ============================================================
+exports.sendBroadcastPush = functions
+    .region('asia-southeast1')
+    .database.ref('adminBroadcast/{broadcastId}')
+    .onCreate(async (snapshot, context) => {
+        const broadcast = snapshot.val();
+        if (!broadcast || !broadcast.title || !broadcast.body) {
+            console.log('Invalid broadcast, skipping.');
+            return null;
+        }
+
+        console.log('Broadcasting push:', broadcast.title);
+
+        // Fetch all users with FCM tokens
+        const usersSnap = await db.ref('users').once('value');
+        if (!usersSnap.exists()) return null;
+
+        const tokens = [];
+        usersSnap.forEach(userSnap => {
+            const user = userSnap.val();
+            if (user && user.fcmToken) {
+                tokens.push(user.fcmToken);
+            }
+        });
+
+        if (tokens.length === 0) {
+            console.log('No FCM tokens found.');
+            return null;
+        }
+
+        console.log(`Sending broadcast to ${tokens.length} users...`);
+
+        // Firebase allows max 500 tokens per multicast
+        const CHUNK_SIZE = 500;
+        const chunks = [];
+        for (let i = 0; i < tokens.length; i += CHUNK_SIZE) {
+            chunks.push(tokens.slice(i, i + CHUNK_SIZE));
+        }
+
+        const icon = broadcast.icon || 'https://i.imgur.com/7D8u8h6.png';
+
+        let totalSuccess = 0;
+        let totalFail    = 0;
+        const staleTokens = [];
+
+        for (const chunk of chunks) {
+            const message = {
+                tokens: chunk,
+                notification: {
+                    title: broadcast.title,
+                    body:  broadcast.body,
+                },
+                data: {
+                    title: broadcast.title,
+                    body:  broadcast.body,
+                    type:  broadcast.type  || 'announcement',
+                    tag:   broadcast.type  || 'announcement',
+                    icon,
+                    url: '/',
+                },
+                webpush: {
+                    notification: {
+                        icon,
+                        badge: 'https://i.imgur.com/7D8u8h6.png',
+                        vibrate: [200, 100, 200],
+                        tag: broadcast.type || 'announcement',
+                        renotify: true,
+                    },
+                },
+            };
+
+            try {
+                const res = await admin.messaging().sendEachForMulticast(message);
+                totalSuccess += res.successCount;
+                totalFail    += res.failureCount;
+
+                // Collect stale tokens
+                res.responses.forEach((r, idx) => {
+                    if (!r.success) {
+                        const code = r.error && r.error.code;
+                        if (
+                            code === 'messaging/invalid-registration-token' ||
+                            code === 'messaging/registration-token-not-registered'
+                        ) {
+                            staleTokens.push(chunk[idx]);
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('Multicast chunk error:', err);
+            }
+        }
+
+        console.log(`Broadcast done. Success: ${totalSuccess}, Failed: ${totalFail}`);
+
+        // Update broadcast record with results
+        await snapshot.ref.update({
+            result: { sent: totalSuccess, failed: totalFail },
+            completedAt: Date.now()
+        });
+
+        // Clean up stale tokens from DB
+        if (staleTokens.length > 0) {
+            console.log(`Removing ${staleTokens.length} stale tokens...`);
+            const cleanups = [];
+            usersSnap.forEach(userSnap => {
+                const user = userSnap.val();
+                if (user && staleTokens.includes(user.fcmToken)) {
+                    cleanups.push(db.ref(`users/${userSnap.key}/fcmToken`).remove());
+                }
+            });
+            await Promise.all(cleanups);
+        }
+
+        return null;
+    });
