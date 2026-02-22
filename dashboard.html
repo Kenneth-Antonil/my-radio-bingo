@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.5.1/jsrsasign-all-min.js"></script>
     <style>
         :root { 
@@ -1504,9 +1505,18 @@
             _pinAttempts = 0;
             sessionStorage.setItem('pin_attempts', '0');
             sessionStorage.removeItem('pin_lock_until');
-            document.getElementById('lockScreen').style.opacity = '0';
-            setTimeout(() => { document.getElementById('lockScreen').style.display = 'none'; }, 500);
             sessionStorage.setItem('admin_unlocked', 'true');
+            // Sign in to Firebase with Google so auth !== null for DB rules
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider).then(() => {
+                document.getElementById('lockScreen').style.opacity = '0';
+                setTimeout(() => { document.getElementById('lockScreen').style.display = 'none'; }, 500);
+            }).catch((err) => {
+                // If popup blocked or cancelled, still show dashboard (already PIN-verified)
+                document.getElementById('lockScreen').style.opacity = '0';
+                setTimeout(() => { document.getElementById('lockScreen').style.display = 'none'; }, 500);
+                console.warn('Google sign-in failed:', err.message);
+            });
         } else {
             _pinAttempts++;
             sessionStorage.setItem('pin_attempts', _pinAttempts);
@@ -1533,6 +1543,18 @@
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const auth = firebase.auth();
+
+    // Auto sign-in if already authenticated in a previous session
+    firebase.auth().onAuthStateChanged(function(user) {
+        if (user) {
+            // Already signed in — hide lock screen if PIN also passed
+            if (sessionStorage.getItem('admin_unlocked') === 'true') {
+                document.getElementById('lockScreen').style.display = 'none';
+            }
+            console.log('Firebase Auth OK:', user.uid);
+        }
+    });
     
     // --- SERVICE ACCOUNT LOGIC (REQUIRED FOR HTTP V1) ---
     let serviceAccount = null;
