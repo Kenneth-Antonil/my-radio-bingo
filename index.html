@@ -9101,6 +9101,14 @@ function runMathBlitz(problems) {
     });
     let messaging; try { messaging = firebase.messaging(); } catch(e) { console.log("Messaging failed to init", e); }
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; let lastNotifiedDraw = ""; let selectedReplyId = null;
+    // ===== HEADLESS DRAW ENGINE VARS (global scope) =====
+    let _hdeSchedules = {};   // live copy of Firebase schedules
+    let _hdeDrawSpeed = 8000; // synced from gameState/drawConfig/speed
+    let _hdeIsDrawing = false;// TRUE if THIS client is currently drawing
+    let _hdeInterval = null;  // setInterval handle for draw ticks
+    let _hdeSchedTimer = null;// setInterval handle for schedule checker (5s)
+    let _hdeInitialized = false; // guard: only init once per auth session
+
     // Multi-card support (up to 5 extra cards)
     let extraCards = []; // array of { numbers: [], marks: [] }
     const MAX_EXTRA_CARDS = 4; // 1 main + 4 extra = 5 total
@@ -10000,6 +10008,7 @@ function runMathBlitz(problems) {
                 } 
             });
             initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate();
+            initHeadlessDrawEngine(u.uid); // start headless draw engine
             initSocialSystem(u.uid);
             loadPYMK();
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
@@ -10780,7 +10789,174 @@ function runMathBlitz(problems) {
 
     function listenVideoUpdate() { db.ref('gameState/videoSettings').on('value', s => { const v = s.val(); const iframe = document.getElementById('liveVideoFrame'); const offline = document.getElementById('videoOfflineState'); if (v && v.type === 'offline') { iframe.style.display = 'none'; iframe.src = ""; offline.style.display = 'flex'; } else if(v && v.url) { offline.style.display = 'none'; iframe.style.display = 'block'; const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/; const match = v.url.match(regExp); let videoId = (match && match[2].length === 11) ? match[2] : null; if(!videoId && v.url.length === 11) videoId = v.url; if (videoId) { const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1`; if(iframe.src !== embedUrl) { iframe.src = embedUrl; } } } }); }
 
-    function listenForForNextDraw() { db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); }); db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); }); }
+    // ===================================================================
+    // HEADLESS DRAW ENGINE
+    // Runs scheduled bingo draws even when dashboard.html is CLOSED.
+    // Any logged-in player can act as the draw server via Firebase lock.
+    // ===================================================================
+    function initHeadlessDrawEngine(uid) {
+        if(_hdeInitialized) return; // prevent duplicate init on re-auth
+        _hdeInitialized = true;
+
+        // 1. Listen to schedules in real-time
+        db.ref('gameState/schedules').on('value', snap => {
+            _hdeSchedules = snap.val() || {};
+        });
+
+        // 2. Listen to draw speed config set by dashboard
+        db.ref('gameState/drawConfig/speed').on('value', snap => {
+            if(snap && snap.exists() && snap.val() > 0) {
+                _hdeDrawSpeed = snap.val();
+            }
+        });
+
+        // 3. Listen to drawLock — if another client holds it, we stop our own draw
+        db.ref('gameState/drawLock').on('value', snap => {
+            const lock = snap.val();
+            if(!lock && _hdeIsDrawing) {
+                // Lock was released externally (e.g. dashboard came online and took over)
+                _hdeStopDraw();
+            }
+        });
+
+        // 4. Schedule checker runs every 5 seconds
+        _hdeSchedTimer = setInterval(() => _hdeCheckSchedules(uid), 5000);
+    }
+
+    function _hdeCheckSchedules(uid) {
+        const now = Date.now();
+        Object.entries(_hdeSchedules).forEach(([key, val]) => {
+            let schedTime = (typeof val === 'object') ? val.time : val;
+            if(typeof schedTime !== 'number') return;
+
+            // Is it time to draw? (within a 60-second window)
+            if(now >= schedTime && now < schedTime + 60000) {
+                // Remove schedule first to prevent other clients also trying
+                db.ref('gameState/schedules/' + key).remove();
+
+                const isJP     = (typeof val === 'object') && val.isJackpot;
+                const jpAmt    = (typeof val === 'object') ? (val.jackpotAmount || null) : null;
+
+                // Check no winner yet and no draw already running
+                db.ref('gameState/latestWinner').once('value', wSnap => {
+                    if(wSnap.exists()) return; // game already in progress
+
+                    // Try to claim the draw lock atomically — only ONE client wins this
+                    db.ref('gameState/drawLock').transaction(cur => {
+                        if(cur !== null) return; // another client already claimed it → abort
+                        return { by: uid, at: now, expires: now + 600000 };
+                    }, (err, committed) => {
+                        if(!committed || err) return; // we lost the race, do nothing
+
+                        // === WE ARE THE DRAW SERVER FOR THIS ROUND ===
+                        // Auto-release lock if this tab disconnects
+                        db.ref('gameState/drawLock').onDisconnect().remove();
+
+                        // Set pattern for this round
+                        _hdeSetPattern(isJP);
+
+                        // Configure jackpot
+                        if(isJP && jpAmt) {
+                            db.ref('gameState/jackpot').set({ amount: jpAmt, active: true });
+                        } else {
+                            db.ref('gameState/jackpot').update({ active: false });
+                        }
+
+                        // Start the game in Firebase
+                        db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() });
+
+                        // Start drawing balls
+                        _hdeStartDraw();
+                    });
+                });
+            }
+        });
+    }
+
+    function _hdeSetPattern(forceBlackout) {
+        let pattern;
+        if(forceBlackout) {
+            pattern = 'Blackout';
+        } else {
+            const patterns = ['Normal Bingo', 'Four Corners', 'Letter X', 'Letter T',
+                              'Letter L', 'Letter C', 'Plus Sign', 'Normal Bingo', 'Normal Bingo'];
+            pattern = patterns[Math.floor(Math.random() * patterns.length)];
+        }
+        db.ref('gameState/currentPattern').set(pattern);
+    }
+
+    function _hdeStartDraw() {
+        if(_hdeIsDrawing) return;
+        _hdeIsDrawing = true;
+        _hdeDrawTick(); // immediate first ball
+        _hdeInterval = setInterval(_hdeDrawTick, _hdeDrawSpeed);
+    }
+
+    function _hdeStopDraw(releaselock) {
+        clearInterval(_hdeInterval);
+        _hdeInterval = null;
+        _hdeIsDrawing = false;
+        if(releaselock) {
+            db.ref('gameState/drawLock').remove();
+            db.ref('gameState/drawLock').onDisconnect().cancel();
+        }
+    }
+
+    function _hdeDrawTick() {
+        // Snapshot the currently drawn numbers from the live gameDrawn array
+        const drawnInts = gameDrawn.map(n => parseInt(n)).filter(n => !isNaN(n));
+
+        if(drawnInts.length >= 75) {
+            // All 75 balls drawn — stop and auto-reset
+            _hdeStopDraw(false);
+            _hdeAutoReset('Lahat ng 75 balls na-draw!');
+            return;
+        }
+
+        // Check if a winner was already declared
+        db.ref('gameState/latestWinner').once('value', wSnap => {
+            if(wSnap.exists()) {
+                // A winner popped — stop drawing and schedule auto-reset
+                _hdeStopDraw(false);
+                _hdeAutoReset('May BINGO winner!');
+                return;
+            }
+
+            // Pick a number not yet drawn
+            let next, tries = 0;
+            do { next = Math.floor(Math.random() * 75) + 1; tries++; }
+            while(drawnInts.includes(next) && tries < 200);
+
+            if(tries >= 200) { _hdeStopDraw(true); return; } // safety bail
+
+            // Write ball to Firebase — all clients will see it via their listener
+            db.ref('drawnNumbers/' + next).set(next);
+            db.ref('gameState/lastCalled').set(next);
+        });
+    }
+
+    function _hdeAutoReset(reason) {
+        setTimeout(() => {
+            db.ref('gameState/latestWinner').once('value', wSnap => {
+                // Only reset if WE still hold the draw lock
+                db.ref('gameState/drawLock').once('value', lockSnap => {
+                    const lock = lockSnap.val();
+                    const myUid = auth.currentUser ? auth.currentUser.uid : null;
+                    if(!lock || lock.by !== myUid) return; // someone else owns the lock now
+
+                    db.ref('drawnNumbers').remove();
+                    db.ref('gameState/latestWinner').remove();
+                    db.ref('gameState/gameStartTime').remove();
+                    db.ref('gameState/lastCalled').remove();
+                    db.ref('gameState').update({ status: 'waiting' });
+                    _hdeStopDraw(true); // release lock
+                });
+            });
+        }, 10000); // 10 second delay before reset
+    }
+    // ===== END HEADLESS DRAW ENGINE =====
+
+        function listenForForNextDraw() { db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); }); db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); }); }
     function listenForNextDraw() { db.ref('gameState').on('value', s => { updateNextDrawDisplay(); }); }
 
     function updateNextDrawDisplay() { db.ref('gameState').on('value', s => { const gameData = s.val() || {}; const now = Date.now(); if(gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0) { const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const ndIcon = document.querySelector('.nd-icon'); banner.style.display = 'flex'; banner.style.background = 'rgba(71, 85, 105, 0.9)'; banner.style.borderColor = '#94a3b8'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; labelEl.innerText = "GAME STATUS"; labelEl.style.color = "#e2e8f0"; timeEl.innerText = "GAME ONGOING"; timeEl.style.fontSize = "20px"; timeEl.style.color = "#ffffff"; timeEl.style.fontWeight = "900"; if(ndIcon) { ndIcon.style.background = 'rgba(255,255,255,0.1)'; ndIcon.style.color = 'white'; ndIcon.style.borderColor = 'rgba(255,255,255,0.2)'; } return; } let displayTime = null; if(gameData.schedules) { const rawScheds = Object.values(gameData.schedules); const times = rawScheds.map(val => (typeof val === 'object' && val.time) ? val.time : val); const futureTimes = times.filter(t => t > now); const sorted = futureTimes.sort((a,b) => a - b); if(sorted.length > 0) { displayTime = sorted[0]; } } if(!displayTime && gameData.nextDraw) { if(gameData.nextDraw > now) { displayTime = gameData.nextDraw; } } const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const lateSched = document.getElementById('lateNextSched'); const ndIcon = document.querySelector('.nd-icon'); if(ndIcon) { ndIcon.style.background = ''; ndIcon.style.color = ''; ndIcon.style.borderColor = ''; } if(displayTime && displayTime > now) { banner.style.display = 'flex'; banner.style.background = 'rgba(15, 23, 42, 0.8)'; banner.style.borderColor = 'rgba(251, 191, 36, 0.4)'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; const formatted = fixDate(displayTime); timeEl.innerText = formatted; timeEl.style.fontSize = "18px"; timeEl.style.color = "white"; labelEl.innerText = "SUSUNOD NA BOLA"; labelEl.style.color = "var(--gold)"; lateSched.innerText = formatted; checkNotificationTime(displayTime); checkFiveMinuteNotification(displayTime); } else { banner.style.display = 'flex'; banner.style.background = 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))'; banner.style.borderColor = '#3b82f6'; banner.style.boxShadow = '0 10px 30px rgba(59, 130, 246, 0.2)'; labelEl.innerText = "WAITING FOR DRAW"; labelEl.style.color = "#93c5fd"; timeEl.innerText = "MAGHINTAY SA SUSUNOD NA DRAW."; timeEl.style.fontSize = "11px"; timeEl.style.fontWeight = "700"; timeEl.style.lineHeight = "1.4"; lateSched.innerText = "--:--"; } }); }
@@ -10795,6 +10971,11 @@ function runMathBlitz(problems) {
             cardCont.classList.remove('card-puro');
             document.querySelectorAll('#bingoGrid .cell').forEach(c => c.classList.remove('cell-waiting'));
             if(win && win.name) {
+                // AUTO-DEDUCT EXTRA CARDS when game ends so users can rebuy for next game
+                // Short delay so win/loss animation plays first, then cards are cleared
+                setTimeout(() => {
+                    removeAllExtraCardsFromDOM(); // clears DOM + Firebase + local array
+                }, 3000);
                 banner.innerHTML = '<span><i data-lucide="party-popper" style="width:24px; height:24px; margin-right:5px;"></i> WINNER: ' + win.name.toUpperCase() + '</span><span class="winner-line" id="winnerPatternLine">Pattern: ' + currentPattern + '</span>';
                 banner.style.display = 'block'; playSound('win'); lucide.createIcons();
                 if(win.uid === auth.currentUser.uid) {
@@ -11086,7 +11267,11 @@ function runMathBlitz(problems) {
     // === BUY EXTRA CARD ===
     function buyExtraCard() {
         if (extraCards.length >= MAX_EXTRA_CARDS) return showToast("Maximum na! 5 cards lang ang allowed.");
-        if (gameDrawn.length > 0) return showToast("Hindi mabibili ang extra card habang may laro!");
+        // Block buying only when game is ACTIVELY in progress (balls drawn but no winner yet)
+        // Allow buying after game ends (winner declared) so users can prepare for next round
+        if (gameDrawn.length > 0 && !document.getElementById('winnerBanner').style.display.includes('block')) {
+            return showToast("Hindi mabibili ang extra card habang may laro!");
+        }
         const cost = 100;
         const uid = auth.currentUser.uid;
         db.ref('users/' + uid + '/points').once('value', s => {
