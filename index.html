@@ -2893,6 +2893,7 @@
             align-items: center;
             padding: 2px 8px;
             border-top: 1px solid rgba(255, 255, 255, 0.07);
+            contain: layout; /* prevent reactions changing height from bubbling reflow up */
         }
         
         .action-btn { 
@@ -3258,6 +3259,71 @@
         .comment-preview-bubble { background: #334155; padding: 6px 10px; border-radius: var(--radius-sm); max-width: 100%; }
         .comment-preview-text { font-size: 12px; color: #cbd5e1; word-break: break-word; line-height: 1.4; }
 
+        /* ==============================
+           POST DETAIL PAGE COMMENT ITEMS
+           ============================== */
+        .pd-comment-item {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 10px 16px;
+            animation: pdCommentIn 0.18s ease;
+        }
+        @keyframes pdCommentIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .pd-comment-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            object-fit: cover; flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.07);
+            cursor: pointer;
+        }
+        .pd-comment-body { flex: 1; min-width: 0; }
+        .pd-comment-bubble {
+            display: inline-block; max-width: 100%;
+            background: #1e293b;
+            border-radius: 0 16px 16px 16px;
+            padding: 9px 13px;
+        }
+        .pd-comment-author {
+            font-size: 12px; font-weight: 800; color: #f1f5f9;
+            margin-bottom: 2px; display: flex; align-items: center; gap: 5px;
+        }
+        .pd-comment-text {
+            font-size: 13px; color: #cbd5e1;
+            word-break: break-word; line-height: 1.45;
+        }
+        .pd-comment-meta {
+            display: flex; align-items: center; gap: 14px;
+            padding: 4px 4px 0;
+            font-size: 11px; color: rgba(255,255,255,0.35); font-weight: 600;
+        }
+        .pd-comment-meta button {
+            background: none; border: none; padding: 0;
+            color: rgba(255,255,255,0.38); font-size: 11px; font-weight: 700;
+            cursor: pointer; font-family: inherit;
+        }
+        .pd-comment-meta button:active { color: #38bdf8; }
+        .pd-comment-like-count {
+            font-size: 11px; color: rgba(255,255,255,0.35);
+            display: flex; align-items: center; gap: 3px;
+        }
+        /* Delete button on own comments */
+        .pd-comment-delete {
+            background: none; border: none; color: rgba(255,255,255,0.2);
+            cursor: pointer; padding: 6px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            margin-top: 2px; transition: color 0.15s;
+        }
+        .pd-comment-delete:active { color: #ef4444; }
+
+        /* Post detail inner card */
+        #postDetailCard .post-card {
+            border-radius: 0 !important;
+            border-left: none !important;
+            border-right: none !important;
+            margin: 0 !important;
+        }
+
         /* SHARE POST MODAL */
         .share-modal { 
             position: fixed; inset: auto; bottom: 0; left: 0; right: 0; height: auto; max-height: 60vh;
@@ -3412,18 +3478,20 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 16px;
+            padding: 0 16px;
+            min-height: 36px;
             font-size: 13px;
             color: rgba(255, 255, 255, 0.45);
             cursor: pointer;
             transition: color 0.15s;
             font-weight: 400;
+            contain: layout;
         }
         .reaction-summary-bar:hover {
             color: rgba(255, 255, 255, 0.65);
             background: none;
         }
-        .reaction-summary-bar:empty { display: none; }
+        .reaction-summary-bar .rsb-inner { display: flex; align-items: center; }
         
         .reaction-emojis-group {
             display: flex;
@@ -7662,8 +7730,9 @@ function runMathBlitz(problems) {
     </div>
 </div>
 
-<div id="commentModalBackdrop" class="comment-modal-backdrop" onclick="closeComments()"></div>
-<div id="commentModal" class="comment-modal">
+<div id="commentModalBackdrop" class="comment-modal-backdrop" onclick="closeComments()" style="display:none;"></div>
+<!-- OLD comment modal hidden — replaced by postDetailPage below -->
+<div id="commentModal" class="comment-modal" style="display:none!important;">
     <div class="comment-header">
         <h3 style="margin:0; font-size:16px;">Comments</h3>
         <button onclick="closeComments()" style="background:none; border:none; color:white;"><i data-lucide="x"></i></button>
@@ -7684,6 +7753,89 @@ function runMathBlitz(problems) {
             <button type="submit" style="background:none; border:none; color:var(--accent);"><i data-lucide="send"></i></button>
         </div>
     </form>
+</div>
+
+<!-- ====================================================
+     FB-STYLE FULL-PAGE POST DETAIL / COMMENTS PAGE
+     ==================================================== -->
+<div id="postDetailPage" style="
+    position: fixed; inset: 0; z-index: 7500;
+    background: #0f172a;
+    display: none; flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    will-change: transform;
+">
+    <!-- Sticky Header -->
+    <div id="postDetailHeader" style="
+        display: flex; align-items: center; gap: 12px;
+        padding: max(14px, env(safe-area-inset-top)) 16px 14px;
+        background: #0f172a;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        flex-shrink: 0;
+        position: sticky; top: 0; z-index: 10;
+    ">
+        <button onclick="closeComments()" style="
+            background: rgba(255,255,255,0.08); border: none; color: white;
+            width: 38px; height: 38px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0; transition: background 0.15s;
+        ">
+            <i data-lucide="arrow-left" style="width:18px; height:18px; pointer-events:none;"></i>
+        </button>
+        <div>
+            <div style="font-size: 17px; font-weight: 800; color: white; letter-spacing: -0.3px;">Post</div>
+            <div id="postDetailCommentCount" style="font-size: 11px; color: rgba(255,255,255,0.38); margin-top: 1px;"></div>
+        </div>
+    </div>
+
+    <!-- Scrollable body: post + comments -->
+    <div id="postDetailBody" style="
+        flex: 1; overflow-y: auto; overscroll-behavior: contain;
+        padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    ">
+        <!-- Post card clone rendered here -->
+        <div id="postDetailCard" style="border-bottom: 8px solid rgba(255,255,255,0.04);"></div>
+
+        <!-- Comments section -->
+        <div id="postDetailCommentList" style="display: flex; flex-direction: column;"></div>
+    </div>
+
+    <!-- Sticky bottom input -->
+    <div id="postDetailInputBar" style="
+        position: fixed; bottom: 0; left: 0; right: 0;
+        background: #111827;
+        border-top: 1px solid rgba(255,255,255,0.07);
+        padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+        display: flex; align-items: center; gap: 10px;
+        z-index: 10;
+    ">
+        <img id="postDetailMyAvatar" src="https://via.placeholder.com/36" style="
+            width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+            border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;
+        ">
+        <div style="
+            flex: 1; display: flex; align-items: center;
+            background: rgba(255,255,255,0.06); border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.1); overflow: hidden;
+        ">
+            <input id="postDetailCommentInput" type="text" placeholder="Write a comment…"
+                autocomplete="off"
+                style="
+                    flex: 1; background: none; border: none; outline: none;
+                    color: white; padding: 10px 14px; font-size: 14px;
+                    font-family: inherit;
+                "
+                onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendDetailComment(); }">
+            <button onclick="sendDetailComment()" style="
+                background: none; border: none; color: var(--accent);
+                padding: 10px 14px; cursor: pointer; display: flex;
+                align-items: center; justify-content: center; flex-shrink: 0;
+            ">
+                <i data-lucide="send" style="width:18px; height:18px;"></i>
+            </button>
+        </div>
+    </div>
 </div>
 
 <div id="shareModalBackdrop" class="share-modal-backdrop" onclick="closeShareModal()"></div>
@@ -12422,116 +12574,318 @@ Please explain why you want a verification badge:`;
 
     let currentOpenPostKey = null;
 
+    // ── POST DETAIL PAGE (FB-style) ──────────────────────────────
+    let _postDetailListener = null;
+
     function openComments(postKey) {
         currentOpenPostKey = postKey;
-        const list = document.getElementById('commentList');
-        list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding: var(--spacing-lg);'>Loading...</div>";
-        document.getElementById('commentModal').style.display = 'flex';
-        document.getElementById('commentModalBackdrop').style.display = 'block';
-        
-        db.ref('postComments/' + postKey).on('value', s => {
-            list.innerHTML = "";
-            if(!s.exists()) {
-                list.innerHTML = "<div style='text-align:center; color:white; opacity:0.5; padding: var(--spacing-lg);'>No comments yet.</div>";
+
+        const page = document.getElementById('postDetailPage');
+        const body = document.getElementById('postDetailBody');
+        const card = document.getElementById('postDetailCard');
+        const commentList = document.getElementById('postDetailCommentList');
+        const countEl = document.getElementById('postDetailCommentCount');
+        const myAvatarEl = document.getElementById('postDetailMyAvatar');
+
+        // Set user avatar in input bar
+        if(userData && userData.photo) myAvatarEl.src = userData.photo;
+
+        // Show loading skeleton
+        card.innerHTML = '<div style="padding:20px; text-align:center; color:rgba(255,255,255,0.35); font-size:13px;">Loading post…</div>';
+        commentList.innerHTML = '';
+        countEl.textContent = '';
+
+        // Slide in
+        page.style.display = 'flex';
+        lockScroll();
+        requestAnimationFrame(() => {
+            page.style.transition = 'transform 0.32s cubic-bezier(0.32,0.72,0,1)';
+            page.style.transform = 'translateX(0)';
+        });
+        lucide.createIcons({ nodes: [document.getElementById('postDetailHeader')] });
+
+        // Load the post card
+        db.ref('socialPosts/' + postKey).once('value', snap => {
+            if (!snap.exists()) {
+                card.innerHTML = '<div style="padding:20px; text-align:center; color:rgba(255,255,255,0.35); font-size:13px;">Post not found.</div>';
                 return;
             }
-            
-            // NORMALIZED: Fetch user data for each comment
-            s.forEach(c => {
-                const com = c.val();
-                
-                db.ref('users/' + com.uid).once('value', userSnap => {
-                    const user = userSnap.val();
-                    if(!user) return;
-                    
-                    const div = document.createElement('div');
-                    div.className = 'comment-item';
-                    div.innerHTML = `
-                        <img class="comment-avatar" src="${user.photo || 'https://via.placeholder.com/40'}">
-                        <div class="comment-content-block">
-                            <div class="comment-bubble">
-                                <div class="comment-author">${escapeHtml(user.name)} ${getBadgeHtml(user.bingoWins || 0)}</div>
-                                <div class="comment-text">${escapeHtml(com.text)}</div>
-                            </div>
-                            <div class="comment-actions">
-                                <button class="cmt-action-btn" onclick="likeComment('${postKey}', '${c.key}')">Like</button>
-                                <button class="cmt-action-btn" onclick="replyComment('${escapeHtml(user.name)}')">Reply</button>
-                                <span>${fixDate(com.time)}</span>
+            const post = { key: postKey, ...snap.val() };
+
+            // Build a lightweight post preview (author + content + image + reactions)
+            db.ref('users/' + post.uid).once('value', authorSnap => {
+                const author = authorSnap.val() || {};
+                const imgHtml = post.image ? `<div class="post-image-container" style="margin:0 0 2px;"><img src="${post.image}" class="post-image"></div>` : '';
+                const videoHtml = post.video ? `<div class="post-image-container" style="margin:0 0 2px;"><video src="${post.video}" class="post-image" controls style="width:100%;max-height:400px;"></video></div>` : '';
+                const moodHtml = post.mood ? `<div class="mood-display">Feeling ${post.mood}</div>` : '';
+                card.innerHTML = `
+                    <div style="padding:14px 16px 0;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <img src="${author.photo||'https://via.placeholder.com/40'}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;cursor:pointer;border:1px solid rgba(255,255,255,0.1);" onclick="closeComments();openUserProfile('${post.uid}')">
+                            <div>
+                                <div style="font-size:14px;font-weight:800;color:white;">${escapeHtml(author.name||'User')}</div>
+                                <div style="font-size:11px;color:rgba(255,255,255,0.38);">${fixDate(post.timestamp)}</div>
                             </div>
                         </div>
+                        ${moodHtml}
+                        <div style="font-size:15px;color:#e2e8f0;line-height:1.55;margin-bottom:12px;">${typeof formatPostContent==='function'?formatPostContent(post.content||''):escapeHtml(post.content||'')}</div>
+                    </div>
+                    ${imgHtml}${videoHtml}
+                    <div id="pd-reaction-bar-${postKey}" style="padding:6px 16px; font-size:13px; color:rgba(255,255,255,0.45); display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.07); cursor:pointer; min-height:36px;" onclick="openReactionViewer('${postKey}')"></div>
+                    <div style="display:flex; border-bottom:1px solid rgba(255,255,255,0.07);">
+                        <button class="action-btn" id="pd-like-btn-${postKey}" onclick="showReactionPopupDetail('${postKey}','${post.uid}')" style="flex:1;">
+                            <i data-lucide="thumbs-up" id="pd-like-icon-${postKey}" style="width:16px;"></i> <span id="pd-like-label-${postKey}">Like</span>
+                        </button>
+                        <div id="pd-react-pop-${postKey}" class="reaction-popup" onmouseleave="this.style.display='none'">
+                            <span class="reaction-emoji" onclick="submitReactionDetail('${postKey}','${post.uid}','👍')">👍</span>
+                            <span class="reaction-emoji" onclick="submitReactionDetail('${postKey}','${post.uid}','❤️')">❤️</span>
+                            <span class="reaction-emoji" onclick="submitReactionDetail('${postKey}','${post.uid}','😂')">😂</span>
+                            <span class="reaction-emoji" onclick="submitReactionDetail('${postKey}','${post.uid}','😮')">😮</span>
+                            <span class="reaction-emoji" onclick="submitReactionDetail('${postKey}','${post.uid}','😢')">😢</span>
+                            <span class="reaction-emoji" onclick="submitReactionDetail('${postKey}','${post.uid}','😡')">😡</span>
+                        </div>
+                        <button class="action-btn" style="flex:1;" onclick="document.getElementById('postDetailCommentInput').focus()">
+                            <i data-lucide="message-circle" style="width:16px;"></i> Comment
+                        </button>
+                        <button class="action-btn" style="flex:1;" onclick="openShareModal('${postKey}')">
+                            <i data-lucide="share-2" style="width:14px;"></i> Share
+                        </button>
+                    </div>
+                `;
+                lucide.createIcons({ nodes: [card] });
+
+                // Load reaction summary for detail page bar
+                _loadPdReactionBar(postKey);
+
+                // Load current user's reaction state
+                if(auth.currentUser) {
+                    db.ref('postLikes/' + postKey + '/' + auth.currentUser.uid).once('value', lSnap => {
+                        if(lSnap.exists()) {
+                            const emojiMap = {'👍':'👍','❤️':'❤️','😂':'😂','😮':'😮','😢':'😢','😡':'😡'};
+                            const emoji = emojiMap[lSnap.val()===true?'❤️':lSnap.val()] || '❤️';
+                            const btn = document.getElementById('pd-like-btn-'+postKey);
+                            const iconSlot = document.getElementById('pd-like-icon-'+postKey);
+                            const label = document.getElementById('pd-like-label-'+postKey);
+                            if(btn) btn.classList.add('liked');
+                            if(iconSlot) { const s=document.createElement('span'); s.setAttribute('data-emoji-slot','1'); s.style.cssText='font-size:18px;line-height:1;'; s.textContent=emoji; iconSlot.replaceWith(s); }
+                            if(label) label.textContent = emoji;
+                        }
+                    });
+                }
+            });
+        });
+
+        // Real-time comments listener
+        if(_postDetailListener) {
+            db.ref('postComments/' + _postDetailListener).off();
+        }
+        _postDetailListener = postKey;
+
+        db.ref('postComments/' + postKey).on('value', snap => {
+            const commentList = document.getElementById('postDetailCommentList');
+            if(!commentList) return;
+
+            const scrollEl = document.getElementById('postDetailBody');
+            const wasAtBottom = scrollEl && (scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight) < 100;
+
+            commentList.innerHTML = '';
+            const countEl = document.getElementById('postDetailCommentCount');
+
+            if(!snap.exists()) {
+                if(countEl) countEl.textContent = 'No comments yet';
+                commentList.innerHTML = `
+                    <div style="padding:48px 20px; text-align:center;">
+                        <div style="font-size:48px; margin-bottom:12px;">💬</div>
+                        <div style="font-size:15px; font-weight:800; color:white; margin-bottom:6px;">No comments yet</div>
+                        <div style="font-size:13px; color:rgba(255,255,255,0.38);">Be the first to comment!</div>
+                    </div>`;
+                return;
+            }
+
+            const allComments = [];
+            snap.forEach(c => allComments.push({ key: c.key, ...c.val() }));
+            if(countEl) countEl.textContent = allComments.length + ' comment' + (allComments.length !== 1 ? 's' : '');
+
+            // Section label
+            const sectionLabel = document.createElement('div');
+            sectionLabel.style.cssText = 'padding:12px 16px 4px; font-size:13px; font-weight:800; color:white;';
+            sectionLabel.textContent = 'All Comments';
+            commentList.appendChild(sectionLabel);
+
+            // Load each comment with user data
+            let rendered = 0;
+            allComments.forEach(com => {
+                db.ref('users/' + com.uid).once('value', userSnap => {
+                    const user = userSnap.val() || { name: 'User', photo: '' };
+                    const isOwn = auth.currentUser && com.uid === auth.currentUser.uid;
+
+                    const div = document.createElement('div');
+                    div.className = 'pd-comment-item';
+                    div.id = 'pd-cmt-' + com.key;
+
+                    const deleteBtn = isOwn
+                        ? `<button class="pd-comment-delete" onclick="deletePdComment('${postKey}','${com.key}')" title="Delete"><i data-lucide="trash-2" style="width:13px;height:13px;pointer-events:none;"></i></button>`
+                        : '';
+
+                    div.innerHTML = `
+                        <img class="pd-comment-avatar" src="${escapeHtml(user.photo||'https://via.placeholder.com/36')}" onclick="closeComments();openUserProfile('${com.uid}')">
+                        <div class="pd-comment-body">
+                            <div class="pd-comment-bubble">
+                                <div class="pd-comment-author">${escapeHtml(user.name)}${user.verified?'<span class="verified-badge"><i data-lucide="check" style="width:9px;height:9px;color:white;"></i></span>':''}</div>
+                                <div class="pd-comment-text">${escapeHtml(com.text)}</div>
+                            </div>
+                            <div class="pd-comment-meta">
+                                <span>${getNotifTimeLabel(com.time)}</span>
+                                <button onclick="replyPdComment('${escapeHtml(user.name)}')">Reply</button>
+                            </div>
+                        </div>
+                        ${deleteBtn}
                     `;
-                    list.appendChild(div);
-                    list.scrollTop = list.scrollHeight;
-                    lucide.createIcons();
+                    commentList.appendChild(div);
+                    lucide.createIcons({ nodes: [div] });
+
+                    rendered++;
+                    if(rendered === allComments.length && wasAtBottom && scrollEl) {
+                        setTimeout(() => scrollEl.scrollTop = scrollEl.scrollHeight, 50);
+                    }
                 });
             });
         });
-    }
-    
-    function closeComments() {
-        document.getElementById('commentModal').style.display = 'none';
-        document.getElementById('commentModalBackdrop').style.display = 'none';
-        db.ref('postComments/' + currentOpenPostKey).off(); 
-        currentOpenPostKey = null;
-        document.getElementById('commentInput').value = '';
-        updateCommentPreview(); // Clear preview
+
+        // Focus input after animation
+        setTimeout(() => document.getElementById('postDetailCommentInput').focus(), 380);
     }
 
-    function sendComment() {
-        const txt = document.getElementById('commentInput').value.trim();
-        if(!txt || !currentOpenPostKey) return;
-        
-        // NORMALIZED: Only store UID, fetch user data when displaying
+    function _loadPdReactionBar(postKey) {
+        db.ref('postLikes/' + postKey).on('value', s => {
+            const bar = document.getElementById('pd-reaction-bar-' + postKey);
+            if(!bar) return;
+            if(!s.exists()) { bar.innerHTML = ''; return; }
+            const counts = {};
+            let total = 0;
+            s.forEach(c => {
+                let e = c.val(); if(e===true) e='❤️';
+                counts[e] = (counts[e]||0)+1; total++;
+            });
+            const top3 = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([e])=>e);
+            bar.innerHTML = `<div style="display:flex;align-items:center;gap:4px;">${top3.map(e=>`<span>${e}</span>`).join('')}<span style="margin-left:4px;">${total} reaction${total!==1?'s':''}</span></div>`;
+        });
+    }
+
+    function showReactionPopupDetail(postKey, authorUid) {
+        const pop = document.getElementById('pd-react-pop-' + postKey);
+        if(!pop) return showReactionPopup(postKey); // fallback
+        if(pop.style.display==='flex') { pop.style.display='none'; return; }
+        pop.style.display='flex';
+        setTimeout(() => {
+            document.addEventListener('click', function close(e) {
+                if(!e.target.closest('#pd-like-btn-'+postKey) && !e.target.closest('#pd-react-pop-'+postKey)) {
+                    pop.style.display='none';
+                    document.removeEventListener('click', close);
+                }
+            });
+        }, 100);
+    }
+
+    function submitReactionDetail(postKey, authorUid, emoji) {
+        // Delegate to main submitReaction — also update detail page button
+        submitReaction(postKey, authorUid, emoji);
+        const pop = document.getElementById('pd-react-pop-' + postKey);
+        if(pop) pop.style.display='none';
+        // Update detail page like button
+        const btn = document.getElementById('pd-like-btn-' + postKey);
+        const iconSlot = btn ? btn.querySelector('i[data-lucide],span[data-emoji-slot]') : null;
+        const label = document.getElementById('pd-like-label-' + postKey);
+        if(iconSlot) {
+            const s = document.createElement('span');
+            s.setAttribute('data-emoji-slot','1');
+            s.style.cssText='font-size:18px;line-height:1;';
+            s.textContent=emoji;
+            iconSlot.replaceWith(s);
+        }
+        if(label) label.textContent = emoji;
+        if(btn) btn.classList.add('liked');
+    }
+
+    function sendDetailComment() {
+        const input = document.getElementById('postDetailCommentInput');
+        const txt = input.value.trim();
+        if(!txt || !currentOpenPostKey || !auth.currentUser) return;
+
+        input.value = '';
+
         db.ref('postComments/' + currentOpenPostKey).push({
-            uid: auth.currentUser.uid, // ONLY user reference
+            uid: auth.currentUser.uid,
             text: txt,
             time: Date.now()
         });
-        
-        // Notify Author (Grouped logic handled in render but we push individual here)
+
+        // Notify author
         db.ref('socialPosts/' + currentOpenPostKey).once('value', s => {
-             const p = s.val();
-             if(p.uid !== auth.currentUser.uid) {
-                 db.ref('notifications/' + p.uid).push({
-                     msg: `${userData.name} commented on your post`,
-                     time: Date.now(),
-                     type: 'comment',
-                     from: auth.currentUser.uid,
-                     fromName: userData.name,
-                     postId: currentOpenPostKey, // Link to post
-                     image: userData.photo
-                 });
-             }
+            const p = s.val();
+            if(p && p.uid !== auth.currentUser.uid && userData) {
+                db.ref('notifications/' + p.uid).push({
+                    msg: `${userData.name} commented on your post`,
+                    time: Date.now(), type: 'comment',
+                    from: auth.currentUser.uid, fromName: userData.name,
+                    postId: currentOpenPostKey, image: userData.photo
+                });
+            }
         });
 
-        // Detect @mentions and notify each mentioned user
+        // @mentions
         const mentionMatches = txt.match(/@(\w+)/g);
-        if(mentionMatches && userData && userData.name) {
-            const uniqueMentions = [...new Set(mentionMatches.map(m => m.slice(1)))];
-            uniqueMentions.forEach(mentionedName => {
-                db.ref('users').orderByChild('name').equalTo(mentionedName).limitToFirst(1).once('value', snap => {
+        if(mentionMatches && userData) {
+            [...new Set(mentionMatches.map(m=>m.slice(1)))].forEach(name => {
+                db.ref('users').orderByChild('name').equalTo(name).limitToFirst(1).once('value', snap => {
                     if(snap.exists()) {
                         const mentionedUid = Object.keys(snap.val())[0];
-                        // Don't notify yourself or the post author (already notified above)
                         if(mentionedUid !== auth.currentUser.uid) {
                             db.ref('notifications/' + mentionedUid).push({
                                 msg: `${userData.name} mentioned you in a comment`,
-                                time: Date.now(),
-                                type: 'mention',
-                                from: auth.currentUser.uid,
-                                fromName: userData.name,
-                                postId: currentOpenPostKey,
-                                image: userData.photo || 'https://via.placeholder.com/40'
+                                time: Date.now(), type: 'mention',
+                                from: auth.currentUser.uid, fromName: userData.name,
+                                postId: currentOpenPostKey, image: userData.photo||''
                             });
                         }
                     }
                 });
             });
         }
-
-        document.getElementById('commentInput').value = "";
-        updateCommentPreview(); // Clear preview
     }
+
+    function replyPdComment(name) {
+        const input = document.getElementById('postDetailCommentInput');
+        input.value = `@${name} `;
+        input.focus();
+    }
+
+    function deletePdComment(postKey, commentKey) {
+        db.ref('postComments/' + postKey + '/' + commentKey).remove();
+    }
+
+    function closeComments() {
+        const page = document.getElementById('postDetailPage');
+        if(page) {
+            page.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1)';
+            page.style.transform = 'translateX(100%)';
+            setTimeout(() => { page.style.display = 'none'; }, 290);
+        }
+        // Stop listeners
+        if(_postDetailListener) {
+            db.ref('postComments/' + _postDetailListener).off();
+            db.ref('postLikes/' + _postDetailListener).off();
+            _postDetailListener = null;
+        }
+        unlockScroll();
+        currentOpenPostKey = null;
+        // Also reset old input in case any legacy code references it
+        const oldInput = document.getElementById('commentInput');
+        if(oldInput) { oldInput.value = ''; updateCommentPreview(); }
+    }
+
+    // Keep sendComment() for any legacy callers (no-op redirect)
+    function sendComment() { sendDetailComment(); }
     
     function updateCommentPreview() {
         const input = document.getElementById('commentInput');
@@ -13098,12 +13452,22 @@ Please explain why you want a verification badge:`;
             db.ref('postLikes/' + post.key + '/' + auth.currentUser.uid).once('value', lSnap => {
                 if(lSnap.exists()) {
                     const btn = postDiv.querySelector('#like-btn-' + post.key);
-                    const reaction = lSnap.val(); // Get stored emoji
-                    const reactionIconMap = {'👍':'<span style="font-size:18px;line-height:1;">👍</span>','❤️':'<span style="font-size:18px;line-height:1;">❤️</span>','😂':'<span style="font-size:18px;line-height:1;">😂</span>','😮':'<span style="font-size:18px;line-height:1;">😮</span>','😢':'<span style="font-size:18px;line-height:1;">😢</span>','😡':'<span style="font-size:18px;line-height:1;">😡</span>'};
-        const sanitizedReaction = reactionIconMap[reaction === true ? '❤️' : reaction] || (reaction === true ? '<span style="font-size:18px;line-height:1;">❤️</span>' : escapeHtml(reaction));
-                    if(btn) {
-                        btn.classList.add('liked');
-                        btn.innerHTML = `<span style="font-size:18px;line-height:1;">${sanitizedReaction}</span> <span id="like-count-wrapper-${post.key}" onclick="event.stopPropagation(); openReactionViewer('${post.key}')" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openReactionViewer('${post.key}')}" role="button" tabindex="0" style="cursor:pointer; margin-left:4px;" aria-label="View who reacted to this post"><span id="like-count-${post.key}">${post.likes || 0}</span></span>`;
+                    const iconSlot = postDiv.querySelector('#like-icon-' + post.key);
+                    const reaction = lSnap.val();
+                    const emojiMap = {'👍':'👍','❤️':'❤️','😂':'😂','😮':'😮','😢':'😢','😡':'😡'};
+                    const emoji = emojiMap[reaction === true ? '❤️' : reaction] || '❤️';
+                    if(btn) btn.classList.add('liked');
+                    // Replace just the icon element — no full innerHTML replacement = no layout shift
+                    if(iconSlot) {
+                        const emojiSpan = document.createElement('span');
+                        emojiSpan.style.cssText = 'font-size:18px;line-height:1;';
+                        emojiSpan.textContent = emoji;
+                        iconSlot.replaceWith(emojiSpan);
+                    }
+                    // Update count text only
+                    const countEl = postDiv.querySelector('#like-count-' + post.key);
+                    if(countEl && (!countEl.textContent || countEl.textContent === 'Like')) {
+                        countEl.textContent = post.likes || 0;
                     }
                 }
             });
@@ -13122,45 +13486,45 @@ Please explain why you want a verification badge:`;
     }
 
     function loadReactionSummary(postKey) {
+        // Run both Firebase reads in parallel and only update DOM once both resolve
+        const likesPromise = new Promise(res => db.ref('postLikes/' + postKey).on('value', s => res(s)));
+        const commentsPromise = new Promise(res => db.ref('postComments/' + postKey).on('value', s => res(s)));
+
         db.ref('postLikes/' + postKey).on('value', s => {
             const bar = document.getElementById('reaction-summary-' + postKey);
             if (!bar) return;
-            
-            if (!s.exists()) {
-                bar.innerHTML = '';
-                return;
-            }
 
-            const counts = {};
-            let totalReactions = 0;
-            s.forEach(child => {
-                let emoji = child.val();
-                // Legacy compatibility: old reactions stored as boolean true, convert to heart emoji
-                if (emoji === true) emoji = '❤️';
-                counts[emoji] = (counts[emoji] || 0) + 1;
-                totalReactions++;
-            });
-
-            // Sort by count descending and get top 3
-            const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-            const topEmojis = sorted.slice(0, 3).map(([emoji]) => emoji);
-            
-            // Get comment count
+            // Always fetch comment count alongside, then do ONE DOM update
             db.ref('postComments/' + postKey).once('value', commentSnapshot => {
                 const commentCount = commentSnapshot.numChildren();
-                
-                // Build the reaction summary HTML
+
+                if (!s.exists()) {
+                    // Reserve space but show nothing — no height collapse
+                    bar.innerHTML = commentCount > 0
+                        ? `<span></span><span class="comment-count-text">${commentCount === 1 ? '1 comment' : commentCount + ' comments'}</span>`
+                        : '';
+                    return;
+                }
+
+                const counts = {};
+                let totalReactions = 0;
+                s.forEach(child => {
+                    let emoji = child.val();
+                    if (emoji === true) emoji = '❤️';
+                    counts[emoji] = (counts[emoji] || 0) + 1;
+                    totalReactions++;
+                });
+
+                const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+                const topEmojis = sorted.slice(0, 3).map(([emoji]) => emoji);
                 const emojisHtml = topEmojis.map(emoji => `<span>${emoji}</span>`).join('');
                 const reactionText = totalReactions === 1 ? '1 reaction' : `${totalReactions} reactions`;
                 const commentText = commentCount > 0 ? (commentCount === 1 ? '1 comment' : `${commentCount} comments`) : '';
-                
-                bar.innerHTML = `
-                    <div style="display: flex; align-items: center;">
-                        <div class="reaction-emojis-group">${emojisHtml}</div>
-                        <span class="reaction-count-text">${reactionText}</span>
-                    </div>
-                    ${commentText ? `<span class="comment-count-text">${commentText}</span>` : ''}
-                `;
+
+                // Single atomic DOM write — no double render
+                bar.innerHTML =
+                    `<div class="rsb-inner"><div class="reaction-emojis-group">${emojisHtml}</div><span class="reaction-count-text">${reactionText}</span></div>` +
+                    (commentText ? `<span class="comment-count-text">${commentText}</span>` : '');
             });
         });
     }
@@ -13192,19 +13556,63 @@ Please explain why you want a verification badge:`;
         const myUid = auth.currentUser.uid;
         const likeRef = db.ref('postLikes/' + postKey + '/' + myUid);
         const pop = document.getElementById('react-pop-' + postKey);
-        
-        if(pop) pop.style.display = 'none'; // Hide popup
+        const btn = document.getElementById('like-btn-' + postKey);
+
+        if(pop) pop.style.display = 'none';
+
+        // ── Optimistic UI: update icon immediately, no waiting for Firebase ──
+        function applyEmojiToBtn(activeEmoji) {
+            if (!btn) return;
+            // Only touch the icon slot — never replace full button innerHTML
+            const iconSlot = btn.querySelector('i[data-lucide], span[data-emoji-slot]');
+            if (iconSlot) {
+                const s = document.createElement('span');
+                s.setAttribute('data-emoji-slot', '1');
+                s.style.cssText = 'font-size:18px;line-height:1;';
+                s.textContent = activeEmoji;
+                iconSlot.replaceWith(s);
+            }
+            if (activeEmoji) btn.classList.add('liked');
+            else btn.classList.remove('liked');
+        }
+
+        function resetBtnToDefault() {
+            if (!btn) return;
+            const iconSlot = btn.querySelector('i[data-lucide], span[data-emoji-slot]');
+            if (iconSlot) {
+                const i = document.createElement('i');
+                i.setAttribute('data-lucide', 'thumbs-up');
+                i.style.cssText = 'width:16px;';
+                iconSlot.replaceWith(i);
+                lucide.createIcons({ nodes: [i] });
+            }
+            btn.classList.remove('liked');
+        }
 
         likeRef.once('value', s => {
             if(s.exists() && s.val() === emoji) {
-                // Remove reaction if same clicked
+                // Toggle off — remove reaction
+                applyEmojiToBtn(null);
+                resetBtnToDefault();
                 likeRef.remove();
                 db.ref('socialPosts/' + postKey + '/likes').transaction(l => (l || 1) - 1);
+                // Update count display
+                const countEl = document.getElementById('like-count-' + postKey);
+                if(countEl) {
+                    const cur = parseInt(countEl.textContent) || 1;
+                    countEl.textContent = cur - 1 > 0 ? cur - 1 : 'Like';
+                }
             } else {
-                // New or Change reaction
+                // New or changed reaction — apply immediately
+                applyEmojiToBtn(emoji);
                 if(!s.exists()) {
                     db.ref('socialPosts/' + postKey + '/likes').transaction(l => (l || 0) + 1);
-                     // Reward only on first interaction
+                    const countEl = document.getElementById('like-count-' + postKey);
+                    if(countEl) {
+                        const cur = parseInt(countEl.textContent) || 0;
+                        countEl.textContent = cur + 1;
+                    }
+                    // Reward only on first interaction
                     const rewardHistoryRef = db.ref('rewardHistory/' + postKey + '/' + myUid);
                     rewardHistoryRef.once('value', histSnap => {
                         if(!histSnap.exists()) {
@@ -13220,7 +13628,7 @@ Please explain why you want a verification badge:`;
                                     image: userData.photo || 'https://via.placeholder.com/40'
                                 });
                             }
-                            rewardHistoryRef.set(true); 
+                            rewardHistoryRef.set(true);
                         }
                     });
                 }
