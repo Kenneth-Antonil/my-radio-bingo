@@ -86,6 +86,33 @@ exports.sendPushOnNotification = functions
             return null;
         }
 
+        // ── Deduplication check ──────────────────────────────
+        // Prevent double push when client writes the same notification twice
+        // within a 10-second window (same from + type + postId)
+        const dedupKey = [
+            notif.from   || 'anon',
+            notif.type   || 'general',
+            notif.postId || 'none'
+        ].join('_').replace(/[.#$/[\]]/g, '-');   // sanitize for RTDB key
+
+        const dedupRef  = db.ref(`_notifDedup/${uid}/${dedupKey}`);
+        const dedupSnap = await dedupRef.once('value');
+
+        if (dedupSnap.exists()) {
+            const lastSent = dedupSnap.val();
+            const TEN_SECONDS = 10 * 1000;
+            if (Date.now() - lastSent < TEN_SECONDS) {
+                console.log(`⏭️ Duplicate notification skipped for ${uid} (${dedupKey})`);
+                return null;
+            }
+        }
+
+        // Mark as sent before sending to prevent race conditions
+        await dedupRef.set(Date.now());
+
+        // Auto-cleanup dedup entry after 30 seconds
+        setTimeout(() => dedupRef.remove().catch(() => {}), 30000);
+
         // ── Get target user's FCM token ──────────────────────
         const userSnap = await db.ref(`users/${uid}/fcmToken`).once('value');
         const fcmToken = userSnap.val();
