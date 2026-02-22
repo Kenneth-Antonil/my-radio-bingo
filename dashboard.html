@@ -263,7 +263,91 @@
         }
         .marquee-text { display: inline-block; animation: marquee 15s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--spacing-md); }
+        .cards-grid { display: flex; flex-direction: column; gap: 10px; }
+        /* === PLAYER GROUP MONITOR === */
+        .player-group {
+            background: rgba(15,23,42,0.7);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 16px;
+            padding: 10px;
+            transition: border-color 0.3s;
+        }
+        .player-group.has-bingo { border-color: var(--success); box-shadow: 0 0 20px rgba(16,185,129,0.2); }
+        .player-group.has-puro { border-color: var(--puro); box-shadow: 0 0 12px rgba(249,115,22,0.15); }
+        .player-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .player-group-name {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 800;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
+        }
+        .player-group-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .player-card-strip {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding-bottom: 2px;
+        }
+        .player-card-strip::-webkit-scrollbar { display: none; }
+        .strip-card {
+            flex-shrink: 0;
+            width: 110px;
+            background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95));
+            border: 1.5px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 7px;
+            position: relative;
+        }
+        .strip-card.bingo {
+            border-color: var(--success);
+            background: linear-gradient(145deg, rgba(16,185,129,0.2), rgba(6,78,59,0.9));
+            box-shadow: 0 0 15px rgba(16,185,129,0.3);
+            animation: bingo-pulse 1s ease-in-out infinite;
+        }
+        .strip-card.puro {
+            border-color: var(--puro);
+            box-shadow: 0 0 10px rgba(249,115,22,0.25);
+            animation: pulse-puro 2s ease-in-out infinite;
+        }
+        .strip-card-label {
+            font-size: 8px;
+            font-weight: 900;
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .strip-card-label .card-status-tag {
+            font-size: 7px;
+            font-weight: 900;
+            padding: 1px 5px;
+            border-radius: 4px;
+            display: none;
+        }
+        .strip-card.bingo .card-status-tag { display: inline; background: var(--success); color: white; }
+        .strip-card.puro .card-status-tag { display: inline; background: var(--puro); color: white; }
         .user-card-monitor { 
             background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9)); 
             padding: var(--spacing-md); 
@@ -1936,10 +2020,13 @@
     }
 
     function updateMonitorCards() {
-        const container = document.getElementById('liveCardsContainer'); container.innerHTML = ""; let usersArray = [];
-        Object.entries(allUsersData).forEach(([key, user]) => { if(user.card || user.currentCard) { usersArray.push({ ...user, uid: key }); } });
+        const container = document.getElementById('liveCardsContainer');
+        container.innerHTML = "";
+        let usersArray = [];
+        Object.entries(allUsersData).forEach(([key, user]) => {
+            if(user.card || user.currentCard) usersArray.push({ ...user, uid: key });
+        });
         usersArray.sort((a, b) => {
-            // FIXED: check state === 'online', not just existence in status
             const aOnline = globalStatusData[a.uid] && globalStatusData[a.uid].state === 'online' ? 1 : 0;
             const bOnline = globalStatusData[b.uid] && globalStatusData[b.uid].state === 'online' ? 1 : 0;
             return bOnline - aOnline;
@@ -1947,50 +2034,93 @@
         usersArray.forEach(user => {
             const card = user.currentCard || user.card;
             const check = checkCardStatus(card, currentPattern, drawnNumbers);
-            // FIXED: must have state === 'online', not just any record in status
             const isOnline = globalStatusData[user.uid] && globalStatusData[user.uid].state === 'online';
-            // Try multiple possible name fields
             const displayName = user.name || user.username || user.displayName || user.email || user.uid.substring(0, 10);
             const safeName = cleanName(displayName);
-            let isBingo = check.isBingo; let isPuro = check.isPuro; if(!isOnline) { isBingo = false; isPuro = false; } else { if(user.hasWonCurrent && drawnNumbers.length > 0) isBingo = true; if(isBingo) isPuro = false; }
 
-            // Wrapper for this user (main card + extra cards grouped)
-            const userWrap = document.createElement('div');
-            userWrap.style.cssText = 'display:flex; flex-direction:column; gap:4px;';
+            let mainIsBingo = check.isBingo;
+            let mainIsPuro = check.isPuro;
+            if(!isOnline) { mainIsBingo = false; mainIsPuro = false; }
+            else { if(user.hasWonCurrent && drawnNumbers.length > 0) mainIsBingo = true; if(mainIsBingo) mainIsPuro = false; }
 
-            // Main card
-            const cardDiv = document.createElement('div'); cardDiv.className = `user-card-monitor ${!isOnline ? 'offline' : ''} ${isBingo ? 'bingo' : ''} ${isPuro ? 'puro' : ''}`;
-            let gridHtml = '<div class="mini-bingo-grid">'; card.forEach((n, idx) => { const marked = drawnNumbers.includes(n) || n === "FREE"; const isWinningCell = check.winningCells.includes(idx); const visualHit = isOnline && isWinningCell; gridHtml += `<div class="mini-cell ${marked ? 'marked' : ''} ${visualHit ? 'hit' : ''}">${n === "FREE" ? '★' : n}</div>`; }); gridHtml += '</div>';
-            cardDiv.innerHTML = `<div class="monitor-badge">${isBingo ? "BINGO!" : "PURO!"}</div><div style="font-size:12px; font-weight:800; display:flex; justify-content:space-between; color:white; align-items:center;"><span style="display:flex; align-items:center; gap:5px;"><span class="${isOnline ? 'online-dot' : 'offline-dot'}"></span>${safeName}</span><span style="font-size:9px; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">${user.points || 0} pts</span></div>${gridHtml}`;
-            userWrap.appendChild(cardDiv);
-
-            // Extra cards
-            if (user.extraCards && isOnline) {
+            // Collect extra cards
+            const extraEntries = [];
+            if(user.extraCards && isOnline) {
                 const extraKeys = Object.keys(user.extraCards).sort((a,b) => parseInt(a)-parseInt(b));
-                extraKeys.forEach((k, ei) => {
+                extraKeys.forEach((k) => {
                     const ec = user.extraCards[k];
-                    if (!ec || !Array.isArray(ec)) return;
+                    if(!ec || !Array.isArray(ec)) return;
                     const ecCheck = checkCardStatus(ec, currentPattern, drawnNumbers);
                     let ecIsBingo = ecCheck.isBingo && drawnNumbers.length > 0;
                     let ecIsPuro = ecCheck.isPuro;
                     if(ecIsBingo) ecIsPuro = false;
-                    const ecDiv = document.createElement('div');
-                    ecDiv.className = `user-card-monitor ${ecIsBingo ? 'bingo' : ''} ${ecIsPuro ? 'puro' : ''}`;
-                    ecDiv.style.cssText = 'border-top: 2px solid rgba(251,191,36,0.3); margin-top: 2px; opacity: 0.9;';
-                    let ecGridHtml = '<div class="mini-bingo-grid">';
-                    ec.forEach((n, idx) => {
-                        const marked = drawnNumbers.includes(n) || n === "FREE";
-                        const isWinningCell = ecCheck.winningCells.includes(idx);
-                        const visualHit = isWinningCell;
-                        ecGridHtml += `<div class="mini-cell ${marked ? 'marked' : ''} ${visualHit ? 'hit' : ''}">${n === "FREE" ? '★' : n}</div>`;
-                    });
-                    ecGridHtml += '</div>';
-                    ecDiv.innerHTML = `<div class="monitor-badge">${ecIsBingo ? "BINGO!" : "PURO!"}</div><div style="font-size:10px; font-weight:800; display:flex; justify-content:space-between; color:rgba(255,255,255,0.7); align-items:center; margin-bottom:4px;"><span style="display:flex; align-items:center; gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block;"></span>Card ${parseInt(k)+2}</span></div>${ecGridHtml}`;
-                    userWrap.appendChild(ecDiv);
+                    extraEntries.push({ card: ec, check: ecCheck, isBingo: ecIsBingo, isPuro: ecIsPuro, label: 'Card ' + (parseInt(k)+2) });
                 });
             }
 
-            if(isBingo && isOnline) container.prepend(userWrap); else if(isPuro && isOnline) container.insertBefore(userWrap, container.children[1] || null); else container.appendChild(userWrap);
+            const hasAnyBingo = mainIsBingo || extraEntries.some(e => e.isBingo);
+            const hasAnyPuro = mainIsPuro || extraEntries.some(e => e.isPuro);
+            const hasExtraCards = extraEntries.length > 0;
+
+            // Build player group wrapper
+            const group = document.createElement('div');
+            group.className = 'player-group' + (hasAnyBingo ? ' has-bingo' : hasAnyPuro ? ' has-puro' : '') + (!isOnline ? ' offline' : '');
+
+            // Player header
+            const header = document.createElement('div');
+            header.className = 'player-group-header';
+            header.innerHTML =
+                '<div class="player-group-name">' +
+                    '<span class="' + (isOnline ? 'online-dot' : 'offline-dot') + '"></span>' +
+                    safeName +
+                '</div>' +
+                '<div class="player-group-meta">' +
+                    (hasAnyBingo ? '<span style="font-size:9px;background:var(--success);color:white;padding:2px 6px;border-radius:5px;font-weight:900;">BINGO!</span>' :
+                     hasAnyPuro ? '<span style="font-size:9px;background:var(--puro);color:white;padding:2px 6px;border-radius:5px;font-weight:900;">PURO!</span>' : '') +
+                    '<span style="font-size:9px;background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:5px;color:rgba(255,255,255,0.5);">' + (user.points||0) + ' pts</span>' +
+                    (hasExtraCards ? '<span style="font-size:8px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;padding:2px 5px;border-radius:5px;font-weight:800;">' + (extraEntries.length+1) + ' cards</span>' : '') +
+                '</div>';
+            group.appendChild(header);
+
+            // Card strip (horizontal scroll for multiple cards)
+            const strip = document.createElement('div');
+            strip.className = 'player-card-strip';
+
+            // Helper: build a strip card element
+            function buildStripCard(cardArr, cardCheck, isBingo, isPuro, cardLabel) {
+                const sc = document.createElement('div');
+                sc.className = 'strip-card' + (isBingo ? ' bingo' : isPuro ? ' puro' : '');
+                // If single card (no extras), make it wider
+                if(!hasExtraCards) sc.style.width = '100%';
+                let gridHtml = '<div class="mini-bingo-grid">';
+                cardArr.forEach((n, idx) => {
+                    const marked = drawnNumbers.includes(n) || n === "FREE";
+                    const isWinCell = cardCheck.winningCells.includes(idx);
+                    gridHtml += '<div class="mini-cell ' + (marked ? 'marked' : '') + ' ' + (isOnline && isWinCell ? 'hit' : '') + '">' + (n === "FREE" ? '★' : n) + '</div>';
+                });
+                gridHtml += '</div>';
+                sc.innerHTML =
+                    '<div class="strip-card-label">' +
+                        cardLabel +
+                        '<span class="card-status-tag">' + (isBingo ? 'BINGO' : 'PURO') + '</span>' +
+                    '</div>' + gridHtml;
+                return sc;
+            }
+
+            // Main card
+            strip.appendChild(buildStripCard(card, check, mainIsBingo, mainIsPuro, 'Card 1'));
+
+            // Extra cards
+            extraEntries.forEach(e => {
+                strip.appendChild(buildStripCard(e.card, e.check, e.isBingo, e.isPuro, e.label));
+            });
+
+            group.appendChild(strip);
+
+            // Sort into container
+            if(hasAnyBingo && isOnline) container.prepend(group);
+            else if(hasAnyPuro && isOnline) container.insertBefore(group, container.children[1] || null);
+            else container.appendChild(group);
         });
     }
 
