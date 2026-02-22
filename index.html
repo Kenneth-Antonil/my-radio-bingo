@@ -2557,6 +2557,30 @@
         .pattern-box { background: rgba(0,0,0,0.4); height: 40px; padding: 0 15px; border-radius: var(--radius-md); display: flex; align-items: center; gap: var(--spacing-xs); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px); }
         .pattern-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
         .pattern-text { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; }
+        /* === DEDICATED PATTERN BAR === */
+        .pattern-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.8));
+            border: 1px solid rgba(251,191,36,0.25);
+            border-radius: var(--radius-lg);
+            padding: 10px 14px;
+            margin-bottom: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .pattern-bar-info { flex:1; min-width:0; }
+        .pattern-bar-label { font-size:9px; font-weight:800; color:rgba(251,191,36,0.6); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; }
+        .pattern-bar-name { font-size:13px; font-weight:900; color:var(--gold); text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .pattern-mini-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:2px; width:62px; flex-shrink:0; }
+        .pattern-mini-cell { aspect-ratio:1; border-radius:3px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.04); transition:0.2s; }
+        .pattern-mini-cell.active { background:linear-gradient(135deg,var(--gold),#f59e0b); border-color:rgba(251,191,36,0.6); box-shadow:0 0 4px rgba(251,191,36,0.5); }
+        .pattern-mini-cell.free { background:rgba(99,102,241,0.4); border-color:rgba(99,102,241,0.5); }
+        /* Clean change card wrapper — button only */
+        .change-card-wrapper-clean { padding: 0 0 12px 0; }
+        .btn-change-full { width:100%; height:38px; background:rgba(59,130,246,0.15); color:var(--accent-glow); border:1px solid rgba(59,130,246,0.4); border-radius: var(--radius-md); font-size:11px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:0.2s; text-shadow:0 1px 2px black; letter-spacing:0.3px; }
+        .btn-change-full:hover { background:var(--accent); color:white; border-color:var(--accent); }
+        .btn-change-full:disabled { opacity:0.4; cursor:not-allowed; border-color:#475569; color:#94a3b8; background:none; }
         .notif-card-new { background: rgba(255,255,255,0.1); padding: var(--spacing-md); border-radius: var(--radius-lg); margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.15); position: relative; transition: 0.2s; backdrop-filter: blur(5px); }
         .notif-card-new:hover { background: rgba(255,255,255,0.15); border-color: var(--accent); }
         .notif-header-new { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs); }
@@ -4652,20 +4676,20 @@
         .bento-grid.cards-4 .card,
         .bento-grid.cards-5 .card { padding: 10px !important; }
 
-        .bento-grid.cards-2 .change-card-wrapper,
-        .bento-grid.cards-3 .change-card-wrapper,
-        .bento-grid.cards-4 .change-card-wrapper,
-        .bento-grid.cards-5 .change-card-wrapper { padding-bottom: 8px !important; }
+        .bento-grid.cards-2 .change-card-wrapper-clean,
+        .bento-grid.cards-3 .change-card-wrapper-clean,
+        .bento-grid.cards-4 .change-card-wrapper-clean,
+        .bento-grid.cards-5 .change-card-wrapper-clean { padding-bottom: 6px !important; }
 
         .bento-grid.cards-2 .pattern-text,
         .bento-grid.cards-3 .pattern-text,
         .bento-grid.cards-4 .pattern-text,
         .bento-grid.cards-5 .pattern-text { font-size: 9px !important; }
 
-        .bento-grid.cards-2 .btn-change,
-        .bento-grid.cards-3 .btn-change,
-        .bento-grid.cards-4 .btn-change,
-        .bento-grid.cards-5 .btn-change { font-size: 9px !important; padding: 3px 7px !important; }
+        .bento-grid.cards-2 .btn-change-full,
+        .bento-grid.cards-3 .btn-change-full,
+        .bento-grid.cards-4 .btn-change-full,
+        .bento-grid.cards-5 .btn-change-full { font-size: 9px !important; height: 30px !important; }
 
         /* All cards equal size in multi-card layout */
 
@@ -6589,6 +6613,17 @@
             <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">NOW DRAWN</span><span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.5);">--</span></div>
         </div>
         
+        <!-- PATTERN BAR -->
+        <div class="pattern-bar" id="patternBar">
+            <div class="pattern-bar-info">
+                <div class="pattern-bar-label">🎯 Current Pattern</div>
+                <div class="pattern-bar-name" id="patternBarName">Normal Bingo</div>
+            </div>
+            <div class="pattern-mini-grid" id="patternMiniGrid">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
         <!-- BENTO CARD GRID -->
         <div class="bento-cards-wrapper">
             <div class="bento-grid" id="bentoGrid">
@@ -6611,8 +6646,8 @@
                             <div class="late-text">Game Finished</div>
                             <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
                         </div>
-                        <div class="change-card-wrapper" style="display:flex; justify-content:center; align-items:center; padding-bottom:15px;">
-                            <button class="btn-change" id="newCardBtn" onclick="generateNewCard()" style="width:100%;"><i data-lucide="refresh-cw" style="width:14px"></i> CHANGE CARD</button>
+                        <div class="change-card-wrapper-clean">
+                            <button class="btn-change-full" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> CHANGE CARD</button>
                         </div>
                         <div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>
                         <div class="grid" id="bingoGrid"></div>
@@ -10005,7 +10040,7 @@ function runMathBlitz(problems) {
                     }
                 } 
             });
-            initBingo(); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate();
+            initBingo(); _renderPatternBar('Normal Bingo'); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate();
             initHeadlessDrawEngine(u.uid); // start headless draw engine
             initSocialSystem(u.uid);
             loadPYMK();
@@ -10959,6 +10994,40 @@ function runMathBlitz(problems) {
     function updateNextDrawDisplay() { db.ref('gameState').on('value', s => { const gameData = s.val() || {}; const now = Date.now(); if(gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0) { const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const ndIcon = document.querySelector('.nd-icon'); banner.style.display = 'flex'; banner.style.background = 'rgba(71, 85, 105, 0.9)'; banner.style.borderColor = '#94a3b8'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; labelEl.innerText = "GAME STATUS"; labelEl.style.color = "#e2e8f0"; timeEl.innerText = "GAME ONGOING"; timeEl.style.fontSize = "20px"; timeEl.style.color = "#ffffff"; timeEl.style.fontWeight = "900"; if(ndIcon) { ndIcon.style.background = 'rgba(255,255,255,0.1)'; ndIcon.style.color = 'white'; ndIcon.style.borderColor = 'rgba(255,255,255,0.2)'; } return; } let displayTime = null; if(gameData.schedules) { const rawScheds = Object.values(gameData.schedules); const times = rawScheds.map(val => (typeof val === 'object' && val.time) ? val.time : val); const futureTimes = times.filter(t => t > now); const sorted = futureTimes.sort((a,b) => a - b); if(sorted.length > 0) { displayTime = sorted[0]; } } if(!displayTime && gameData.nextDraw) { if(gameData.nextDraw > now) { displayTime = gameData.nextDraw; } } const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const lateSched = document.getElementById('lateNextSched'); const ndIcon = document.querySelector('.nd-icon'); if(ndIcon) { ndIcon.style.background = ''; ndIcon.style.color = ''; ndIcon.style.borderColor = ''; } if(displayTime && displayTime > now) { banner.style.display = 'flex'; banner.style.background = 'rgba(15, 23, 42, 0.8)'; banner.style.borderColor = 'rgba(251, 191, 36, 0.4)'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; const formatted = fixDate(displayTime); timeEl.innerText = formatted; timeEl.style.fontSize = "18px"; timeEl.style.color = "white"; labelEl.innerText = "SUSUNOD NA BOLA"; labelEl.style.color = "var(--gold)"; lateSched.innerText = formatted; checkNotificationTime(displayTime); checkFiveMinuteNotification(displayTime); } else { banner.style.display = 'flex'; banner.style.background = 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))'; banner.style.borderColor = '#3b82f6'; banner.style.boxShadow = '0 10px 30px rgba(59, 130, 246, 0.2)'; labelEl.innerText = "WAITING FOR DRAW"; labelEl.style.color = "#93c5fd"; timeEl.innerText = "MAGHINTAY SA SUSUNOD NA DRAW."; timeEl.style.fontSize = "11px"; timeEl.style.fontWeight = "700"; timeEl.style.lineHeight = "1.4"; lateSched.innerText = "--:--"; } }); }
     function checkNotificationTime(timeInput) { if(lastNotifiedDraw == timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 10) { if(Notification.permission === "granted") new Notification("Radio Bingo", { body: "Only 10 minutes left until the draw!" }); lastNotifiedDraw = timeInput; } } }
 
+    // ===== PATTERN BAR RENDERER =====
+    function _renderPatternBar(p) {
+        const nameEl = document.getElementById('patternBarName');
+        const gridEl = document.getElementById('patternMiniGrid');
+        if(nameEl) nameEl.innerText = p || 'Normal Bingo';
+        if(!gridEl) return;
+        const patternCells = {
+            'Normal Bingo': [], // any line — show all possible
+            'Blackout': [...Array(25).keys()],
+            'Letter X': [0,4,6,8,12,16,18,20,24],
+            'Four Corners': [0,4,20,24],
+            'Letter T': [0,1,2,3,4,7,12,17,22],
+            'Letter L': [0,5,10,15,20,21,22,23,24],
+            'Letter C': [0,1,2,3,4,5,10,15,20,21,22,23,24],
+            'Plus Sign': [2,7,10,11,12,13,14,17,22],
+            'Diamond': [2,6,8,11,12,13,16,18,22],
+            'Letter Z': [0,1,2,3,4,8,12,16,20,21,22,23,24],
+            'Double Bingo': [0,1,2,3,4,5,6,7,8,9],
+            'Outside Border': [0,1,2,3,4,5,9,10,14,15,19,20,21,22,23,24]
+        };
+        // For Normal Bingo show first row as example
+        const normalBingoExample = [0,1,2,3,4];
+        const highlighted = p === 'Normal Bingo' ? normalBingoExample : (patternCells[p] || []);
+        gridEl.innerHTML = '';
+        for(let i = 0; i < 25; i++) {
+            const cell = document.createElement('div');
+            const isFree = i === 12;
+            const isActive = highlighted.includes(i) || isFree;
+            cell.className = 'pattern-mini-cell' + (isFree ? ' free' : (highlighted.includes(i) ? ' active' : ''));
+            gridEl.appendChild(cell);
+        }
+    }
+    // ===== END PATTERN BAR RENDERER =====
+
     function initBingo() {
         // Listen to gameState/winners (multi-winner support) for banner display
         db.ref('gameState/winners').on('value', wSnap => {
@@ -11034,6 +11103,7 @@ function runMathBlitz(problems) {
         db.ref('gameState/currentPattern').on('value', s => {
             currentPattern = s.val() || "Normal Bingo";
             document.getElementById('patternName').innerText = currentPattern;
+            _renderPatternBar(currentPattern);
             checkWin(); checkWinExtra();
         });
         db.ref('drawnNumbers').on('value', s => {
@@ -11312,8 +11382,8 @@ function runMathBlitz(problems) {
                     '<div class="late-text">Game Finished</div>' +
                     '<div class="late-subtext">Better luck next time!</div>' +
                 '</div>' +
-                '<div class="change-card-wrapper" style="display:flex; justify-content:center; align-items:center; padding-bottom:15px;">' +
-                    '<button class="btn-change" style="width:100%;" onclick="regenExtraCard(' + cardIdx + ')"><i data-lucide="refresh-cw" style="width:14px"></i> CHANGE CARD</button>' +
+                '<div class="change-card-wrapper-clean">' +
+                    '<button class="btn-change-full" onclick="regenExtraCard(' + cardIdx + ')"><i data-lucide="refresh-cw" style="width:14px"></i> CHANGE CARD</button>' +
                 '</div>' +
                 '<div class="bingo-header"><div class="letter">B</div><div class="letter">I</div><div class="letter">N</div><div class="letter">G</div><div class="letter">O</div></div>' +
                 '<div class="grid" id="bingoGrid-extra-' + cardIdx + '"></div>' +
