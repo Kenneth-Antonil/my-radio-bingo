@@ -361,6 +361,13 @@ io.on('connection', (socket) => {
 
         io.emit('bingo_winner', winner);
         endGame(winner);
+
+      sendPushNotificationToUser(
+            playerUid, 
+            "🎉 BINGO WINNER!", 
+            `Congrats ${name}! Nanalo ka ng ${prize} sa Radio Bingo Live online radio!`, 
+            "/" 
+        );
     });
 
     // ── Mini-game spin (server-side RNG) ──
