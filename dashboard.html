@@ -8,7 +8,6 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.5.1/jsrsasign-all-min.js"></script>
     <style>
         :root { 
@@ -834,65 +833,16 @@
 </head>
 <body>
 
-<!-- Self-contained auth block: Firebase init + signInWithGoogle + onAuthStateChanged -->
-<script>
-    var _fbConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
-    firebase.initializeApp(_fbConfig);
-    window.db = firebase.database();
-    window.auth_admin = firebase.auth();
-
-    function signInWithGoogle() {
-        var btn = document.getElementById('googleSignInBtn');
-        var msg = document.getElementById('authStatusMsg');
-        if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
-        var provider = new firebase.auth.GoogleAuthProvider();
-        window.auth_admin.signInWithPopup(provider).catch(function(err) {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#fff" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/></svg> Sign in with Google';
-            }
-            if (msg) msg.textContent = 'Sign-in failed: ' + err.message;
-        });
-    }
-
-    window.auth_admin.onAuthStateChanged(function(user) {
-        var lockScreen = document.getElementById('lockScreen');
-        var msg = document.getElementById('authStatusMsg');
-        var btn = document.getElementById('googleSignInBtn');
-        if (!user) {
-            if (lockScreen) lockScreen.style.display = 'flex';
-            return;
-        }
-        window.db.ref('admins/' + user.uid).once('value').then(function(snap) {
-            if (snap.exists() && snap.val() === true) {
-                lockScreen.style.opacity = '0';
-                setTimeout(function() { lockScreen.style.display = 'none'; }, 500);
-                console.log('%c✅ Admin verified: ' + user.displayName, 'color:#10b981;font-weight:bold;');
-                if (typeof initDashboard === 'function') initDashboard();
-            } else {
-                window.auth_admin.signOut();
-                if (msg) msg.textContent = '⛔ Access denied. ' + user.email + ' is not authorized.';
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#fff" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/></svg> Sign in with Google';
-                }
-            }
-        });
-    });
-</script>
-
 <div id="lockScreen" style="position:fixed; inset:0; background:#0f0f14; z-index:999999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white;">
     <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);">
         <i data-lucide="lock" style="width: 40px; height: 40px; color: var(--accent);"></i>
     </div>
     <div style="font-size:24px; font-weight:900; margin-bottom:10px; letter-spacing: -1px;">ADMIN <span style="color:var(--accent);">LOCKED</span></div>
-    <p style="opacity: 0.6; font-size: 12px; margin-bottom: 8px;">Sign in with your authorized Google account.</p>
-    <p id="authStatusMsg" style="opacity:0.5; font-size:11px; margin-bottom:24px; color:#ef4444;"></p>
-    <button onclick="signInWithGoogle()" id="googleSignInBtn" style="background:#4285f4; border:none; color:white; font-size:14px; font-weight:700; padding:14px 28px; border-radius:12px; cursor:pointer; display:flex; align-items:center; gap:10px; margin-bottom:16px;">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#fff" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/></svg>
-        Sign in with Google
-    </button>
-    <p style="font-size:10px; opacity:0.4; max-width:260px; text-align:center;">Only pre-approved admin accounts can access this panel. Unauthorized access attempts are logged.</p>
+    <p style="opacity: 0.6; font-size: 12px; margin-bottom: 30px;">Enter security PIN to access control panel.</p>
+    <div style="display:flex; gap:10px;">
+        <input type="password" id="adminPassInput" placeholder="Enter PIN" style="width:180px; padding:12px; text-align:center; border-radius:12px; border:1px solid #334155; background:#1e293b; color:white; font-weight:900; letter-spacing: 2px; outline: none;">
+        <button onclick="checkAdminLock()" class="btn btn-primary" style="width:auto; padding:12px 20px; margin:0;"><i data-lucide="arrow-right"></i></button>
+    </div>
 </div>
 
 <div class="sidebar">
@@ -1532,21 +1482,29 @@
 </div>
 
 <script>
-    // --- SECURE AUTH LOCK SYSTEM (Firebase Auth + Admin UID check) ---
-    // STEP 1: Add Firebase Auth SDK in <head> (already included if using firebase-auth.js)
-    // STEP 2: In Firebase Realtime DB, add your admin UIDs:
-    //   admins: { "YOUR_GOOGLE_UID_HERE": true }
-    // STEP 3: Set Firebase DB rules (see firebase-security-rules.json)
+    // --- LOCK SCREEN LOGIC ---
+    const ADMIN_PIN = "12345"; // <--- CHANGE THIS TO YOUR DESIRED PIN
+    
+    function checkAdminLock() {
+        const val = document.getElementById('adminPassInput').value;
+        if(val === ADMIN_PIN) {
+            document.getElementById('lockScreen').style.opacity = '0';
+            setTimeout(() => { document.getElementById('lockScreen').style.display = 'none'; }, 500);
+            sessionStorage.setItem('admin_unlocked', 'true');
+        } else {
+            alert("WRONG PIN! ACCESS DENIED.");
+            document.getElementById('adminPassInput').value = "";
+        }
+    }
+    // Check if already unlocked in this session
+    if(sessionStorage.getItem('admin_unlocked') === 'true') {
+        document.getElementById('lockScreen').style.display = 'none';
+    }
 
-    // Firebase already initialized in the self-contained auth block above
-    try { lucide.createIcons(); } catch(e) {}
-    const db = window.db;
-    const auth_admin = window.auth_admin;
-    // signInWithGoogle + onAuthStateChanged + admin check handled in auth block above
-    // initDashboard() is called automatically after admin UID is verified
-
-    // Wrap all dashboard init code into this function (called only after auth verified)
-    function initDashboard() {
+    lucide.createIcons();
+    const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
     
     // --- SERVICE ACCOUNT LOGIC (REQUIRED FOR HTTP V1) ---
     let serviceAccount = null;
@@ -1873,44 +1831,46 @@
         }); 
     }
     
-    // COST OPTIMIZATION: Changed from real-time .on() to .once() + refresh
-    // Previously this downloaded ALL users on EVERY single user change (very expensive)
-    function loadAllUsers(silent) {
-        if (!silent) { const list = document.getElementById('pointsUserList'); if (list) list.innerHTML = '<div style="text-align:center;padding:20px;opacity:0.5;font-size:12px;">Loading users...</div>'; }
-        db.ref('users').once('value', s => {
-            allUsersData = s.val() || {};
-            document.getElementById('countUsers').innerText = s.numChildren();
-            const list = document.getElementById('pointsUserList');
-            const currentSelected = document.getElementById('selectedUserForPoints').value;
-            list.innerHTML = "";
-            s.forEach(child => {
-                const u = child.val();
-                const uid = child.key;
-                const safeName = cleanName(u.name);
-                const currentPts = u.points || 0;
-                // Live activity detection vs cache
-                if (userPointsCache.hasOwnProperty(uid)) {
-                    const oldPts = userPointsCache[uid];
-                    if (oldPts !== currentPts) {
-                        const diff = currentPts - oldPts;
-                        logLiveActivity(safeName, oldPts, currentPts, diff);
-                    }
+    // THE GLOBAL SPY MONITOR
+    db.ref('users').on('value', s => { 
+        allUsersData = s.val() || {}; 
+        document.getElementById('countUsers').innerText = s.numChildren();
+        
+        // 1. Update UI List
+        const list = document.getElementById('pointsUserList'); 
+        const currentSelected = document.getElementById('selectedUserForPoints').value; 
+        list.innerHTML = ""; 
+        
+        s.forEach(child => { 
+            const u = child.val(); 
+            const uid = child.key; 
+            const safeName = cleanName(u.name); 
+            const currentPts = u.points || 0;
+            
+            // 2. LIVE ACTIVITY DETECTION
+            // If we have seen this user before, compare points
+            if (userPointsCache.hasOwnProperty(uid)) {
+                const oldPts = userPointsCache[uid];
+                if (oldPts !== currentPts) {
+                    const diff = currentPts - oldPts;
+                    logLiveActivity(safeName, oldPts, currentPts, diff);
                 }
-                userPointsCache[uid] = currentPts;
-                const isSel = currentSelected === uid ? 'selected' : '';
-                const div = document.createElement('div');
-                div.className = `user-option ${isSel}`;
-                div.onclick = () => selectUserForMgmt(uid, div, safeName);
-                div.innerHTML = `<span>${safeName}</span> <span>${formatCurrency(currentPts)}</span>`;
-                list.appendChild(div);
-            });
-            renderActiveUserList();
-            updateMonitorCards();
-        });
-    }
-    loadAllUsers(); // Initial load
-    // Auto-refresh users every 60 seconds (instead of real-time listener)
-    setInterval(() => loadAllUsers(true), 60000);
+            }
+            // Update cache
+            userPointsCache[uid] = currentPts;
+
+            const isSel = currentSelected === uid ? 'selected' : ''; 
+            const div = document.createElement('div'); 
+            div.className = `user-option ${isSel}`; 
+            div.onclick = () => selectUserForMgmt(uid, div, safeName); 
+            // UPDATED: Show PHP in Admin List
+            div.innerHTML = `<span>${safeName}</span> <span>${formatCurrency(currentPts)}</span>`; 
+            list.appendChild(div); 
+        }); 
+        
+        renderActiveUserList(); 
+        updateMonitorCards(); 
+    });
     
     function logLiveActivity(name, oldVal, newVal, diff) {
         const feed = document.getElementById('liveActivityFeed');
@@ -4226,8 +4186,6 @@ db.ref('partnerApplications').orderByChild('status').equalTo('pending').on('valu
         badge.style.display = count > 0 ? 'inline-block' : 'none';
     }
 });
-
-} // ← END of initDashboard() — all code above runs only after admin UID is verified
 
 </script>
 </body>
