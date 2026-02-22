@@ -2213,7 +2213,7 @@
     }
     function resetGame() {
         if(confirm("WARNING: Reset entire board?")){
-            db.ref('drawnNumbers').remove(); db.ref('gameState/latestWinner').remove(); db.ref('gameState/gameStartTime').remove(); db.ref('gameState/lastCalled').remove();
+            db.ref('drawnNumbers').remove(); db.ref('gameState/latestWinner').remove(); db.ref('gameState/winners').remove(); db.ref('gameState/gameStartTime').remove(); db.ref('gameState/lastCalled').remove();
             db.ref('gameState').update({ status: 'waiting' });
             db.ref('users').once('value', s => { let updates = {}; s.forEach(u => { updates[u.key + '/hasWonCurrent'] = false; }); db.ref('users').update(updates); });
             stopAutoDrawLogic(); setTimeout(updateMonitorCards, 500); document.getElementById('lastBall').innerText = "--"; lastSpokenNumber = null;
@@ -2227,13 +2227,14 @@
     function autoResetGame(reason) {
         // Prevent duplicate timers
         if(autoResetTimer) return;
-        const DELAY = 10000; // 10 seconds
-        if(typeof addActivityItem === 'function') addActivityItem('🔄 ' + reason + ' Auto-reset in 10 seconds...');
+        const DELAY = 5000; // 5 seconds
+        if(typeof addActivityItem === 'function') addActivityItem('🔄 ' + reason + ' Auto-reset in 5 seconds...');
         autoResetTimer = setTimeout(function() {
             autoResetTimer = null;
             stopAutoDrawLogic();
             db.ref('drawnNumbers').remove();
             db.ref('gameState/latestWinner').remove();
+            db.ref('gameState/winners').remove();
             db.ref('gameState/gameStartTime').remove();
             db.ref('gameState/lastCalled').remove();
             db.ref('gameState').update({ status: 'waiting' });
