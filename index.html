@@ -86,154 +86,210 @@
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
         }
 
-        /* === FULLSCREEN PHOTO VIEWER === */
+        /* === FULLSCREEN MEDIA VIEWER (Custom Player) === */
         .fullscreen-photo-viewer {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.98);
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #000;
             z-index: 99999;
             flex-direction: column;
         }
         .fullscreen-photo-viewer.active { display: flex; }
-        
-        .fullscreen-header {
+
+        /* Top bar: close + author info + 3-dot */
+        .fs-topbar {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: var(--spacing-md);
-            padding-top: max(var(--spacing-md), env(safe-area-inset-top));
-            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+            top: 0; left: 0; right: 0;
+            padding: 12px 14px;
+            padding-top: max(12px, env(safe-area-inset-top));
+            background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, transparent 100%);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            z-index: 10;
+            gap: 10px;
+            z-index: 20;
         }
-        
-        .fullscreen-close-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+        .fs-close-btn {
+            background: rgba(255,255,255,0.12);
+            border: none;
             color: white;
-            font-size: 24px;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
             cursor: pointer;
-            padding: 8px;
-            border-radius: var(--radius-sm);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+            transition: background 0.2s;
         }
-        
-        .fullscreen-menu-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: white;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: var(--radius-sm);
+        .fs-close-btn:hover { background: rgba(255,255,255,0.22); }
+        .fs-author-info {
+            flex: 1;
             display: flex;
             align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
+            gap: 9px;
+            min-width: 0;
+        }
+        .fs-author-avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.25);
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        .fs-author-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fs-author-time {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 1px;
+        }
+        .fs-dots-btn {
+            background: rgba(255,255,255,0.12);
+            border: none;
+            color: white;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
             position: relative;
-            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+            transition: background 0.2s;
         }
-        
-        .photo-menu-dropdown {
+        .fs-dots-btn:hover { background: rgba(255,255,255,0.22); }
+
+        /* 3-dot dropdown */
+        .fs-dots-menu {
             display: none;
             position: absolute;
-            top: 100%;
+            top: calc(100% + 6px);
             right: 0;
-            margin-top: 8px;
-            background: rgba(30, 41, 59, 0.98);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius-md);
-            min-width: 200px;
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            min-width: 210px;
             overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(20px);
-            z-index: 100;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+            z-index: 30;
+            animation: popIn 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .photo-menu-dropdown.show { display: block; }
-        
-        .photo-menu-item {
-            padding: var(--spacing-md);
+        .fs-dots-menu.show { display: block; }
+        .fs-menu-item {
+            padding: 14px 18px;
             color: white;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
             cursor: pointer;
-            transition: background 0.2s;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
+            transition: background 0.15s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
         }
-        .photo-menu-item:hover { background: rgba(255, 255, 255, 0.1); }
-        .photo-menu-item i { width: 20px; height: 20px; }
-        
-        .fullscreen-photo-container {
+        .fs-menu-item:hover { background: rgba(255,255,255,0.07); }
+        .fs-menu-item.danger { color: #f87171; }
+        .fs-menu-item i { width: 18px; height: 18px; flex-shrink: 0; }
+        .fs-menu-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 0; }
+
+        /* Media container */
+        .fs-media-container {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 80px var(--spacing-xl) 120px;
             overflow: hidden;
+            padding: 80px 0 140px;
         }
-        
-        .fullscreen-photo-container img {
+        .fs-media-container img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
             user-select: none;
-            border-radius: var(--radius-md);
+            cursor: zoom-in;
         }
-        
-        .fullscreen-photo-container video {
+        .fs-media-container video {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
-            border-radius: var(--radius-md);
         }
-        
-        .fullscreen-footer {
+
+        /* Bottom bar */
+        .fs-bottom {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: var(--spacing-lg);
-            padding-bottom: max(var(--spacing-lg), env(safe-area-inset-bottom));
-            background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            z-index: 10;
+            bottom: 0; left: 0; right: 0;
+            padding-bottom: max(14px, env(safe-area-inset-bottom));
+            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, transparent 100%);
+            z-index: 20;
         }
-        
-        .fullscreen-action-btn {
-            display: flex;
-            flex-direction: column;
+        /* Reaction summary row */
+        .fs-reaction-summary {
+            display: none;
             align-items: center;
-            gap: 6px;
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 8px;
-            transition: all 0.2s;
-        }
-        .fullscreen-action-btn:hover { transform: scale(1.1); }
-        .fullscreen-action-btn i { width: 32px; height: 32px; }
-        .fullscreen-action-btn.liked i { color: #ef4444; fill: #ef4444; }
-        .fullscreen-action-btn span {
+            justify-content: space-between;
+            padding: 6px 16px 4px;
             font-size: 13px;
+            color: rgba(255,255,255,0.55);
+            cursor: pointer;
+        }
+        .fs-reaction-summary.has-data { display: flex; }
+        /* Divider */
+        .fs-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 0 12px; }
+        /* Action buttons row */
+        .fs-actions {
+            display: flex;
+            align-items: center;
+            padding: 4px 8px 8px;
+            position: relative;
+        }
+        .fs-action-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            padding: 11px 6px;
+            font-size: 14px;
             font-weight: 600;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            border-radius: 8px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .fs-action-btn:hover { background: rgba(255,255,255,0.09); color: white; }
+        .fs-action-btn:active { background: rgba(255,255,255,0.13); }
+        .fs-action-btn.fs-liked { color: #2374e1; }
+        .fs-action-btn.fs-liked:hover { background: rgba(35,116,225,0.1); }
+
+        /* Fullscreen Reaction Popup */
+        .fs-reaction-popup {
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 8px;
+            background: #1e293b;
+            border-radius: 50px;
+            padding: 8px 12px;
+            display: none;
+            gap: 4px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            border: 1px solid rgba(255,255,255,0.12);
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 30;
+            align-items: center;
+        }
+        .fs-reaction-popup .reaction-emoji {
+            font-size: 28px;
+            width: 40px; height: 40px;
         }
 
         /* === BADGE & ONLINE SYSTEM === */
@@ -14196,40 +14252,81 @@ Please explain why you want a verification badge:`;
 
 <!-- Fullscreen Photo Viewer -->
 <div class="fullscreen-photo-viewer" id="fullscreenPhotoViewer">
-    <div class="fullscreen-header">
-        <button class="fullscreen-close-btn" onclick="closeFullscreenPhoto()">
-            <i data-lucide="x"></i>
+
+    <!-- TOP BAR -->
+    <div class="fs-topbar">
+        <button class="fs-close-btn" onclick="closeFullscreenPhoto()" aria-label="Close">
+            <i data-lucide="x" style="width:18px;height:18px;"></i>
         </button>
-        <div style="flex: 1;"></div>
-        <button class="fullscreen-menu-btn" onclick="togglePhotoMenu(event)">
-            <i data-lucide="more-vertical"></i>
-            <div class="photo-menu-dropdown" id="photoMenuDropdown">
-                <div class="photo-menu-item" onclick="downloadCurrentMedia()">
+        <div class="fs-author-info">
+            <img class="fs-author-avatar" id="fsAuthorAvatar" src="" onclick="fsTapAuthor()" alt="">
+            <div>
+                <div class="fs-author-name" id="fsAuthorName">—</div>
+                <div class="fs-author-time" id="fsAuthorTime">—</div>
+            </div>
+        </div>
+        <!-- 3-dot menu -->
+        <button class="fs-dots-btn" onclick="toggleFsMenu(event)" aria-label="More options">
+            <i data-lucide="more-horizontal" style="width:18px;height:18px;"></i>
+            <div class="fs-dots-menu" id="fsDotsMenu">
+                <button class="fs-menu-item" onclick="fsSaveMedia()">
                     <i data-lucide="download"></i>
-                    <span id="downloadMenuText">Download</span>
-                </div>
+                    <span id="fsSaveLabel">Save Photo</span>
+                </button>
+                <button class="fs-menu-item" onclick="fsHidePost()">
+                    <i data-lucide="eye-off"></i>
+                    <span>Hide post</span>
+                </button>
+                <div class="fs-menu-divider"></div>
+                <button class="fs-menu-item danger" onclick="fsReportPost()">
+                    <i data-lucide="flag"></i>
+                    <span>Report</span>
+                </button>
             </div>
         </button>
     </div>
-    
-    <div class="fullscreen-photo-container" id="fullscreenMediaContainer">
-        <img id="fullscreenPhotoImg" src="" alt="Fullscreen Photo" style="display:none;">
+
+    <!-- MEDIA -->
+    <div class="fs-media-container" id="fullscreenMediaContainer">
+        <img id="fullscreenPhotoImg" src="" alt="Photo" style="display:none;">
         <video id="fullscreenVideoPlayer" controls style="display:none;"></video>
     </div>
-    
-    <div class="fullscreen-footer">
-        <button class="fullscreen-action-btn" id="fullscreenLikeBtn" onclick="handleFullscreenLike()">
-            <i data-lucide="heart"></i>
-            <span id="fullscreenLikeCount">Like</span>
-        </button>
-        <button class="fullscreen-action-btn" onclick="handleFullscreenComment()">
-            <i data-lucide="message-circle"></i>
-            <span id="fullscreenCommentCount">Comment</span>
-        </button>
-        <button class="fullscreen-action-btn" onclick="handleFullscreenShare()">
-            <i data-lucide="share-2"></i>
-            <span>Share</span>
-        </button>
+
+    <!-- BOTTOM BAR -->
+    <div class="fs-bottom">
+        <!-- Reaction summary (shown only when there are reactions) -->
+        <div class="fs-reaction-summary" id="fsReactionSummary" onclick="fsOpenReactionViewer()">
+            <div style="display:flex;align-items:center;gap:0;">
+                <div class="reaction-emojis-group" id="fsReactionEmojis"></div>
+                <span class="reaction-count-text" id="fsReactionCountText"></span>
+            </div>
+            <span id="fsCommentCountText" style="font-size:13px;color:rgba(255,255,255,0.45);"></span>
+        </div>
+        <div class="fs-divider" id="fsDivider" style="display:none;"></div>
+        <!-- Actions -->
+        <div class="fs-actions">
+            <!-- Reaction popup -->
+            <div id="fsReactPop" class="fs-reaction-popup" onmouseleave="closeFsReactionPopup()">
+                <span class="reaction-emoji" onclick="submitFsReaction('👍')" title="Like">👍</span>
+                <span class="reaction-emoji" onclick="submitFsReaction('❤️')" title="Love">❤️</span>
+                <span class="reaction-emoji" onclick="submitFsReaction('😂')" title="Haha">😂</span>
+                <span class="reaction-emoji" onclick="submitFsReaction('😮')" title="Wow">😮</span>
+                <span class="reaction-emoji" onclick="submitFsReaction('😢')" title="Sad">😢</span>
+                <span class="reaction-emoji" onclick="submitFsReaction('😡')" title="Angry">😡</span>
+            </div>
+            <button class="fs-action-btn" id="fsLikeBtn" onclick="showFsReactionPopup()">
+                <i data-lucide="thumbs-up" style="width:18px;height:18px;"></i>
+                <span id="fsLikeLabel">Like</span>
+            </button>
+            <button class="fs-action-btn" onclick="handleFullscreenComment()">
+                <i data-lucide="message-circle" style="width:18px;height:18px;"></i>
+                <span id="fsCommentLabel">Comment</span>
+            </button>
+            <button class="fs-action-btn" onclick="handleFullscreenShare()">
+                <i data-lucide="share-2" style="width:18px;height:18px;"></i>
+                <span>Share</span>
+            </button>
+        </div>
     </div>
 </div>
 
@@ -14245,294 +14342,369 @@ Please explain why you want a verification badge:`;
 </div>
 
 <script>
-    // === FULLSCREEN PHOTO/VIDEO VIEWER FUNCTIONS ===
+    // ============================================================
+    // === FULLSCREEN MEDIA VIEWER — Custom Player ===
+    // ============================================================
     let currentPhotoPostKey = null;
-    let currentPhotoData = null;
-    let currentMediaType = 'image'; // 'image' or 'video'
-    let currentMediaUrl = '';
-    
-    function openFullscreenPhoto(mediaUrl, postKey, mediaType = 'image') {
+    let currentPhotoData  = null;
+    let currentMediaType  = 'image';
+    let currentMediaUrl   = '';
+    let _fsReactionPopupTimer = null;
+
+    // ── OPEN ────────────────────────────────────────────────────
+    function openFullscreenPhoto(mediaUrl, postKey, mediaType) {
+        mediaType = mediaType || 'image';
         currentPhotoPostKey = postKey;
-        currentMediaType = mediaType;
-        currentMediaUrl = mediaUrl;
-        
-        const viewer = document.getElementById('fullscreenPhotoViewer');
-        const img = document.getElementById('fullscreenPhotoImg');
+        currentMediaType    = mediaType;
+        currentMediaUrl     = mediaUrl;
+
+        const img   = document.getElementById('fullscreenPhotoImg');
         const video = document.getElementById('fullscreenVideoPlayer');
-        const downloadText = document.getElementById('downloadMenuText');
-        
-        // Show appropriate media element
+
         if (mediaType === 'video') {
             img.style.display = 'none';
             video.style.display = 'block';
             video.src = mediaUrl;
             video.load();
-            downloadText.textContent = 'Download Video';
+            document.getElementById('fsSaveLabel').textContent = 'Save Video';
         } else {
             video.style.display = 'none';
-            img.style.display = 'block';
+            img.style.display   = 'block';
             img.src = mediaUrl;
-            downloadText.textContent = 'Download Photo';
+            document.getElementById('fsSaveLabel').textContent = 'Save Photo';
         }
-        
-        viewer.classList.add('active');
+
+        document.getElementById('fullscreenPhotoViewer').classList.add('active');
         document.body.style.overflow = 'hidden';
-        
-        // Load post data
-        loadFullscreenPostData(postKey);
-        
-        setTimeout(() => lucide.createIcons(), 100);
+
+        // Reset state
+        _fsResetUI();
+
+        // Load author + post data
+        if (postKey) _fsLoadPostData(postKey);
+
+        setTimeout(function() { try { lucide.createIcons(); } catch(e){} }, 80);
     }
-    
+
+    // ── CLOSE ───────────────────────────────────────────────────
     function closeFullscreenPhoto() {
-        const viewer = document.getElementById('fullscreenPhotoViewer');
-        const video = document.getElementById('fullscreenVideoPlayer');
-        
+        var viewer = document.getElementById('fullscreenPhotoViewer');
+        var video  = document.getElementById('fullscreenVideoPlayer');
         viewer.classList.remove('active');
         document.body.style.overflow = '';
-        
-        // Stop video if playing
-        if (video) {
-            video.pause();
-            video.src = '';
-        }
-        
+        if (video) { video.pause(); video.src = ''; }
+        closeFsDotsMenu();
+        closeFsReactionPopup();
         currentPhotoPostKey = null;
-        currentPhotoData = null;
-        currentMediaType = 'image';
-        currentMediaUrl = '';
-        
-        // Close dropdown if open
-        document.getElementById('photoMenuDropdown').classList.remove('show');
+        currentPhotoData    = null;
     }
-    
-    function togglePhotoMenu(event) {
-        event.stopPropagation();
-        const dropdown = document.getElementById('photoMenuDropdown');
-        dropdown.classList.toggle('show');
-        
-        if (dropdown.classList.contains('show')) {
-            setTimeout(() => {
-                document.addEventListener('click', function closeMenu(e) {
-                    if (!e.target.closest('.photo-menu-dropdown') && !e.target.closest('.fullscreen-menu-btn')) {
-                        dropdown.classList.remove('show');
-                        document.removeEventListener('click', closeMenu);
-                    }
-                });
-            }, 100);
-        }
+
+    // ── RESET UI ────────────────────────────────────────────────
+    function _fsResetUI() {
+        document.getElementById('fsAuthorName').textContent = '—';
+        document.getElementById('fsAuthorTime').textContent = '';
+        document.getElementById('fsAuthorAvatar').src = '';
+        document.getElementById('fsLikeLabel').textContent = 'Like';
+        document.getElementById('fsCommentLabel').textContent = 'Comment';
+        document.getElementById('fsLikeBtn').classList.remove('fs-liked');
+        document.getElementById('fsLikeBtn').innerHTML = '<i data-lucide="thumbs-up" style="width:18px;height:18px;"></i><span id="fsLikeLabel">Like</span>';
+        var summary = document.getElementById('fsReactionSummary');
+        summary.classList.remove('has-data');
+        document.getElementById('fsDivider').style.display = 'none';
+        document.getElementById('fsReactionEmojis').innerHTML = '';
+        document.getElementById('fsReactionCountText').textContent = '';
+        document.getElementById('fsCommentCountText').textContent = '';
+        closeFsReactionPopup();
     }
-    
-    function downloadCurrentMedia() {
-        const link = document.createElement('a');
-        link.href = currentMediaUrl;
-        
-        if (currentMediaType === 'video') {
-            link.download = `radio-bingo-video-${Date.now()}.mp4`;
-            showToast('Downloading video...');
-        } else {
-            link.download = `radio-bingo-photo-${Date.now()}.jpg`;
-            showToast('Downloading photo...');
-        }
-        
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        document.getElementById('photoMenuDropdown').classList.remove('show');
-    }
-    
-    // Legacy function name support
-    function downloadCurrentPhoto() {
-        downloadCurrentMedia();
-    }
-    
-    function loadFullscreenPostData(postKey) {
-        if (!postKey) return;
-        
-        // Fetch post data from Firebase
-        db.ref('socialPosts/' + postKey).once('value', snap => {
+
+    // ── LOAD POST DATA ──────────────────────────────────────────
+    function _fsLoadPostData(postKey) {
+        if (!window.db) return;
+
+        // Load post
+        db.ref('socialPosts/' + postKey).once('value', function(snap) {
             if (!snap.exists()) return;
-            
             currentPhotoData = snap.val();
-            const likeCount = currentPhotoData.likes || 0;
-            
-            // Update like count display
-            document.getElementById('fullscreenLikeCount').textContent = likeCount > 0 ? likeCount : 'Like';
-            
-            // Check if current user liked this
-            if (auth.currentUser) {
-                db.ref('postLikes/' + postKey + '/' + auth.currentUser.uid).once('value', likeSnap => {
-                    const likeBtn = document.getElementById('fullscreenLikeBtn');
-                    if (likeSnap.exists()) {
-                        likeBtn.classList.add('liked');
-                    } else {
-                        likeBtn.classList.remove('liked');
-                    }
-                    lucide.createIcons();
-                });
-            }
-            
-            // Load comment count
-            db.ref('postComments/' + postKey).once('value', commentSnap => {
-                const commentCount = commentSnap.numChildren();
-                document.getElementById('fullscreenCommentCount').textContent = commentCount > 0 ? commentCount : 'Comment';
+
+            // Load author
+            db.ref('users/' + currentPhotoData.uid).once('value', function(uSnap) {
+                var u = uSnap.val() || {};
+                document.getElementById('fsAuthorName').textContent = u.name || 'Unknown';
+                document.getElementById('fsAuthorAvatar').src = u.photo || 'https://via.placeholder.com/36';
+                var t = currentPhotoData.timestamp ? _fsRelTime(currentPhotoData.timestamp) : '';
+                document.getElementById('fsAuthorTime').textContent = t;
             });
-        });
-    }
-    
-    function handleFullscreenLike() {
-        if (!auth.currentUser) {
-            closeFullscreenPhoto();
-            return showToast("Please login first");
-        }
-        
-        if (!currentPhotoPostKey) return;
-        
-        const myUid = auth.currentUser.uid;
-        const likeRef = db.ref('postLikes/' + currentPhotoPostKey + '/' + myUid);
-        const likeBtn = document.getElementById('fullscreenLikeBtn');
-        const countSpan = document.getElementById('fullscreenLikeCount');
-        
-        likeRef.once('value', s => {
-            if (s.exists()) {
-                // Unlike
-                likeRef.remove();
-                db.ref('socialPosts/' + currentPhotoPostKey + '/likes').transaction(l => Math.max(0, (l || 1) - 1));
-                likeBtn.classList.remove('liked');
-                showToast('Like removed');
-            } else {
-                // Like
-                likeRef.set('❤️');
-                db.ref('socialPosts/' + currentPhotoPostKey + '/likes').transaction(l => (l || 0) + 1);
-                likeBtn.classList.add('liked');
-                showToast('Liked!');
-                
-                // Reward post author
-                if (currentPhotoData && currentPhotoData.uid !== myUid) {
-                    const rewardHistoryRef = db.ref('rewardHistory/' + currentPhotoPostKey + '/' + myUid);
-                    rewardHistoryRef.once('value', histSnap => {
-                        if (!histSnap.exists() && userData && userData.name) {
-                            db.ref('users/' + currentPhotoData.uid + '/points').transaction(p => (p || 0) + 10);
-                            db.ref('notifications/' + currentPhotoData.uid).push({
-                                msg: `${userData.name} liked your ${currentMediaType === 'video' ? 'video' : 'photo'}`,
-                                time: Date.now(),
-                                type: 'like',
-                                from: myUid,
-                                fromName: userData.name,
-                                postId: currentPhotoPostKey,
-                                image: userData.photo || 'https://via.placeholder.com/40'
-                            });
-                            rewardHistoryRef.set(true);
-                        }
-                    });
-                }
+
+            // Load my reaction
+            if (window.auth && auth.currentUser) {
+                db.ref('postLikes/' + postKey + '/' + auth.currentUser.uid).once('value', function(lSnap) {
+                    var btn = document.getElementById('fsLikeBtn');
+                    if (lSnap.exists()) {
+                        var rxn = lSnap.val();
+                        if (rxn === true) rxn = '❤️';
+                        btn.classList.add('fs-liked');
+                        btn.innerHTML = '<span style="font-size:20px;line-height:1;">' + rxn + '</span><span id="fsLikeLabel" style="margin-left:4px;">' + rxn + '</span>';
+                    }
+                    try { lucide.createIcons(); } catch(e) {}
+                });
             }
-            
-            // Reload data
-            loadFullscreenPostData(currentPhotoPostKey);
-            lucide.createIcons();
+        });
+
+        // Load reaction summary (live)
+        db.ref('postLikes/' + postKey).on('value', function(s) {
+            var summary = document.getElementById('fsReactionSummary');
+            if (!s.exists()) {
+                summary.classList.remove('has-data');
+                document.getElementById('fsDivider').style.display = 'none';
+                return;
+            }
+            var counts = {}; var total = 0;
+            s.forEach(function(c) {
+                var e = c.val();
+                if (e === true) e = '❤️';
+                counts[e] = (counts[e] || 0) + 1;
+                total++;
+            });
+            var sorted = Object.entries(counts).sort(function(a,b){ return b[1]-a[1]; });
+            var topEmojis = sorted.slice(0, 3).map(function(x){ return x[0]; });
+
+            document.getElementById('fsReactionEmojis').innerHTML = topEmojis.map(function(e){ return '<span>' + e + '</span>'; }).join('');
+            document.getElementById('fsReactionCountText').textContent = total === 1 ? '1 reaction' : total + ' reactions';
+
+            // Comment count
+            db.ref('postComments/' + postKey).once('value', function(cSnap) {
+                var cc = cSnap.numChildren();
+                var ccEl = document.getElementById('fsCommentCountText');
+                if (cc > 0) {
+                    ccEl.textContent = cc === 1 ? '1 comment' : cc + ' comments';
+                    document.getElementById('fsCommentLabel').textContent = cc;
+                } else {
+                    ccEl.textContent = '';
+                }
+            });
+
+            summary.classList.add('has-data');
+            document.getElementById('fsDivider').style.display = 'block';
         });
     }
-    
-    function handleFullscreenComment() {
-        if (!currentPhotoPostKey) return;
-        closeFullscreenPhoto();
-        
-        // Open comment modal for this post
-        setTimeout(() => {
-            openComments(currentPhotoPostKey);
-        }, 300);
+
+    // ── RELATIVE TIME ───────────────────────────────────────────
+    function _fsRelTime(ts) {
+        var diff = Date.now() - ts;
+        var m = Math.floor(diff / 60000);
+        if (m < 1) return 'Just now';
+        if (m < 60) return m + 'm ago';
+        var h = Math.floor(m / 60);
+        if (h < 24) return h + 'h ago';
+        return Math.floor(h / 24) + 'd ago';
     }
-    
-    function handleFullscreenShare() {
+
+    // ── AUTHOR TAP ──────────────────────────────────────────────
+    function fsTapAuthor() {
+        if (!currentPhotoData) return;
+        closeFullscreenPhoto();
+        setTimeout(function() {
+            if (typeof openUserProfile === 'function') openUserProfile(currentPhotoData.uid);
+        }, 250);
+    }
+
+    // ── 3-DOT MENU ──────────────────────────────────────────────
+    function toggleFsMenu(event) {
+        event.stopPropagation();
+        var menu = document.getElementById('fsDotsMenu');
+        menu.classList.toggle('show');
+        if (menu.classList.contains('show')) {
+            setTimeout(function() {
+                document.addEventListener('click', function _closeFsMenu(e) {
+                    if (!e.target.closest('.fs-dots-btn')) {
+                        menu.classList.remove('show');
+                        document.removeEventListener('click', _closeFsMenu);
+                    }
+                });
+            }, 50);
+        }
+        try { lucide.createIcons(); } catch(e) {}
+    }
+    function closeFsDotsMenu() {
+        var m = document.getElementById('fsDotsMenu');
+        if (m) m.classList.remove('show');
+    }
+
+    function fsSaveMedia() {
+        closeFsDotsMenu();
+        var a = document.createElement('a');
+        a.href = currentMediaUrl;
+        a.download = 'radio-bingo-' + (currentMediaType === 'video' ? 'video-' : 'photo-') + Date.now() + (currentMediaType === 'video' ? '.mp4' : '.jpg');
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        if (typeof showToast === 'function') showToast((currentMediaType === 'video' ? 'Video' : 'Photo') + ' saving...');
+    }
+    function fsHidePost() {
+        closeFsDotsMenu();
+        closeFullscreenPhoto();
         if (!currentPhotoPostKey) return;
-        
-        const shareData = {
-            title: 'Radio Bingo Live',
-            text: `Check out this ${currentMediaType === 'video' ? 'video' : 'photo'} on Radio Bingo Live!`,
-            url: window.location.href
-        };
-        
-        if (navigator.share) {
-            navigator.share(shareData)
-                .then(() => showToast('Shared successfully!'))
-                .catch(() => {});
-        } else {
-            // Fallback: copy link
-            navigator.clipboard.writeText(window.location.href)
-                .then(() => showToast('Link copied to clipboard!'))
-                .catch(() => showToast('Unable to share'));
+        // Remove post card from DOM
+        var card = document.getElementById('post-' + currentPhotoPostKey);
+        if (card) {
+            card.style.transition = 'opacity 0.3s';
+            card.style.opacity = '0';
+            setTimeout(function() { card.remove(); }, 300);
+        }
+        if (typeof showToast === 'function') showToast('Post hidden');
+    }
+    function fsReportPost() {
+        closeFsDotsMenu();
+        closeFullscreenPhoto();
+        if (!currentPhotoPostKey) return;
+        if (typeof openReportModal === 'function') {
+            openReportModal(currentPhotoPostKey, 'post');
+        } else if (typeof showToast === 'function') {
+            showToast('Report submitted. Thank you!');
         }
     }
-    
-    // Add click handler to post images - wrap existing renderPosts function
-    const originalRenderPosts = window.renderPosts;
-    if (originalRenderPosts) {
-        window.renderPosts = function(...args) {
-            originalRenderPosts.apply(this, args);
-            
-            // Add click handlers after posts render
-            setTimeout(() => {
-                // Handle images
-                document.querySelectorAll('.post-card img[src*="http"]').forEach(img => {
-                    if (!img.dataset.fullscreenEnabled && img.closest('.post-content, .post-media')) {
-                        img.dataset.fullscreenEnabled = 'true';
-                        img.style.cursor = 'pointer';
-                        
-                        const postCard = img.closest('.post-card');
-                        const postKey = postCard ? postCard.dataset.postKey : null;
-                        
-                        img.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openFullscreenPhoto(img.src, postKey, 'image');
-                        });
-                    }
-                });
-                
-                // Handle videos
-                document.querySelectorAll('.post-card video').forEach(video => {
-                    if (!video.dataset.fullscreenEnabled) {
-                        video.dataset.fullscreenEnabled = 'true';
-                        
-                        const postCard = video.closest('.post-card');
-                        const postKey = postCard ? postCard.dataset.postKey : null;
-                        
-                        // Add double-click handler for fullscreen
-                        video.addEventListener('dblclick', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openFullscreenPhoto(video.src || video.currentSrc, postKey, 'video');
-                        });
-                        
-                        // Add fullscreen button overlay
-                        const wrapper = video.parentElement;
-                        if (wrapper && !wrapper.querySelector('.video-fullscreen-overlay')) {
-                            const overlay = document.createElement('div');
-                            overlay.className = 'video-fullscreen-overlay';
-                            overlay.style.cssText = 'position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.7); padding:8px; border-radius:8px; cursor:pointer; z-index:10; backdrop-filter:blur(10px);';
-                            overlay.innerHTML = '<i data-lucide="maximize-2" style="width:20px; height:20px; color:white;"></i>';
-                            overlay.onclick = function(e) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                openFullscreenPhoto(video.src || video.currentSrc, postKey, 'video');
-                            };
-                            
-                            if (wrapper.style.position !== 'relative' && wrapper.style.position !== 'absolute') {
-                                wrapper.style.position = 'relative';
-                            }
-                            wrapper.appendChild(overlay);
-                            
-                            setTimeout(() => lucide.createIcons(), 100);
-                        }
-                    }
-                });
-            }, 500);
-        };
+
+    // ── REACTION POPUP ──────────────────────────────────────────
+    function showFsReactionPopup() {
+        var pop = document.getElementById('fsReactPop');
+        if (pop.style.display === 'flex') {
+            closeFsReactionPopup();
+            return;
+        }
+        pop.style.display = 'flex';
+        if (_fsReactionPopupTimer) clearTimeout(_fsReactionPopupTimer);
+        _fsReactionPopupTimer = setTimeout(closeFsReactionPopup, 5000);
     }
+    function closeFsReactionPopup() {
+        var pop = document.getElementById('fsReactPop');
+        if (pop) pop.style.display = 'none';
+        if (_fsReactionPopupTimer) { clearTimeout(_fsReactionPopupTimer); _fsReactionPopupTimer = null; }
+    }
+
+    function submitFsReaction(emoji) {
+        closeFsReactionPopup();
+        if (!window.auth || !auth.currentUser) return typeof showToast === 'function' && showToast('Please login first');
+        if (!currentPhotoPostKey) return;
+
+        var myUid  = auth.currentUser.uid;
+        var likeRef = db.ref('postLikes/' + currentPhotoPostKey + '/' + myUid);
+        var btn     = document.getElementById('fsLikeBtn');
+
+        likeRef.once('value', function(s) {
+            if (s.exists() && s.val() === emoji) {
+                // Toggle off same reaction
+                likeRef.remove();
+                db.ref('socialPosts/' + currentPhotoPostKey + '/likes').transaction(function(l) { return Math.max(0, (l||1) - 1); });
+                btn.classList.remove('fs-liked');
+                btn.innerHTML = '<i data-lucide="thumbs-up" style="width:18px;height:18px;"></i><span id="fsLikeLabel">Like</span>';
+                try { lucide.createIcons(); } catch(e) {}
+            } else {
+                // Set/change reaction
+                var wasLiked = s.exists();
+                likeRef.set(emoji);
+                if (!wasLiked) {
+                    db.ref('socialPosts/' + currentPhotoPostKey + '/likes').transaction(function(l) { return (l||0) + 1; });
+                    // Notify post author
+                    if (currentPhotoData && currentPhotoData.uid !== myUid && window.userData) {
+                        db.ref('notifications/' + currentPhotoData.uid).push({
+                            msg: userData.name + ' reacted ' + emoji + ' to your ' + (currentMediaType === 'video' ? 'video' : 'photo'),
+                            time: Date.now(), type: 'like', from: myUid,
+                            fromName: userData.name, postId: currentPhotoPostKey,
+                            image: userData.photo || ''
+                        });
+                    }
+                }
+                btn.classList.add('fs-liked');
+                btn.innerHTML = '<span style="font-size:20px;line-height:1;">' + emoji + '</span><span id="fsLikeLabel" style="margin-left:4px;">' + emoji + '</span>';
+            }
+            loadReactionSummary(currentPhotoPostKey);
+        });
+    }
+
+    function fsOpenReactionViewer() {
+        if (currentPhotoPostKey && typeof openReactionViewer === 'function') {
+            openReactionViewer(currentPhotoPostKey);
+        }
+    }
+
+    // ── COMMENT ─────────────────────────────────────────────────
+    function handleFullscreenComment() {
+        var key = currentPhotoPostKey;
+        closeFullscreenPhoto();
+        setTimeout(function() {
+            if (key && typeof openComments === 'function') openComments(key);
+        }, 280);
+    }
+
+    // ── SHARE ───────────────────────────────────────────────────
+    function handleFullscreenShare() {
+        var key = currentPhotoPostKey;
+        if (!key) return;
+        if (navigator.share) {
+            navigator.share({ title: 'Radio Bingo Live', url: window.location.href })
+                .catch(function(){});
+        } else {
+            navigator.clipboard.writeText(window.location.href)
+                .then(function(){ if (typeof showToast === 'function') showToast('Link copied!'); });
+        }
+    }
+
+    // Legacy aliases
+    function downloadCurrentMedia() { fsSaveMedia(); }
+    function downloadCurrentPhoto() { fsSaveMedia(); }
+    function togglePhotoMenu(event) { toggleFsMenu(event); }
+
+    // ── CLICK HANDLERS on post images/videos (attached at render) ─
+    function _attachMediaClickHandlers() {
+        document.querySelectorAll('.post-card .post-image').forEach(function(el) {
+            if (el.dataset.fsAttached) return;
+            el.dataset.fsAttached = 'true';
+            el.style.cursor = 'pointer';
+
+            var postCard = el.closest('.post-card');
+            var postKey  = postCard ? postCard.id.replace('post-', '') : null;
+
+            if (el.tagName === 'VIDEO') {
+                // Single tap opens fullscreen
+                var tapTimer = null;
+                el.addEventListener('click', function(e) {
+                    if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; return; }
+                    tapTimer = setTimeout(function() {
+                        tapTimer = null;
+                        openFullscreenPhoto(el.src || el.currentSrc, postKey, 'video');
+                    }, 220);
+                });
+                el.addEventListener('dblclick', function(e) {
+                    e.preventDefault(); e.stopPropagation();
+                });
+            } else {
+                el.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    openFullscreenPhoto(el.src, postKey, 'image');
+                });
+            }
+        });
+    }
+
+    // Attach on load & mutation
+    document.addEventListener('DOMContentLoaded', function() {
+        var obs = new MutationObserver(function() { _attachMediaClickHandlers(); });
+        var feed = document.getElementById('socialFeed');
+        if (feed) obs.observe(feed, { childList: true, subtree: true });
+        _attachMediaClickHandlers();
+    });
+
+    // Handle ESC key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            var viewer = document.getElementById('fullscreenPhotoViewer');
+            if (viewer && viewer.classList.contains('active')) closeFullscreenPhoto();
+        }
+    });
+
+    console.log('%c🎬 Custom Media Viewer Loaded', 'color:#0ea5e9;font-weight:bold;');
+</script>
     
     // ===============================================
     // CONTENT CREATOR SYSTEM
