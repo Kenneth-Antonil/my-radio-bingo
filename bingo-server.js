@@ -59,6 +59,36 @@ const BINGO_RANGES       = { B:[1,15], I:[16,30], N:[31,45], G:[46,60], O:[61,75
 function uid()   { return Math.random().toString(36).slice(2, 9).toUpperCase(); }
 function rnd(a)  { return a[Math.floor(Math.random() * a.length)]; }
 
+async function sendPushNotificationToUser(targetUid, title, body, url = '/') {
+    try {
+        // Kunin ang token ng target user mula sa Firestore
+        const userDoc = await admin.firestore().collection('users').doc(targetUid).get();
+        if (!userDoc.exists) return;
+
+        const tokens = userDoc.data().fcmTokens;
+        if (!tokens || tokens.length === 0) return;
+
+        // I-setup ang payload ng notification
+        const message = {
+            notification: { 
+                title: title, 
+                body: body 
+            },
+            data: { 
+                url: url // Anong page ang bubuksan kapag kinlick ang notif
+            },
+            tokens: tokens // Ipapadala sa lahat ng naka-login na devices ng user
+        };
+
+        // I-send gamit ang Firebase Cloud Messaging
+        const response = await admin.messaging().sendMulticast(message);
+        console.log('Push sent:', response.successCount, 'successful');
+        
+    } catch (err) {
+        console.error('Error sending push notification:', err);
+    }
+}
+
 function shuffle(arr) {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
