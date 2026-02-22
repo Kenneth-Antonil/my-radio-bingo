@@ -9165,6 +9165,10 @@ function runMathBlitz(problems) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js')
                 .catch(err => console.log('SW Failed:', err));
+            // FCM Background Push — kailangan nasa root ang file na ito
+            navigator.serviceWorker.register('./firebase-messaging-sw.js')
+                .then(reg => console.log('FCM SW registered:', reg.scope))
+                .catch(err => console.log('FCM SW Failed:', err));
         });
     }
     const VAPID_KEY = 'BKaRv3bFBjqNJ7zdJnUyH7g0bw0TX-7rbxNDQng8yW5JPX1Ha8jA6E_9R3vjlIU80XZjM7BNIuR2m80VDlvlepk'; // <-- PALITAN: Firebase Console → Project Settings → Cloud Messaging → Web Push Certificates → Key Pair
@@ -9587,6 +9591,7 @@ function runMathBlitz(problems) {
                     time: Date.now(),
                     type: 'like',
                     from: myUid,
+                    fromName: userData.name,
                     postId: postKey,
                     image: userData.photo || 'https://via.placeholder.com/40'
                 });
@@ -9785,6 +9790,7 @@ function runMathBlitz(problems) {
                     time: Date.now(),
                     type: 'comment',
                     from: myUid,
+                    fromName: userData.name,
                     postId: currentBeatsCommentPostKey,
                     image: userData.photo || 'https://via.placeholder.com/40'
                 });
@@ -9804,6 +9810,7 @@ function runMathBlitz(problems) {
                                     time: Date.now(),
                                     type: 'mention',
                                     from: myUid,
+                                    fromName: userData.name,
                                     postId: currentBeatsCommentPostKey,
                                     image: userData.photo || 'https://via.placeholder.com/40'
                                 });
@@ -9887,6 +9894,7 @@ function runMathBlitz(problems) {
                     time: Date.now(),
                     type: 'follow',
                     from: myUid,
+                    fromName: userData.name,
                     image: userData.photo || 'https://via.placeholder.com/40'
                 });
             }
@@ -9927,6 +9935,7 @@ function runMathBlitz(problems) {
                     time: Date.now(),
                     type: 'follow',
                     from: myUid,
+                    fromName: userData.name,
                     image: userData.photo || 'https://via.placeholder.com/40'
                 });
             }
@@ -11939,7 +11948,7 @@ function runMathBlitz(problems) {
             const msgData = { from: myUid, to: currentChatPartner, text: text, image: imageData, timestamp: Date.now() }; 
             db.ref('messages').push(msgData); 
             const notifMsg = imageData ? 'Sent a photo' : `New PM from ${userData.name}`;
-            db.ref('notifications/' + currentChatPartner).push({ msg: notifMsg, time: Date.now(), type: 'pm', from: myUid }); 
+            db.ref('notifications/' + currentChatPartner).push({ msg: notifMsg, time: Date.now(), type: 'pm', from: myUid, fromName: userData.name }); 
         }
 
         inp.value = ''; 
@@ -12258,6 +12267,7 @@ function runMathBlitz(problems) {
                     time: Date.now(),
                     type: 'support_reply',
                     from: auth.currentUser.uid,
+                    fromName: userData.name,
                     ticketId: currentTicketKey,
                     image: userData.photo
                 });
@@ -13203,6 +13213,7 @@ Please explain why you want a verification badge:`;
                     msg: `${senderName} gifted you the ${skin.name} skin!`,
                     type: 'gift',
                     from: senderId,
+                    fromName: senderName,
                     time: Date.now()
                 });
                 
@@ -13344,6 +13355,7 @@ Please explain why you want a verification badge:`;
                      time: Date.now(),
                      type: 'comment',
                      from: auth.currentUser.uid,
+                     fromName: userData.name,
                      postId: currentOpenPostKey, // Link to post
                      image: userData.photo
                  });
@@ -13365,6 +13377,7 @@ Please explain why you want a verification badge:`;
                                 time: Date.now(),
                                 type: 'mention',
                                 from: auth.currentUser.uid,
+                                fromName: userData.name,
                                 postId: currentOpenPostKey,
                                 image: userData.photo || 'https://via.placeholder.com/40'
                             });
@@ -13537,6 +13550,7 @@ Please explain why you want a verification badge:`;
                         time: Date.now(),
                         type: 'share',
                         from: auth.currentUser.uid,
+                        fromName: userData.name,
                         postId: currentSharePostKey,
                         image: userData.photo
                     });
@@ -14057,6 +14071,7 @@ Please explain why you want a verification badge:`;
                                     time: Date.now(),
                                     type: 'like',
                                     from: myUid,
+                                    fromName: userData.name,
                                     postId: postKey,
                                     image: userData.photo || 'https://via.placeholder.com/40'
                                 });
@@ -14388,6 +14403,7 @@ Please explain why you want a verification badge:`;
                                 time: Date.now(),
                                 type: 'like',
                                 from: myUid,
+                                fromName: userData.name,
                                 postId: currentPhotoPostKey,
                                 image: userData.photo || 'https://via.placeholder.com/40'
                             });
@@ -14526,10 +14542,11 @@ Please explain why you want a verification badge:`;
                 showToast('Unfollowed');
                 
                 db.ref(`notifications/${targetUid}`).push({
-                    msg: `${auth.currentUser.displayName || 'Someone'} unfollowed you`,
+                    msg: `${userData.name || 'Someone'} unfollowed you`,
                     time: Date.now(),
                     type: 'unfollow',
-                    from: myUid
+                    from: myUid,
+                    fromName: userData.name || 'Someone'
                 });
             } else {
                 // Follow
@@ -14538,10 +14555,11 @@ Please explain why you want a verification badge:`;
                 showToast('Following!');
                 
                 db.ref(`notifications/${targetUid}`).push({
-                    msg: `${auth.currentUser.displayName || 'Someone'} started following you!`,
+                    msg: `${userData.name || 'Someone'} started following you!`,
                     time: Date.now(),
                     type: 'new_follower',
-                    from: myUid
+                    from: myUid,
+                    fromName: userData.name || 'Someone'
                 });
             }
             
@@ -15222,7 +15240,7 @@ Please explain why you want a verification badge:`;
         const s = currentStoryGroup[currentStoryIdx];
         db.ref(`notifications/${s.uid}`).push({
             msg: `${userData.name} replied to your story: "${msg}"`,
-            time: Date.now(), type: 'story_reply', from: auth.currentUser.uid
+            time: Date.now(), type: 'story_reply', from: auth.currentUser.uid, fromName: userData.name
         });
         inp.value = '';
         showToast('Reply sent!');
