@@ -1034,7 +1034,7 @@
                         <span id="speedVal" style="color:white;">8s</span>
                     </label>
                     <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
-                        <input type="range" id="drawSpeed" min="3" max="15" value="8" style="flex:1; accent-color: var(--success);" oninput="document.getElementById('speedVal').innerText=this.value+'s'">
+                        <input type="range" id="drawSpeed" min="3" max="15" value="8" style="flex:1; accent-color: var(--success);" oninput="document.getElementById('speedVal').innerText=this.value+'s'; db.ref('gameState/drawConfig').update({speed: this.value*1000})">
                     </div>
                     <button class="btn btn-primary" id="btnAutoDraw" onclick="toggleAutoDraw()" style="background: linear-gradient(135deg, #059669, #047857); box-shadow: 0 4px 15px rgba(5, 150, 105, 0.4);">
                         <i data-lucide="play"></i> START AUTO DRAW
@@ -1754,6 +1754,9 @@
             if(now >= time && now < time + 60000) { 
                 db.ref('gameState/latestWinner').once('value', w => { 
                     if(!w.exists() && !isAutoDrawing) { 
+                        // Save draw speed to Firebase for headless draw engine
+                        const speedMs = (document.getElementById('drawSpeed').value || 8) * 1000;
+                        db.ref('gameState/drawConfig').set({ speed: speedMs });
                         // AUTO-SET JACKPOT if this is a jackpot round
                         if(isJP && jpAmt) {
                             db.ref('gameState/jackpot').set({ amount: jpAmt, active: true });
@@ -1771,8 +1774,14 @@
                             db.ref('gameState/jackpot').update({ active: false });
                             randomizePatternForGame(false); // Random pattern for normal rounds
                         }
-                        db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() }); 
-                        startAutoDrawLogic(); 
+                        db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() });
+                        // Claim draw lock via transaction - only one client draws at a time
+                        db.ref('gameState/drawLock').transaction(cur => {
+                            if(cur !== null) return; // abort - someone else has it
+                            return { by: 'dashboard', at: Date.now(), expires: Date.now() + 300000 };
+                        }, (err, committed) => {
+                            if(committed) { startAutoDrawLogic(); }
+                        });
                     } 
                 }); 
                 removeSchedule(key); 
@@ -1791,7 +1800,7 @@
 
     function toggleAutoDraw() { if(!isAutoDrawing) { db.ref('gameState/latestWinner').once('value', s => { if(s.exists()) { alert("May Winner Na! Reset Game muna bago mag start ulit."); return; } startAutoDrawLogic(); }); } else { stopAutoDrawLogic(); } }
     function startAutoDrawLogic() { if(isAutoDrawing) return; db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() }); const btn = document.getElementById('btnAutoDraw'); const speed = document.getElementById('drawSpeed').value * 1000; isAutoDrawing = true; btn.innerHTML = `<i data-lucide="pause"></i> STOP AUTO DRAW`; btn.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)"; autoDrawLogic(); autoDrawInterval = setInterval(autoDrawLogic, speed); lucide.createIcons(); }
-    function stopAutoDrawLogic() { const btn = document.getElementById('btnAutoDraw'); clearInterval(autoDrawInterval); isAutoDrawing = false; btn.innerHTML = `<i data-lucide="play"></i> START AUTO DRAW`; btn.style.background = "linear-gradient(135deg, #059669, #047857)"; lucide.createIcons(); }
+    function stopAutoDrawLogic() { const btn = document.getElementById('btnAutoDraw'); clearInterval(autoDrawInterval); isAutoDrawing = false; db.ref('gameState/drawLock').remove(); btn.innerHTML = `<i data-lucide="play"></i> START AUTO DRAW`; btn.style.background = "linear-gradient(135deg, #059669, #047857)"; lucide.createIcons(); }
     function autoDrawLogic() { if(drawnNumbers.length >= 75) { stopAutoDrawLogic(); autoResetGame("Lahat ng numbers na-draw!"); return; } db.ref('gameState/latestWinner').once('value', s => { if(s.exists()) { stopAutoDrawLogic(); return; } let nextNum; do { nextNum = Math.floor(Math.random() * 75) + 1; } while (drawnNumbers.includes(nextNum)); toggleBall(nextNum); }); }
     function speakNumber(num) { if ('speechSynthesis' in window) { let letter = "B"; if (num > 15) letter = "I"; if (num > 30) letter = "N"; if (num > 45) letter = "G"; if (num > 60) letter = "O"; const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 0.9; window.speechSynthesis.speak(msg); } }
     function toggleBall(num) { const ref = db.ref('drawnNumbers/' + num); ref.once('value', s => { if(s.exists()) { ref.remove(); } else { ref.set(num); db.ref('gameState/lastCalled').set(num); db.ref('gameState/gameStartTime').once('value', ss => { if(!ss.exists()) db.ref('gameState/gameStartTime').set(Date.now()); }); } }); }
