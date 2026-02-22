@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.5.1/jsrsasign-all-min.js"></script>
     <style>
         :root { 
@@ -1505,7 +1506,57 @@
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    
+    const auth = firebase.auth();
+
+    // =============================================
+    // 🔐 ADMIN AUTH GATE
+    // Palitan ang email at password ng iyong Admin account sa Firebase Authentication
+    // =============================================
+    const ADMIN_UID      = 'iNGOa6aVhcRUjd0JHW210iEOW2w2';
+    const ADMIN_EMAIL    = 'keneth.antonil.amazingdynamic@gmail.com';   // ← PALITAN NG IYONG ADMIN EMAIL
+    const ADMIN_PASSWORD = '12345';    // ← PALITAN NG IYONG ADMIN PASSWORD
+
+    // Auth loading overlay
+    (function injectAuthOverlay() {
+        const overlay = document.createElement('div');
+        overlay.id = 'auth-loading-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a0f;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+        overlay.innerHTML = `
+            <div style="font-size:40px;animation:spin 1.5s linear infinite;">⚙️</div>
+            <div id="auth-status-msg" style="color:#8b5cf6;font-family:Inter,sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;">Signing in as Admin...</div>
+            <style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>`;
+        document.body.appendChild(overlay);
+    })();
+    function removeAuthOverlay() {
+        const el = document.getElementById('auth-loading-overlay');
+        if(el) el.remove();
+    }
+
+    auth.onAuthStateChanged(function(user) {
+        if(user && user.uid === ADMIN_UID) {
+            // ✅ Admin confirmed — boot the dashboard
+            removeAuthOverlay();
+            initDashboard();
+        } else if(user) {
+            // Wrong account signed in
+            document.getElementById('auth-status-msg').innerText = '⛔ Access Denied. Not an admin account.';
+            auth.signOut();
+        } else {
+            // Not signed in — sign in silently
+            document.getElementById('auth-status-msg').innerText = '🔑 Signing in as Admin...';
+            auth.signInWithEmailAndPassword(ADMIN_EMAIL, ADMIN_PASSWORD)
+                .catch(function(err) {
+                    document.getElementById('auth-status-msg').innerText = '❌ Login Failed: ' + err.message;
+                    console.error('Admin login error:', err);
+                });
+        }
+    });
+
+    function initDashboard() {
+    // =============================================
+    // 🚀 ALL DASHBOARD LOGIC STARTS HERE (after auth)
+    // =============================================
+
     // --- SERVICE ACCOUNT LOGIC (REQUIRED FOR HTTP V1) ---
     let serviceAccount = null;
     const savedSA = localStorage.getItem('rb_service_account');
@@ -4186,6 +4237,8 @@ db.ref('partnerApplications').orderByChild('status').equalTo('pending').on('valu
         badge.style.display = count > 0 ? 'inline-block' : 'none';
     }
 });
+
+    } // ← END of initDashboard()
 
 </script>
 </body>
