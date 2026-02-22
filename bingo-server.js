@@ -13,6 +13,14 @@
 
 'use strict';
 
+const admin = require('firebase-admin');
+const serviceAccount = require('./serviceAccountKey.json');
+
+// I-initialize ang Firebase Admin para makapag-usap ang server sa Firestore at FCM
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
 const express    = require('express');
 const http       = require('http');
 const { Server } = require('socket.io');
