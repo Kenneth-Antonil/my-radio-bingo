@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebase.com https://*.firebaseapp.com https://*.googleapis.com https://*.gstatic.com https://unpkg.com https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src * data: blob:; connect-src 'self' wss://*.firebaseio.com https://*.googleapis.com https://*.firebase.com https://fcm.googleapis.com https://oauth2.googleapis.com; frame-src 'none';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radio Bingo | Admin Master Pro 3D</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -840,9 +841,10 @@
     <div style="font-size:24px; font-weight:900; margin-bottom:10px; letter-spacing: -1px;">ADMIN <span style="color:var(--accent);">LOCKED</span></div>
     <p style="opacity: 0.6; font-size: 12px; margin-bottom: 30px;">Enter security PIN to access control panel.</p>
     <div style="display:flex; gap:10px;">
-        <input type="password" id="adminPassInput" placeholder="Enter PIN" style="width:180px; padding:12px; text-align:center; border-radius:12px; border:1px solid #334155; background:#1e293b; color:white; font-weight:900; letter-spacing: 2px; outline: none;">
+        <input type="password" id="adminPassInput" placeholder="Enter PIN" style="width:180px; padding:12px; text-align:center; border-radius:12px; border:1px solid #334155; background:#1e293b; color:white; font-weight:900; letter-spacing: 2px; outline: none;" onkeydown="if(event.key==='Enter') checkAdminLock()">
         <button onclick="checkAdminLock()" class="btn btn-primary" style="width:auto; padding:12px 20px; margin:0;"><i data-lucide="arrow-right"></i></button>
     </div>
+    <div id="lockHint" style="margin-top:14px; font-size:11px; color:#ef4444; font-weight:700; min-height:18px; text-align:center;"></div>
 </div>
 
 <div class="sidebar">
@@ -1482,18 +1484,44 @@
 </div>
 
 <script>
-    // --- LOCK SCREEN LOGIC ---
+    // --- LOCK SCREEN LOGIC (with brute-force protection) ---
     const ADMIN_PIN = "12345"; // <--- CHANGE THIS TO YOUR DESIRED PIN
-    
+    let _pinAttempts = parseInt(sessionStorage.getItem('pin_attempts') || '0');
+    let _pinLockUntil = parseInt(sessionStorage.getItem('pin_lock_until') || '0');
+
     function checkAdminLock() {
+        const now = Date.now();
+        // Check if locked out
+        if(_pinLockUntil > now) {
+            const secsLeft = Math.ceil((_pinLockUntil - now) / 1000);
+            document.getElementById('adminPassInput').placeholder = 'Locked ' + secsLeft + 's...';
+            document.getElementById('adminPassInput').value = '';
+            return;
+        }
         const val = document.getElementById('adminPassInput').value;
         if(val === ADMIN_PIN) {
+            // Correct! Reset attempts and unlock
+            _pinAttempts = 0;
+            sessionStorage.setItem('pin_attempts', '0');
+            sessionStorage.removeItem('pin_lock_until');
             document.getElementById('lockScreen').style.opacity = '0';
             setTimeout(() => { document.getElementById('lockScreen').style.display = 'none'; }, 500);
             sessionStorage.setItem('admin_unlocked', 'true');
         } else {
-            alert("WRONG PIN! ACCESS DENIED.");
-            document.getElementById('adminPassInput').value = "";
+            _pinAttempts++;
+            sessionStorage.setItem('pin_attempts', _pinAttempts);
+            document.getElementById('adminPassInput').value = '';
+            if(_pinAttempts >= 5) {
+                // Lockout: 30 seconds per offense, up to 10 minutes
+                const lockSecs = Math.min(30 * Math.pow(2, _pinAttempts - 5), 600);
+                _pinLockUntil = now + (lockSecs * 1000);
+                sessionStorage.setItem('pin_lock_until', _pinLockUntil);
+                document.getElementById('adminPassInput').placeholder = 'Locked ' + lockSecs + 's...';
+                document.getElementById('lockHint').innerText = '🔒 Too many attempts! Locked for ' + lockSecs + ' seconds.';
+            } else {
+                const remaining = 5 - _pinAttempts;
+                document.getElementById('lockHint').innerText = 'Wrong PIN. ' + remaining + ' attempt' + (remaining !== 1 ? 's' : '') + ' remaining.';
+            }
         }
     }
     // Check if already unlocked in this session
@@ -1526,6 +1554,10 @@
     }
 
     let currentPattern = "Normal Bingo"; let drawnNumbers = []; let autoDrawInterval = null; let isAutoDrawing = false; let jackpotVisible = false; let schedules = {}; let globalStatusData = {}; let allUsersData = {}; let lastSpokenNumber = null;
+    // Dashboard rate limiter
+    const _drl = {};
+    function dRateLimit(key, ms) { const now = Date.now(); if (_drl[key] && (now - _drl[key]) < ms) return false; _drl[key] = now; return true; }
+    function dSanitize(str, max) { return String(str||'').replace(/<[^>]*>/g,'').replace(/[<>"'\`]/g,'').trim().substring(0, max||100); }
     let userPointsCache = {}; // For detecting live changes
     
     // === CURRENCY LOGIC (ADMIN SIDE) ===
