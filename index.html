@@ -9161,7 +9161,12 @@ function runMathBlitz(problems) {
 
     const sounds = { click: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2731885542.mp3'), newBall: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3'), pop: new Audio('https://cdn.freesound.org/previews/536/536108_1415754-lq.mp3'), win: new Audio('https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3'), lose: new Audio('https://cdn.freesound.org/previews/76/76376_877451-lq.mp3'), spin: new Audio('https://cdn.freesound.org/previews/413/413203_5121236-lq.mp3'), cardFlip: new Audio('https://cdn.freesound.org/previews/240/240776_4107740-lq.mp3'), stop: new Audio('https://cdn.freesound.org/previews/256/256113_3263906-lq.mp3'), tumble: new Audio('https://cdn.freesound.org/previews/256/256113_3263906-lq.mp3'), drop: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3') };
     function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; if(type === 'drop') sounds[type].volume = 0.3; else sounds[type].volume = 1.0; sounds[type].play().catch(e => console.log("Audio play error", e)); } }
-    if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').then(reg => { }).catch(err => console.log('SW Failed:', err)); }); }
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .catch(err => console.log('SW Failed:', err));
+        });
+    }
     const VAPID_KEY = 'BKaRv3bFBjqNJ7zdJnUyH7g0bw0TX-7rbxNDQng8yW5JPX1Ha8jA6E_9R3vjlIU80XZjM7BNIuR2m80VDlvlepk'; // <-- PALITAN: Firebase Console → Project Settings → Cloud Messaging → Web Push Certificates → Key Pair
     function requestNotifyPermission() { if ("Notification" in window) { Notification.requestPermission().then(permission => { if (permission === "granted" && messaging) { messaging.getToken({ vapidKey: VAPID_KEY }).then((currentToken) => { if (currentToken && auth.currentUser) db.ref('users/' + auth.currentUser.uid).update({ fcmToken: currentToken }); }).catch((err) => console.log('Err token', err)); } }); } }
 
@@ -10861,14 +10866,13 @@ function runMathBlitz(problems) {
         Object.entries(_hdeSchedules).forEach(([key, val]) => {
             let schedTime = (typeof val === 'object') ? val.time : val;
             if(typeof schedTime !== 'number') return;
+            const isJP  = (typeof val === 'object') && val.isJackpot;
+            const jpAmt = (typeof val === 'object') ? (val.jackpotAmount || null) : null;
 
             // Is it time to draw? (within a 60-second window)
             if(now >= schedTime && now < schedTime + 60000) {
                 // Remove schedule first to prevent other clients also trying
                 db.ref('gameState/schedules/' + key).remove();
-
-                const isJP     = (typeof val === 'object') && val.isJackpot;
-                const jpAmt    = (typeof val === 'object') ? (val.jackpotAmount || null) : null;
 
                 // Check no winner yet and no draw already running
                 db.ref('gameState/latestWinner').once('value', wSnap => {
