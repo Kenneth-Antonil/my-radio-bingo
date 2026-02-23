@@ -19,7 +19,7 @@
     <link rel="apple-touch-icon" href="https://i.imgur.com/7D8u8h6.png">
     <link rel="manifest" href="manifest.json">
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Comic+Neue:wght@700&family=Cinzel:wght@700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -1192,7 +1192,7 @@
         
         .ad-container-global { position: relative; z-index: 10 !important; width: 320px; height: 50px; display: flex; justify-content: center; align-items: center; margin: 10px auto; background: rgba(0,0,0,0.4); border-radius: 4px; border: 1px dashed rgba(255,255,255,0.3); text-align: center; overflow: hidden; clear: both; }
 
-        #jackpotBanner { background: linear-gradient(135deg, #271a00 0%, #451a03 50%, #000000 100%); border: 2px solid #fbbf24; color: #fbbf24; padding: var(--spacing-md); text-align: center; border-radius: var(--radius-lg); box-shadow: 0 0 25px rgba(251, 191, 36, 0.3), inset 0 0 20px rgba(251, 191, 36, 0.1); display: none; margin-bottom: var(--spacing-md); position: relative; overflow: hidden; animation: pulse-border 2s infinite; }
+        #jackpotBanner { background: linear-gradient(135deg, #271a00 0%, #451a03 50%, #000000 100%); border: 2px solid #fbbf24; color: #fbbf24; padding: var(--spacing-md); text-align: center; border-radius: var(--radius-lg); box-shadow: 0 0 25px rgba(251, 191, 36, 0.3), inset 0 0 20px rgba(251, 191, 36, 0.1); display: none; margin-bottom: 0; position: relative; overflow: hidden; animation: pulse-border 2s infinite; }
         #jackpotBanner::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(45deg, transparent, rgba(251, 191, 36, 0.2), transparent); animation: shimmer 3s infinite linear; }
         @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
         @keyframes pulse-border { 0% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); border-color: #b45309; } 50% { box-shadow: 0 0 35px rgba(251, 191, 36, 0.6); border-color: #fbbf24; } 100% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); border-color: #b45309; } }
@@ -1540,82 +1540,368 @@
         /* === CHAT BUBBLE BUTTON === */
         .chat-bubble-btn {
             position: fixed;
-            bottom: calc(20px + env(safe-area-inset-bottom));
+            bottom: calc(24px + env(safe-area-inset-bottom));
             right: 18px;
-            width: 54px; height: 54px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent), #2563eb);
+            width: 52px; height: 52px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
             border: none;
             color: white;
-            display: flex; align-items: center; justify-content: center;
+            display: none; /* hidden by default — shown only on bingo tab */
+            align-items: center; justify-content: center;
             cursor: pointer;
             z-index: 4999;
-            box-shadow: 0 4px 20px rgba(14,165,233,0.5);
+            box-shadow: 0 4px 24px rgba(14,165,233,0.45), 0 1px 0 rgba(255,255,255,0.15) inset;
             transition: transform 0.2s, box-shadow 0.2s;
+            flex-direction: column;
+            gap: 2px;
         }
-        .chat-bubble-btn:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(14,165,233,0.7); }
-        .chat-bubble-btn:active { transform: scale(0.95); }
+        .chat-bubble-btn.bingo-visible { display: flex; }
+        .chat-bubble-btn:active { transform: scale(0.93); }
+        .chat-bubble-btn-label { font-size: 8px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1; opacity: 0.85; }
         .chat-bubble-badge {
-            position: absolute; top: -3px; right: -3px;
+            position: absolute; top: -5px; right: -5px;
             background: #ef4444; color: white;
             font-size: 9px; font-weight: 900;
             min-width: 18px; height: 18px;
             border-radius: 9px; padding: 0 4px;
             display: none; align-items: center; justify-content: center;
-            border: 2px solid #0f172a;
-            line-height: 1;
+            border: 2px solid #0f172a; line-height: 1;
         }
         .chat-bubble-badge.show { display: flex; }
 
         /* === CHAT DRAWER === */
         .chat-drawer-backdrop {
             display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.6); z-index: 5000;
-            backdrop-filter: blur(4px);
+            background: rgba(0,0,0,0.55); z-index: 5000;
+            backdrop-filter: blur(6px);
         }
         .chat-drawer-backdrop.open { display: block; }
         .chat-drawer {
             position: fixed; bottom: 0; left: 0; right: 0;
-            height: 72vh;
-            background: #111827;
-            border-radius: 20px 20px 0 0;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            height: 75vh;
+            background: #0d1424;
+            border-radius: 24px 24px 0 0;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            border-left: 1px solid rgba(255,255,255,0.05);
+            border-right: 1px solid rgba(255,255,255,0.05);
             z-index: 5001;
             display: flex; flex-direction: column;
             transform: translateY(100%);
-            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+            transition: transform 0.4s cubic-bezier(0.32,0.72,0,1);
             overflow: hidden;
+            box-shadow: 0 -20px 60px rgba(0,0,0,0.6);
         }
         .chat-drawer.open { transform: translateY(0); }
         .chat-drawer-handle {
-            width: 36px; height: 4px;
-            background: rgba(255,255,255,0.2);
+            width: 40px; height: 4px;
+            background: rgba(255,255,255,0.15);
             border-radius: 2px;
-            margin: 10px auto 0;
+            margin: 12px auto 0;
             flex-shrink: 0;
         }
         .chat-drawer-header {
-            padding: 10px 16px 10px;
-            background: rgba(31,41,55,0.95);
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 12px 16px;
             display: flex; align-items: center; justify-content: space-between;
             flex-shrink: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
         .chat-drawer-title {
             display: flex; align-items: center; gap: 10px;
-            font-size: 14px; font-weight: 800;
-            letter-spacing: 0.5px; color: var(--accent-glow);
+            font-size: 13px; font-weight: 800;
+            letter-spacing: 1px; color: white;
             text-transform: uppercase;
         }
+        .chat-drawer-live-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #22c55e; box-shadow: 0 0 8px #22c55e;
+            animation: pulseDot 1.5s ease-in-out infinite; flex-shrink: 0;
+        }
+        .chat-drawer-online { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.35); margin-left: 2px; }
         .chat-drawer-close {
-            width: 32px; height: 32px; border-radius: 50%;
-            background: rgba(255,255,255,0.08);
-            border: none; color: white;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.6);
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; transition: background 0.2s;
         }
-        .chat-drawer-close:hover { background: rgba(255,255,255,0.15); }
-        @keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .chat-drawer-close:hover { background: rgba(255,255,255,0.12); color: white; }
+        @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.75)} }
+
+        /* Chat message rows */
+        .chat-row { display: flex; gap: 8px; max-width: 100%; animation: fadeIn 0.25s ease; align-items: flex-end; }
+        .chat-pfp { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; object-fit: cover; cursor: pointer; border: 1px solid rgba(255,255,255,0.12); }
+        .chat-content { display: flex; flex-direction: column; max-width: 78%; }
+        .chat-name { font-size: 10px; font-weight: 700; color: #64748b; margin-bottom: 3px; cursor: pointer; margin-left: 4px; }
+        .chat-row:not([style*="row-reverse"]) .bubble { background: rgba(30,41,59,0.9); color: #e2e8f0; border-radius: 4px 16px 16px 16px; border: 1px solid rgba(255,255,255,0.07); font-size: 13px; line-height: 1.45; padding: 8px 12px; }
+        .chat-row[style*="row-reverse"] .bubble { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: white; border-radius: 16px 4px 16px 16px; font-size: 13px; line-height: 1.45; padding: 8px 12px; }
+        .chat-row[style*="row-reverse"] .chat-name { display: none; }
+
+        /* Chat input */
+        .chat-input-area { background: #0d1424; padding: 10px 12px; border-top: 1px solid rgba(255,255,255,0.06); padding-bottom: max(12px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; }
+        .input-wrapper { flex: 1; display: flex; background: rgba(30,41,59,0.9); padding: 0 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); transition: border-color 0.2s, background 0.2s; align-items: center; height: 44px; }
+        .input-wrapper:focus-within { border-color: rgba(14,165,233,0.5); background: rgba(30,41,59,1); }
+        .input-wrapper input { flex: 1; background: none; border: none; color: white; outline: none; font-size: 13px; height: 100%; }
+        .input-wrapper input::placeholder { color: rgba(255,255,255,0.25); }
+        .send-btn { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: white; border: none; width: 44px; height: 44px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s, box-shadow 0.2s; flex-shrink: 0; box-shadow: 0 4px 14px rgba(14,165,233,0.4); }
+        .send-btn:active { transform: scale(0.9); box-shadow: 0 2px 6px rgba(14,165,233,0.3); }
+
+        /* ═══════════════════════════════════════════
+           VOICE CALL SYSTEM — WebRTC
+        ═══════════════════════════════════════════ */
+
+        /* ── INCOMING CALL OVERLAY ── */
+        @keyframes callRingPulse {
+            0%,100% { transform: scale(1);   box-shadow: 0 0 0 0   rgba(34,197,94,.6); }
+            50%      { transform: scale(1.06); box-shadow: 0 0 0 20px rgba(34,197,94,0); }
+        }
+        @keyframes callRingWave {
+            0%   { transform: scale(1);   opacity: .6; }
+            100% { transform: scale(2.2); opacity: 0;  }
+        }
+        @keyframes callSlideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to   { transform: translateY(0);     opacity: 1; }
+        }
+        @keyframes callFadeIn {
+            from { opacity: 0; transform: scale(.92); }
+            to   { opacity: 1; transform: scale(1);   }
+        }
+
+        .call-incoming-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.85);
+            backdrop-filter: blur(18px);
+            z-index: 99000;
+            align-items: center; justify-content: center;
+            flex-direction: column;
+            animation: callFadeIn .3s ease;
+        }
+        .call-incoming-overlay.show { display: flex; }
+
+        .call-incoming-card {
+            background: linear-gradient(160deg, #0d1a2e 0%, #071020 100%);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 32px;
+            padding: 40px 32px 32px;
+            width: min(340px, 90vw);
+            display: flex; flex-direction: column; align-items: center;
+            gap: 16px;
+            box-shadow: 0 32px 80px rgba(0,0,0,.8);
+            animation: callSlideDown .35s cubic-bezier(.34,1.56,.64,1);
+        }
+
+        .call-incoming-label {
+            font-size: 11px; font-weight: 800; letter-spacing: 2px;
+            text-transform: uppercase; color: #22c55e;
+        }
+        .call-incoming-label.group-lbl { color: #38bdf8; }
+
+        .call-avatar-ring-wrap {
+            position: relative; width: 96px; height: 96px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 8px 0;
+        }
+        .call-ring-wave {
+            position: absolute; inset: 0;
+            border-radius: 50%;
+            border: 2.5px solid #22c55e;
+            animation: callRingWave 1.8s ease-out infinite;
+        }
+        .call-ring-wave:nth-child(2) { animation-delay: .6s; }
+        .call-ring-wave:nth-child(3) { animation-delay: 1.2s; }
+        .call-avatar-img {
+            width: 96px; height: 96px;
+            border-radius: 50%; object-fit: cover;
+            border: 3px solid #22c55e;
+            animation: callRingPulse 1.8s ease-in-out infinite;
+            position: relative; z-index: 1;
+        }
+        .call-avatar-group-icon {
+            width: 96px; height: 96px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1e3a5f, #0d1a2e);
+            display: flex; align-items: center; justify-content: center;
+            border: 3px solid #38bdf8;
+            animation: callRingPulse 1.8s ease-in-out infinite;
+            position: relative; z-index: 1;
+        }
+
+        .call-incoming-name {
+            font-size: 24px; font-weight: 900; color: #fff;
+            letter-spacing: -.5px; text-align: center;
+        }
+        .call-incoming-sub {
+            font-size: 13px; color: rgba(255,255,255,.45);
+            font-weight: 500; margin-top: -8px;
+        }
+
+        .call-action-row {
+            display: flex; gap: 40px;
+            align-items: center; margin-top: 16px;
+        }
+        .call-action-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            cursor: pointer; border: none; background: none;
+        }
+        .call-action-btn-circle {
+            width: 68px; height: 68px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .call-action-btn:active .call-action-btn-circle { transform: scale(.9); }
+        .call-accept-circle {
+            background: #22c55e;
+            box-shadow: 0 8px 28px rgba(34,197,94,.5);
+        }
+        .call-decline-circle {
+            background: #ef4444;
+            box-shadow: 0 8px 28px rgba(239,68,68,.5);
+        }
+        .call-action-btn span {
+            font-size: 12px; font-weight: 700; color: rgba(255,255,255,.5);
+        }
+
+        /* ── IN-CALL SCREEN ── */
+        .call-active-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: linear-gradient(180deg, #071428 0%, #030d1a 100%);
+            z-index: 99001;
+            flex-direction: column;
+            align-items: center; justify-content: space-between;
+            padding: max(env(safe-area-inset-top), 48px) 0
+                     max(env(safe-area-inset-bottom), 36px);
+            animation: callFadeIn .3s ease;
+        }
+        .call-active-overlay.show { display: flex; }
+
+        .call-active-top {
+            display: flex; flex-direction: column; align-items: center; gap: 14px;
+            padding-top: 16px;
+        }
+        .call-active-label {
+            font-size: 10px; font-weight: 800; letter-spacing: 2px;
+            text-transform: uppercase; color: rgba(255,255,255,.35);
+        }
+        .call-active-avatar-wrap {
+            position: relative; width: 110px; height: 110px;
+        }
+        .call-active-avatar {
+            width: 110px; height: 110px;
+            border-radius: 50%; object-fit: cover;
+            border: 3px solid rgba(255,255,255,.12);
+        }
+        .call-active-speaking-ring {
+            position: absolute; inset: -6px;
+            border-radius: 50%;
+            border: 3px solid #22c55e;
+            opacity: 0; transition: opacity .25s;
+            box-shadow: 0 0 20px rgba(34,197,94,.6);
+        }
+        .call-active-speaking-ring.speaking { opacity: 1; }
+
+        .call-active-name {
+            font-size: 28px; font-weight: 900; color: #fff;
+            letter-spacing: -.8px;
+        }
+        .call-active-status {
+            font-size: 14px; color: rgba(255,255,255,.45);
+            font-weight: 500; margin-top: -6px;
+        }
+        .call-timer {
+            font-size: 18px; font-weight: 700;
+            color: #22c55e; letter-spacing: 1px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Group call participants */
+        .call-participants-row {
+            display: flex; gap: 14px;
+            justify-content: center; flex-wrap: wrap;
+            padding: 0 24px;
+        }
+        .call-participant-item {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+        }
+        .call-participant-avatar-wrap { position: relative; }
+        .call-participant-avatar {
+            width: 54px; height: 54px; border-radius: 50%; object-fit: cover;
+            border: 2px solid rgba(255,255,255,.1);
+        }
+        .call-participant-speaking {
+            position: absolute; inset: -4px; border-radius: 50%;
+            border: 2.5px solid #22c55e; opacity: 0;
+            box-shadow: 0 0 12px rgba(34,197,94,.5);
+            transition: opacity .2s;
+        }
+        .call-participant-speaking.on { opacity: 1; }
+        .call-participant-muted-icon {
+            position: absolute; bottom: -2px; right: -2px;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: #ef4444;
+            display: none; align-items: center; justify-content: center;
+            border: 2px solid #030d1a;
+        }
+        .call-participant-muted-icon.show { display: flex; }
+        .call-participant-name {
+            font-size: 10px; color: rgba(255,255,255,.5);
+            font-weight: 700; max-width: 56px;
+            text-align: center; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap;
+        }
+
+        /* In-call controls */
+        .call-controls {
+            display: flex; gap: 20px;
+            align-items: center; justify-content: center;
+            flex-wrap: wrap; padding: 0 20px;
+        }
+        .call-ctrl-btn {
+            display: flex; flex-direction: column;
+            align-items: center; gap: 8px;
+            cursor: pointer; border: none; background: none;
+        }
+        .call-ctrl-circle {
+            width: 62px; height: 62px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,.1);
+            border: 1px solid rgba(255,255,255,.12);
+            transition: transform .15s, background .2s;
+        }
+        .call-ctrl-btn:active .call-ctrl-circle { transform: scale(.88); }
+        .call-ctrl-btn.active .call-ctrl-circle {
+            background: rgba(255,255,255,.22);
+            border-color: rgba(255,255,255,.3);
+        }
+        .call-ctrl-label {
+            font-size: 11px; font-weight: 700;
+            color: rgba(255,255,255,.45);
+        }
+        .call-end-circle {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: #ef4444;
+            box-shadow: 0 8px 28px rgba(239,68,68,.55);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: none;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .call-end-circle:active { transform: scale(.88); box-shadow: none; }
+
+        /* ── CALL BUTTON (in chat header) ── */
+        .pm-call-btn {
+            background: rgba(34,197,94,.15);
+            border: 1px solid rgba(34,197,94,.3);
+            color: #22c55e;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0;
+            transition: background .15s, transform .1s;
+        }
+        .pm-call-btn:active { background: rgba(34,197,94,.28); transform: scale(.9); }
 
         /* === HAMBURGER MENU === */
         .hamburger-btn { width: 40px; height: 40px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-direction: column; gap: 4px; transition: all 0.2s; flex-shrink: 0; }
@@ -1655,7 +1941,7 @@
         .drawer-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 6px 0; }
         .drawer-footer { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.07); }
 
-        .next-draw-container { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.4); padding: var(--spacing-md); border-radius: var(--radius-xl); margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-md); box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
+        .next-draw-container { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.4); padding: var(--spacing-md); border-radius: var(--radius-xl); margin-bottom: 0; display: flex; align-items: center; gap: var(--spacing-md); box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
 
         /* === BEATS SECTION (Vertical Video Feed) === */
         #view-beats {
@@ -2061,14 +2347,13 @@
         .container { width: 100%; max-width: 500px; margin: 0 auto; padding: var(--spacing-sm); padding-bottom: 80px; /* Space for Nav */ }
         .card { background: var(--glass-surface); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; padding: var(--spacing-md); margin-bottom: var(--spacing-lg); border: 1px solid var(--glass-border); position: relative; transition: all 0.3s ease; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
         
-        .video-feed-wrapper { margin-bottom: var(--spacing-md); border-radius: 24px; overflow: hidden; background: #000; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
-        .video-container { position: relative; width: 100%; aspect-ratio: 16 / 9; }
+        /* === VIDEO FEED REMOVED — elements moved off-screen in DOM === */
         .video-overlay-bl { position: absolute; bottom: 12px; left: 12px; z-index: 10; background: rgba(0,0,0,0.9); padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--success); display: flex; align-items: center; gap: 5px; color: var(--success); font-size: 11px; font-weight: 800; }
-        .draw-panel { display: grid; grid-template-columns: 1fr 90px; gap: var(--spacing-sm); margin-bottom: var(--spacing-lg); }
-        .prev-balls { background: rgba(0,0,0,0.4); border-radius: var(--radius-lg); padding: var(--spacing-sm); display: flex; align-items: center; gap: var(--spacing-xs); overflow-x: auto; scrollbar-width: none; border: 1px solid rgba(255,255,255,0.1); }
-        .ball-small { min-width: 40px; height: 40px; background: linear-gradient(135deg, #334155, #1e293b); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; border: 1px solid rgba(255,255,255,0.3); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-shadow: 0 1px 2px black; }
-        .current-ball-box { background: linear-gradient(135deg, var(--accent), #2563eb); border-radius: var(--radius-lg); height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5); border: 2px solid rgba(255,255,255,0.4); position: relative; overflow: hidden; }
-        .current-ball-box::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent); animation: shine 3s infinite; }
+        .draw-panel { display: grid; grid-template-columns: 1fr 96px; gap: var(--spacing-sm); margin-bottom: var(--spacing-lg); }
+        .prev-balls { background: rgba(15,23,42,0.6); border-radius: var(--radius-lg); padding: 10px 12px; display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; border: 1px solid rgba(255,255,255,0.07); }
+        .ball-small { min-width: 38px; height: 38px; background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.85); box-shadow: 0 2px 8px rgba(0,0,0,0.4); text-shadow: 0 1px 2px black; }
+        .current-ball-box { background: linear-gradient(145deg, #0ea5e9, #2563eb); border-radius: var(--radius-xl); height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 8px 28px rgba(14, 165, 233, 0.45); border: 1.5px solid rgba(255,255,255,0.3); position: relative; overflow: hidden; }
+        .current-ball-box::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(45deg, transparent, rgba(255,255,255,0.25), transparent); animation: shine 3s infinite; }
         @keyframes shine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
         .bingo-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: var(--spacing-sm); }
         .letter { text-align: center; font-size: 24px; font-weight: 900; color: var(--gold); text-shadow: 0 2px 10px rgba(251, 191, 36, 0.8); -webkit-text-stroke: 1px rgba(0,0,0,0.5); }
@@ -2105,7 +2390,7 @@
         .late-overlay, .game-over-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--spacing-lg); border-radius: var(--radius-xl); border: 1px solid rgba(255,255,255,0.2); }
         .late-text { font-weight: 800; font-size: 20px; color: white; margin-bottom: var(--spacing-xs); text-shadow: 0 4px 10px rgba(0,0,0,0.8); }
         .late-subtext { font-size: 14px; opacity: 1; color: #cbd5e1; text-shadow: 0 2px 4px black; }
-        #winnerBanner { display: none; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: var(--spacing-md); border-radius: var(--radius-lg); text-align: center; font-weight: 900; margin-bottom: var(--spacing-md); animation: slideDown 0.5s ease; border: 2px solid #a7f3d0; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4); text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        #winnerBanner { display: none; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: var(--spacing-md); border-radius: var(--radius-lg); text-align: center; font-weight: 900; margin-bottom: 0; animation: slideDown 0.5s ease; border: 2px solid #a7f3d0; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4); text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
         .winner-line { font-size: 13px; opacity: 1; margin-top: 5px; display: block; font-weight: 600; }
         @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .chat-box { height: 480px; display: flex; flex-direction: column; background: #111827; border-radius: var(--radius-xl); border: 1px solid rgba(255,255,255,0.1); overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; }
@@ -2658,15 +2943,15 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            background: linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.8));
-            border: 1px solid rgba(251,191,36,0.25);
+            background: rgba(15,23,42,0.7);
+            border: 1px solid rgba(251,191,36,0.2);
             border-radius: var(--radius-lg);
             padding: 10px 14px;
-            margin-bottom: 10px;
+            margin-bottom: 0;
             backdrop-filter: blur(10px);
         }
         .pattern-bar-info { flex:1; min-width:0; }
-        .pattern-bar-label { font-size:9px; font-weight:800; color:rgba(251,191,36,0.6); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; }
+        .pattern-bar-label { font-size:9px; font-weight:800; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:2px; margin-bottom:3px; }
         .pattern-bar-name { font-size:13px; font-weight:900; color:var(--gold); text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .pattern-mini-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:2px; width:62px; flex-shrink:0; }
         .pattern-mini-cell { aspect-ratio:1; border-radius:3px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.04); transition:0.2s; }
@@ -4760,31 +5045,182 @@
             border-color: transparent;
             color: white;
         }
-        /* Bingo tab quick-action buttons */
-        .bingo-quick-actions {
-            display: flex;
-            gap: 10px;
-            padding: 12px 16px;
-            overflow-x: auto;
+        /* ====================================
+           BINGO SECTION — MODERN REDESIGN
+        ==================================== */
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
         }
-        .bingo-quick-btn {
-            flex-shrink: 0;
+
+        /* ── ARTISTIC BINGO HEADER CARD ── */
+        @keyframes bingo-hdr-drift {
+            0%   { transform: translateY(0px) rotate(0deg); }
+            50%  { transform: translateY(-6px) rotate(1deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        @keyframes bingo-hdr-shimmer {
+            0%   { opacity: 0.5; }
+            50%  { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        @keyframes bingo-hdr-scan {
+            0%   { transform: translateY(-100%); }
+            100% { transform: translateY(400%); }
+        }
+
+        .bingo-section-header {
+            position: relative;
+            margin: 0 calc(-1 * var(--spacing-sm)) 0;
+            border-radius: 0;
+            overflow: hidden;
+            min-height: 130px;
+            display: flex;
+            align-items: flex-end;
+            background: linear-gradient(160deg, #060d1f 0%, #0c1a35 40%, #0a1628 100%);
+            border: none;
+            box-shadow: none;
+        }
+
+        /* SVG art canvas fills full card */
+        .bingo-hdr-art {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Subtle scan-line effect */
+        .bingo-hdr-scanline {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .bingo-hdr-scanline::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0;
+            height: 40px;
+            background: linear-gradient(180deg, transparent 0%, rgba(14,165,233,0.06) 50%, transparent 100%);
+            animation: bingo-hdr-scan 4s linear infinite;
+        }
+
+        /* Glass overlay at bottom — fades into page bg so it feels native */
+        .bingo-hdr-glass {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(15,23,42,0.25) 45%,
+                rgba(15,23,42,0.92) 80%,
+                #0f172a 100%
+            );
+            z-index: 3;
+        }
+
+        /* Content row */
+        .bingo-hdr-content {
+            position: relative;
+            z-index: 4;
+            width: 100%;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 20px calc(var(--spacing-sm) + 4px) 16px;
+        }
+
+        .bingo-hdr-eyebrow {
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--accent-glow);
+            opacity: 0.7;
+            margin-bottom: 4px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .bingo-hdr-title {
+            font-family: 'Cinzel', serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            line-height: 1;
+            text-shadow: 0 2px 20px rgba(14,165,233,0.4);
+        }
+
+        .bingo-hdr-sub {
+            font-size: 10px;
+            color: rgba(255,255,255,0.35);
+            font-weight: 500;
+            margin-top: 5px;
+            letter-spacing: 0.5px;
+        }
+
+        .bingo-online-pill {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 10px 16px;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.1);
+            gap: 6px;
+            background: rgba(16,185,129,0.12);
+            border: 1px solid rgba(16,185,129,0.3);
+            border-radius: 20px;
+            padding: 6px 12px;
+            flex-shrink: 0;
+            backdrop-filter: blur(10px);
+        }
+        .bingo-online-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        /* Bingo tab quick-action buttons */
+        .bingo-quick-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 14px 0 14px;
+        }
+        .bingo-quick-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 14px 10px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
             background: rgba(30,41,59,0.6);
-            color: white;
-            font-size: 12px;
+            color: rgba(255,255,255,0.8);
+            font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
             backdrop-filter: blur(10px);
+            letter-spacing: 0.2px;
+            text-transform: uppercase;
         }
-        .bingo-quick-btn.gold { border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.1); color: #fbbf24; }
-        .bingo-quick-btn.blue { border-color: rgba(14,165,233,0.3); background: rgba(14,165,233,0.1); color: #38bdf8; }
+        .bingo-quick-btn:active { transform: scale(0.96); }
+        .bingo-quick-btn .qbtn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .bingo-quick-btn.gold { border-color: rgba(251,191,36,0.25); background: rgba(251,191,36,0.08); color: #fbbf24; }
+        .bingo-quick-btn.gold .qbtn-icon { background: rgba(251,191,36,0.15); }
+        .bingo-quick-btn.blue { border-color: rgba(14,165,233,0.25); background: rgba(14,165,233,0.08); color: #38bdf8; }
+        .bingo-quick-btn.blue .qbtn-icon { background: rgba(14,165,233,0.15); }
+        .bingo-quick-btn.red { border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.08); color: #f87171; }
+        .bingo-quick-btn.red .qbtn-icon { background: rgba(239,68,68,0.15); }
         /* ============================================
            🎱 BENTO CARD GRID SYSTEM
         ============================================ */
@@ -5474,9 +5910,12 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            overflow: visible; /* let children be visible */
+            width: 100%;
         }
         .pm-newinput {
             flex: 1;
+            min-width: 0; /* critical — allows flex item to shrink below content size */
             background: #1c2540;
             border: 1.5px solid rgba(255,255,255,.1);
             border-radius: 24px;
@@ -6300,7 +6739,8 @@
 <!-- ===== ONLINE RADIO PLAYER BAR ===== -->
 <!-- Chat Bubble FAB -->
 <button class="chat-bubble-btn" id="chatBubbleBtn" onclick="openChatDrawer()">
-    <i data-lucide="message-circle" style="width:24px;height:24px;"></i>
+    <i data-lucide="message-square" style="width:20px;height:20px;"></i>
+    <span class="chat-bubble-btn-label">Chat</span>
     <span class="chat-bubble-badge" id="chatBubbleBadge">0</span>
 </button>
 
@@ -6312,31 +6752,251 @@
     <div class="chat-drawer-handle"></div>
     <div class="chat-drawer-header">
         <div class="chat-drawer-title">
-            <i data-lucide="message-square" style="width:18px;color:var(--accent-glow)"></i>
-            LIVE STREAM CHAT
+            <div class="chat-drawer-live-dot"></div>
+            LIVE CHAT
+            <span class="chat-drawer-online" id="chatOnlineCount"></span>
         </div>
         <button class="chat-drawer-close" onclick="closeChatDrawer()">
-            <i data-lucide="x" style="width:16px"></i>
+            <i data-lucide="x" style="width:14px;height:14px;"></i>
         </button>
     </div>
-    <div id="chatList" style="flex:1;overflow-y:auto;padding:var(--spacing-md);display:flex;flex-direction:column;gap:var(--spacing-sm);scroll-behavior:smooth;background:#0f172a;"></div>
-    <div id="replyIndicator" class="reply-indicator" style="display:none; padding: 5px 15px; background: #374151; color: #d1d5db; font-size: 11px;">
-        <span id="replyText">Replying to...</span>
-        <button onclick="cancelReply()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="x" style="width:14px"></i></button>
+    <div id="chatList" style="flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;background:#0d1424;"></div>
+    <div id="replyIndicator" class="reply-indicator" style="display:none; padding: 6px 14px; background: rgba(14,165,233,0.1); border-top: 1px solid rgba(14,165,233,0.2); color: #94a3b8; font-size: 11px; align-items:center; justify-content:space-between;">
+        <span id="replyText" style="opacity:0.7;">Replying to...</span>
+        <button onclick="cancelReply()" style="background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; padding:0; display:flex; align-items:center;"><i data-lucide="x" style="width:14px"></i></button>
     </div>
-    <div class="chat-input-area" style="padding-bottom:max(12px,env(safe-area-inset-bottom));">
-        <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();">
-            <input type="text" id="chatIn" placeholder="Say something..." autocomplete="off">
-            <button type="submit" class="send-btn">
-                <i data-lucide="send" style="width:16px"></i>
-            </button>
+    <div class="chat-input-area">
+        <form class="input-wrapper" onsubmit="event.preventDefault(); sendChat();" style="margin:0;">
+            <input type="text" id="chatIn" placeholder="Send a message..." autocomplete="off">
         </form>
+        <button type="button" onclick="sendChat()" class="send-btn">
+            <i data-lucide="send" style="width:16px;height:16px;"></i>
+        </button>
     </div>
 </div>
 <div id="customPopupBanner">
-    <div style="position:relative; max-width:400px; width:100%; animation: popScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-        <button onclick="closeCustomBanner()" style="position:absolute; top:-15px; right:-10px; background:linear-gradient(135deg, #ef4444, #b91c1c); color:white; border:2px solid white; border-radius:50%; width:36px; height:36px; font-weight:bold; cursor:pointer; z-index:10; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,0.3);"><i data-lucide="x" style="width:20px"></i></button>
-        <img id="customBannerImg" src="" style="width:100%; border-radius: var(--radius-xl); border:2px solid rgba(255,255,255,0.2); box-shadow:0 20px 50px rgba(0,0,0,0.8); cursor:pointer; object-fit:cover;" onclick="clickCustomBanner()">
+    <div style="position:relative; max-width:380px; width:100%; animation: popScale 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+
+        <!-- Close -->
+        <button onclick="closeCustomBanner()" style="position:absolute;top:-13px;right:-8px;background:#1e293b;color:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.15);border-radius:50%;width:34px;height:34px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.5);transition:background 0.2s;">
+            <i data-lucide="x" style="width:16px;height:16px;"></i>
+        </button>
+
+        <!-- Card -->
+        <div style="background:linear-gradient(160deg,#0a0f1e 0%,#0d1526 50%,#080e1c 100%);border:1.5px solid rgba(255,255,255,0.1);border-radius:24px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.9),0 0 0 1px rgba(14,165,233,0.1);">
+
+            <!-- ── HERO ARTWORK ── -->
+            <div style="position:relative;height:200px;overflow:hidden;background:linear-gradient(135deg,#060d1f 0%,#0c1a3a 60%,#0a1628 100%);">
+
+                <!-- Background grid -->
+                <svg style="position:absolute;inset:0;width:100%;height:100%;" viewBox="0 0 380 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+                    <!-- perspective grid -->
+                    <defs>
+                        <linearGradient id="gridFade" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="transparent"/>
+                            <stop offset="100%" stop-color="rgba(14,165,233,0.15)"/>
+                        </linearGradient>
+                        <linearGradient id="heroGlow" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.25"/>
+                            <stop offset="100%" stop-color="#6366f1" stop-opacity="0.15"/>
+                        </linearGradient>
+                        <linearGradient id="phoneBody" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#1e3a5f"/>
+                            <stop offset="100%" stop-color="#0c1e34"/>
+                        </linearGradient>
+                        <linearGradient id="phoneScreen" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#0d2340"/>
+                            <stop offset="100%" stop-color="#061220"/>
+                        </linearGradient>
+                        <linearGradient id="accentLine" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="#0ea5e9"/>
+                            <stop offset="50%" stop-color="#818cf8"/>
+                            <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
+                        </linearGradient>
+                        <radialGradient id="orb1" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.4"/>
+                            <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
+                        </radialGradient>
+                        <radialGradient id="orb2" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#6366f1" stop-opacity="0.35"/>
+                            <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+                        </radialGradient>
+                        <filter id="softBlur">
+                            <feGaussianBlur stdDeviation="3"/>
+                        </filter>
+                    </defs>
+
+                    <!-- Ambient orbs -->
+                    <ellipse cx="80" cy="100" rx="90" ry="90" fill="url(#orb2)" filter="url(#softBlur)"/>
+                    <ellipse cx="300" cy="80" rx="100" ry="100" fill="url(#orb1)" filter="url(#softBlur)"/>
+
+                    <!-- Horizontal scan lines (subtle) -->
+                    <rect x="0" y="30" width="380" height="0.5" fill="rgba(14,165,233,0.06)"/>
+                    <rect x="0" y="60" width="380" height="0.5" fill="rgba(14,165,233,0.06)"/>
+                    <rect x="0" y="90" width="380" height="0.5" fill="rgba(14,165,233,0.06)"/>
+                    <rect x="0" y="120" width="380" height="0.5" fill="rgba(14,165,233,0.06)"/>
+                    <rect x="0" y="150" width="380" height="0.5" fill="rgba(14,165,233,0.06)"/>
+                    <rect x="0" y="180" width="380" height="0.5" fill="rgba(14,165,233,0.06)"/>
+
+                    <!-- Arc rings background -->
+                    <circle cx="340" cy="170" r="120" fill="none" stroke="rgba(99,102,241,0.08)" stroke-width="40"/>
+                    <circle cx="340" cy="170" r="80" fill="none" stroke="rgba(14,165,233,0.06)" stroke-width="25"/>
+                    <circle cx="50" cy="30" r="70" fill="none" stroke="rgba(14,165,233,0.07)" stroke-width="20"/>
+
+                    <!-- ── PHONE 1 (center, slightly tilted) ── -->
+                    <!-- shadow -->
+                    <ellipse cx="190" cy="196" rx="40" ry="6" fill="rgba(0,0,0,0.5)" filter="url(#softBlur)"/>
+                    <!-- body -->
+                    <rect x="155" y="18" width="70" height="170" rx="12" fill="url(#phoneBody)" stroke="rgba(14,165,233,0.4)" stroke-width="1.5"/>
+                    <!-- screen -->
+                    <rect x="160" y="28" width="60" height="148" rx="7" fill="url(#phoneScreen)"/>
+                    <!-- notch / dynamic island -->
+                    <rect x="175" y="30" width="30" height="7" rx="3.5" fill="rgba(0,0,0,0.6)"/>
+                    <!-- top accent line inside screen -->
+                    <rect x="160" y="43" width="60" height="1" fill="url(#accentLine)" opacity="0.4"/>
+                    <!-- chat bubbles on screen -->
+                    <!-- incoming bubble row 1 -->
+                    <rect x="164" y="52" width="34" height="10" rx="5" fill="rgba(14,165,233,0.25)" stroke="rgba(14,165,233,0.4)" stroke-width="0.7"/>
+                    <rect x="165" y="54.5" width="24" height="1.5" rx="0.75" fill="rgba(14,165,233,0.5)"/>
+                    <rect x="165" y="57.5" width="16" height="1.5" rx="0.75" fill="rgba(14,165,233,0.35)"/>
+                    <!-- outgoing bubble row 2 -->
+                    <rect x="182" y="68" width="34" height="10" rx="5" fill="rgba(99,102,241,0.3)" stroke="rgba(99,102,241,0.45)" stroke-width="0.7"/>
+                    <rect x="185" y="70.5" width="20" height="1.5" rx="0.75" fill="rgba(199,210,254,0.6)"/>
+                    <rect x="185" y="73.5" width="14" height="1.5" rx="0.75" fill="rgba(199,210,254,0.4)"/>
+                    <!-- incoming bubble row 3 -->
+                    <rect x="164" y="84" width="28" height="10" rx="5" fill="rgba(14,165,233,0.25)" stroke="rgba(14,165,233,0.4)" stroke-width="0.7"/>
+                    <rect x="165" y="86.5" width="20" height="1.5" rx="0.75" fill="rgba(14,165,233,0.5)"/>
+                    <rect x="165" y="89.5" width="12" height="1.5" rx="0.75" fill="rgba(14,165,233,0.35)"/>
+                    <!-- divider label "Voice Call" -->
+                    <rect x="170" y="100" width="40" height="1" rx="0.5" fill="rgba(255,255,255,0.08)"/>
+                    <rect x="172" y="104" width="36" height="7" rx="3.5" fill="rgba(16,185,129,0.2)" stroke="rgba(16,185,129,0.4)" stroke-width="0.7"/>
+                    <!-- phone icon on call pill -->
+                    <circle cx="180" cy="107.5" r="2.5" fill="rgba(16,185,129,0.5)"/>
+                    <rect x="183" y="106" width="14" height="1.5" rx="0.75" fill="rgba(16,185,129,0.6)"/>
+                    <rect x="183" y="108.5" width="10" height="1.5" rx="0.75" fill="rgba(16,185,129,0.4)"/>
+                    <!-- group row -->
+                    <rect x="164" y="118" width="52" height="10" rx="5" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.35)" stroke-width="0.7"/>
+                    <rect x="167" y="120.5" width="28" height="1.5" rx="0.75" fill="rgba(196,181,253,0.5)"/>
+                    <rect x="167" y="123.5" width="18" height="1.5" rx="0.75" fill="rgba(196,181,253,0.35)"/>
+                    <!-- home indicator -->
+                    <rect x="175" y="168" width="30" height="3" rx="1.5" fill="rgba(255,255,255,0.12)"/>
+                    <!-- side buttons -->
+                    <rect x="153" y="55" width="2.5" height="14" rx="1.25" fill="rgba(14,165,233,0.3)"/>
+                    <rect x="153" y="72" width="2.5" height="14" rx="1.25" fill="rgba(14,165,233,0.3)"/>
+                    <rect x="224.5" y="62" width="2.5" height="20" rx="1.25" fill="rgba(14,165,233,0.2)"/>
+
+                    <!-- ── PHONE 2 (left, smaller, slightly behind) ── -->
+                    <rect x="58" y="45" width="52" height="125" rx="9" fill="#0c1929" stroke="rgba(99,102,241,0.25)" stroke-width="1.2" opacity="0.85"/>
+                    <rect x="63" y="53" width="42" height="108" rx="5" fill="#060e1c" opacity="0.9"/>
+                    <rect x="63" y="62" width="30" height="8" rx="4" fill="rgba(99,102,241,0.2)" stroke="rgba(99,102,241,0.3)" stroke-width="0.6" opacity="0.85"/>
+                    <rect x="65" y="64.5" width="20" height="1.2" rx="0.6" fill="rgba(199,210,254,0.4)" opacity="0.85"/>
+                    <rect x="65" y="67" width="13" height="1.2" rx="0.6" fill="rgba(199,210,254,0.3)" opacity="0.85"/>
+                    <rect x="76" y="76" width="25" height="8" rx="4" fill="rgba(14,165,233,0.2)" stroke="rgba(14,165,233,0.3)" stroke-width="0.6" opacity="0.85"/>
+                    <rect x="78" y="78.5" width="16" height="1.2" rx="0.6" fill="rgba(14,165,233,0.5)" opacity="0.85"/>
+                    <rect x="63" y="90" width="28" height="8" rx="4" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.3)" stroke-width="0.6" opacity="0.85"/>
+                    <rect x="65" y="92.5" width="18" height="1.2" rx="0.6" fill="rgba(196,181,253,0.45)" opacity="0.85"/>
+
+                    <!-- ── FLOATING FEATURE BADGES ── -->
+                    <!-- Badge: Message -->
+                    <rect x="270" y="28" width="85" height="28" rx="8" fill="rgba(14,165,233,0.15)" stroke="rgba(14,165,233,0.4)" stroke-width="1"/>
+                    <circle cx="284" cy="42" r="7" fill="rgba(14,165,233,0.2)" stroke="rgba(14,165,233,0.5)" stroke-width="1"/>
+                    <!-- message icon -->
+                    <rect x="280" y="38.5" width="8" height="5.5" rx="1.5" fill="none" stroke="rgba(14,165,233,0.9)" stroke-width="1.1"/>
+                    <line x1="281.5" y1="43.5" x2="283" y2="45" stroke="rgba(14,165,233,0.9)" stroke-width="1"/>
+                    <rect x="293" y="39" width="32" height="1.5" rx="0.75" fill="rgba(14,165,233,0.7)"/>
+                    <rect x="293" y="42" width="22" height="1.2" rx="0.6" fill="rgba(14,165,233,0.4)"/>
+
+                    <!-- Badge: Calls -->
+                    <rect x="270" y="66" width="85" height="28" rx="8" fill="rgba(16,185,129,0.12)" stroke="rgba(16,185,129,0.35)" stroke-width="1"/>
+                    <circle cx="284" cy="80" r="7" fill="rgba(16,185,129,0.2)" stroke="rgba(16,185,129,0.45)" stroke-width="1"/>
+                    <!-- phone icon -->
+                    <path d="M280 77.5 Q280 76 281.5 76 L283 77.5 Q283 78.5 282 79 Q281.5 82 284 83.5 Q284.5 82.5 285.5 82.5 L287 84 Q287 85.5 285.5 85.5 Q281 85 280 80.5 Z" fill="none" stroke="rgba(16,185,129,0.9)" stroke-width="0.9" stroke-linejoin="round"/>
+                    <rect x="293" y="77" width="32" height="1.5" rx="0.75" fill="rgba(16,185,129,0.7)"/>
+                    <rect x="293" y="80" width="22" height="1.2" rx="0.6" fill="rgba(16,185,129,0.4)"/>
+
+                    <!-- Badge: Groups -->
+                    <rect x="270" y="104" width="85" height="28" rx="8" fill="rgba(139,92,246,0.12)" stroke="rgba(139,92,246,0.35)" stroke-width="1"/>
+                    <circle cx="284" cy="118" r="7" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.45)" stroke-width="1"/>
+                    <!-- group icon -->
+                    <circle cx="282" cy="116" r="2" fill="none" stroke="rgba(139,92,246,0.9)" stroke-width="1"/>
+                    <path d="M279 121 Q279 119 282 119 Q285 119 285 121" fill="none" stroke="rgba(139,92,246,0.9)" stroke-width="1" stroke-linecap="round"/>
+                    <circle cx="286.5" cy="115.5" r="1.6" fill="none" stroke="rgba(196,181,253,0.7)" stroke-width="0.9"/>
+                    <path d="M284.5 120 Q285 118.5 286.5 118.5 Q288.5 118.5 289 120" fill="none" stroke="rgba(196,181,253,0.7)" stroke-width="0.9" stroke-linecap="round"/>
+                    <rect x="293" y="115" width="32" height="1.5" rx="0.75" fill="rgba(139,92,246,0.7)"/>
+                    <rect x="293" y="118" width="22" height="1.2" rx="0.6" fill="rgba(139,92,246,0.4)"/>
+
+                    <!-- Connecting dots/lines from phone to badges -->
+                    <line x1="228" y1="68" x2="268" y2="42" stroke="rgba(14,165,233,0.2)" stroke-width="0.8" stroke-dasharray="3,3"/>
+                    <line x1="228" y1="100" x2="268" y2="80" stroke="rgba(16,185,129,0.2)" stroke-width="0.8" stroke-dasharray="3,3"/>
+                    <line x1="228" y1="126" x2="268" y2="118" stroke="rgba(139,92,246,0.2)" stroke-width="0.8" stroke-dasharray="3,3"/>
+
+                    <!-- Dot at connection points -->
+                    <circle cx="228" cy="68" r="2.5" fill="rgba(14,165,233,0.5)"/>
+                    <circle cx="228" cy="100" r="2.5" fill="rgba(16,185,129,0.5)"/>
+                    <circle cx="228" cy="126" r="2.5" fill="rgba(139,92,246,0.5)"/>
+
+                    <!-- Floating particles -->
+                    <circle cx="130" cy="25" r="2" fill="rgba(14,165,233,0.4)"/>
+                    <circle cx="150" cy="180" r="1.5" fill="rgba(99,102,241,0.35)"/>
+                    <circle cx="250" cy="175" r="2" fill="rgba(16,185,129,0.3)"/>
+                    <circle cx="40" cy="140" r="1.5" fill="rgba(139,92,246,0.4)"/>
+
+                    <!-- Bottom fade overlay -->
+                    <rect x="0" y="155" width="380" height="45" fill="url(#gridFade)"/>
+                </svg>
+
+                <!-- NEW tag -->
+                <div style="position:absolute;top:14px;left:14px;background:linear-gradient(135deg,#0ea5e9,#6366f1);padding:4px 10px;border-radius:20px;font-size:9px;font-weight:900;letter-spacing:2px;color:white;text-transform:uppercase;box-shadow:0 4px 12px rgba(14,165,233,0.4);">NEW FEATURE</div>
+            </div>
+
+            <!-- ── CONTENT ── -->
+            <div style="padding:22px 22px 24px;">
+                <!-- Top accent bar -->
+                <div style="height:2px;background:linear-gradient(90deg,#0ea5e9,#6366f1,rgba(14,165,233,0));border-radius:2px;margin-bottom:18px;"></div>
+
+                <!-- Headline -->
+                <div style="font-size:20px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;line-height:1.25;margin-bottom:6px;">Messenger is Now Live</div>
+                <div style="font-size:13px;color:rgba(255,255,255,0.55);line-height:1.6;margin-bottom:20px;font-weight:500;">Connect with the community — send messages, make voice calls, and create group chats directly inside the app.</div>
+
+                <!-- Feature list -->
+                <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px;">
+                    <div style="display:flex;align-items:center;gap:12px;background:rgba(14,165,233,0.06);border:1px solid rgba(14,165,233,0.15);border-radius:12px;padding:11px 14px;">
+                        <div style="width:34px;height:34px;border-radius:9px;background:rgba(14,165,233,0.15);border:1px solid rgba(14,165,233,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="message-circle" style="width:16px;height:16px;color:#38bdf8;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;font-weight:800;color:white;line-height:1.3;">Private Messaging</div>
+                            <div style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:500;">Send and receive messages in real time</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:12px;padding:11px 14px;">
+                        <div style="width:34px;height:34px;border-radius:9px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="phone" style="width:16px;height:16px;color:#34d399;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;font-weight:800;color:white;line-height:1.3;">Voice Calls</div>
+                            <div style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:500;">Make free calls to any member</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:12px;padding:11px 14px;">
+                        <div style="width:34px;height:34px;border-radius:9px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="users" style="width:16px;height:16px;color:#a78bfa;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;font-weight:800;color:white;line-height:1.3;">Group Chats</div>
+                            <div style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:500;">Create and manage group conversations</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CTA Button -->
+                <button onclick="closeCustomBanner(); switchTab('home');" style="width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#6366f1);border:none;border-radius:12px;color:white;font-size:14px;font-weight:800;letter-spacing:0.3px;cursor:pointer;box-shadow:0 8px 24px rgba(14,165,233,0.35);transition:opacity 0.2s;">
+                    Open Messenger
+                </button>
+                <div style="text-align:center;margin-top:12px;font-size:10px;color:rgba(255,255,255,0.2);font-weight:600;letter-spacing:0.5px;">TAP ANYWHERE OUTSIDE TO DISMISS</div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -6553,6 +7213,147 @@
     </div>
 </div>
 
+<!-- ===== ANNOUNCEMENT CAROUSEL ===== -->
+<div id="annCarouselWrap" style="position:sticky;top:0;z-index:99;background:#0f172a;border-bottom:1px solid rgba(255,255,255,0.07);">
+    <div style="position:relative;overflow:hidden;height:72px;">
+        <div id="annCarousel" style="display:flex;height:100%;transition:transform 0.75s cubic-bezier(.4,0,.2,1);will-change:transform;">
+
+            <!-- ══ Slide 1: Holy Friday ══ -->
+            <div style="min-width:100%;height:100%;position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;padding:0 40px 0 14px;background:linear-gradient(110deg,#0d0221 0%,#1e0a3c 55%,#3b1060 100%);">
+                <!-- Artwork background: geometric arcs + stars -->
+                <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 400 72" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                    <!-- large arc top-right -->
+                    <circle cx="370" cy="-10" r="80" fill="none" stroke="rgba(139,92,246,0.18)" stroke-width="30"/>
+                    <circle cx="370" cy="-10" r="52" fill="none" stroke="rgba(167,139,250,0.10)" stroke-width="18"/>
+                    <!-- diagonal grid lines -->
+                    <line x1="0" y1="72" x2="60" y2="0" stroke="rgba(139,92,246,0.07)" stroke-width="1"/>
+                    <line x1="40" y1="72" x2="100" y2="0" stroke="rgba(139,92,246,0.07)" stroke-width="1"/>
+                    <line x1="80" y1="72" x2="140" y2="0" stroke="rgba(139,92,246,0.05)" stroke-width="1"/>
+                    <!-- star dots -->
+                    <circle cx="200" cy="12" r="1.5" fill="#c4b5fd" opacity="0.5"/>
+                    <circle cx="240" cy="30" r="1" fill="#e9d5ff" opacity="0.4"/>
+                    <circle cx="180" cy="55" r="1.5" fill="#a78bfa" opacity="0.35"/>
+                    <circle cx="310" cy="20" r="2" fill="#c4b5fd" opacity="0.3"/>
+                    <circle cx="280" cy="58" r="1" fill="#e9d5ff" opacity="0.4"/>
+                    <circle cx="340" cy="44" r="1.5" fill="#a78bfa" opacity="0.25"/>
+                    <!-- glowing orb bottom-left -->
+                    <ellipse cx="0" cy="72" rx="60" ry="40" fill="rgba(139,92,246,0.12)"/>
+                    <!-- cross icon art (large, faded, BG) -->
+                    <rect x="320" y="10" width="6" height="22" rx="2" fill="rgba(196,181,253,0.06)"/>
+                    <rect x="314" y="18" width="18" height="6" rx="2" fill="rgba(196,181,253,0.06)"/>
+                </svg>
+                <!-- Icon -->
+                <div style="flex-shrink:0;width:44px;height:44px;border-radius:12px;background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.35);display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
+                    <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
+                        <rect x="3" y="16" width="3" height="8" rx="1" fill="#a78bfa" opacity="0.6"/>
+                        <ellipse cx="4.5" cy="15" rx="1.2" ry="1.8" fill="#fde68a" style="animation:ann-flicker 1.4s ease-in-out infinite;transform-origin:4.5px 16px"/>
+                        <rect x="22" y="16" width="3" height="8" rx="1" fill="#a78bfa" opacity="0.6"/>
+                        <ellipse cx="23.5" cy="15" rx="1.2" ry="1.8" fill="#fde68a" style="animation:ann-flicker 1.4s ease-in-out infinite 0.3s;transform-origin:23.5px 16px"/>
+                        <rect x="12" y="4" width="4" height="16" rx="1.5" fill="#ede9fe"/>
+                        <rect x="7" y="9" width="14" height="4" rx="1.5" fill="#ede9fe"/>
+                    </svg>
+                </div>
+                <!-- Text -->
+                <div style="flex:1;min-width:0;position:relative;z-index:1;">
+                    <div style="font-size:9px;font-weight:900;letter-spacing:2.5px;color:#c4b5fd;text-transform:uppercase;line-height:1.3;margin-bottom:2px;">NOTICE · HOLY WEEK</div>
+                    <div style="font-size:13px;font-weight:800;color:#ede9fe;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;">No Bingo Draw on Good Friday</div>
+                </div>
+                <div style="font-size:9px;color:rgba(167,139,250,0.45);font-weight:700;flex-shrink:0;position:relative;z-index:1;">1/2</div>
+            </div>
+
+            <!-- ══ Slide 2: Rice Jackpot ══ -->
+            <div style="min-width:100%;height:100%;position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;padding:0 40px 0 14px;background:linear-gradient(110deg,#18100000 0%,#2d1800 40%,#1a0f00 100%);">
+                <!-- solid base layer -->
+                <div style="position:absolute;inset:0;background:linear-gradient(110deg,#1a0e00,#2d1c00,#3a2200);"></div>
+                <!-- Artwork background: trophy / coin patterns -->
+                <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 400 72" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                    <!-- big coin circle BG top-right -->
+                    <circle cx="360" cy="36" r="55" fill="none" stroke="rgba(251,191,36,0.12)" stroke-width="28"/>
+                    <circle cx="360" cy="36" r="30" fill="rgba(251,191,36,0.05)"/>
+                    <!-- horizontal shimmer lines -->
+                    <line x1="0" y1="18" x2="400" y2="18" stroke="rgba(251,191,36,0.04)" stroke-width="1"/>
+                    <line x1="0" y1="36" x2="400" y2="36" stroke="rgba(251,191,36,0.04)" stroke-width="1"/>
+                    <line x1="0" y1="54" x2="400" y2="54" stroke="rgba(251,191,36,0.04)" stroke-width="1"/>
+                    <!-- dot scatter -->
+                    <circle cx="160" cy="14" r="2" fill="#fbbf24" opacity="0.25"/>
+                    <circle cx="220" cy="50" r="1.5" fill="#fcd34d" opacity="0.2"/>
+                    <circle cx="270" cy="22" r="2.5" fill="#fbbf24" opacity="0.15"/>
+                    <circle cx="300" cy="60" r="1.5" fill="#fcd34d" opacity="0.2"/>
+                    <!-- trophy silhouette faded -->
+                    <path d="M330 5 Q328 16 332 20 L338 20 Q342 16 340 5 Z" fill="rgba(251,191,36,0.07)"/>
+                    <rect x="333" y="20" width="4" height="6" rx="1" fill="rgba(251,191,36,0.07)"/>
+                    <rect x="330" y="26" width="10" height="3" rx="1.5" fill="rgba(251,191,36,0.07)"/>
+                    <!-- glow bottom-right -->
+                    <ellipse cx="400" cy="72" rx="70" ry="45" fill="rgba(251,191,36,0.08)"/>
+                </svg>
+                <!-- Icon -->
+                <div style="flex-shrink:0;width:44px;height:44px;border-radius:12px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.35);display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
+                    <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
+                        <rect x="4" y="13" width="11" height="11" rx="3" fill="#d97706" opacity="0.9"/>
+                        <rect x="7" y="11" width="5" height="3" rx="1.5" fill="#92400e"/>
+                        <text x="9.5" y="21" text-anchor="middle" font-family="Arial Black" font-size="4.5" font-weight="900" fill="#fff8e1">5KG</text>
+                        <path d="M15 5 Q13.5 12 16 14 L20 14 Q22.5 12 21 5 Z" fill="#fbbf24"/>
+                        <path d="M15 7.5 Q12 7.5 12 10.5 Q12 13 15 12.5" stroke="#f59e0b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                        <path d="M21 7.5 Q24 7.5 24 10.5 Q24 13 21 12.5" stroke="#f59e0b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                        <rect x="17" y="14" width="2" height="3" rx="0.5" fill="#d97706"/>
+                        <rect x="15.5" y="17" width="5" height="1.5" rx="0.75" fill="#fbbf24"/>
+                    </svg>
+                </div>
+                <!-- Text -->
+                <div style="flex:1;min-width:0;position:relative;z-index:1;">
+                    <div style="font-size:9px;font-weight:900;letter-spacing:2.5px;color:#fcd34d;text-transform:uppercase;line-height:1.3;margin-bottom:2px;">NEW JACKPOT PRIZE</div>
+                    <div style="font-size:13px;font-weight:800;color:#fef3c7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;">5KG Rice — Starting March 10 · Every 8:00 PM</div>
+                </div>
+                <div style="font-size:9px;color:rgba(251,191,36,0.45);font-weight:700;flex-shrink:0;position:relative;z-index:1;">2/2</div>
+            </div>
+
+        </div>
+        <button onclick="document.getElementById('annCarouselWrap').style.display='none'" style="position:absolute;top:50%;right:8px;transform:translateY(-50%);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.5);width:22px;height:22px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;padding:0;z-index:10;line-height:1;">✕</button>
+    </div>
+    <div style="display:flex;justify-content:center;gap:5px;padding:3px 0 5px;">
+        <div id="annDot0" style="width:18px;height:3px;border-radius:2px;background:#a78bfa;transition:all 0.3s;"></div>
+        <div id="annDot1" style="width:6px;height:3px;border-radius:2px;background:rgba(255,255,255,0.2);transition:all 0.3s;"></div>
+    </div>
+</div>
+<style>
+@keyframes ann-flicker {
+    0%,100%{transform:scaleY(1) scaleX(1) rotate(-1deg)}
+    25%{transform:scaleY(1.08) scaleX(0.94) rotate(1deg)}
+    50%{transform:scaleY(0.93) scaleX(1.05) rotate(-2deg)}
+    75%{transform:scaleY(1.1) scaleX(0.95) rotate(1.5deg)}
+}
+</style>
+<script>
+(function(){
+    var cur=0,total=2,timer;
+    var colors=['#a78bfa','#fbbf24'];
+    function goTo(i){
+        cur=(i+total)%total;
+        document.getElementById('annCarousel').style.transform='translateX(-'+(cur*100)+'%)';
+        for(var d=0;d<total;d++){
+            var dot=document.getElementById('annDot'+d);
+            if(!dot)continue;
+            dot.style.width=d===cur?'16px':'6px';
+            dot.style.background=d===cur?colors[cur]:'rgba(255,255,255,0.2)';
+        }
+    }
+    function startAuto(){ timer=setInterval(function(){goTo(cur+1);},6000); }
+    function stopAuto(){ clearInterval(timer); }
+    var wrap=document.getElementById('annCarousel');
+    var touchX=0;
+    if(wrap){
+        wrap.addEventListener('touchstart',function(e){touchX=e.touches[0].clientX;stopAuto();},{passive:true});
+        wrap.addEventListener('touchend',function(e){
+            var diff=touchX-e.changedTouches[0].clientX;
+            if(Math.abs(diff)>30) goTo(diff>0?cur+1:cur-1);
+            startAuto();
+        },{passive:true});
+    }
+    startAuto();
+})();
+</script>
+<!-- ===== END ANNOUNCEMENT CAROUSEL ===== -->
+
 <!-- HAMBURGER OVERLAY -->
 <div class="hamburger-overlay" id="hamburgerOverlay" onclick="closeHamburgerMenu()"></div>
 
@@ -6593,16 +7394,14 @@
     <button class="hamburger-nav-item" onclick="closeHamburgerMenu(); openMenuModal()">
         <i data-lucide="settings"></i> Settings
     </button>
+    <div class="hamburger-divider"></div>
+    <div class="hamburger-section-label">Earn</div>
+    <button class="hamburger-nav-item" id="hmenu-inf-entry" onclick="closeHamburgerMenu(); if(typeof openInfluencerDash === 'function') openInfluencerDash(); else openInfluencerApply();" style="color:#818cf8;">
+        <i data-lucide="star" style="color:#818cf8;"></i> Influencer Portal
+    </button>
 </div>
 
 <div class="container">
-    <div class="ad-container-global">
-        <script type="text/javascript">
-            atOptions = { 'key' : '9bf585b6ee39cb9b515e2fae1fa958c2', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-        </script>
-        <script type="text/javascript" src="https://pl28660488.effectivegatecpm.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
-    </div>
-
     <div id="view-home" style="display:block;">
         <div id="friendRequestsSection"></div>
 
@@ -6734,34 +7533,111 @@
         </div>
     </div>
 
-    <div id="view-bingo" style="display:none;">
-        <!-- Quick actions -->
-        <div class="bingo-quick-actions">
-            <button class="bingo-quick-btn gold" onclick="openTournaments()">
-                <i data-lucide="trophy" style="width:18px;height:18px;vertical-align:middle;color:#fbbf24;"></i> Tournaments
-            </button>
-            <button class="bingo-quick-btn blue" onclick="openLeaderboard()">
-                <i data-lucide="bar-chart-2" style="width:18px;height:18px;vertical-align:middle;color:#38bdf8;"></i> Leaderboard
-            </button>
-            <button class="bingo-quick-btn" onclick="showStreakModal(userData.loginStreak||1, STREAK_REWARDS[Math.min((userData.loginStreak||1)-1,6)])" style="border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#f87171;">
-                <i data-lucide="flame" style="width:18px;height:18px;vertical-align:middle;color:#f87171;"></i> My Streak
-            </button>
-        </div>
-        <div class="video-feed-wrapper">
-            <div class="video-container">
-                <div class="video-overlay-bl"><i data-lucide="users" style="width:14px"></i><span id="onlineCount">0</span> ONLINE</div>
-                <div id="videoOfflineState" style="display:none; position:absolute; inset:0; background:#0f172a; flex-direction:column; align-items:center; justify-content:center; z-index:20;">
-                    <div style="width:60px; height:60px; background:rgba(255,255,255,0.05); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom: var(--spacing-md); animation:pulse-ring 2s infinite;">
-                        <i data-lucide="radio" style="width:30px; height:30px; color:#94a3b8;"></i>
-                    </div>
-                    <h3 style="margin:0; font-size:16px; font-weight:900; color:white; letter-spacing:1px;">WAITING FOR LIVE</h3>
-                    <p style="margin:5px 0 0; font-size:12px; color:#64748b;">Stand by for the next draw.</p>
+    <div id="view-bingo" style="display:none; padding-top:0;">
+
+        <!-- ── ARTISTIC BINGO HEADER CARD ── -->
+        <div class="bingo-section-header">
+
+            <!-- SVG Art Background -->
+            <svg class="bingo-hdr-art" viewBox="0 0 400 110" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <radialGradient id="rg1" cx="80%" cy="20%" r="60%">
+                        <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.25"/>
+                        <stop offset="100%" stop-color="transparent"/>
+                    </radialGradient>
+                    <radialGradient id="rg2" cx="10%" cy="90%" r="50%">
+                        <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.15"/>
+                        <stop offset="100%" stop-color="transparent"/>
+                    </radialGradient>
+                    <radialGradient id="rg3" cx="50%" cy="50%" r="40%">
+                        <stop offset="0%" stop-color="#6366f1" stop-opacity="0.1"/>
+                        <stop offset="100%" stop-color="transparent"/>
+                    </radialGradient>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="2" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+
+                <!-- Background gradients -->
+                <rect width="400" height="110" fill="url(#rg1)"/>
+                <rect width="400" height="110" fill="url(#rg2)"/>
+                <rect width="400" height="110" fill="url(#rg3)"/>
+
+                <!-- Geometric bingo ball grid — abstract art -->
+                <!-- Large faded circle, top right -->
+                <circle cx="340" cy="28" r="55" fill="none" stroke="rgba(14,165,233,0.18)" stroke-width="1"/>
+                <circle cx="340" cy="28" r="38" fill="none" stroke="rgba(14,165,233,0.12)" stroke-width="0.5"/>
+                <circle cx="340" cy="28" r="22" fill="rgba(14,165,233,0.06)" stroke="rgba(14,165,233,0.2)" stroke-width="0.5"/>
+
+                <!-- Decorative bingo balls — faded, artistic -->
+                <circle cx="342" cy="28" r="16" fill="rgba(14,165,233,0.08)" stroke="rgba(14,165,233,0.3)" stroke-width="1" filter="url(#glow)"/>
+                <text x="342" y="33" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="10" font-weight="800" font-family="Inter,sans-serif">B7</text>
+
+                <circle cx="370" cy="60" r="11" fill="rgba(251,191,36,0.08)" stroke="rgba(251,191,36,0.25)" stroke-width="1"/>
+                <text x="370" y="64.5" text-anchor="middle" fill="rgba(251,191,36,0.4)" font-size="8" font-weight="800" font-family="Inter,sans-serif">N32</text>
+
+                <circle cx="310" cy="70" r="9" fill="rgba(99,102,241,0.08)" stroke="rgba(99,102,241,0.2)" stroke-width="1"/>
+                <text x="310" y="74" text-anchor="middle" fill="rgba(99,102,241,0.4)" font-size="7" font-weight="800" font-family="Inter,sans-serif">G52</text>
+
+                <circle cx="380" cy="18" r="7" fill="rgba(16,185,129,0.1)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+                <text x="380" y="21.5" text-anchor="middle" fill="rgba(16,185,129,0.5)" font-size="6" font-weight="800" font-family="Inter,sans-serif">O75</text>
+
+                <!-- Diagonal grid lines — bingo card texture -->
+                <line x1="0" y1="0" x2="400" y2="110" stroke="rgba(255,255,255,0.02)" stroke-width="20"/>
+                <line x1="-40" y1="0" x2="360" y2="110" stroke="rgba(255,255,255,0.015)" stroke-width="14"/>
+
+                <!-- BINGO letter track — top edge -->
+                <rect x="0" y="0" width="400" height="3" fill="linear-gradient(90deg, transparent, rgba(14,165,233,0.4), transparent)"/>
+                <line x1="0" y1="2" x2="400" y2="2" stroke="rgba(14,165,233,0.3)" stroke-width="1.5"/>
+
+                <!-- Subtle horizontal rule lines like a bingo card -->
+                <line x1="20" y1="35" x2="200" y2="35" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+                <line x1="20" y1="55" x2="180" y2="55" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+
+                <!-- Accent dot cluster -->
+                <circle cx="15" cy="15" r="2" fill="rgba(14,165,233,0.5)"/>
+                <circle cx="22" cy="15" r="1.5" fill="rgba(14,165,233,0.3)"/>
+                <circle cx="28" cy="15" r="1" fill="rgba(14,165,233,0.2)"/>
+            </svg>
+
+            <!-- Scan-line shimmer layer -->
+            <div class="bingo-hdr-scanline"></div>
+
+            <!-- Glass fade at bottom -->
+            <div class="bingo-hdr-glass"></div>
+
+            <!-- Text content -->
+            <div class="bingo-hdr-content">
+                <div>
+                    <div class="bingo-hdr-eyebrow">Radio Bingo Live</div>
+                    <div class="bingo-hdr-title">LIVE DRAW</div>
+                    <div class="bingo-hdr-sub">Real-Time · Official</div>
                 </div>
-                <iframe id="liveVideoFrame" width="100%" height="100%" src="https://www.youtube.com/embed/4I_NSJTbdXo?autoplay=1&mute=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="border:none; position:absolute; top:0; left:0; width:100%; height:100%;"></iframe>
+                <div class="bingo-online-pill">
+                    <span class="bingo-online-dot"></span>
+                    <span id="onlineCount" style="font-size:12px;font-weight:800;color:#10b981;">0</span>
+                    <span style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:600;">Online</span>
+                </div>
             </div>
         </div>
 
-        <div id="jackpotBanner">
+        <!-- Quick actions -->
+        <div class="bingo-quick-actions">
+            <button class="bingo-quick-btn gold" onclick="openTournaments()">
+                <div class="qbtn-icon"><i data-lucide="trophy" style="width:18px;height:18px;"></i></div>
+                Tournaments
+            </button>
+            <button class="bingo-quick-btn blue" onclick="openLeaderboard()">
+                <div class="qbtn-icon"><i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i></div>
+                Leaderboard
+            </button>
+            <button class="bingo-quick-btn red" onclick="showStreakModal(userData.loginStreak||1, STREAK_REWARDS[Math.min((userData.loginStreak||1)-1,6)])">
+                <div class="qbtn-icon"><i data-lucide="flame" style="width:18px;height:18px;"></i></div>
+                My Streak
+            </button>
+        </div>
+        <div id="jackpotBanner" style="margin-bottom:12px;">
             <div class="jp-label-new">
                 <i data-lucide="crown" style="width: 16px;"></i> JACKPOT ROUND <i data-lucide="crown" style="width: 16px;"></i>
             </div>
@@ -6769,7 +7645,7 @@
             <div style="font-size: 10px; opacity: 0.7; margin-top: 5px; color: #fbbf24;">RB COINS GRAND PRIZE</div>
         </div>
 
-        <div id="nextDrawBanner" class="next-draw-container">
+        <div id="nextDrawBanner" class="next-draw-container" style="margin-bottom:12px;">
             <div class="nd-icon"><i data-lucide="calendar-days"></i></div>
             <div class="nd-info">
                 <div class="next-draw-label">Susunod na Bola</div>
@@ -6777,7 +7653,7 @@
             </div>
         </div>
         
-        <div id="winnerBanner">
+        <div id="winnerBanner" style="margin-bottom:12px;">
             <span><i data-lucide="party-popper" style="width:24px; height:24px;"></i> BINGO WINNER!</span>
             <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
         </div>
@@ -6786,13 +7662,13 @@
 
         <div class="draw-panel">
             <div class="prev-balls" id="ballRow"></div>
-            <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.8; color:white;">NOW DRAWN</span><span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.5);">--</span></div>
+            <div class="current-ball-box"><span style="font-size:9px; font-weight:800; opacity:0.75; color:white; letter-spacing:1px; text-transform:uppercase;">Now Drawn</span><span id="currentBall" style="font-size:36px; font-weight:900; color:white; text-shadow:0 2px 10px rgba(0,0,0,0.5);">--</span></div>
         </div>
         
         <!-- PATTERN BAR -->
-        <div class="pattern-bar" id="patternBar">
+        <div class="pattern-bar" id="patternBar" style="margin-bottom:12px;">
             <div class="pattern-bar-info">
-                <div class="pattern-bar-label">🎯 Current Pattern</div>
+                <div class="pattern-bar-label">CURRENT PATTERN</div>
                 <div class="pattern-bar-name" id="patternBarName">Normal Bingo</div>
             </div>
             <div class="pattern-mini-grid" id="patternMiniGrid">
@@ -7591,6 +8467,10 @@ function runMathBlitz(problems) {
                 <div class="pm-chatname" id="chatTargetName">User</div>
                 <div class="pm-chatstatus" id="chatTargetStatus">Active now</div>
             </div>
+            <!-- Voice Call Button -->
+            <button class="pm-call-btn" onclick="startCallFromChat()" title="Voice Call" id="chatCallBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.68 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.57 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </button>
             <button onclick="deleteConversation()" class="pm-hdrbtn" style="color:var(--danger);">
                 <i data-lucide="trash-2" style="width:18px;"></i>
             </button>
@@ -8429,6 +9309,13 @@ function runMathBlitz(problems) {
         
         // Pause all beats videos when leaving beats tab
         document.querySelectorAll('.beats-video').forEach(v => v.pause());
+
+        // Chat FAB only visible on bingo tab
+        var chatBtn = document.getElementById('chatBubbleBtn');
+        if (chatBtn) {
+            if (tab === 'bingo') { chatBtn.classList.add('bingo-visible'); }
+            else { chatBtn.classList.remove('bingo-visible'); closeChatDrawer(); }
+        }
         
         if(tab === 'home') {
             document.getElementById('view-home').style.display = 'block';
@@ -9235,8 +10122,11 @@ function runMathBlitz(problems) {
                     const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase(); 
                     const urlParams = new URLSearchParams(window.location.search); 
                     const referredBy = urlParams.get('ref'); 
-                    userRef.set({ name: u.displayName, photo: u.photoURL, points: 200, refCode: newRefCode, referredBy: referredBy || null, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false, ownedSkins: ['default'], equippedSkin: 'default' }); 
-                    if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 300); } }); } 
+                    const pendingInfCode = window._pendingInfluencerCode || null;
+                    const finalReferredBy = pendingInfCode || referredBy || null;
+                    userRef.set({ name: u.displayName, photo: u.photoURL, points: 200, refCode: newRefCode, referredBy: finalReferredBy, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false, ownedSkins: ['default'], equippedSkin: 'default' }); 
+                    if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 300); } }); }
+                    if (pendingInfCode) { setTimeout(() => { if(typeof trackInfluencerRecruit === 'function') trackInfluencerRecruit(pendingInfCode, u.uid, u.displayName, u.photoURL); }, 1000); } 
                 } else { 
                     // Existing User
                     const data = snapshot.val(); 
@@ -9302,9 +10192,10 @@ function runMathBlitz(problems) {
                     }
                 } 
             });
-            initBingo(); _renderPatternBar('Normal Bingo'); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate();
+            initBingo(); _renderPatternBar('Normal Bingo'); setupChat(); listenForNextDraw(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate(); if(typeof setupCallListener === 'function') setupCallListener();
             initHeadlessDrawEngine(u.uid); // start headless draw engine
             initSocialSystem(u.uid);
+            if(typeof initInfluencerSystem === 'function') initInfluencerSystem(u.uid);
             loadPYMK();
         } else { document.getElementById('loginOverlay').style.display = 'flex'; }
     });
@@ -9631,7 +10522,7 @@ function runMathBlitz(problems) {
     }
     
     let bannerTargetUrl = "";
-    function initBannerListener() { if(sessionStorage.getItem('bannerSeen')) return; db.ref('gameState/bannerSettings').once('value', s => { const d = s.val(); if(d && d.active && d.imageUrl) { document.getElementById('customBannerImg').src = d.imageUrl; bannerTargetUrl = d.targetUrl; document.getElementById('customPopupBanner').style.display = 'flex'; sessionStorage.setItem('bannerSeen', 'true'); playSound('pop'); } }); }
+    function initBannerListener() { if(sessionStorage.getItem('bannerSeen')) return; document.getElementById('customPopupBanner').style.display = 'flex'; sessionStorage.setItem('bannerSeen', 'true'); playSound('pop'); lucide.createIcons(); }
 
     // ===== SCHEDULE ANNOUNCEMENT LISTENER =====
     function initScheduleAnnouncementListener() {
@@ -10128,40 +11019,56 @@ function runMathBlitz(problems) {
     function listenVideoUpdate() { db.ref('gameState/videoSettings').on('value', s => { const v = s.val(); const iframe = document.getElementById('liveVideoFrame'); const offline = document.getElementById('videoOfflineState'); if (v && v.type === 'offline') { iframe.style.display = 'none'; iframe.src = ""; offline.style.display = 'flex'; } else if(v && v.url) { offline.style.display = 'none'; iframe.style.display = 'block'; const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/; const match = v.url.match(regExp); let videoId = (match && match[2].length === 11) ? match[2] : null; if(!videoId && v.url.length === 11) videoId = v.url; if (videoId) { const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1`; if(iframe.src !== embedUrl) { iframe.src = embedUrl; } } } }); }
 
     // ===================================================================
-    // HEADLESS DRAW ENGINE
-    // Runs scheduled bingo draws even when dashboard.html is CLOSED.
-    // Any logged-in player can act as the draw server via Firebase lock.
+// HEADLESS DRAW ENGINE (HDE) — CLIENT-SIDE FALLBACK
     // ===================================================================
+    // PRIMARY draw engine is now Firebase Cloud Functions (runs 24/7).
+    // HDE acts as a FALLBACK only when:
+    //   - cloudDrawConfig.cloudEnabled === false, AND
+    //   - No dashboard is open (drawLock not held), AND
+    //   - A scheduled game time arrives
+    //
+    // In normal operation, Cloud Functions handle everything server-side.
+    // ===================================================================
+    let _hdeCloudActive = false; // true when CF is drawing
+
     function initHeadlessDrawEngine(uid) {
-        if(_hdeInitialized) return; // prevent duplicate init on re-auth
+        if(_hdeInitialized) return;
         _hdeInitialized = true;
 
-        // 1. Listen to schedules in real-time
+        // 1. Listen to schedules
         db.ref('gameState/schedules').on('value', snap => {
             _hdeSchedules = snap.val() || {};
         });
 
-        // 2. Listen to draw speed config set by dashboard
+        // 2. Sync draw speed
         db.ref('gameState/drawConfig/speed').on('value', snap => {
-            if(snap && snap.exists() && snap.val() > 0) {
-                _hdeDrawSpeed = snap.val();
+            if(snap && snap.exists() && snap.val() > 0) _hdeDrawSpeed = snap.val();
+        });
+
+        // 3. Monitor Cloud Function draw status — HDE yields when CF is active
+        db.ref('gameState/drawConfig/cloudEnabled').on('value', snap => {
+            _hdeCloudActive = !!snap.val();
+            if(_hdeCloudActive && _hdeIsDrawing) {
+                // CF has taken over — stop client draw
+                _hdeStopDraw(true);
             }
         });
 
-        // 3. Listen to drawLock — if another client holds it, we stop our own draw
+        // 4. Listen to drawLock — yield if another client holds it
         db.ref('gameState/drawLock').on('value', snap => {
             const lock = snap.val();
-            if(!lock && _hdeIsDrawing) {
-                // Lock was released externally (e.g. dashboard came online and took over)
-                _hdeStopDraw();
-            }
+            if(!lock && _hdeIsDrawing) _hdeStopDraw();
         });
 
-        // 4. Schedule checker runs every 5 seconds
+        // 5. Schedule checker runs every 5 seconds — but only triggers HDE
+        //    if Cloud Functions are NOT already handling the draw
         _hdeSchedTimer = setInterval(() => _hdeCheckSchedules(uid), 5000);
     }
 
     function _hdeCheckSchedules(uid) {
+        // ── CLOUD FUNCTION ACTIVE: skip client-side draw entirely ──
+        if(_hdeCloudActive) return;
+
         const now = Date.now();
         Object.entries(_hdeSchedules).forEach(([key, val]) => {
             let schedTime = (typeof val === 'object') ? val.time : val;
@@ -10169,40 +11076,35 @@ function runMathBlitz(problems) {
             const isJP  = (typeof val === 'object') && val.isJackpot;
             const jpAmt = (typeof val === 'object') ? (val.jackpotAmount || null) : null;
 
-            // Is it time to draw? (within a 60-second window)
             if(now >= schedTime && now < schedTime + 60000) {
-                // Remove schedule first to prevent other clients also trying
                 db.ref('gameState/schedules/' + key).remove();
 
-                // Check no winner yet and no draw already running
                 db.ref('gameState/latestWinner').once('value', wSnap => {
-                    if(wSnap.exists()) return; // game already in progress
+                    if(wSnap.exists()) return;
 
-                    // Try to claim the draw lock atomically — only ONE client wins this
+                    // Re-check: if cloud became active between now and lock attempt, abort
+                    if(_hdeCloudActive) return;
+
                     db.ref('gameState/drawLock').transaction(cur => {
-                        if(cur !== null) return; // another client already claimed it → abort
+                        if(cur !== null) return;
                         return { by: uid, at: now, expires: now + 600000 };
                     }, (err, committed) => {
-                        if(!committed || err) return; // we lost the race, do nothing
+                        if(!committed || err) return;
 
-                        // === WE ARE THE DRAW SERVER FOR THIS ROUND ===
-                        // Auto-release lock if this tab disconnects
+                        // One more cloud check after lock claim
+                        if(_hdeCloudActive) {
+                            db.ref('gameState/drawLock').remove();
+                            return;
+                        }
+
                         db.ref('gameState/drawLock').onDisconnect().remove();
-
-                        // Set pattern for this round
                         _hdeSetPattern(isJP);
-
-                        // Configure jackpot
                         if(isJP && jpAmt) {
                             db.ref('gameState/jackpot').set({ amount: jpAmt, active: true });
                         } else {
                             db.ref('gameState/jackpot').update({ active: false });
                         }
-
-                        // Start the game in Firebase
                         db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() });
-
-                        // Start drawing balls
                         _hdeStartDraw();
                     });
                 });
@@ -10223,9 +11125,9 @@ function runMathBlitz(problems) {
     }
 
     function _hdeStartDraw() {
-        if(_hdeIsDrawing) return;
+        if(_hdeIsDrawing || _hdeCloudActive) return;
         _hdeIsDrawing = true;
-        _hdeDrawTick(); // immediate first ball
+        _hdeDrawTick();
         _hdeInterval = setInterval(_hdeDrawTick, _hdeDrawSpeed);
     }
 
@@ -10240,33 +11142,30 @@ function runMathBlitz(problems) {
     }
 
     function _hdeDrawTick() {
-        // Snapshot the currently drawn numbers from the live gameDrawn array
+        // Yield to Cloud Function if it became active mid-draw
+        if(_hdeCloudActive) { _hdeStopDraw(true); return; }
+
         const drawnInts = gameDrawn.map(n => parseInt(n)).filter(n => !isNaN(n));
 
         if(drawnInts.length >= 75) {
-            // All 75 balls drawn — stop and auto-reset
             _hdeStopDraw(false);
             _hdeAutoReset('Lahat ng 75 balls na-draw!');
             return;
         }
 
-        // Check if a winner was already declared
         db.ref('gameState/latestWinner').once('value', wSnap => {
             if(wSnap.exists()) {
-                // A winner popped — stop drawing and schedule auto-reset
                 _hdeStopDraw(false);
                 _hdeAutoReset('May BINGO winner!');
                 return;
             }
 
-            // Pick a number not yet drawn
             let next, tries = 0;
             do { next = Math.floor(Math.random() * 75) + 1; tries++; }
             while(drawnInts.includes(next) && tries < 200);
 
-            if(tries >= 200) { _hdeStopDraw(true); return; } // safety bail
+            if(tries >= 200) { _hdeStopDraw(true); return; }
 
-            // Write ball to Firebase — all clients will see it via their listener
             db.ref('drawnNumbers/' + next).set(next);
             db.ref('gameState/lastCalled').set(next);
         });
@@ -10274,23 +11173,23 @@ function runMathBlitz(problems) {
 
     function _hdeAutoReset(reason) {
         setTimeout(() => {
-            // Only reset if WE still hold the draw lock
             db.ref('gameState/drawLock').once('value', lockSnap => {
                 const lock = lockSnap.val();
                 const myUid = auth.currentUser ? auth.currentUser.uid : null;
-                if(!lock || lock.by !== myUid) return; // someone else owns the lock now
+                if(!lock || lock.by !== myUid) return;
 
                 db.ref('drawnNumbers').remove();
                 db.ref('gameState/latestWinner').remove();
-                db.ref('gameState/winners').remove(); // clear multi-winner list
+                db.ref('gameState/winners').remove();
                 db.ref('gameState/gameStartTime').remove();
                 db.ref('gameState/lastCalled').remove();
                 db.ref('gameState').update({ status: 'waiting' });
-                _hdeStopDraw(true); // release lock
+                _hdeStopDraw(true);
             });
-        }, 5000); // 5 second delay before reset
+        }, 5000);
     }
     // ===== END HEADLESS DRAW ENGINE =====
+
 
         function listenForForNextDraw() { db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); }); db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); }); }
     function listenForNextDraw() { db.ref('gameState').on('value', s => { updateNextDrawDisplay(); }); }
@@ -10568,6 +11467,7 @@ function runMathBlitz(problems) {
         db.ref('gameState/winners/' + uid).set(winnerData); // multi-winner support
         db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize);
         db.ref('users/' + uid + '/bingoWins').transaction(w => (w || 0) + 1);
+        if(typeof trackRecruitActivity === 'function') trackRecruitActivity(uid, 'game');
         db.ref('users/' + uid).update({ hasWonCurrent: true });
         userData.hasWonCurrent = true;
         if (isJackpotActive) {
@@ -10770,6 +11670,9 @@ function runMathBlitz(problems) {
         chatUnreadCount = 0;
         const badge = document.getElementById('chatBubbleBadge');
         if(badge) { badge.textContent = '0'; badge.classList.remove('show'); }
+        var onlineEl = document.getElementById('chatOnlineCount');
+        var mainCount = document.getElementById('onlineCount');
+        if(onlineEl && mainCount) onlineEl.textContent = mainCount.textContent + ' online';
         document.getElementById('chatDrawerBackdrop').classList.add('open');
         document.getElementById('chatDrawer').classList.add('open');
         lockScroll();
@@ -10815,7 +11718,7 @@ function runMathBlitz(problems) {
     let currentChatPartner = null;
     let isGroupChat = false;
 
-    function openMessenger() { lockScroll(); document.getElementById('pmModal').style.display = 'flex'; document.getElementById('pmInboxView').style.display = 'flex'; document.getElementById('pmChatView').style.display = 'none'; loadInbox(); }
+    function openMessenger() { window.location.href = 'messenger.html'; }
     function loadInbox() { 
         const uid = auth.currentUser.uid; 
         const list = document.getElementById('pmList'); 
@@ -11159,45 +12062,7 @@ function runMathBlitz(problems) {
     }
 
     function openPrivateChat(uid, name, photo) { 
-        if(uid === auth.currentUser.uid) return showToast("Cant msg self"); 
-        currentChatPartner = uid; 
-        isGroupChat = false;
-        lockScroll();
-        document.getElementById('pmModal').style.display = 'flex'; 
-        document.getElementById('pmInboxView').style.display = 'none'; 
-        document.getElementById('pmChatView').style.display = 'flex'; 
-        document.getElementById('chatTargetName').innerText = name; 
-        
-        // Real-time status monitoring
-        const statusRef = db.ref('status/' + uid);
-        statusRef.on('value', statusSnap => {
-            const status = statusSnap.val();
-            const statusElement = document.getElementById('chatTargetStatus');
-            
-            if(status && status.state === 'online') {
-                statusElement.innerText = "Active now";
-                statusElement.style.color = "#22c55e";
-            } else if(status && status.last_seen) {
-                const lastSeenText = formatLastSeen(status.last_seen);
-                statusElement.innerText = `Active ${lastSeenText}`;
-                statusElement.style.color = "rgba(255,255,255,0.5)";
-            } else {
-                statusElement.innerText = "Offline";
-                statusElement.style.color = "rgba(255,255,255,0.4)";
-            }
-        });
-        
-        document.getElementById('chatTargetAvatarCont').innerHTML = `<img src="${photo}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
-        
-        db.ref('notifications/' + auth.currentUser.uid).once('value', s => {
-            s.forEach(n => {
-                if(n.val().type === 'pm' && n.val().from === uid) {
-                    db.ref('notifications/' + auth.currentUser.uid + '/' + n.key).remove();
-                }
-            });
-        });
-
-        listenPrivateMessages(auth.currentUser.uid); 
+        window.location.href = 'messenger.html?uid=' + uid;
     }
     
     function backToInbox() { 
@@ -11213,6 +12078,28 @@ function runMathBlitz(problems) {
         if(pmListenerRef) pmListenerRef.off();
         loadInbox(); 
     }
+
+    // ── Bridge: start a voice call from the current open chat ──
+    function startCallFromChat() {
+        if (!currentChatPartner) return showToast('Open a chat first!');
+        if (!auth || !auth.currentUser) return showToast('Login first!');
+
+        if (isGroupChat) {
+            // Group voice call
+            db.ref('groups/' + currentChatPartner).once('value', snap => {
+                const grp = snap.val();
+                const grpName = grp ? grp.name : 'Group';
+                startVoiceCall(null, grpName, null, true, currentChatPartner);
+            });
+        } else {
+            // 1-on-1 call — get target user info
+            db.ref('users/' + currentChatPartner).once('value', snap => {
+                const u = snap.val() || {};
+                startVoiceCall(currentChatPartner, u.name || 'User', u.photo || '', false, null);
+            });
+        }
+    }
+
     
     let pmImageBase64 = null;
     function handlePmImage(input) {
@@ -14249,6 +15136,8 @@ Please explain why you want a verification badge:`;
         });
 
         showStreakModal(newStreak, reward);
+        // Track recruit login activity for influencer system
+        if(typeof trackRecruitActivity === 'function') trackRecruitActivity(uid, 'login');
     }
 
     function showStreakModal(streak, reward) {
@@ -17655,6 +18544,1593 @@ function updateHamburgerActive(tab) {
     if (target) target.classList.add('active');
 }
 // ============================================================
+</script>
+
+<!-- Video elements for JS compatibility — completely off-screen, zero layout impact -->
+<div style="position:fixed;top:-9999px;left:-9999px;width:0;height:0;overflow:hidden;pointer-events:none;visibility:hidden;z-index:-9999;" aria-hidden="true">
+    <iframe id="liveVideoFrame" src="" title="" frameborder="0" style="width:0;height:0;border:none;"></iframe>
+    <div id="videoOfflineState" style="width:0;height:0;"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     VOICE CALL SYSTEM — WebRTC + Firebase Signaling
+═══════════════════════════════════════════════════ -->
+
+<!-- INCOMING CALL OVERLAY -->
+<div id="callIncomingOverlay" class="call-incoming-overlay">
+    <div class="call-incoming-card">
+        <div class="call-incoming-label" id="callIncomingLabel">Incoming Voice Call</div>
+
+        <div class="call-avatar-ring-wrap">
+            <div class="call-ring-wave"></div>
+            <div class="call-ring-wave"></div>
+            <div class="call-ring-wave"></div>
+            <img class="call-avatar-img" id="callIncomingAvatar" src="" alt="">
+        </div>
+
+        <div class="call-incoming-name" id="callIncomingName">Caller</div>
+        <div class="call-incoming-sub" id="callIncomingSub">Radio Bingo Live</div>
+
+        <div class="call-action-row">
+            <!-- Decline -->
+            <button class="call-action-btn" onclick="declineCall()">
+                <div class="call-action-btn-circle call-decline-circle">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </div>
+                <span>Decline</span>
+            </button>
+            <!-- Accept -->
+            <button class="call-action-btn" onclick="acceptCall()">
+                <div class="call-action-btn-circle call-accept-circle">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.68 12 19.79 19.79 0 0 1 1.6 3.38 2 2 0 0 1 3.57 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                </div>
+                <span>Accept</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ACTIVE CALL SCREEN -->
+<div id="callActiveOverlay" class="call-active-overlay">
+    <!-- Top section -->
+    <div class="call-active-top">
+        <div class="call-active-label" id="callActiveLabel">VOICE CALL</div>
+        <div class="call-active-avatar-wrap" id="callActiveAvatarWrap">
+            <img class="call-active-avatar" id="callActiveAvatar" src="" alt="">
+            <div class="call-active-speaking-ring" id="callActiveSpeakingRing"></div>
+        </div>
+        <div class="call-active-name" id="callActiveName">User</div>
+        <div class="call-active-status" id="callActiveStatus">Connecting…</div>
+        <div class="call-timer" id="callTimer" style="display:none;">00:00</div>
+    </div>
+
+    <!-- Group participants (shown for group calls) -->
+    <div class="call-participants-row" id="callParticipantsRow" style="display:none;"></div>
+
+    <!-- Controls -->
+    <div class="call-controls">
+        <!-- Mute -->
+        <button class="call-ctrl-btn" id="callMuteBtn" onclick="toggleCallMute()">
+            <div class="call-ctrl-circle">
+                <svg id="callMuteIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </div>
+            <span class="call-ctrl-label" id="callMuteLabel">Mute</span>
+        </button>
+
+        <!-- End Call -->
+        <button class="call-end-circle" onclick="endCall()">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 3.57 1H6.5a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.48 8.91"/><line x1="23" y1="1" x2="1" y2="23"/></svg>
+        </button>
+
+        <!-- Speaker -->
+        <button class="call-ctrl-btn" id="callSpeakerBtn" onclick="toggleCallSpeaker()">
+            <div class="call-ctrl-circle">
+                <svg id="callSpeakerIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            </div>
+            <span class="call-ctrl-label" id="callSpeakerLabel">Speaker</span>
+        </button>
+    </div>
+</div>
+
+<!-- Hidden audio elements -->
+<audio id="callRingtoneAudio" loop style="display:none;">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+</audio>
+<audio id="callRemoteAudio" autoplay style="display:none;"></audio>
+
+<script>
+/* ═══════════════════════════════════════════════
+   WEBRTC VOICE CALL ENGINE
+   Firebase paths used:
+     calls/{callId}/offer
+     calls/{callId}/answer
+     calls/{callId}/callerCandidates
+     calls/{callId}/calleeCandidates
+     calls/{callId}/status   (ringing|accepted|ended|declined)
+   Notification path:
+     callNotif/{uid}/{callId}
+═══════════════════════════════════════════════ */
+(function() {
+    'use strict';
+
+    // ── STUN servers (free Google STUN) ──
+    const ICE_SERVERS = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+        ]
+    };
+
+    // ── State ──
+    let _pc = null;               // RTCPeerConnection
+    let _localStream = null;      // microphone stream
+    let _remoteStream = null;
+    let _currentCallId = null;
+    let _callRole = null;         // 'caller' | 'callee'
+    let _callTargetUid = null;    // for 1-on-1
+    let _callGroupId = null;      // for group
+    let _isMuted = false;
+    let _isSpeaker = false;
+    let _callTimerInterval = null;
+    let _callSeconds = 0;
+    let _incomingCallId = null;
+    let _callNotifListener = null;
+    let _callStatusListener = null;
+    let _pendingCandidates = [];
+
+    // Speaking detection
+    let _audioCtx = null;
+    let _analyser = null;
+    let _speakingInterval = null;
+
+    // ── Expose globally ──
+    window.startVoiceCall   = startVoiceCall;
+    window.acceptCall       = acceptCall;
+    window.declineCall      = declineCall;
+    window.endCall          = endCall;
+    window.toggleCallMute   = toggleCallMute;
+    window.toggleCallSpeaker = toggleCallSpeaker;
+
+    /* ──────────────────────────────────────────
+       START CALL  (caller side)
+    ────────────────────────────────────────── */
+    async function startVoiceCall(targetUid, targetName, targetPhoto, isGroup, groupId) {
+        if (!window.auth || !window.auth.currentUser) return showToast('Login first!');
+        if (_pc) return showToast('Already in a call!');
+
+        try {
+            // 1. Get mic
+            _localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } catch(e) {
+            return showToast('❌ Mic access denied. Please allow microphone.');
+        }
+
+        const myUid   = auth.currentUser.uid;
+        const myName  = window.userData ? window.userData.name  : 'User';
+        const myPhoto = window.userData ? window.userData.photo : '';
+
+        // 2. Create Firebase call doc
+        const callRef = db.ref('calls').push();
+        _currentCallId  = callRef.key;
+        _callRole       = 'caller';
+        _callTargetUid  = targetUid  || null;
+        _callGroupId    = isGroup ? groupId : null;
+
+        // 3. Setup PeerConnection
+        _pc = new RTCPeerConnection(ICE_SERVERS);
+        _localStream.getTracks().forEach(t => _pc.addTrack(t, _localStream));
+
+        // Collect ICE candidates
+        _pc.onicecandidate = e => {
+            if (e.candidate) {
+                db.ref(`calls/${_currentCallId}/callerCandidates`).push(e.candidate.toJSON());
+            }
+        };
+
+        // Remote audio
+        _remoteStream = new MediaStream();
+        _pc.ontrack = e => {
+            e.streams[0].getTracks().forEach(t => _remoteStream.addTrack(t));
+            const audio = document.getElementById('callRemoteAudio');
+            audio.srcObject = _remoteStream;
+        };
+
+        // 4. Create offer
+        const offer = await _pc.createOffer();
+        await _pc.setLocalDescription(offer);
+        await callRef.set({
+            callerId:   myUid,
+            callerName: myName,
+            callerPhoto: myPhoto,
+            calleeUid:  targetUid || null,
+            groupId:    isGroup ? groupId : null,
+            isGroup:    !!isGroup,
+            status:     'ringing',
+            timestamp:  Date.now(),
+            offer: { type: offer.type, sdp: offer.sdp }
+        });
+
+        // 5. Send notification to callee(s)
+        const notifData = {
+            callId: _currentCallId,
+            callerName: myName,
+            callerPhoto: myPhoto,
+            isGroup: !!isGroup,
+            groupId: isGroup ? groupId : null,
+            timestamp: Date.now()
+        };
+        if (isGroup) {
+            // Notify all group members
+            db.ref('groups/' + groupId + '/members').once('value', snap => {
+                snap.forEach(m => {
+                    if (m.key !== myUid) {
+                        db.ref(`callNotif/${m.key}/${_currentCallId}`).set(notifData);
+                    }
+                });
+            });
+        } else {
+            db.ref(`callNotif/${targetUid}/${_currentCallId}`).set(notifData);
+        }
+
+        // 6. Show active call screen (caller view — waiting)
+        showActiveCallScreen(targetName, targetPhoto, isGroup, 'Ringing…');
+
+        // 7. Listen for answer
+        listenForAnswer();
+
+        // 8. Listen for callee candidates
+        db.ref(`calls/${_currentCallId}/calleeCandidates`).on('child_added', snap => {
+            if (_pc && _pc.remoteDescription) {
+                _pc.addIceCandidate(new RTCIceCandidate(snap.val()));
+            } else {
+                _pendingCandidates.push(snap.val());
+            }
+        });
+
+        // 9. Listen for status changes
+        listenCallStatus();
+    }
+
+    /* ──────────────────────────────────────────
+       LISTEN FOR ANSWER  (caller side)
+    ────────────────────────────────────────── */
+    function listenForAnswer() {
+        db.ref(`calls/${_currentCallId}/answer`).on('value', async snap => {
+            const answer = snap.val();
+            if (answer && _pc && !_pc.currentRemoteDescription) {
+                const desc = new RTCSessionDescription(answer);
+                await _pc.setRemoteDescription(desc);
+                // Flush pending ICE candidates
+                _pendingCandidates.forEach(c => _pc.addIceCandidate(new RTCIceCandidate(c)));
+                _pendingCandidates = [];
+                startCallTimer();
+                updateCallStatus('Connected');
+                startSpeakingDetection();
+            }
+        });
+    }
+
+    /* ──────────────────────────────────────────
+       INCOMING CALL LISTENER  (setup after login)
+    ────────────────────────────────────────── */
+    window.setupCallListener = function() {
+        if (!auth || !auth.currentUser) return;
+        const myUid = auth.currentUser.uid;
+
+        // Remove old listener
+        if (_callNotifListener) {
+            db.ref(`callNotif/${myUid}`).off('child_added', _callNotifListener);
+        }
+
+        _callNotifListener = db.ref(`callNotif/${myUid}`)
+            .orderByChild('timestamp')
+            .limitToLast(1)
+            .on('child_added', snap => {
+                const data = snap.val();
+                if (!data) return;
+                const age = Date.now() - (data.timestamp || 0);
+                if (age > 30000) { snap.ref.remove(); return; } // ignore old
+                if (_pc) return; // already in call
+
+                _incomingCallId = snap.key;
+                showIncomingCall(data);
+                snap.ref.remove(); // consume notif
+            });
+    };
+
+    /* ──────────────────────────────────────────
+       SHOW INCOMING CALL UI
+    ────────────────────────────────────────── */
+    function showIncomingCall(data) {
+        document.getElementById('callIncomingName').textContent  = data.callerName || 'Someone';
+        document.getElementById('callIncomingAvatar').src        = data.callerPhoto || '';
+        document.getElementById('callIncomingLabel').textContent = data.isGroup ? 'Incoming Group Call' : 'Incoming Voice Call';
+        document.getElementById('callIncomingLabel').className   = 'call-incoming-label' + (data.isGroup ? ' group-lbl' : '');
+        document.getElementById('callIncomingSub').textContent   = data.isGroup ? 'Group Voice Call' : 'Radio Bingo Live';
+
+        // Ring
+        const ringtone = document.getElementById('callRingtoneAudio');
+        ringtone.play().catch(() => {});
+
+        // Vibrate pattern
+        if (navigator.vibrate) navigator.vibrate([400,200,400,200,400]);
+
+        document.getElementById('callIncomingOverlay').classList.add('show');
+        lockScroll();
+
+        // Auto-decline after 30s
+        window._incomingCallTimeout = setTimeout(() => declineCall(), 30000);
+    }
+
+    /* ──────────────────────────────────────────
+       ACCEPT CALL  (callee side)
+    ────────────────────────────────────────── */
+    async function acceptCall() {
+        clearTimeout(window._incomingCallTimeout);
+        stopRingtone();
+        document.getElementById('callIncomingOverlay').classList.remove('show');
+
+        if (!_incomingCallId) return;
+
+        try {
+            _localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } catch(e) {
+            return showToast('❌ Mic access denied.');
+        }
+
+        const callSnap = await db.ref(`calls/${_incomingCallId}`).once('value');
+        const callData = callSnap.val();
+        if (!callData || callData.status === 'ended' || callData.status === 'declined') {
+            showToast('Call already ended.');
+            unlockScroll();
+            return;
+        }
+
+        _currentCallId  = _incomingCallId;
+        _callRole       = 'callee';
+        _callTargetUid  = callData.callerId;
+        _callGroupId    = callData.groupId || null;
+
+        // Setup PeerConnection
+        _pc = new RTCPeerConnection(ICE_SERVERS);
+        _localStream.getTracks().forEach(t => _pc.addTrack(t, _localStream));
+
+        _pc.onicecandidate = e => {
+            if (e.candidate) {
+                db.ref(`calls/${_currentCallId}/calleeCandidates`).push(e.candidate.toJSON());
+            }
+        };
+
+        _remoteStream = new MediaStream();
+        _pc.ontrack = e => {
+            e.streams[0].getTracks().forEach(t => _remoteStream.addTrack(t));
+            const audio = document.getElementById('callRemoteAudio');
+            audio.srcObject = _remoteStream;
+        };
+
+        // Set remote offer
+        await _pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+
+        // Create answer
+        const answer = await _pc.createAnswer();
+        await _pc.setLocalDescription(answer);
+        await db.ref(`calls/${_currentCallId}/answer`).set({ type: answer.type, sdp: answer.sdp });
+        await db.ref(`calls/${_currentCallId}`).update({ status: 'accepted' });
+
+        // Collect caller candidates
+        db.ref(`calls/${_currentCallId}/callerCandidates`).on('child_added', snap => {
+            if (_pc) _pc.addIceCandidate(new RTCIceCandidate(snap.val()));
+        });
+
+        // Show active screen
+        showActiveCallScreen(callData.callerName, callData.callerPhoto, callData.isGroup, 'Connected');
+        startCallTimer();
+        startSpeakingDetection();
+        listenCallStatus();
+    }
+
+    /* ──────────────────────────────────────────
+       DECLINE CALL
+    ────────────────────────────────────────── */
+    function declineCall() {
+        clearTimeout(window._incomingCallTimeout);
+        stopRingtone();
+        document.getElementById('callIncomingOverlay').classList.remove('show');
+        unlockScroll();
+        if (_incomingCallId) {
+            db.ref(`calls/${_incomingCallId}`).update({ status: 'declined' });
+            _incomingCallId = null;
+        }
+    }
+
+    /* ──────────────────────────────────────────
+       END CALL
+    ────────────────────────────────────────── */
+    function endCall() {
+        // Update Firebase status
+        if (_currentCallId) {
+            db.ref(`calls/${_currentCallId}`).update({ status: 'ended' });
+            db.ref(`calls/${_currentCallId}/callerCandidates`).off();
+            db.ref(`calls/${_currentCallId}/calleeCandidates`).off();
+            db.ref(`calls/${_currentCallId}/answer`).off();
+        }
+        if (_callStatusListener && _currentCallId) {
+            db.ref(`calls/${_currentCallId}/status`).off('value', _callStatusListener);
+        }
+
+        // Close PeerConnection
+        if (_pc) { _pc.close(); _pc = null; }
+
+        // Stop local audio
+        if (_localStream) {
+            _localStream.getTracks().forEach(t => t.stop());
+            _localStream = null;
+        }
+
+        // Stop timer & speaking detection
+        clearInterval(_callTimerInterval);
+        clearInterval(_speakingInterval);
+        if (_audioCtx) { _audioCtx.close().catch(() => {}); _audioCtx = null; }
+
+        // Reset state
+        _currentCallId = null;
+        _callRole      = null;
+        _callTargetUid = null;
+        _callGroupId   = null;
+        _isMuted       = false;
+        _callSeconds   = 0;
+        _pendingCandidates = [];
+
+        // Hide UI
+        document.getElementById('callActiveOverlay').classList.remove('show');
+        stopRingtone();
+        unlockScroll();
+
+        // Reset controls
+        document.getElementById('callMuteBtn').classList.remove('active');
+        document.getElementById('callMuteLabel').textContent = 'Mute';
+        document.getElementById('callSpeakerBtn').classList.remove('active');
+        document.getElementById('callSpeakerLabel').textContent = 'Speaker';
+        document.getElementById('callTimer').style.display = 'none';
+        document.getElementById('callActiveSpeakingRing').classList.remove('speaking');
+
+        showToast('📞 Call ended');
+    }
+
+    /* ──────────────────────────────────────────
+       LISTEN CALL STATUS
+    ────────────────────────────────────────── */
+    function listenCallStatus() {
+        if (!_currentCallId) return;
+        _callStatusListener = db.ref(`calls/${_currentCallId}/status`).on('value', snap => {
+            const status = snap.val();
+            if (status === 'ended' || status === 'declined') {
+                if (_pc) {
+                    showToast(status === 'declined' ? '📵 Call declined' : '📞 Call ended');
+                    endCall();
+                }
+            } else if (status === 'accepted') {
+                updateCallStatus('Connected');
+                startCallTimer();
+                startSpeakingDetection();
+            }
+        });
+    }
+
+    /* ──────────────────────────────────────────
+       ACTIVE CALL SCREEN
+    ────────────────────────────────────────── */
+    function showActiveCallScreen(name, photo, isGroup, statusText) {
+        document.getElementById('callActiveName').textContent   = name || 'User';
+        document.getElementById('callActiveStatus').textContent = statusText || 'Connecting…';
+        document.getElementById('callActiveLabel').textContent  = isGroup ? 'GROUP VOICE CALL' : 'VOICE CALL';
+
+        const avatarEl = document.getElementById('callActiveAvatar');
+        const wrapEl   = document.getElementById('callActiveAvatarWrap');
+
+        if (isGroup) {
+            wrapEl.innerHTML = `
+                <div style="width:110px;height:110px;border-radius:50%;background:linear-gradient(135deg,#1e3a5f,#0d1a2e);display:flex;align-items:center;justify-content:center;border:3px solid rgba(56,189,248,.3);">
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="call-active-speaking-ring" id="callActiveSpeakingRing"></div>`;
+        } else {
+            wrapEl.innerHTML = `
+                <img class="call-active-avatar" id="callActiveAvatar" src="${photo||''}" alt="">
+                <div class="call-active-speaking-ring" id="callActiveSpeakingRing"></div>`;
+        }
+
+        document.getElementById('callActiveOverlay').classList.add('show');
+        lockScroll();
+    }
+
+    function updateCallStatus(text) {
+        const el = document.getElementById('callActiveStatus');
+        if (el) el.textContent = text;
+    }
+
+    /* ──────────────────────────────────────────
+       CALL TIMER
+    ────────────────────────────────────────── */
+    function startCallTimer() {
+        _callSeconds = 0;
+        const timerEl = document.getElementById('callTimer');
+        if (timerEl) timerEl.style.display = 'block';
+        clearInterval(_callTimerInterval);
+        _callTimerInterval = setInterval(() => {
+            _callSeconds++;
+            const m = Math.floor(_callSeconds / 60);
+            const s = _callSeconds % 60;
+            if (timerEl) timerEl.textContent =
+                (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+        }, 1000);
+    }
+
+    /* ──────────────────────────────────────────
+       SPEAKING DETECTION  (via Web Audio API)
+    ────────────────────────────────────────── */
+    function startSpeakingDetection() {
+        if (!_localStream) return;
+        try {
+            _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            _analyser = _audioCtx.createAnalyser();
+            _analyser.fftSize = 512;
+            const src = _audioCtx.createMediaStreamSource(_localStream);
+            src.connect(_analyser);
+            const data = new Uint8Array(_analyser.frequencyBinCount);
+            _speakingInterval = setInterval(() => {
+                _analyser.getByteFrequencyData(data);
+                const avg = data.reduce((a, b) => a + b, 0) / data.length;
+                const ring = document.getElementById('callActiveSpeakingRing');
+                if (ring) ring.classList.toggle('speaking', avg > 12 && !_isMuted);
+                // Broadcast speaking status for group calls
+                if (_callGroupId && auth && auth.currentUser) {
+                    db.ref(`calls/${_currentCallId}/speaking/${auth.currentUser.uid}`)
+                      .set(avg > 12 && !_isMuted);
+                }
+            }, 150);
+        } catch(e) { /* Web Audio not supported */ }
+    }
+
+    /* ──────────────────────────────────────────
+       MUTE / SPEAKER CONTROLS
+    ────────────────────────────────────────── */
+    function toggleCallMute() {
+        _isMuted = !_isMuted;
+        if (_localStream) {
+            _localStream.getAudioTracks().forEach(t => t.enabled = !_isMuted);
+        }
+        const btn   = document.getElementById('callMuteBtn');
+        const label = document.getElementById('callMuteLabel');
+        const icon  = document.getElementById('callMuteIcon');
+        if (btn) btn.classList.toggle('active', _isMuted);
+        if (label) label.textContent = _isMuted ? 'Unmute' : 'Mute';
+        if (icon) icon.setAttribute('stroke', _isMuted ? '#ef4444' : 'white');
+        // Hide speaking ring when muted
+        const ring = document.getElementById('callActiveSpeakingRing');
+        if (ring && _isMuted) ring.classList.remove('speaking');
+        showToast(_isMuted ? '🔇 Muted' : '🎙️ Unmuted');
+    }
+
+    function toggleCallSpeaker() {
+        _isSpeaker = !_isSpeaker;
+        const audio = document.getElementById('callRemoteAudio');
+        // setSinkId is for choosing audio output (Chrome only, experimental)
+        if (audio && audio.setSinkId) {
+            audio.setSinkId(_isSpeaker ? 'default' : '').catch(() => {});
+        }
+        const btn   = document.getElementById('callSpeakerBtn');
+        const label = document.getElementById('callSpeakerLabel');
+        if (btn) btn.classList.toggle('active', _isSpeaker);
+        if (label) label.textContent = _isSpeaker ? 'Earpiece' : 'Speaker';
+        showToast(_isSpeaker ? '🔊 Speaker on' : '🔈 Earpiece');
+    }
+
+    /* ──────────────────────────────────────────
+       RINGTONE HELPER
+    ────────────────────────────────────────── */
+    function stopRingtone() {
+        const r = document.getElementById('callRingtoneAudio');
+        if (r) { r.pause(); r.currentTime = 0; }
+        if (navigator.vibrate) navigator.vibrate(0);
+    }
+
+})(); // end IIFE
+</script>
+
+<!-- ============================================================
+     INFLUENCER MARKETING SYSTEM
+     Influencer Dashboard · Application · Fraud Review Panel
+============================================================ -->
+
+<!-- ══════════════════════════════════════════
+     INFLUENCER DASHBOARD OVERLAY
+══════════════════════════════════════════ -->
+<div id="influencerDashOverlay" style="display:none;position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,0.92);backdrop-filter:blur(8px);overflow-y:auto;padding-bottom:40px;">
+    <div style="max-width:480px;margin:0 auto;">
+
+        <!-- Header -->
+        <div style="position:sticky;top:0;z-index:10;background:linear-gradient(180deg,rgba(9,14,28,0.98) 80%,transparent);padding:max(20px,env(safe-area-inset-top)) 16px 16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <div style="font-size:10px;font-weight:800;letter-spacing:2.5px;color:#0ea5e9;text-transform:uppercase;margin-bottom:3px;">Influencer Portal</div>
+                    <div style="font-size:20px;font-weight:900;color:white;line-height:1.1;" id="infDashName">My Dashboard</div>
+                </div>
+                <button onclick="closeInfluencerDash()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:white;width:38px;height:38px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <i data-lucide="x" style="width:16px;height:16px;"></i>
+                </button>
+            </div>
+        </div>
+
+        <div style="padding:0 16px 24px;">
+
+            <!-- Status Badge -->
+            <div style="display:flex;align-items:center;gap:8px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:10px 14px;margin-bottom:20px;">
+                <div style="width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0;animation:pulse-dot 1.5s infinite;"></div>
+                <span style="font-size:12px;font-weight:700;color:#34d399;">Active Influencer</span>
+                <div style="margin-left:auto;background:rgba(16,185,129,0.15);border-radius:6px;padding:3px 10px;font-size:10px;font-weight:800;color:#34d399;letter-spacing:1px;" id="infTierBadge">TIER 1</div>
+            </div>
+
+            <!-- Stats Grid 2x2 -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+                <div style="background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.2);border-radius:16px;padding:16px;">
+                    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Total Recruits</div>
+                    <div style="font-size:28px;font-weight:900;color:white;line-height:1;" id="infTotalRecruits">0</div>
+                    <div style="font-size:10px;color:rgba(14,165,233,0.6);font-weight:600;margin-top:4px;">All sign-ups</div>
+                </div>
+                <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:16px;padding:16px;">
+                    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Verified</div>
+                    <div style="font-size:28px;font-weight:900;color:#10b981;line-height:1;" id="infVerifiedRecruits">0</div>
+                    <div style="font-size:10px;color:rgba(16,185,129,0.6);font-weight:600;margin-top:4px;">Active users</div>
+                </div>
+                <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:16px;padding:16px;">
+                    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Pending</div>
+                    <div style="font-size:28px;font-weight:900;color:#fbbf24;line-height:1;" id="infPendingRecruits">0</div>
+                    <div style="font-size:10px;color:rgba(251,191,36,0.6);font-weight:600;margin-top:4px;">Awaiting activity</div>
+                </div>
+                <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:16px;padding:16px;">
+                    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Earnings</div>
+                    <div style="font-size:22px;font-weight:900;color:#10b981;line-height:1;" id="infEarnings">₱0</div>
+                    <div style="font-size:10px;color:rgba(16,185,129,0.6);font-weight:600;margin-top:4px;">Total PHP earned</div>
+                </div>
+            </div>
+
+            <!-- Referral Link -->
+            <div style="background:rgba(30,41,59,0.7);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;margin-bottom:20px;">
+                <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:10px;">Your Referral Link</div>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                    <div style="flex:1;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;font-size:11px;color:#38bdf8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="infRefLinkDisplay">Loading...</div>
+                    <button onclick="copyInfluencerLink()" style="background:linear-gradient(135deg,#0ea5e9,#6366f1);border:none;color:white;border-radius:10px;padding:10px 16px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;">Copy</button>
+                </div>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="shareInfluencerLink('facebook')" style="flex:1;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:#60a5fa;border-radius:8px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">Facebook</button>
+                    <button onclick="shareInfluencerLink('whatsapp')" style="flex:1;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#34d399;border-radius:8px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">WhatsApp</button>
+                    <button onclick="shareInfluencerLink('native')" style="flex:1;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);color:#a78bfa;border-radius:8px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">More</button>
+                </div>
+            </div>
+
+            <!-- Commission Rate -->
+            <div style="background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(14,165,233,0.08));border:1px solid rgba(99,102,241,0.25);border-radius:16px;padding:16px;margin-bottom:20px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,0.5);letter-spacing:1.5px;text-transform:uppercase;">Commission Rate</div>
+                    <div style="font-size:10px;color:rgba(99,102,241,0.7);font-weight:700;" id="infTierLabel">Tier 1</div>
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:10px;">
+                    <div style="flex:1;text-align:center;background:rgba(0,0,0,0.2);border-radius:10px;padding:10px 6px;">
+                        <div style="font-size:18px;font-weight:900;color:#10b981;" id="infCoinsPerRecruit">₱50</div>
+                        <div style="font-size:9px;color:rgba(255,255,255,0.4);font-weight:700;margin-top:2px;">PER RECRUIT</div>
+                    </div>
+                    <div style="flex:1;text-align:center;background:rgba(0,0,0,0.2);border-radius:10px;padding:10px 6px;">
+                        <div style="font-size:18px;font-weight:900;color:#fbbf24;" id="infBonusThreshold">10</div>
+                        <div style="font-size:9px;color:rgba(255,255,255,0.4);font-weight:700;margin-top:2px;">RECRUIT BONUS</div>
+                    </div>
+                    <div style="flex:1;text-align:center;background:rgba(0,0,0,0.2);border-radius:10px;padding:10px 6px;">
+                        <div style="font-size:18px;font-weight:900;color:#34d399;" id="infBonusAmt">₱200</div>
+                        <div style="font-size:9px;color:rgba(255,255,255,0.4);font-weight:700;margin-top:2px;">BONUS PHP</div>
+                    </div>
+                </div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.3);line-height:1.6;">A recruit is <strong style="color:rgba(255,255,255,0.6);">verified</strong> once they log in 3 times or play 1 Bingo game. Fraudulent accounts are automatically excluded.</div>
+            </div>
+
+            <!-- Recruit List -->
+            <div style="margin-bottom:20px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <div style="font-size:12px;font-weight:800;color:white;">Recent Recruits</div>
+                    <div style="font-size:10px;color:rgba(255,255,255,0.35);font-weight:600;" id="infRecruitsCount"></div>
+                </div>
+                <div id="infRecruitList" style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="text-align:center;padding:30px;color:rgba(255,255,255,0.25);font-size:12px;font-weight:600;">Loading recruits...</div>
+                </div>
+            </div>
+
+            <!-- Payout -->
+            <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:16px;padding:16px;">
+                <div style="font-size:11px;font-weight:800;color:#10b981;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Request Payout</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-bottom:14px;line-height:1.5;">Minimum ₱500 required. Payout is processed within 1–3 business days.</div>
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Payout Method</div>
+                    <div style="display:flex;gap:8px;">
+                        <button id="payoutMethodGcash" onclick="selectPayoutMethod('gcash')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(20,184,166,0.15);border:2px solid rgba(20,184,166,0.4);color:#2dd4bf;border-radius:10px;padding:10px;font-size:12px;font-weight:800;cursor:pointer;transition:all 0.2s;">
+                            <svg width="16" height="16" viewBox="0 0 130 48" fill="none"><path d="M24 8C15.163 8 8 15.163 8 24C8 32.837 15.163 40 24 40C32.837 40 40 32.837 40 24V21H24V27H33.5C32.2 31.5 28.5 34.5 24 34.5C18.201 34.5 13.5 29.799 13.5 24C13.5 18.201 18.201 13.5 24 13.5C26.7 13.5 29.2 14.5 31.1 16.2L35.1 12.2C32.3 9.7 28.3 8 24 8Z" fill="currentColor"/></svg>
+                            GCash
+                        </button>
+                        <button id="payoutMethodMaya" onclick="selectPayoutMethod('maya')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(30,41,59,0.5);border:2px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);border-radius:10px;padding:10px;font-size:12px;font-weight:800;cursor:pointer;transition:all 0.2s;">
+                            <i data-lucide="credit-card" style="width:14px;height:14px;"></i>
+                            Maya
+                        </button>
+                    </div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Account Number</div>
+                    <input id="infPayoutNumber" type="tel" placeholder="e.g. 09XXXXXXXXX"
+                        style="width:100%;background:rgba(0,0,0,0.3);border:1.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:11px 14px;color:white;font-size:14px;font-weight:700;outline:none;font-family:Inter,sans-serif;box-sizing:border-box;transition:border-color 0.2s;"
+                        oninput="this.style.borderColor='rgba(255,255,255,0.1)';">
+                    <div id="infPayoutErr" style="display:none;margin-top:5px;font-size:11px;font-weight:700;color:#f87171;"></div>
+                </div>
+                <button onclick="submitInfluencerPayout()" style="width:100%;background:linear-gradient(135deg,#10b981,#059669);border:none;color:white;border-radius:10px;padding:13px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:0.5px;">
+                    <i data-lucide="send" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;"></i>Request Payout
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     INFLUENCER APPLICATION MODAL
+══════════════════════════════════════════ -->
+<!-- INFLUENCER APPLY FORM -->
+<div id="influencerApplyOverlay" style="display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,0.88);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px;">
+    <div style="background:linear-gradient(160deg,#0a0f1e,#0d1526);border:1.5px solid rgba(255,255,255,0.1);border-radius:24px;max-width:400px;width:100%;overflow:hidden;animation:popScale 0.4s cubic-bezier(0.175,0.885,0.32,1.275);">
+        <div style="height:3px;background:linear-gradient(90deg,#0ea5e9,#6366f1,#fbbf24);"></div>
+        <div style="padding:24px;">
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,rgba(14,165,233,0.2),rgba(99,102,241,0.2));border:1px solid rgba(14,165,233,0.3);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;">
+                    <i data-lucide="star" style="width:24px;height:24px;color:#0ea5e9;"></i>
+                </div>
+                <div style="font-size:18px;font-weight:900;color:white;margin-bottom:6px;">Become an Influencer</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.45);line-height:1.6;">Earn real cash for every approved user you bring to Radio Bingo Live.</div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.15);border-radius:10px;">
+                    <i data-lucide="check-circle" style="width:16px;height:16px;color:#10b981;flex-shrink:0;"></i>
+                    <span style="font-size:12px;color:rgba(255,255,255,0.7);font-weight:500;">₱50 cash per approved recruit</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.15);border-radius:10px;">
+                    <i data-lucide="check-circle" style="width:16px;height:16px;color:#10b981;flex-shrink:0;"></i>
+                    <span style="font-size:12px;color:rgba(255,255,255,0.7);font-weight:500;">Payout via GCash or Maya</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.15);border-radius:10px;">
+                    <i data-lucide="check-circle" style="width:16px;height:16px;color:#10b981;flex-shrink:0;"></i>
+                    <span style="font-size:12px;color:rgba(255,255,255,0.7);font-weight:500;">Unique link + real-time dashboard</span>
+                </div>
+            </div>
+
+            <!-- Social Media — REQUIRED -->
+            <div style="margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+                    <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.5);letter-spacing:1.5px;text-transform:uppercase;">Social Media / Channel</label>
+                    <span style="font-size:10px;font-weight:800;color:#ef4444;letter-spacing:0.5px;">REQUIRED</span>
+                </div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:8px;line-height:1.5;">We check your account before approving. Paste your page/profile link or username.</div>
+                <input id="infApplyChannel" type="text" placeholder="e.g. fb.com/yourpage · @yourtiktok · youtube.com/c/you"
+                    style="width:100%;background:rgba(0,0,0,0.3);border:1.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:white;font-size:13px;outline:none;font-family:Inter,sans-serif;box-sizing:border-box;transition:border-color 0.2s;"
+                    oninput="this.style.borderColor='rgba(255,255,255,0.1)';document.getElementById('infApplyChannelErr').style.display='none';">
+                <div id="infApplyChannelErr" style="display:none;margin-top:6px;font-size:11px;font-weight:700;color:#f87171;display:flex;align-items:center;gap:5px;">
+                    <i data-lucide="alert-circle" style="width:12px;height:12px;flex-shrink:0;"></i>
+                    <span>Please enter your social media link or username.</span>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:10px;">
+                <button onclick="document.getElementById('influencerApplyOverlay').style.display='none'; unlockScroll();" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);border-radius:12px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;">Cancel</button>
+                <button onclick="submitInfluencerApplication()" style="flex:2;background:linear-gradient(135deg,#0ea5e9,#6366f1);border:none;color:white;border-radius:12px;padding:13px;font-size:13px;font-weight:800;cursor:pointer;">Submit Application</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- INFLUENCER APPLICATION STATUS SCREEN (pending / rejected) -->
+<div id="infStatusOverlay" style="display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,0.9);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:20px;">
+    <div style="background:linear-gradient(160deg,#0a0f1e,#0d1526);border:1.5px solid rgba(255,255,255,0.1);border-radius:24px;max-width:380px;width:100%;overflow:hidden;">
+        <div id="infStatusBar" style="height:3px;background:linear-gradient(90deg,#fbbf24,#f97316);"></div>
+        <div style="padding:28px 24px 24px;text-align:center;">
+            <!-- Icon -->
+            <div id="infStatusIconWrap" style="width:64px;height:64px;border-radius:20px;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;">
+                <i id="infStatusIcon" data-lucide="clock" style="width:28px;height:28px;color:#fbbf24;"></i>
+            </div>
+            <!-- Status pill -->
+            <div id="infStatusPill" style="display:inline-block;font-size:9px;font-weight:900;letter-spacing:2px;padding:4px 14px;border-radius:20px;background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);margin-bottom:14px;text-transform:uppercase;">Under Review</div>
+            <!-- Title -->
+            <div id="infStatusTitle" style="font-size:18px;font-weight:900;color:white;margin-bottom:10px;line-height:1.3;">Application Submitted</div>
+            <!-- Message -->
+            <div id="infStatusMsg" style="font-size:12px;color:rgba(255,255,255,0.45);line-height:1.7;margin-bottom:18px;"></div>
+            <!-- Submitted channel -->
+            <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:12px 14px;margin-bottom:20px;text-align:left;">
+                <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;">Submitted Social Media</div>
+                <div id="infStatusChannel" style="font-size:12px;color:#38bdf8;font-weight:600;word-break:break-all;"></div>
+            </div>
+            <button onclick="document.getElementById('infStatusOverlay').style.display='none';unlockScroll();" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);border-radius:12px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     ADMIN FRAUD REVIEW PANEL
+══════════════════════════════════════════ -->
+<div id="fraudReviewOverlay" style="display:none;position:fixed;inset:0;z-index:99992;background:rgba(0,0,0,0.94);backdrop-filter:blur(8px);overflow-y:auto;padding-bottom:40px;">
+    <div style="max-width:480px;margin:0 auto;">
+
+        <!-- Header -->
+        <div style="position:sticky;top:0;z-index:10;background:rgba(9,14,28,0.98);padding:max(20px,env(safe-area-inset-top)) 16px 16px;border-bottom:1px solid rgba(255,255,255,0.07);">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <div style="font-size:10px;font-weight:800;letter-spacing:2.5px;color:#ef4444;text-transform:uppercase;margin-bottom:3px;">Admin Panel</div>
+                    <div style="font-size:18px;font-weight:900;color:white;">Fraud Review Queue</div>
+                </div>
+                <button onclick="closeFraudReview()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:white;width:38px;height:38px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <i data-lucide="x" style="width:16px;height:16px;"></i>
+                </button>
+            </div>
+        </div>
+
+        <div style="padding:16px;">
+
+            <!-- Summary Counts -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;">
+                <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:12px;text-align:center;">
+                    <div style="font-size:22px;font-weight:900;color:#fbbf24;" id="fraudPendingCount">0</div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.4);font-weight:700;margin-top:2px;text-transform:uppercase;">Pending</div>
+                </div>
+                <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:12px;text-align:center;">
+                    <div style="font-size:22px;font-weight:900;color:#f87171;" id="fraudFlaggedCount">0</div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.4);font-weight:700;margin-top:2px;text-transform:uppercase;">Flagged</div>
+                </div>
+                <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:12px;text-align:center;">
+                    <div style="font-size:22px;font-weight:900;color:#34d399;" id="fraudApprovedCount">0</div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.4);font-weight:700;margin-top:2px;text-transform:uppercase;">Approved</div>
+                </div>
+            </div>
+
+            <!-- Influencer Overview Table -->
+            <div style="background:rgba(14,165,233,0.05);border:1px solid rgba(14,165,233,0.15);border-radius:16px;padding:14px;margin-bottom:20px;">
+                <div style="font-size:11px;font-weight:800;color:#38bdf8;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;">All Influencers</div>
+                <div id="adminInfluencerList" style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="text-align:center;padding:16px;color:rgba(255,255,255,0.25);font-size:12px;">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div style="display:flex;gap:6px;margin-bottom:14px;">
+                <button onclick="loadFraudQueue('pending')" id="fqTab-pending" style="flex:1;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;border-radius:10px;padding:8px;font-size:11px;font-weight:800;cursor:pointer;">Pending</button>
+                <button onclick="loadFraudQueue('flagged')" id="fqTab-flagged" style="flex:1;background:rgba(30,41,59,0.5);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);border-radius:10px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">Flagged</button>
+                <button onclick="loadFraudQueue('approved')" id="fqTab-approved" style="flex:1;background:rgba(30,41,59,0.5);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);border-radius:10px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">Approved</button>
+                <button onclick="loadFraudQueue('all')" id="fqTab-all" style="flex:1;background:rgba(30,41,59,0.5);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);border-radius:10px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">All</button>
+            </div>
+
+            <div id="fraudQueueList" style="display:flex;flex-direction:column;gap:10px;">
+                <div style="text-align:center;padding:30px;color:rgba(255,255,255,0.25);font-size:12px;">Loading queue...</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     INFLUENCER SYSTEM CSS
+══════════════════════════════════════════ -->
+<style>
+.inf-recruit-row {
+    display:flex;align-items:center;gap:10px;
+    background:rgba(30,41,59,0.5);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:12px;padding:12px 14px;
+}
+.inf-recruit-avatar {
+    width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;
+    border:2px solid rgba(255,255,255,0.1);background:#1e293b;
+}
+.inf-recruit-status {
+    font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+    padding:3px 8px;border-radius:6px;flex-shrink:0;
+}
+.inf-recruit-status.verified { background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3); }
+.inf-recruit-status.pending  { background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.25); }
+.inf-recruit-status.flagged  { background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25); }
+.fq-card {
+    background:rgba(30,41,59,0.6);border:1px solid rgba(255,255,255,0.07);
+    border-radius:14px;padding:14px;
+}
+.fq-card.flagged-card { border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.05); }
+.fq-flag-tag {
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:9px;font-weight:800;
+    padding:3px 8px;border-radius:6px;
+    background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.25);
+    margin-right:4px;margin-bottom:4px;
+}
+.inf-admin-row {
+    display:flex;align-items:center;gap:10px;
+    padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.inf-admin-row:last-child { border-bottom:none; }
+</style>
+
+<!-- ══════════════════════════════════════════
+     INFLUENCER SYSTEM JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+(function() {
+'use strict';
+
+// ─── CONFIG ──────────────────────────────────────────────────────
+var INF_PESOS_PER_RECRUIT      = 50;   // ₱50 per approved recruit
+var INF_BONUS_THRESHOLD        = 10;
+var INF_BONUS_PESOS            = 200;  // ₱200 bonus every 10 recruits
+var INF_MIN_LOGINS             = 3;
+var INF_MIN_GAMES              = 1;
+var INF_PAYOUT_MIN             = 500;  // minimum ₱500 to request payout
+var FRAUD_MAX_PER_IP           = 3;    // max accounts per IP in 24h
+var _infPayoutMethod           = 'gcash';
+
+// ─── STATE ───────────────────────────────────────────────────────
+var _infUid  = null;
+var _infData = null;
+var _infLink = '';
+var _fqTab   = 'pending';
+
+// ─── HELPERS ─────────────────────────────────────────────────────
+function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function simpleHash(str) {
+    var h = 0;
+    for (var i = 0; i < str.length; i++) { h = ((h << 5) - h) + str.charCodeAt(i); h = h | 0; }
+    return Math.abs(h).toString(36);
+}
+function fmtDate(ts) {
+    if (!ts) return '—';
+    return new Date(ts).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+function getInfluencerTier(verified) {
+    if (verified >= 50) return { tier:3, threshold:25, bonus:500,  rate:50 };
+    if (verified >= 20) return { tier:2, threshold:15, bonus:300,  rate:50 };
+    return                     { tier:1, threshold:10, bonus:200,  rate:50 };
+}
+
+// ─── STATE ───────────────────────────────────────────────────────
+var _infAppData = null; // pending/rejected application data
+
+// ─── INIT ─────────────────────────────────────────────────────────
+function init(uid) {
+    _infUid = uid;
+    runFraudChecks(uid);
+    // Listen to approved influencer record
+    db.ref('influencers/' + uid).on('value', function(snap) {
+        _infData = snap.val();
+        updateMenuEntry();
+    });
+    // Listen to application status (pending / rejected)
+    db.ref('influencerApplications').orderByChild('uid').equalTo(uid).on('value', function(snap) {
+        if (snap.exists()) {
+            var key = Object.keys(snap.val())[0];
+            _infAppData = snap.val()[key];
+            _infAppData._key = key;
+        } else {
+            _infAppData = null;
+        }
+        updateMenuEntry();
+    });
+    db.ref('users/' + uid + '/role').once('value', function(s) {
+        if (s.val() === 'admin') injectAdminButton();
+    });
+}
+window.initInfluencerSystem = init;
+
+// ─── MENU BUTTON STATE ────────────────────────────────────────────
+function updateMenuEntry() {
+    var btn = document.getElementById('hmenu-inf-entry');
+    if (!btn) return;
+    if (_infData) {
+        // Approved & active
+        btn.innerHTML = '<i data-lucide="bar-chart-2" style="color:#818cf8;"></i> Influencer Portal <span style="margin-left:auto;background:rgba(16,185,129,0.15);color:#34d399;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:1px;">ACTIVE</span>';
+    } else if (_infAppData && _infAppData.status === 'pending') {
+        // Applied, waiting for approval
+        btn.innerHTML = '<i data-lucide="clock" style="color:#fbbf24;"></i> Influencer Portal <span style="margin-left:auto;background:rgba(251,191,36,0.12);color:#fbbf24;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:1px;">PENDING</span>';
+    } else if (_infAppData && _infAppData.status === 'rejected') {
+        // Rejected
+        btn.innerHTML = '<i data-lucide="star" style="color:#818cf8;"></i> Influencer Portal <span style="margin-left:auto;background:rgba(239,68,68,0.1);color:#f87171;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:1px;">REJECTED</span>';
+    } else {
+        // Not applied yet
+        btn.innerHTML = '<i data-lucide="star" style="color:#818cf8;"></i> Influencer Portal <span style="margin-left:auto;background:rgba(14,165,233,0.15);color:#38bdf8;font-size:9px;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:1px;">JOIN</span>';
+    }
+    lucide.createIcons();
+}
+
+function injectAdminButton() {
+    if (document.getElementById('hmenu-fraudreview')) return;
+    var menu = document.querySelector('#hamburgerMenu');
+    if (!menu) return;
+    var d = document.createElement('div'); d.className = 'hamburger-divider';
+    var b = document.createElement('button');
+    b.className = 'hamburger-nav-item';
+    b.id = 'hmenu-fraudreview';
+    b.style.color = '#f87171';
+    b.innerHTML = '<i data-lucide="shield-alert" style="color:#ef4444;"></i> Fraud Review';
+    b.onclick = function() { closeHamburgerMenu(); openFraudReview(); };
+    menu.appendChild(d);
+    menu.appendChild(b);
+    lucide.createIcons();
+}
+
+// ─── APPLICATION ──────────────────────────────────────────────────
+function openInfluencerApply() {
+    if (!auth.currentUser) return showToast('Please login first.');
+    // Already approved — go to dashboard
+    if (_infData) return openInfluencerDash();
+    // Already has an application — show its status
+    if (_infAppData) {
+        showInfStatusScreen(_infAppData);
+        return;
+    }
+    // Fresh application
+    document.getElementById('infApplyChannel').value = '';
+    document.getElementById('infApplyChannel').style.borderColor = 'rgba(255,255,255,0.1)';
+    document.getElementById('infApplyChannelErr').style.display = 'none';
+    var el = document.getElementById('influencerApplyOverlay');
+    el.style.display = 'flex';
+    lockScroll();
+    lucide.createIcons();
+}
+window.openInfluencerApply = openInfluencerApply;
+
+function submitInfluencerApplication() {
+    if (!auth.currentUser) return;
+    var channelInput = document.getElementById('infApplyChannel');
+    var channel = (channelInput.value || '').trim();
+    var errEl   = document.getElementById('infApplyChannelErr');
+
+    // Validate — required
+    if (!channel) {
+        channelInput.style.borderColor = 'rgba(239,68,68,0.6)';
+        errEl.style.display = 'flex';
+        channelInput.focus();
+        lucide.createIcons();
+        return;
+    }
+
+    var uid   = auth.currentUser.uid;
+    var uData = window.userData || {};
+
+    // Disable button while submitting
+    var submitBtn = document.querySelector('#influencerApplyOverlay button[onclick="submitInfluencerApplication()"]');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
+
+    db.ref('influencerApplications').push({
+        uid:       uid,
+        name:      uData.name  || auth.currentUser.displayName || 'Unknown',
+        photo:     uData.photo || auth.currentUser.photoURL    || '',
+        channel:   channel,
+        status:    'pending',
+        appliedAt: Date.now()
+    }).then(function() {
+        document.getElementById('influencerApplyOverlay').style.display = 'none';
+        unlockScroll();
+        showInfStatusScreen({ channel: channel, status: 'pending' });
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Application'; }
+    }).catch(function() {
+        showToast('Error submitting. Please try again.');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Application'; }
+    });
+}
+window.submitInfluencerApplication = submitInfluencerApplication;
+
+// ─── STATUS SCREEN (pending / rejected) ──────────────────────────
+function showInfStatusScreen(appData) {
+    var isPending  = appData.status === 'pending';
+    var isRejected = appData.status === 'rejected';
+
+    var iconEl    = document.getElementById('infStatusIcon');
+    var wrapEl    = document.getElementById('infStatusIconWrap');
+    var pillEl    = document.getElementById('infStatusPill');
+    var titleEl   = document.getElementById('infStatusTitle');
+    var msgEl     = document.getElementById('infStatusMsg');
+    var barEl     = document.getElementById('infStatusBar');
+    var chanEl    = document.getElementById('infStatusChannel');
+
+    if (isPending) {
+        iconEl.setAttribute('data-lucide', 'clock');
+        wrapEl.style.background   = 'rgba(251,191,36,0.12)';
+        wrapEl.style.borderColor  = 'rgba(251,191,36,0.3)';
+        pillEl.textContent         = 'Under Review';
+        pillEl.style.background   = 'rgba(251,191,36,0.12)';
+        pillEl.style.color        = '#fbbf24';
+        pillEl.style.borderColor  = 'rgba(251,191,36,0.3)';
+        barEl.style.background    = 'linear-gradient(90deg,#fbbf24,#f97316)';
+        titleEl.textContent       = 'Application Submitted!';
+        msgEl.textContent         = 'Our team is reviewing your social media account. You will receive a notification once your application is approved. This usually takes 1–2 days.';
+    } else if (isRejected) {
+        iconEl.setAttribute('data-lucide', 'x-circle');
+        wrapEl.style.background   = 'rgba(239,68,68,0.12)';
+        wrapEl.style.borderColor  = 'rgba(239,68,68,0.3)';
+        pillEl.textContent         = 'Not Approved';
+        pillEl.style.background   = 'rgba(239,68,68,0.1)';
+        pillEl.style.color        = '#f87171';
+        pillEl.style.borderColor  = 'rgba(239,68,68,0.25)';
+        barEl.style.background    = 'linear-gradient(90deg,#ef4444,#b91c1c)';
+        titleEl.textContent       = 'Application Not Approved';
+        msgEl.textContent         = appData.rejectReason
+            ? appData.rejectReason
+            : 'Your application did not meet our current requirements. You may contact support for more details.';
+    }
+
+    chanEl.textContent = appData.channel || '—';
+
+    var overlay = document.getElementById('infStatusOverlay');
+    overlay.style.display = 'flex';
+    lockScroll();
+    lucide.createIcons();
+}
+
+// ─── DASHBOARD OPEN / CLOSE ───────────────────────────────────────
+function openInfluencerDash() {
+    if (!auth.currentUser) return showToast('Please login first.');
+    if (!_infData) return openInfluencerApply();
+    document.getElementById('influencerDashOverlay').style.display = 'block';
+    lockScroll();
+    renderDashboard();
+    lucide.createIcons();
+}
+function closeInfluencerDash() {
+    document.getElementById('influencerDashOverlay').style.display = 'none';
+    unlockScroll();
+}
+window.openInfluencerDash  = openInfluencerDash;
+window.closeInfluencerDash = closeInfluencerDash;
+
+// ─── RENDER DASHBOARD ─────────────────────────────────────────────
+function renderDashboard() {
+    if (!_infData || !_infUid) return;
+    var t = getInfluencerTier(_infData.verifiedRecruits || 0);
+    _infLink = window.location.origin + window.location.pathname + '?ref=' + _infData.code;
+
+    document.getElementById('infDashName').textContent         = _infData.name || 'My Dashboard';
+    document.getElementById('infTierBadge').textContent        = 'TIER ' + t.tier;
+    document.getElementById('infTierLabel').textContent        = 'Tier ' + t.tier;
+    document.getElementById('infCoinsPerRecruit').textContent  = '₱' + t.rate;
+    document.getElementById('infBonusThreshold').textContent   = t.threshold;
+    document.getElementById('infBonusAmt').textContent         = '₱' + t.bonus.toLocaleString();
+    document.getElementById('infTotalRecruits').textContent    = (_infData.totalRecruits    || 0).toLocaleString();
+    document.getElementById('infVerifiedRecruits').textContent = (_infData.verifiedRecruits || 0).toLocaleString();
+    document.getElementById('infPendingRecruits').textContent  = (_infData.pendingRecruits  || 0).toLocaleString();
+    document.getElementById('infEarnings').textContent         = '₱' + (_infData.totalEarnings || 0).toLocaleString();
+    document.getElementById('infRefLinkDisplay').textContent   = _infLink;
+
+    // Load recruit list
+    db.ref('influencerRecruits/' + _infUid).limitToLast(30).once('value', function(snap) {
+        var list = document.getElementById('infRecruitList');
+        var data = snap.val();
+        document.getElementById('infRecruitsCount').textContent = data ? Object.keys(data).length + ' total' : '0 total';
+        if (!data) {
+            list.innerHTML = '<div style="text-align:center;padding:30px;color:rgba(255,255,255,0.25);font-size:12px;font-weight:600;">No recruits yet — share your link to get started.</div>';
+            return;
+        }
+        list.innerHTML = '';
+        Object.entries(data).reverse().forEach(function(entry) {
+            var rUid = entry[0], r = entry[1];
+            var sc = r.status === 'verified' ? 'verified' : r.status === 'flagged' ? 'flagged' : 'pending';
+            var sl = r.status === 'verified' ? 'Verified'  : r.status === 'flagged' ? 'Flagged'  : 'Pending';
+            var row = document.createElement('div');
+            row.className = 'inf-recruit-row';
+            row.innerHTML =
+                '<img class="inf-recruit-avatar" src="' + esc(r.photo || '') + '" onerror="this.src=\'https://ui-avatars.com/api/?name=' + encodeURIComponent(r.name||'U') + '&background=1e293b&color=fff&size=38\'">' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div style="font-size:12px;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(r.name || 'Unknown') + '</div>' +
+                  '<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px;">' + fmtDate(r.joinedAt) + ' · ' + (r.loginCount||0) + ' logins · ' + (r.gamesPlayed||0) + ' games</div>' +
+                '</div>' +
+                '<div class="inf-recruit-status ' + sc + '">' + sl + '</div>';
+            list.appendChild(row);
+        });
+    });
+}
+
+// ─── COPY / SHARE ─────────────────────────────────────────────────
+function copyInfluencerLink() {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(_infLink).then(function() { showToast('Link copied!'); }).catch(fallbackCopy);
+    } else { fallbackCopy(); }
+}
+function fallbackCopy() {
+    var ta = document.createElement('textarea');
+    ta.value = _infLink;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Link copied!');
+}
+function shareInfluencerLink(platform) {
+    var text = encodeURIComponent('Join me on Radio Bingo Live! ' + _infLink);
+    if (platform === 'facebook') { window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(_infLink), '_blank'); }
+    else if (platform === 'whatsapp') { window.open('https://wa.me/?text=' + text, '_blank'); }
+    else if (platform === 'native' && navigator.share) { navigator.share({ title:'Radio Bingo Live', text:'Join me!', url:_infLink }).catch(function(){}); }
+    else { copyInfluencerLink(); }
+}
+window.copyInfluencerLink  = copyInfluencerLink;
+window.shareInfluencerLink = shareInfluencerLink;
+
+// ─── RECRUIT TRACKING (called on new user signup) ─────────────────
+function trackInfluencerRecruit(influencerCode, newUid, newName, newPhoto) {
+    if (!influencerCode || !newUid) return;
+    db.ref('influencers').orderByChild('code').equalTo(influencerCode).once('value', function(snap) {
+        if (!snap.exists()) return;
+        var infUid = Object.keys(snap.val())[0];
+        if (infUid === newUid) return; // can't recruit yourself
+
+        db.ref('influencerRecruits/' + infUid + '/' + newUid).set({
+            name: newName || 'User',
+            photo: newPhoto || '',
+            status: 'pending',
+            joinedAt: Date.now(),
+            loginCount: 1,
+            gamesPlayed: 0,
+            flagged: false
+        });
+        db.ref('users/' + newUid).update({ recruitedBy: infUid, recruitedByCode: influencerCode });
+        db.ref('influencers/' + infUid + '/totalRecruits').transaction(function(n) { return (n||0)+1; });
+        db.ref('influencers/' + infUid + '/pendingRecruits').transaction(function(n) { return (n||0)+1; });
+        db.ref('notifications/' + infUid).push({ type:'recruit', message:(newName||'Someone')+' joined using your referral link!', timestamp:Date.now(), read:false });
+    });
+}
+window.trackInfluencerRecruit = trackInfluencerRecruit;
+
+// ─── ACTIVITY TRACKING (login / game) ────────────────────────────
+function trackRecruitActivity(uid, actType) {
+    db.ref('users/' + uid + '/recruitedBy').once('value', function(snap) {
+        var infUid = snap.val();
+        if (!infUid) return;
+        var rRef = db.ref('influencerRecruits/' + infUid + '/' + uid);
+        rRef.once('value', function(rSnap) {
+            if (!rSnap.exists()) return;
+            var r = rSnap.val();
+            if (r.status === 'verified' || r.status === 'flagged') return;
+            var updates = {};
+            if (actType === 'login') updates.loginCount  = (r.loginCount  || 0) + 1;
+            if (actType === 'game')  updates.gamesPlayed = (r.gamesPlayed || 0) + 1;
+            rRef.update(updates);
+            var newLogins = updates.loginCount  !== undefined ? updates.loginCount  : (r.loginCount  || 0);
+            var newGames  = updates.gamesPlayed !== undefined ? updates.gamesPlayed : (r.gamesPlayed || 0);
+            if (newLogins >= INF_MIN_LOGINS || newGames >= INF_MIN_GAMES) {
+                verifyRecruit(infUid, uid);
+            }
+        });
+    });
+}
+window.trackRecruitActivity = trackRecruitActivity;
+
+function verifyRecruit(infUid, recruitUid) {
+    db.ref('influencerRecruits/' + infUid + '/' + recruitUid).update({ status:'verified', verifiedAt:Date.now() });
+    db.ref('influencers/' + infUid).transaction(function(inf) {
+        if (!inf) return inf;
+        var v = (inf.verifiedRecruits || 0) + 1;
+        var t = getInfluencerTier(v);
+        inf.verifiedRecruits = v;
+        inf.pendingRecruits  = Math.max((inf.pendingRecruits || 0) - 1, 0);
+        inf.totalEarnings    = (inf.totalEarnings || 0) + t.rate;
+        inf.tier             = t.tier;
+        // Milestone bonus
+        if (v % t.threshold === 0) {
+            inf.totalEarnings += t.bonus;
+            db.ref('notifications/' + infUid).push({ type:'bonus', message:'Milestone! You reached '+v+' verified recruits and earned a ₱'+t.bonus.toLocaleString()+' bonus!', timestamp:Date.now(), read:false });
+        }
+        return inf;
+    });
+    db.ref('notifications/' + infUid).push({ type:'verified_recruit', message:'A recruit was verified! +₱'+INF_PESOS_PER_RECRUIT+' earnings added.', timestamp:Date.now(), read:false });
+}
+
+// ─── ANTI-FRAUD: IP CHECK (using Firebase metadata approach) ─────
+// Instead of external API, we use Firebase's built-in connection info
+// and store a client-derived IP signature via the WebRTC STUN trick
+function runFraudChecks(uid) {
+    checkEmailVerified(uid);
+    checkAccountAge(uid);
+    detectIPSignature(uid);
+}
+
+// WebRTC-based local IP detection (no external API needed)
+function detectIPSignature(uid) {
+    try {
+        var pc = new (window.RTCPeerConnection || window.webkitRTCPeerConnection)({ iceServers:[{urls:'stun:stun.l.google.com:19302'}] });
+        pc.createDataChannel('');
+        pc.createOffer().then(function(o) { pc.setLocalDescription(o); });
+        pc.onicecandidate = function(e) {
+            if (!e || !e.candidate || !e.candidate.candidate) return;
+            var m = e.candidate.candidate.match(/\b(\d{1,3}\.){3}\d{1,3}\b/);
+            if (!m) return;
+            pc.close();
+            var ipSig = simpleHash(m[0]);
+            checkIPRegistry(uid, ipSig, m[0]);
+        };
+        // Timeout fallback
+        setTimeout(function() { try { pc.close(); } catch(ex) {} }, 5000);
+    } catch(ex) { /* WebRTC not available */ }
+}
+
+function checkIPRegistry(uid, ipHash, rawIp) {
+    var ipRef = db.ref('ipRegistry/' + ipHash);
+    var now   = Date.now();
+    var cutoff = now - 86400000; // 24h window
+
+    ipRef.once('value', function(snap) {
+        var data = snap.val() || { accounts:{} };
+        data.accounts = data.accounts || {};
+        // Prune old entries
+        Object.keys(data.accounts).forEach(function(k) {
+            if (data.accounts[k] < cutoff) delete data.accounts[k];
+        });
+        data.accounts[uid] = now;
+        data.lastSeen = now;
+        ipRef.set(data);
+
+        var count = Object.keys(data.accounts).length;
+        if (count > FRAUD_MAX_PER_IP) {
+            flagAccount(uid, 'multi_account_ip', 'Same IP used by ' + count + ' accounts in 24h', ipHash);
+        }
+    });
+}
+
+function checkAccountAge(uid) {
+    if (!auth.currentUser || !auth.currentUser.metadata) return;
+    var created = new Date(auth.currentUser.metadata.creationTime).getTime();
+    if (Date.now() - created < 600000) { // < 10 minutes old
+        db.ref('users/' + uid + '/recruitedBy').once('value', function(s) {
+            if (s.val()) {
+                db.ref('fraudMonitor/' + uid).update({ newAccountWithReferral:true, createdAt:Date.now() });
+                flagAccount(uid, 'instant_referral', 'New account signed up with referral link within 10 minutes', null);
+            }
+        });
+    }
+}
+
+function checkEmailVerified(uid) {
+    if (!auth.currentUser) return;
+    var verified = auth.currentUser.emailVerified;
+    db.ref('users/' + uid).update({ emailVerified: !!verified });
+    if (!verified) {
+        flagAccount(uid, 'unverified_email', 'Account email not verified by provider', null);
+    }
+}
+
+// ─── FLAG ACCOUNT ────────────────────────────────────────────────
+function flagAccount(uid, reason, detail, extra) {
+    var flagRef = db.ref('fraudFlags/' + uid + '/flags/' + reason);
+    flagRef.once('value', function(existing) {
+        if (existing.exists()) return;
+        flagRef.set({ reason:reason, detail:detail, extra:extra||null, timestamp:Date.now() });
+
+        db.ref('fraudFlags/' + uid + '/flags').once('value', function(allFlags) {
+            var count    = allFlags.numChildren();
+            var severity = count >= 3 ? 'high' : count >= 2 ? 'medium' : 'low';
+            db.ref('fraudFlags/' + uid).update({ uid:uid, severity:severity, reviewStatus:'pending', lastFlagAt:Date.now() });
+
+            db.ref('users/' + uid + '/recruitedBy').once('value', function(s) {
+                var infUid = s.val();
+                if (!infUid) return;
+                db.ref('influencerRecruits/' + infUid + '/' + uid).update({ status:'flagged', flagReason:reason });
+                db.ref('influencers/' + infUid + '/pendingRecruits').transaction(function(n) { return Math.max((n||0)-1,0); });
+                if (severity === 'high') {
+                    db.ref('notifications/' + infUid).push({ type:'fraud_alert', message:'A recruit was auto-flagged for fraud and removed from your count.', timestamp:Date.now(), read:false });
+                }
+            });
+        });
+    });
+}
+window._flagAccount = flagAccount;
+
+// ─── FRAUD REVIEW PANEL ──────────────────────────────────────────
+function openFraudReview() {
+    document.getElementById('fraudReviewOverlay').style.display = 'block';
+    lockScroll();
+    lucide.createIcons();
+    // Load summary counts
+    ['pending','flagged','approved'].forEach(function(status) {
+        db.ref('fraudFlags').orderByChild('reviewStatus').equalTo(status).once('value', function(snap) {
+            var el = document.getElementById('fraud' + status.charAt(0).toUpperCase() + status.slice(1) + 'Count');
+            if (el) el.textContent = snap.numChildren();
+        });
+    });
+    loadAdminInfluencerList();
+    loadFraudQueue('pending');
+}
+function closeFraudReview() {
+    document.getElementById('fraudReviewOverlay').style.display = 'none';
+    unlockScroll();
+}
+window.openFraudReview = openFraudReview;
+window.closeFraudReview = closeFraudReview;
+
+function loadAdminInfluencerList() {
+    var el = document.getElementById('adminInfluencerList');
+    db.ref('influencers').once('value', function(snap) {
+        var data = snap.val();
+        if (!data) { el.innerHTML = '<div style="text-align:center;padding:12px;color:rgba(255,255,255,0.25);font-size:12px;">No influencers yet.</div>'; return; }
+        el.innerHTML = '';
+        Object.values(data).sort(function(a,b){ return (b.verifiedRecruits||0)-(a.verifiedRecruits||0); }).forEach(function(inf) {
+            var t = getInfluencerTier(inf.verifiedRecruits || 0);
+            var row = document.createElement('div');
+            row.className = 'inf-admin-row';
+            row.innerHTML =
+                '<img src="' + esc(inf.photo||'') + '" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid rgba(14,165,233,0.3);background:#1e293b;flex-shrink:0;" onerror="this.src=\'https://ui-avatars.com/api/?name=' + encodeURIComponent(inf.name||'U') + '&background=1e293b&color=fff&size=34\'">' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div style="font-size:12px;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(inf.name||'Unknown') + '</div>' +
+                  '<div style="font-size:10px;color:rgba(255,255,255,0.35);">Code: <span style="color:#38bdf8;">' + esc(inf.code||'—') + '</span> · Tier ' + t.tier + '</div>' +
+                '</div>' +
+                '<div style="text-align:right;flex-shrink:0;">' +
+                  '<div style="font-size:13px;font-weight:900;color:#10b981;">' + (inf.verifiedRecruits||0) + '</div>' +
+                  '<div style="font-size:9px;color:rgba(255,255,255,0.3);font-weight:700;">VERIFIED</div>' +
+                '</div>';
+            el.appendChild(row);
+        });
+    });
+}
+
+function loadFraudQueue(filter) {
+    _fqTab = filter;
+    var tabColors = { pending:'rgba(251,191,36,', flagged:'rgba(239,68,68,', approved:'rgba(16,185,129,', all:'rgba(99,102,241,' };
+    var tabTextColors = { pending:'#fbbf24', flagged:'#f87171', approved:'#34d399', all:'#818cf8' };
+    ['pending','flagged','approved','all'].forEach(function(t) {
+        var tab = document.getElementById('fqTab-' + t);
+        if (!tab) return;
+        var active = t === filter;
+        var c = tabColors[t] || tabColors.all;
+        tab.style.background   = active ? c + '0.15)' : 'rgba(30,41,59,0.5)';
+        tab.style.borderColor  = active ? c + '0.4)'  : 'rgba(255,255,255,0.08)';
+        tab.style.color        = active ? tabTextColors[t] : 'rgba(255,255,255,0.5)';
+        tab.style.fontWeight   = active ? '800' : '700';
+    });
+
+    var list = document.getElementById('fraudQueueList');
+    list.innerHTML = '<div style="text-align:center;padding:24px;color:rgba(255,255,255,0.3);font-size:12px;">Loading...</div>';
+
+    var query = filter === 'all'
+        ? db.ref('fraudFlags').limitToLast(60)
+        : db.ref('fraudFlags').orderByChild('reviewStatus').equalTo(filter).limitToLast(60);
+
+    query.once('value', function(snap) {
+        var data = snap.val();
+        list.innerHTML = '';
+        if (!data) {
+            list.innerHTML = '<div style="text-align:center;padding:30px;color:rgba(255,255,255,0.25);font-size:12px;font-weight:600;">No records found.</div>';
+            return;
+        }
+        Object.entries(data).reverse().forEach(function(entry) {
+            var fUid = entry[0], fData = entry[1];
+            db.ref('users/' + fUid).once('value', function(uSnap) {
+                var user = uSnap.val() || {};
+                db.ref('fraudFlags/' + fUid + '/flags').once('value', function(flagsSnap) {
+                    var flags = flagsSnap.val() || {};
+                    var sevColor  = fData.severity === 'high' ? '#ef4444' : fData.severity === 'medium' ? '#fbbf24' : '#64748b';
+                    var statColor = fData.reviewStatus === 'approved' ? '#10b981' : fData.reviewStatus === 'flagged' ? '#ef4444' : '#fbbf24';
+                    var isBad     = fData.reviewStatus === 'flagged' || fData.severity === 'high';
+
+                    var flagTags = Object.keys(flags).map(function(k) {
+                        return '<span class="fq-flag-tag">' + esc(flags[k].detail || k) + '</span>';
+                    }).join('');
+
+                    var card = document.createElement('div');
+                    card.className = 'fq-card' + (isBad ? ' flagged-card' : '');
+                    card.innerHTML =
+                        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">' +
+                          '<img src="' + esc(user.photo||'') + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid ' + sevColor + '44;background:#1e293b;" onerror="this.src=\'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name||'U') + '&background=1e293b&color=fff&size=36\'">' +
+                          '<div style="flex:1;min-width:0;">' +
+                            '<div style="font-size:12px;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(user.name||'Unknown') + '</div>' +
+                            '<div style="font-size:10px;color:rgba(255,255,255,0.35);">UID: ' + fUid.substring(0,10) + '… · Severity: <span style="color:' + sevColor + ';font-weight:700;">' + (fData.severity||'low').toUpperCase() + '</span></div>' +
+                          '</div>' +
+                          '<div style="font-size:9px;font-weight:800;padding:3px 8px;border-radius:6px;background:' + statColor + '18;color:' + statColor + ';border:1px solid ' + statColor + '35;letter-spacing:0.5px;">' + (fData.reviewStatus||'pending').toUpperCase() + '</div>' +
+                        '</div>' +
+                        '<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;">' + (flagTags || '<span style="font-size:10px;color:rgba(255,255,255,0.3);">No flags recorded.</span>') + '</div>' +
+                        '<div style="display:flex;gap:8px;">' +
+                          '<button onclick="adminApprove(\'' + fUid + '\')" style="flex:1;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#34d399;border-radius:8px;padding:8px;font-size:11px;font-weight:800;cursor:pointer;">Approve</button>' +
+                          '<button onclick="adminFlag(\'' + fUid + '\')" style="flex:1;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#f87171;border-radius:8px;padding:8px;font-size:11px;font-weight:800;cursor:pointer;">Flag</button>' +
+                          '<button onclick="adminViewUser(\'' + fUid + '\')" style="flex:1;background:rgba(30,41,59,0.7);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);border-radius:8px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">View</button>' +
+                        '</div>';
+                    list.appendChild(card);
+                });
+            });
+        });
+    });
+}
+window.loadFraudQueue = loadFraudQueue;
+
+function adminApprove(uid) {
+    db.ref('fraudFlags/' + uid).update({ reviewStatus:'approved', reviewedAt:Date.now() });
+    db.ref('users/' + uid + '/recruitedBy').once('value', function(s) {
+        var infUid = s.val();
+        if (!infUid) return;
+        db.ref('influencerRecruits/' + infUid + '/' + uid + '/status').set('pending');
+        db.ref('influencers/' + infUid + '/pendingRecruits').transaction(function(n) { return (n||0)+1; });
+    });
+    showToast('Account approved.');
+    setTimeout(function() { loadFraudQueue(_fqTab); }, 400);
+}
+function adminFlag(uid) {
+    db.ref('fraudFlags/' + uid).update({ reviewStatus:'flagged', reviewedAt:Date.now(), severity:'high' });
+    db.ref('users/' + uid).update({ fraudFlagged:true });
+    showToast('Account flagged as fraudulent.');
+    setTimeout(function() { loadFraudQueue(_fqTab); }, 400);
+}
+function adminViewUser(uid) {
+    closeFraudReview();
+    if (typeof openOtherProfile === 'function') openOtherProfile(uid);
+}
+window.adminApprove  = adminApprove;
+window.adminFlag     = adminFlag;
+window.adminViewUser = adminViewUser;
+
+// ─── PAYOUT ───────────────────────────────────────────────────────
+function selectPayoutMethod(method) {
+    _infPayoutMethod = method;
+    var gcashBtn = document.getElementById('payoutMethodGcash');
+    var mayaBtn  = document.getElementById('payoutMethodMaya');
+    if (!gcashBtn || !mayaBtn) return;
+    var activeStyle   = 'flex:1;display:flex;align-items:center;justify-content:center;gap:6px;border:2px solid;border-radius:10px;padding:10px;font-size:12px;font-weight:800;cursor:pointer;transition:all 0.2s;';
+    var inactiveStyle = 'flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(30,41,59,0.5);border:2px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);border-radius:10px;padding:10px;font-size:12px;font-weight:800;cursor:pointer;transition:all 0.2s;';
+    if (method === 'gcash') {
+        gcashBtn.style.cssText = activeStyle + 'background:rgba(20,184,166,0.2);border-color:rgba(20,184,166,0.6);color:#2dd4bf;';
+        mayaBtn.style.cssText  = inactiveStyle;
+    } else {
+        mayaBtn.style.cssText  = activeStyle + 'background:rgba(99,102,241,0.2);border-color:rgba(99,102,241,0.6);color:#818cf8;';
+        gcashBtn.style.cssText = inactiveStyle;
+    }
+}
+
+function submitInfluencerPayout() {
+    if (!auth.currentUser || !_infData) return;
+    var number = (document.getElementById('infPayoutNumber').value || '').trim();
+    var errEl  = document.getElementById('infPayoutErr');
+    errEl.style.display = 'none';
+
+    var totalEarnings = _infData.totalEarnings || 0;
+    var pending = _infData.pendingPayout || 0;
+    var available = totalEarnings - pending;
+
+    if (available < INF_PAYOUT_MIN) {
+        errEl.textContent = 'Minimum ₱' + INF_PAYOUT_MIN + ' required. Available: ₱' + available.toLocaleString();
+        errEl.style.display = 'block';
+        return;
+    }
+    if (!/^09\d{9}$/.test(number)) {
+        document.getElementById('infPayoutNumber').style.borderColor = '#ef4444';
+        errEl.textContent = 'Enter a valid 11-digit mobile number (e.g. 09XXXXXXXXX).';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    db.ref('influencerPayouts').push({
+        uid:       _infUid,
+        name:      _infData.name || 'Unknown',
+        method:    _infPayoutMethod,
+        number:    number,
+        amount:    available,
+        status:    'pending',
+        requestedAt: Date.now()
+    }, function(err) {
+        if (err) { errEl.textContent = 'Error: ' + err.message; errEl.style.display='block'; return; }
+        db.ref('influencers/' + _infUid + '/pendingPayout').set(totalEarnings);
+        db.ref('notifications/' + _infUid).push({ type:'payout_requested', message:'Payout request of ₱'+available.toLocaleString()+' via '+(_infPayoutMethod==='gcash'?'GCash':'Maya')+' submitted! Processing within 1–3 business days.', timestamp:Date.now(), read:false });
+        document.getElementById('infPayoutNumber').value = '';
+        if (typeof showToast === 'function') showToast('✅ Payout request submitted!');
+    });
+}
+window.selectPayoutMethod     = selectPayoutMethod;
+window.submitInfluencerPayout = submitInfluencerPayout;
+
+// ─── HOOK: URL ?ref= reading for INF codes ────────────────────────
+var _urlRef = (new URLSearchParams(window.location.search)).get('ref') || '';
+window._pendingInfluencerCode = _urlRef.startsWith('INF-') ? _urlRef : null;
+
+})();
 </script>
 </body>
 </html>

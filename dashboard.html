@@ -1032,6 +1032,7 @@
         <button class="tab-btn" onclick="openTab('support-tab', this)"><i data-lucide="message-square" width="16"></i> SUPPORT</button>
         <button class="tab-btn" onclick="openTab('tournament-tab', this)"><i data-lucide="trophy" width="16"></i> TOURNAMENTS</button>
         <button class="tab-btn" id="partnersTabBtn" onclick="openTab('partners-tab', this)"><i data-lucide="store" width="16"></i> PARTNERS <span id="partnersBadge" style="display:none;background:#ef4444;color:white;font-size:9px;font-weight:900;padding:1px 7px;border-radius:20px;margin-left:4px;vertical-align:middle;"></span></button>
+        <button class="tab-btn" id="influencersTabBtn" onclick="openTab('influencers-tab', this)"><i data-lucide="star" width="16"></i> INFLUENCERS <span id="influencersBadge" style="display:none;background:#ef4444;color:white;font-size:9px;font-weight:900;padding:1px 7px;border-radius:20px;margin-left:4px;vertical-align:middle;"></span></button>
         <button class="tab-btn" onclick="openTab('myshop-tab', this)"><i data-lucide="shopping-bag" width="16"></i> MY SHOP</button>
         <button class="tab-btn" onclick="openTab('push-tab', this); loadPushHistory();"><i data-lucide="bell" width="16"></i> PUSH</button>
     </div>
@@ -1118,16 +1119,25 @@
                     <div id="patternPreviewBox" style="margin-top:8px; background:rgba(0,0,0,0.3); border:1px solid rgba(139,92,246,0.2); border-radius:12px; padding:10px; display:grid; grid-template-columns:repeat(5,1fr); gap:3px;"></div>
                 </div>
                 <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.3); padding: 15px; border-radius: 16px; margin-bottom: 20px;">
-                    <label style="color:var(--success); margin-bottom:8px; display:flex; justify-content:space-between;">
+                    <label style="color:var(--success); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
                         <span>AUTO DRAW MACHINE</span>
                         <span id="speedVal" style="color:white;">8s</span>
                     </label>
+                    <!-- ☁️ CLOUD DRAW STATUS BADGE -->
+                    <div id="cloudDrawStatus" style="display:none; align-items:center; gap:8px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.35); border-radius:10px; padding:8px 12px; margin-bottom:12px; font-size:11px; font-weight:800;">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981; animation:pulse 1.2s infinite;"></span>
+                        <span style="color:#34d399;">☁️ FIREBASE CLOUD DRAW ACTIVE</span>
+                        <span style="color:rgba(255,255,255,0.4); font-weight:600; margin-left:auto;" id="cloudDrawBallCount">0/75 balls</span>
+                    </div>
                     <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
                         <input type="range" id="drawSpeed" min="3" max="15" value="8" style="flex:1; accent-color: var(--success);" oninput="document.getElementById('speedVal').innerText=this.value+'s'; db.ref('gameState/drawConfig').update({speed: this.value*1000})">
                     </div>
                     <button class="btn btn-primary" id="btnAutoDraw" onclick="toggleAutoDraw()" style="background: linear-gradient(135deg, #059669, #047857); box-shadow: 0 4px 15px rgba(5, 150, 105, 0.4);">
                         <i data-lucide="play"></i> START AUTO DRAW
                     </button>
+                    <div style="margin-top:8px; font-size:10px; color:rgba(255,255,255,0.35); text-align:center; font-weight:600;">
+                        ☁️ Drawing handled by Firebase Cloud Functions — works even when this tab is closed
+                    </div>
                 </div>
                 <div class="input-group">
                     <label>Current Ball</label>
@@ -1426,6 +1436,36 @@
             <div id="partnerAppsList">
                 <div style="text-align:center;padding:60px;opacity:0.35;">
                     <i data-lucide="store" style="width:42px;height:42px;display:block;margin:0 auto 14px;"></i>
+                    <div style="font-size:13px;font-weight:700;">No applications yet</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===== INFLUENCER APPLICATIONS TAB ===== -->
+    <div id="influencers-tab" class="tab-content">
+        <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+                <div>
+                    <h2 style="margin:0 0 4px;display:flex;align-items:center;gap:10px;">
+                        <i data-lucide="star" style="width:20px;"></i> Influencer Applications
+                    </h2>
+                    <p style="font-size:11px;opacity:0.5;margin:0;">Review social media accounts and approve/reject applicants</p>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <button onclick="filterIA('all')"      id="iaf-all"      style="padding:7px 14px;border-radius:10px;border:1px solid rgba(139,92,246,0.4);background:rgba(139,92,246,0.15);color:#a78bfa;font-weight:800;font-size:11px;cursor:pointer;">ALL <span id="iac-all">0</span></button>
+                    <button onclick="filterIA('pending')"  id="iaf-pending"  style="padding:7px 14px;border-radius:10px;border:1px solid rgba(251,191,36,0.4);background:rgba(251,191,36,0.1);color:#fbbf24;font-weight:800;font-size:11px;cursor:pointer;">PENDING <span id="iac-pending">0</span></button>
+                    <button onclick="filterIA('approved')" id="iaf-approved" style="padding:7px 14px;border-radius:10px;border:1px solid rgba(16,185,129,0.4);background:rgba(16,185,129,0.1);color:#10b981;font-weight:800;font-size:11px;cursor:pointer;">APPROVED <span id="iac-approved">0</span></button>
+                    <button onclick="filterIA('rejected')" id="iaf-rejected" style="padding:7px 14px;border-radius:10px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;font-weight:800;font-size:11px;cursor:pointer;">REJECTED <span id="iac-rejected">0</span></button>
+                    <button onclick="loadInfluencerApps()" style="padding:7px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.6);font-weight:800;font-size:11px;cursor:pointer;">&#8635; Refresh</button>
+                </div>
+            </div>
+
+            <!-- List -->
+            <div id="influencerAppsList">
+                <div style="text-align:center;padding:60px;opacity:0.35;">
+                    <i data-lucide="star" style="width:42px;height:42px;display:block;margin:0 auto 14px;"></i>
                     <div style="font-size:13px;font-weight:700;">No applications yet</div>
                 </div>
             </div>
@@ -1903,9 +1943,8 @@
             if(now >= time && now < time + 60000) { 
                 db.ref('gameState/latestWinner').once('value', w => { 
                     if(!w.exists() && !isAutoDrawing) { 
-                        // Save draw speed to Firebase for headless draw engine
+                        // Save draw speed to Firebase for Cloud Draw Engine
                         const speedMs = (document.getElementById('drawSpeed').value || 8) * 1000;
-                        db.ref('gameState/drawConfig').set({ speed: speedMs });
                         // AUTO-SET JACKPOT if this is a jackpot round
                         if(isJP && jpAmt) {
                             db.ref('gameState/jackpot').set({ amount: jpAmt, active: true });
@@ -1923,14 +1962,17 @@
                             db.ref('gameState/jackpot').update({ active: false });
                             randomizePatternForGame(false); // Random pattern for normal rounds
                         }
+                        // Trigger Cloud Draw Engine via Firebase (no setInterval needed)
                         db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() });
-                        // Claim draw lock via transaction - only one client draws at a time
-                        db.ref('gameState/drawLock').transaction(cur => {
-                            if(cur !== null) return; // abort - someone else has it
-                            return { by: 'dashboard', at: Date.now(), expires: Date.now() + 300000 };
-                        }, (err, committed) => {
-                            if(committed) { startAutoDrawLogic(); }
+                        db.ref('gameState/drawConfig').update({
+                            cloudEnabled: true,
+                            speed: speedMs,
+                            startedAt: Date.now(),
+                            lastDrawAt: Date.now(),
                         });
+                        db.ref('gameState/drawLock').remove(); // release any stale client lock
+                        isAutoDrawing = true;
+                        _syncAutoDrawBtn(true);
                     } 
                 }); 
                 removeSchedule(key); 
@@ -1939,7 +1981,8 @@
     }, 5000);
 
     // --- GAME LOGIC ---
-    db.ref('drawnNumbers').on('value', s => { drawnNumbers = s.val() ? Object.values(s.val()) : []; document.querySelectorAll('.ball').forEach(b => b.classList.remove('drawn')); drawnNumbers.forEach(n => document.getElementById('ball-'+n).classList.add('drawn')); updateMonitorCards(); });
+    db.ref('drawnNumbers').on('value', s => { drawnNumbers = s.val() ? Object.values(s.val()) : []; document.querySelectorAll('.ball').forEach(b => b.classList.remove('drawn')); drawnNumbers.forEach(n => document.getElementById('ball-'+n).classList.add('drawn')); updateMonitorCards(); const cEl = document.getElementById('cloudDrawBallCount'); if(cEl) cEl.textContent = drawnNumbers.length + '/75 balls'; });
+    db.ref('gameState/drawConfig/cloudEnabled').on('value', snap => { const badge = document.getElementById('cloudDrawStatus'); if(badge) badge.style.display = snap.val() ? 'flex' : 'none'; });
     db.ref('gameState/lastCalled').on('value', s => { if(s.exists()) { const num = s.val(); document.getElementById('lastBall').innerText = num; if (num !== lastSpokenNumber) { speakNumber(num); lastSpokenNumber = num; } } else { document.getElementById('lastBall').innerText = "--"; lastSpokenNumber = null; } });
     db.ref('gameState/currentPattern').on('value', s => { currentPattern = s.val() || "Normal Bingo"; document.getElementById('patternSelect').value = currentPattern; renderPatternPreview(currentPattern); updatePatternBadge(currentPattern); updateMonitorCards(); });
     
@@ -1947,10 +1990,103 @@
     db.ref('gameState/jackpot').once('value', s => { if(s.exists()){ const d = s.val(); document.getElementById('jackpotAmount').value = d.amount || ""; if(d.active) { jackpotVisible = true; document.getElementById('jackpotKnob').style.left = "23px"; document.getElementById('jackpotKnobBg').style.background = "var(--success)"; document.getElementById('jackpotStatusText').innerText = "VISIBLE"; } } });
     document.getElementById('jackpotAmount').addEventListener('input', (e) => { if(jackpotVisible) { db.ref('gameState/jackpot').update({ amount: e.target.value }); } });
 
-    function toggleAutoDraw() { if(!isAutoDrawing) { db.ref('gameState/latestWinner').once('value', s => { if(s.exists()) { alert("May Winner Na! Reset Game muna bago mag start ulit."); return; } startAutoDrawLogic(); }); } else { stopAutoDrawLogic(); } }
-    function startAutoDrawLogic() { if(isAutoDrawing) return; db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() }); const btn = document.getElementById('btnAutoDraw'); const speed = document.getElementById('drawSpeed').value * 1000; isAutoDrawing = true; btn.innerHTML = `<i data-lucide="pause"></i> STOP AUTO DRAW`; btn.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)"; autoDrawLogic(); autoDrawInterval = setInterval(autoDrawLogic, speed); lucide.createIcons(); }
-    function stopAutoDrawLogic() { const btn = document.getElementById('btnAutoDraw'); clearInterval(autoDrawInterval); isAutoDrawing = false; db.ref('gameState/drawLock').remove(); btn.innerHTML = `<i data-lucide="play"></i> START AUTO DRAW`; btn.style.background = "linear-gradient(135deg, #059669, #047857)"; lucide.createIcons(); }
-    function autoDrawLogic() { if(drawnNumbers.length >= 75) { stopAutoDrawLogic(); autoResetGame("Lahat ng numbers na-draw!"); return; } db.ref('gameState/latestWinner').once('value', s => { if(s.exists()) { stopAutoDrawLogic(); return; } let nextNum; do { nextNum = Math.floor(Math.random() * 75) + 1; } while (drawnNumbers.includes(nextNum)); toggleBall(nextNum); }); }
+    // ═══════════════════════════════════════════════════════════════
+    // FIREBASE CLOUD DRAW ENGINE — dashboard controls
+    // Drawing is now handled SERVER-SIDE by Cloud Functions.
+    // This removes all setInterval dependency from the browser.
+    // ═══════════════════════════════════════════════════════════════
+
+    // Listen to cloud draw state so UI stays in sync even if another
+    // tab or the Cloud Function itself changed the state.
+    db.ref('gameState/drawConfig').on('value', snap => {
+        const cfg = snap.val() || {};
+        const cloudActive = !!cfg.cloudEnabled;
+        if(cloudActive !== isAutoDrawing) {
+            isAutoDrawing = cloudActive;
+            _syncAutoDrawBtn(cloudActive);
+        }
+    });
+
+    // Also sync when cloudDrawLock appears/disappears
+    db.ref('gameState/cloudDrawLock').on('value', snap => {
+        // If lock was externally removed (reset), ensure UI is correct
+        if(!snap.exists() && isAutoDrawing) {
+            db.ref('gameState/drawConfig/cloudEnabled').once('value', s => {
+                if(!s.val()) { isAutoDrawing = false; _syncAutoDrawBtn(false); }
+            });
+        }
+    });
+
+    function _syncAutoDrawBtn(active) {
+        const btn = document.getElementById('btnAutoDraw');
+        if(!btn) return;
+        if(active) {
+            btn.innerHTML = `<i data-lucide="pause"></i> STOP AUTO DRAW`;
+            btn.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)";
+        } else {
+            btn.innerHTML = `<i data-lucide="play"></i> START AUTO DRAW`;
+            btn.style.background = "linear-gradient(135deg, #059669, #047857)";
+        }
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function toggleAutoDraw() {
+        if(!isAutoDrawing) {
+            db.ref('gameState/latestWinner').once('value', s => {
+                if(s.exists()) { alert("May Winner Na! Reset Game muna bago mag start ulit."); return; }
+                startAutoDrawLogic();
+            });
+        } else {
+            stopAutoDrawLogic();
+        }
+    }
+
+    function startAutoDrawLogic() {
+        if(isAutoDrawing) return;
+        const speed = (document.getElementById('drawSpeed').value || 8) * 1000;
+        const now = Date.now();
+
+        // Write game state to Firebase — Cloud Function will pick this up
+        // and start drawing balls on its next tick (within 1 minute).
+        // It also draws the first ball immediately via the onWrite trigger.
+        db.ref('gameState').update({ status: 'playing', gameStartTime: now });
+        db.ref('gameState/drawConfig').update({
+            cloudEnabled: true,
+            speed: speed,
+            startedAt: now,
+            lastDrawAt: now,   // Cloud Function draws first ball on its first tick
+        });
+        // Release any stale client lock so CF can claim it
+        db.ref('gameState/drawLock').remove();
+
+        isAutoDrawing = true;
+        _syncAutoDrawBtn(true);
+        if(typeof addActivityItem === 'function')
+            addActivityItem('☁️ Cloud Draw started. Balls drawn server-side via Firebase Cloud Functions.');
+    }
+
+    function stopAutoDrawLogic() {
+        db.ref('gameState/drawConfig').update({ cloudEnabled: false });
+        db.ref('gameState/cloudDrawLock').remove();
+        db.ref('gameState/drawLock').remove();
+        isAutoDrawing = false;
+        _syncAutoDrawBtn(false);
+        if(typeof addActivityItem === 'function')
+            addActivityItem('⏹️ Cloud Draw stopped by admin.');
+    }
+
+    // Legacy local draw fallback — only used when admin manually
+    // wants to draw right now without waiting for the CF tick.
+    // Normal auto-draw is handled by Cloud Functions.
+    function autoDrawLogic() {
+        if(drawnNumbers.length >= 75) { stopAutoDrawLogic(); autoResetGame("Lahat ng numbers na-draw!"); return; }
+        db.ref('gameState/latestWinner').once('value', s => {
+            if(s.exists()) { stopAutoDrawLogic(); return; }
+            let nextNum;
+            do { nextNum = Math.floor(Math.random() * 75) + 1; } while (drawnNumbers.includes(nextNum));
+            toggleBall(nextNum);
+        });
+    }
     function speakNumber(num) { if ('speechSynthesis' in window) { let letter = "B"; if (num > 15) letter = "I"; if (num > 30) letter = "N"; if (num > 45) letter = "G"; if (num > 60) letter = "O"; const msg = new SpeechSynthesisUtterance(`${letter} ${num}`); msg.rate = 0.9; window.speechSynthesis.speak(msg); } }
     function toggleBall(num) { const ref = db.ref('drawnNumbers/' + num); ref.once('value', s => { if(s.exists()) { ref.remove(); } else { ref.set(num); db.ref('gameState/lastCalled').set(num); db.ref('gameState/gameStartTime').once('value', ss => { if(!ss.exists()) db.ref('gameState/gameStartTime').set(Date.now()); }); } }); }
 
@@ -4476,6 +4612,236 @@ function deleteBroadcast(key) {
     db.ref('adminBroadcast/' + key).remove(function() { loadPushHistory(); });
 }
 
+// ============================================================
+// ===        INFLUENCER APPLICATIONS MANAGER             ===
+// ============================================================
+
+var _iaAll    = [];
+var _iaFilter = 'pending';
+var _iaPendingRejectKey = null;
+
+function loadInfluencerApps() {
+    var list = document.getElementById('influencerAppsList');
+    if (!list) return;
+    list.innerHTML = '<div style="text-align:center;padding:50px;opacity:0.4;font-size:13px;font-weight:700;">Loading...</div>';
+
+    db.ref('influencerApplications').orderByChild('appliedAt').once('value', function(snap) {
+        _iaAll = [];
+        if (snap.exists()) {
+            snap.forEach(function(c) { var d = c.val(); d._key = c.key; _iaAll.push(d); });
+            _iaAll.reverse();
+        }
+        _iaUpdateCounts();
+        _iaRender();
+    });
+}
+
+function _iaUpdateCounts() {
+    var c = { all: _iaAll.length, pending: 0, approved: 0, rejected: 0 };
+    _iaAll.forEach(function(a) { var s = a.status || 'pending'; if (c[s] !== undefined) c[s]++; });
+    ['all','pending','approved','rejected'].forEach(function(k) {
+        var el = document.getElementById('iac-' + k);
+        if (el) el.textContent = c[k];
+    });
+    var badge = document.getElementById('influencersBadge');
+    if (badge) { badge.textContent = c.pending; badge.style.display = c.pending > 0 ? 'inline-block' : 'none'; }
+}
+
+function filterIA(f) { _iaFilter = f; _iaRender(); }
+
+function _iaRender() {
+    var list = document.getElementById('influencerAppsList');
+    if (!list) return;
+
+    var items = _iaFilter === 'all' ? _iaAll : _iaAll.filter(function(a) { return (a.status||'pending') === _iaFilter; });
+
+    if (!items.length) {
+        list.innerHTML = '<div style="text-align:center;padding:60px;opacity:0.35;"><div style="font-size:36px;margin-bottom:12px;">⭐</div><div style="font-size:13px;font-weight:700;">No ' + _iaFilter + ' applications</div></div>';
+        return;
+    }
+
+    var html = '';
+    items.forEach(function(app) {
+        var status = app.status || 'pending';
+        var date   = app.appliedAt ? new Date(app.appliedAt).toLocaleString('en-PH', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+        var sColor = status === 'approved' ? '#10b981' : status === 'rejected' ? '#ef4444' : '#fbbf24';
+        var sBg    = status === 'approved' ? 'rgba(16,185,129,0.12)' : status === 'rejected' ? 'rgba(239,68,68,0.12)' : 'rgba(251,191,36,0.12)';
+        var sBdr   = status === 'approved' ? 'rgba(16,185,129,0.3)'  : status === 'rejected' ? 'rgba(239,68,68,0.3)'  : 'rgba(251,191,36,0.3)';
+        var sLabel = status === 'approved' ? 'APPROVED' : status === 'rejected' ? 'REJECTED' : 'PENDING';
+        var k      = _paEsc(app._key);
+        var nm     = _paEsc(app.name || '—');
+
+        // Channel — clickable if it looks like a URL
+        var channelHtml = _paEsc(app.channel || '—');
+        if (app.channel && (app.channel.indexOf('http') === 0 || app.channel.indexOf('.') !== -1)) {
+            var href = app.channel.indexOf('http') === 0 ? app.channel : 'https://' + app.channel;
+            channelHtml = '<a href="' + _paEsc(href) + '" target="_blank" rel="noopener" style="color:#38bdf8;text-decoration:underline;">' + _paEsc(app.channel) + '</a>';
+        }
+
+        var approveBtn = status !== 'approved'
+            ? '<button onclick="approveInfluencer(\'' + k + '\')" style="padding:8px 16px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:9px;color:white;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap;">&#10003; APPROVE</button>' : '';
+        var rejectBtn = status !== 'rejected'
+            ? '<button onclick="openIARejectModal(\'' + k + '\')" style="padding:8px 16px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:9px;color:#ef4444;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap;">&#10005; REJECT</button>' : '';
+        var resetBtn = status !== 'pending'
+            ? '<button onclick="setIAStatus(\'' + k + '\',\'pending\',null)" style="padding:8px 16px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:9px;color:#fbbf24;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">&#8617; RESET</button>' : '';
+        var deleteBtn = '<button onclick="deleteIA(\'' + k + '\',\'' + nm + '\')" style="padding:8px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;color:rgba(255,255,255,0.35);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">&#128465; DELETE</button>';
+
+        html += '<div id="iacard-' + k + '" style="background:rgba(15,23,42,0.5);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px;margin-bottom:12px;">'
+            + '<div style="display:flex;gap:14px;flex-wrap:wrap;">'
+            // Avatar
+            + '<img src="' + _paEsc(app.photo||'') + '" onerror="this.src=\'https://ui-avatars.com/api/?name=' + encodeURIComponent(app.name||'U') + '&background=1e293b&color=fff&size=50\'" style="width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid rgba(139,92,246,0.3);flex-shrink:0;">'
+            // Info
+            + '<div style="flex:1;min-width:180px;">'
+              + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+                + '<span style="font-size:15px;font-weight:900;color:white;">' + nm + '</span>'
+                + '<span style="background:' + sBg + ';border:1px solid ' + sBdr + ';color:' + sColor + ';font-size:9px;font-weight:900;padding:2px 9px;border-radius:20px;letter-spacing:1px;">' + sLabel + '</span>'
+              + '</div>'
+              // Social media — most important field
+              + '<div style="background:rgba(14,165,233,0.06);border:1px solid rgba(14,165,233,0.15);border-radius:8px;padding:8px 12px;margin-bottom:8px;">'
+                + '<div style="font-size:9px;font-weight:800;color:rgba(14,165,233,0.6);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Social Media</div>'
+                + '<div style="font-size:12px;font-weight:600;word-break:break-all;">' + channelHtml + '</div>'
+              + '</div>'
+              + '<div style="font-size:11px;color:rgba(255,255,255,0.3);">UID: ' + _paEsc((app.uid||'').substring(0,12)) + '…  ·  Applied: ' + date + '</div>'
+              + (app.rejectReason ? '<div style="margin-top:6px;font-size:11px;color:rgba(239,68,68,0.7);line-height:1.5;"><strong>Reject reason:</strong> ' + _paEsc(app.rejectReason) + '</div>' : '')
+            + '</div>'
+            // Action buttons
+            + '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">' + approveBtn + rejectBtn + resetBtn + deleteBtn + '</div>'
+            + '</div>'
+            + '</div>';
+    });
+
+    list.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+}
+
+function approveInfluencer(key) {
+    var app = _iaAll.find(function(a) { return a._key === key; });
+    if (!app || !app.uid) return;
+    if (!confirm('APPROVE "' + (app.name||'this applicant') + '"?\n\nThis will give them immediate access to the Influencer Portal.')) return;
+
+    var code = 'INF-' + app.uid.substring(0,6).toUpperCase();
+
+    // Create the influencers record — this is what unlocks the portal on the app
+    db.ref('influencers/' + app.uid).set({
+        uid:              app.uid,
+        name:             app.name  || 'Unknown',
+        photo:            app.photo || '',
+        code:             code,
+        channel:          app.channel || null,
+        status:           'active',
+        tier:             1,
+        totalRecruits:    0,
+        verifiedRecruits: 0,
+        pendingRecruits:  0,
+        totalEarnings:    0,
+        approvedAt:       Date.now(),
+        joinedAt:         Date.now()
+    });
+
+    setIAStatus(key, 'approved', null);
+
+    // Push notification to user
+    db.ref('notifications/' + app.uid).push({
+        type:      'influencer_approved',
+        message:   'Congratulations! Your Influencer Program application has been approved. Open the Influencer Portal from the menu to get your referral link.',
+        timestamp: Date.now(),
+        read:      false
+    });
+
+    if (typeof addActivityItem === 'function') addActivityItem('⭐ Influencer approved: ' + (app.name||'—'));
+}
+
+function openIARejectModal(key) {
+    _iaPendingRejectKey = key;
+    var app = _iaAll.find(function(a) { return a._key === key; });
+    // Build reject modal on the fly — no static HTML needed
+    var existing = document.getElementById('iaRejectModal');
+    if (existing) existing.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'iaRejectModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = '<div style="background:#0f1629;border:1.5px solid rgba(239,68,68,0.3);border-radius:20px;max-width:400px;width:100%;padding:24px;">'
+        + '<div style="font-size:16px;font-weight:900;color:white;margin-bottom:4px;">Reject Application</div>'
+        + '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:6px;">Applicant: <strong style="color:rgba(255,255,255,0.7);">' + _paEsc(app ? app.name : '') + '</strong></div>'
+        + '<div style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:14px;">Provide a reason (required). The applicant will see this message.</div>'
+        + '<textarea id="iaRejectReasonInput" rows="3" placeholder="e.g. Insufficient followers, unrelated niche, private account..." style="width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px;color:white;font-size:13px;outline:none;font-family:Inter,sans-serif;box-sizing:border-box;resize:vertical;"></textarea>'
+        + '<div id="iaRejectReasonErr" style="display:none;color:#f87171;font-size:11px;font-weight:700;margin-top:6px;">Please enter a reason.</div>'
+        + '<div style="display:flex;gap:10px;margin-top:14px;">'
+          + '<button onclick="document.getElementById(\'iaRejectModal\').remove();" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">Cancel</button>'
+          + '<button onclick="confirmIAReject()" style="flex:1;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;">Confirm Reject</button>'
+        + '</div>'
+        + '</div>';
+    document.body.appendChild(modal);
+    setTimeout(function() { var ta = document.getElementById('iaRejectReasonInput'); if(ta) ta.focus(); }, 100);
+}
+
+function confirmIAReject() {
+    var reason = (document.getElementById('iaRejectReasonInput').value || '').trim();
+    var errEl  = document.getElementById('iaRejectReasonErr');
+    if (!reason) { errEl.style.display = 'block'; return; }
+    setIAStatus(_iaPendingRejectKey, 'rejected', reason);
+    var modal = document.getElementById('iaRejectModal');
+    if (modal) modal.remove();
+    _iaPendingRejectKey = null;
+}
+
+function setIAStatus(key, newStatus, rejectReason) {
+    var updates = { status: newStatus };
+    if (rejectReason) updates.rejectReason = rejectReason;
+
+    db.ref('influencerApplications/' + key).update(updates, function(err) {
+        if (err) { alert('Error: ' + err.message); return; }
+
+        var app = _iaAll.find(function(a) { return a._key === key; });
+        if (app) { app.status = newStatus; if (rejectReason) app.rejectReason = rejectReason; }
+
+        _iaUpdateCounts();
+        _iaRender();
+
+        // Notify user on rejection
+        if (newStatus === 'rejected' && app && app.uid) {
+            db.ref('notifications/' + app.uid).push({
+                type:      'influencer_rejected',
+                message:   rejectReason
+                    ? 'Your Influencer application was not approved: ' + rejectReason
+                    : 'Your Influencer application was not approved at this time.',
+                timestamp: Date.now(),
+                read:      false
+            });
+        }
+
+        var msg = newStatus === 'approved' ? '✅ Influencer approved!' : newStatus === 'rejected' ? '❌ Influencer rejected.' : '↩ Reset to pending.';
+        if (typeof addActivityItem === 'function') addActivityItem(msg);
+    });
+}
+
+function deleteIA(key, name) {
+    if (!confirm('DELETE application ni "' + name + '"? Hindi na ito maibabalik.')) return;
+    db.ref('influencerApplications/' + key).remove(function(err) {
+        if (err) { alert('Error: ' + err.message); return; }
+        _iaAll = _iaAll.filter(function(a) { return a._key !== key; });
+        _iaUpdateCounts();
+        _iaRender();
+        if (typeof addActivityItem === 'function') addActivityItem('🗑️ Deleted influencer app: ' + name);
+    });
+}
+
+// Live badge — watch pending count in real-time
+db.ref('influencerApplications').orderByChild('status').equalTo('pending').on('value', function(snap) {
+    var count = snap.exists() ? Object.keys(snap.val()).length : 0;
+    var badge = document.getElementById('influencersBadge');
+    if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'inline-block' : 'none'; }
+});
+
+// Hook openTab to auto-load when influencers tab is opened
+(function() {
+    var _prevOT = window.openTab;
+    window.openTab = function(tabId, btn) {
+        _prevOT(tabId, btn);
+        if (tabId === 'influencers-tab') loadInfluencerApps();
+    };
+})();
 
 </script>
 </body>
