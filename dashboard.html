@@ -2523,12 +2523,18 @@
     }
     function resetGame() {
         if(confirm("WARNING: Reset entire board?")){
-            db.ref('drawnNumbers').remove(); db.ref('gameState/latestWinner').remove(); db.ref('gameState/winners').remove(); db.ref('gameState/gameStartTime').remove(); db.ref('gameState/lastCalled').remove();
-            db.ref('gameState').update({ status: 'waiting' });
-            db.ref('users').once('value', s => { let updates = {}; s.forEach(u => { updates[u.key + '/hasWonCurrent'] = false; }); db.ref('users').update(updates); });
-            stopAutoDrawLogic(); setTimeout(updateMonitorCards, 500); document.getElementById('lastBall').innerText = "--"; lastSpokenNumber = null;
-            // Randomize pattern for next game
-            randomizePatternForGame(false);
+            // Save current winner before clearing
+            db.ref('gameState/latestWinner').once('value', function(wSnap) {
+                if(wSnap.exists()) {
+                    db.ref('gameState/lastGameWinner').set({ ...wSnap.val(), resetAt: Date.now() });
+                }
+                db.ref('drawnNumbers').remove(); db.ref('gameState/latestWinner').remove(); db.ref('gameState/winners').remove(); db.ref('gameState/gameStartTime').remove(); db.ref('gameState/lastCalled').remove();
+                db.ref('gameState').update({ status: 'waiting' });
+                db.ref('users').once('value', s => { let updates = {}; s.forEach(u => { updates[u.key + '/hasWonCurrent'] = false; }); db.ref('users').update(updates); });
+                stopAutoDrawLogic(); setTimeout(updateMonitorCards, 500); document.getElementById('lastBall').innerText = "--"; lastSpokenNumber = null;
+                // Randomize pattern for next game
+                randomizePatternForGame(false);
+            });
         }
     }
 
@@ -2542,23 +2548,29 @@
         autoResetTimer = setTimeout(function() {
             autoResetTimer = null;
             stopAutoDrawLogic();
-            db.ref('drawnNumbers').remove();
-            db.ref('gameState/latestWinner').remove();
-            db.ref('gameState/winners').remove();
-            db.ref('gameState/gameStartTime').remove();
-            db.ref('gameState/lastCalled').remove();
-            db.ref('gameState').update({ status: 'waiting' });
-            db.ref('users').once('value', function(s) {
-                let updates = {};
-                s.forEach(function(u) { updates[u.key + '/hasWonCurrent'] = false; });
-                db.ref('users').update(updates);
+            // Save current winner before clearing
+            db.ref('gameState/latestWinner').once('value', function(wSnap) {
+                if(wSnap.exists()) {
+                    db.ref('gameState/lastGameWinner').set({ ...wSnap.val(), resetAt: Date.now() });
+                }
+                db.ref('drawnNumbers').remove();
+                db.ref('gameState/latestWinner').remove();
+                db.ref('gameState/winners').remove();
+                db.ref('gameState/gameStartTime').remove();
+                db.ref('gameState/lastCalled').remove();
+                db.ref('gameState').update({ status: 'waiting' });
+                db.ref('users').once('value', function(s) {
+                    let updates = {};
+                    s.forEach(function(u) { updates[u.key + '/hasWonCurrent'] = false; });
+                    db.ref('users').update(updates);
+                });
+                setTimeout(updateMonitorCards, 500);
+                document.getElementById('lastBall').innerText = "--";
+                lastSpokenNumber = null;
+                // Randomize pattern for next game (non-jackpot)
+                randomizePatternForGame(false);
+                if(typeof addActivityItem === 'function') addActivityItem('✅ Game auto-reset complete. Ready for next draw!');
             });
-            setTimeout(updateMonitorCards, 500);
-            document.getElementById('lastBall').innerText = "--";
-            lastSpokenNumber = null;
-            // Randomize pattern for next game (non-jackpot)
-            randomizePatternForGame(false);
-            if(typeof addActivityItem === 'function') addActivityItem('✅ Game auto-reset complete. Ready for next draw!');
         }, DELAY);
     }
 
