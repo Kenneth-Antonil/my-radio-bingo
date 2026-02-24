@@ -67,36 +67,53 @@ async function sendPushToAll(title, body, data = {}) {
         const BATCH = 500;
         for (let i = 0; i < tokens.length; i += BATCH) {
             const batch = tokens.slice(i, i + BATCH);
+
+            // ── DATA-ONLY message ──────────────────────────────────────────
+            // BAKIT: Kapag may "notification" field, ang browser mismo ang
+            // nag-handle at nilalampasan ang Service Worker — unreliable sa web.
+            // Data-only = laging dumadaan sa SW onBackgroundMessage = reliable.
+            // ──────────────────────────────────────────────────────────────
             const message = {
                 tokens: batch,
-                notification: { title, body },
+                // NO "notification" field — data-only para sa web
                 data: {
                     title,
                     body,
                     icon: 'https://i.imgur.com/7D8u8h6.png',
-                    url: '/',
+                    url: data.url || '/?tab=bingo',
                     tag: data.tag || 'rbl-game',
+                    requireInteraction: data.requireInteraction || 'false',
                     ...Object.fromEntries(
                         Object.entries(data).map(([k, v]) => [k, String(v)])
                     ),
                 },
                 android: {
                     priority: 'high',
-                    notification: { sound: 'default', channelId: 'radiobingo' },
+                    // Android: kailangan ng notification block kahit data-only
+                    // para lumabas sa notification tray
+                    notification: {
+                        title,
+                        body,
+                        sound: 'default',
+                        channelId: 'radiobingo',
+                        icon: 'notification_icon',
+                    },
                 },
                 apns: {
-                    payload: { aps: { sound: 'default', badge: 1 } },
+                    // iOS: kailangan din ng notification block
+                    payload: {
+                        aps: {
+                            alert: { title, body },
+                            sound: 'default',
+                            badge: 1,
+                            'content-available': 1,
+                        },
+                    },
                 },
                 webpush: {
-                    headers: { Urgency: 'high' },
-                    notification: {
-                        icon: 'https://i.imgur.com/7D8u8h6.png',
-                        badge: 'https://i.imgur.com/7D8u8h6.png',
-                        renotify: true,
-                        requireInteraction: data.requireInteraction === 'true',
-                        vibrate: [200, 100, 200],
-                    },
-                    fcmOptions: { link: data.url || '/' },
+                    headers: { Urgency: 'high', TTL: '86400' },
+                    // Web: walang notification block — SW na ang bahala
+                    fcmOptions: { link: data.url || '/?tab=bingo' },
                 },
             };
 
