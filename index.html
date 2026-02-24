@@ -7664,6 +7664,7 @@
             <div style="flex:1; min-width:0;">
                 <div style="font-size:9px; font-weight:800; color:rgba(255,255,255,0.35); letter-spacing:1px; text-transform:uppercase; margin-bottom:3px;">PINAKABAGONG WINNER</div>
                 <div id="lastWinnerName" style="font-size:14px; font-weight:800; color:rgba(255,255,255,0.3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">WALA</div>
+                <div id="lastWinnerTime" style="font-size:10px; font-weight:700; color:rgba(255,255,255,0.25); margin-top:2px; display:none;">🕐 --</div>
             </div>
             <div id="lastWinnerPrize" style="flex-shrink:0; font-size:11px; font-weight:800; color:rgba(255,255,255,0.25); text-align:right; display:none;">
                 <span style="font-size:14px; color:#fbbf24;">+<span id="lastWinnerPrizeAmt">0</span></span>
@@ -10124,18 +10125,6 @@ function runMathBlitz(problems) {
                 });
             }
             document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('userPanel').style.display = 'flex';
-            // ── Deep-link from push notification: ?tab=bingo, ?tab=home, etc. ──
-            (function() {
-                const _tabParam = new URLSearchParams(window.location.search).get('tab');
-                if (_tabParam) {
-                    setTimeout(function() {
-                        if (typeof switchTab === 'function') switchTab(_tabParam);
-                        // Clean URL para hindi mag-retrigger sa refresh
-                        const _newSearch = window.location.search.replace(/[?&]tab=[^&]*/g, '').replace(/^&/, '?');
-                        window.history.replaceState(null, '', window.location.pathname + (_newSearch || '') + window.location.hash);
-                    }, 500);
-                }
-            })();
             
             document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photoURL), 0, 45, u.uid);
 
@@ -11235,6 +11224,7 @@ function runMathBlitz(problems) {
             const nameEl  = document.getElementById('lastWinnerName');
             const prizeEl = document.getElementById('lastWinnerPrize');
             const amtEl   = document.getElementById('lastWinnerPrizeAmt');
+            const timeEl  = document.getElementById('lastWinnerTime');
             if(!nameEl) return;
             if(snap.exists()) {
                 const w = snap.val();
@@ -11244,10 +11234,28 @@ function runMathBlitz(problems) {
                     amtEl.textContent = (w.prize || 300).toLocaleString();
                     prizeEl.style.display = 'block';
                 }
+                // ── Show draw time ──
+                if(timeEl) {
+                    const ts = w.wonAt || w.resetAt || null;
+                    if(ts) {
+                        const d = new Date(ts);
+                        const formatted = d.toLocaleString('en-PH', {
+                            month: 'short', day: 'numeric',
+                            hour: 'numeric', minute: '2-digit',
+                            hour12: true, timeZone: 'Asia/Manila'
+                        });
+                        timeEl.textContent  = '\u{1F550} ' + formatted;
+                        timeEl.style.display = 'block';
+                        timeEl.style.color   = 'rgba(255,255,255,0.45)';
+                    } else {
+                        timeEl.style.display = 'none';
+                    }
+                }
             } else {
                 nameEl.textContent  = 'WALA';
                 nameEl.style.color  = 'rgba(255,255,255,0.3)';
                 if(prizeEl) prizeEl.style.display = 'none';
+                if(timeEl)  timeEl.style.display  = 'none';
             }
         });
     }
@@ -11520,7 +11528,7 @@ function runMathBlitz(problems) {
         let winPrize = 300;
         if (isJackpotActive) winPrize = currentJackpotAmount;
         // cardId: 'main' or 'extra-0', 'extra-1', etc.
-        const winnerData = { name: userData.name, uid: uid, prize: winPrize, winCard: cardId || 'main' };
+        const winnerData = { name: userData.name, uid: uid, prize: winPrize, winCard: cardId || 'main', wonAt: Date.now() };
         db.ref('gameState/latestWinner').set(winnerData);
         db.ref('gameState/winners/' + uid).set(winnerData); // multi-winner support
         db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize);
