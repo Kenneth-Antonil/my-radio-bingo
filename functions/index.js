@@ -183,7 +183,7 @@ exports.scheduledDrawChecker = onSchedule(
                     await sendPushToAll(
                         '⏰ 10 Minutes to Draw!',
                         `${drawLabel} magsisimula sa ${formatTime(schedTime)}. Mag-ready na!`,
-                        { tag: 'rbl-countdown', url: '/' }
+                        { tag: 'rbl-countdown', url: '/?tab=bingo' }
                     );
                     console.log(`[schedChecker] 10-min push sent for key=${key}`);
                 }
@@ -201,7 +201,7 @@ exports.scheduledDrawChecker = onSchedule(
                     await sendPushToAll(
                         '🔥 5 Minutes na lang!',
                         `${drawLabel} magsisimula na sa ${formatTime(schedTime)}. Huwag palampasin!`,
-                        { tag: 'rbl-countdown', url: '/', requireInteraction: 'true' }
+                        { tag: 'rbl-countdown', url: '/?tab=bingo', requireInteraction: 'true' }
                     );
                     console.log(`[schedChecker] 5-min push sent for key=${key}`);
                 }
@@ -275,7 +275,7 @@ exports.scheduledDrawChecker = onSchedule(
             await sendPushToAll(
                 '🎯 SIMULA NA! Drawing ngayon!',
                 `Pattern: ${patternLabel} — Buksan ang app at i-check ang iyong card!`,
-                { tag: 'rbl-draw-start', url: '/', requireInteraction: 'true' }
+                { tag: 'rbl-draw-start', url: '/?tab=bingo', requireInteraction: 'true' }
             );
 
             console.log(`[schedChecker] Started draw: key=${key}, pattern=${pattern}, isJP=${isJP}`);
@@ -320,7 +320,7 @@ exports.cloudDrawEngine = onSchedule(
             await sendPushToAll(
                 '😔 Walang Nagwagi',
                 'Nabasa na ang lahat ng 75 balls at walang nagbingo! Maghintay ng susunod na draw.',
-                { tag: 'rbl-no-winner', url: '/' }
+                { tag: 'rbl-no-winner', url: '/?tab=bingo' }
             );
             await triggerAutoReset(null);
             return null;
@@ -343,7 +343,7 @@ exports.cloudDrawEngine = onSchedule(
                 await sendPushToAll(
                     '😔 Walang Nagwagi',
                     'Nabasa na ang lahat ng 75 balls at walang nagbingo!',
-                    { tag: 'rbl-no-winner', url: '/' }
+                    { tag: 'rbl-no-winner', url: '/?tab=bingo' }
                 );
                 await triggerAutoReset(null);
                 return null;
@@ -400,7 +400,7 @@ exports.onWinnerFound = onValueCreated(
         await sendPushToAll(
             isJackpot ? '🏆 JACKPOT WINNER!' : '🎉 BINGO! May Nagwagi!',
             `${winnerName} nag-${winnerPattern}${prizeAmt}! Congrats! Maghintay ng susunod na draw.`,
-            { tag: 'rbl-winner', url: '/', requireInteraction: 'true' }
+            { tag: 'rbl-winner', url: '/?tab=bingo', requireInteraction: 'true' }
         );
 
         // Wait 10 seconds then auto-reset

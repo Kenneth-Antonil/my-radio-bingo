@@ -10124,6 +10124,18 @@ function runMathBlitz(problems) {
                 });
             }
             document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('userPanel').style.display = 'flex';
+            // ── Deep-link from push notification: ?tab=bingo, ?tab=home, etc. ──
+            (function() {
+                const _tabParam = new URLSearchParams(window.location.search).get('tab');
+                if (_tabParam) {
+                    setTimeout(function() {
+                        if (typeof switchTab === 'function') switchTab(_tabParam);
+                        // Clean URL para hindi mag-retrigger sa refresh
+                        const _newSearch = window.location.search.replace(/[?&]tab=[^&]*/g, '').replace(/^&/, '?');
+                        window.history.replaceState(null, '', window.location.pathname + (_newSearch || '') + window.location.hash);
+                    }, 500);
+                }
+            })();
             
             document.getElementById('userImgContainer').innerHTML = renderAvatarWithBadge(sanitizeUrl(u.photoURL), 0, 45, u.uid);
 

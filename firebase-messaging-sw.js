@@ -19,31 +19,32 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Notification icons
-const ICON = 'https://i.imgur.com/7D8u8h6.png';
+const ICON  = 'https://i.imgur.com/7D8u8h6.png';
 const BADGE = 'https://i.imgur.com/7D8u8h6.png';
 
-// ── Handle background push messages ─────────────────────────
+// ── Handle background push messages ──────────────────────────
 messaging.onBackgroundMessage(payload => {
     console.log('[SW] Background push received:', payload);
 
-    const data = payload.data || {};
+    const data  = payload.data || {};
     const title = data.title || payload.notification?.title || '🎯 Radio Bingo Live';
     const body  = data.body  || payload.notification?.body  || 'May bagong notification!';
     const icon  = data.icon  || ICON;
-    const url   = data.url   || '/';
+    const url   = data.url   || '/index.html';
 
     return self.registration.showNotification(title, {
         body,
         icon,
         badge: BADGE,
-        tag: data.tag || 'rbl-notif',         // collapse same-type notifs
+        tag: data.tag || 'rbl-notif',
         renotify: true,
-        data: { url },
+        requireInteraction: data.requireInteraction === 'true',
+        // ← IMPORTANT: i-store ang FULL url dito para magamit sa click handler
+        data: { url: url.startsWith('http') ? url : (self.location.origin + url) },
         vibrate: [200, 100, 200],
         actions: [
-            { action: 'open', title: '👀 Buksan' },
-            { action: 'dismiss', title: 'Dismiss' }
+            { action: 'open',    title: '👀 Buksan' },
+            { action: 'dismiss', title: 'Dismiss'   }
         ]
     });
 });
@@ -52,22 +53,28 @@ messaging.onBackgroundMessage(payload => {
 self.addEventListener('notificationclick', event => {
     event.notification.close();
 
+    // Dismiss button — wala nang gagawin
     if (event.action === 'dismiss') return;
 
-    const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+    // Kunin ang target URL na naka-store sa notification data
+    const targetUrl = (event.notification.data && event.notification.data.url)
+        ? event.notification.data.url
+        : self.location.origin + '/?tab=bingo';
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-            // If app already open, focus it
+
+            // ── Kung may bukas na tab ng app ──────────────────
             for (const client of clientList) {
-                if (client.url.includes(self.location.origin) && 'focus' in client) {
-                    return client.focus();
+                if (client.url.startsWith(self.location.origin)) {
+                    // I-navigate ang existing tab papunta sa tamang URL
+                    // tapos i-focus para lumabas sa harap
+                    return client.navigate(targetUrl).then(c => c && c.focus());
                 }
             }
-            // Otherwise open a new window
-            if (clients.openWindow) {
-                return clients.openWindow(targetUrl);
-            }
+
+            // ── Kung walang bukas na tab — mag-open ng bago ──
+            return clients.openWindow(targetUrl);
         })
     );
 });
