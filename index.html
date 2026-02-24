@@ -10110,8 +10110,38 @@ function runMathBlitz(problems) {
     auth.onAuthStateChanged(u => {
         if(u) {
             if(messaging) {
-                // Save token
-                messaging.getToken({ vapidKey: VAPID_KEY }).then((token) => { if(token) db.ref('users/' + u.uid).update({ fcmToken: token }); }).catch((err)=>console.log(err));
+                // ── Save & Auto-refresh FCM Token ────────────────────────
+                // Ginagawa natin ito every login para siguradong hindi
+                // expired ang token sa database. Expired tokens = walang push.
+                function saveOrRefreshFcmToken(uid) {
+                    if (!messaging) return;
+                    messaging.getToken({ vapidKey: VAPID_KEY })
+                        .then(token => {
+                            if (!token) {
+                                console.log('[FCM] Walang token — baka blocked ang notification.');
+                                return;
+                            }
+                            // I-compare sa nakasave — update lang kung bago
+                            db.ref('users/' + uid + '/fcmToken').once('value', snap => {
+                                if (snap.val() !== token) {
+                                    db.ref('users/' + uid).update({ fcmToken: token, fcmUpdatedAt: Date.now() });
+                                    console.log('[FCM] Token updated sa DB.');
+                                } else {
+                                    console.log('[FCM] Token same pa rin — OK.');
+                                }
+                            });
+                        })
+                        .catch(err => console.log('[FCM] getToken error:', err));
+                    // Auto-refresh token kung mag-rotate (uncommon pero possible)
+                    messaging.onTokenRefresh(() => {
+                        messaging.getToken({ vapidKey: VAPID_KEY })
+                            .then(newToken => {
+                                if (newToken) db.ref('users/' + uid).update({ fcmToken: newToken, fcmUpdatedAt: Date.now() });
+                                console.log('[FCM] Token refreshed.');
+                            }).catch(err => console.log('[FCM] Refresh error:', err));
+                    });
+                }
+                saveOrRefreshFcmToken(u.uid);
                 // FIX TRIPLE NOTIF: i-unsubscribe ang lumang listener bago mag-register ng bago
                 // Ang onAuthStateChanged ay pwedeng mag-trigger ng maraming beses (login, refresh, reconnect)
                 // Bawat trigger = bagong onMessage listener na nag-iisa-isa = TRIPLE/QUADRUPLE notif
