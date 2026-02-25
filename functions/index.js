@@ -303,22 +303,57 @@ exports.scheduledDrawChecker = onSchedule(
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+<<<<<<< HEAD
+// SLEEP HELPER
+// ─────────────────────────────────────────────────────────────────────────────
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. CLOUD DRAW ENGINE — runs every 1 minute
+//    Draws balls one at a time with a real delay between each ball so
+//    players see a smooth, evenly-spaced draw (default: every 5 seconds).
+//
+//    HOW IT WORKS:
+//    • The function runs for up to ~55 seconds per invocation.
+//    • It draws ONE ball, waits `speed` ms, draws the next, and so on.
+//    • This replaces the old "burst-then-pause" approach where all missed
+//      balls were drawn instantly at the start of each minute.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.cloudDrawEngine = onSchedule(
+    {
+        schedule:  'every 1 minutes',
+        timeZone:  'Asia/Manila',
+        timeoutSeconds: 120,   // give enough room for the full draw loop
+    },
+=======
 // 2. CLOUD DRAW ENGINE — runs every 1 minute
 //    Draws balls according to configured speed.
 //    Handles winner detection, full-board detection, and auto-reset.
 // ─────────────────────────────────────────────────────────────────────────────
 exports.cloudDrawEngine = onSchedule(
     { schedule: 'every 1 minutes', timeZone: 'Asia/Manila' },
+>>>>>>> 4f0fcdd87ae126d9d910cb9996bc98b4491e65a4
     async () => {
         const cfgSnap = await db.ref('gameState/drawConfig').once('value');
         const cfg     = cfgSnap.val() || {};
         if (!cfg.cloudEnabled) return null;
 
+<<<<<<< HEAD
+        // ── Config ─────────────────────────────────────────────────────────
+        const speed = cfg.speed || 5000;   // default: 5 seconds per ball
+
+        // Max balls we can safely draw within 55 seconds (5s safety buffer).
+        // Example: speed=5000 → 11 balls; speed=3000 → 18 balls.
+        const MAX_PER_RUN = Math.floor(55000 / speed);
+
+        // ── Check for winner ───────────────────────────────────────────────
+=======
         const speed     = cfg.speed || 8000;
         const startedAt = cfg.startedAt || Date.now();
         const now       = Date.now();
 
         // ── Check for winner ──
+>>>>>>> 4f0fcdd87ae126d9d910cb9996bc98b4491e65a4
         const winnerSnap = await db.ref('gameState/latestWinner').once('value');
         if (winnerSnap.exists()) {
             console.log('[drawEngine] Winner found — triggering auto-reset.');
@@ -326,14 +361,21 @@ exports.cloudDrawEngine = onSchedule(
             return null;
         }
 
+<<<<<<< HEAD
+        // ── Get currently drawn numbers ────────────────────────────────────
+=======
         // ── Get currently drawn numbers ──
+>>>>>>> 4f0fcdd87ae126d9d910cb9996bc98b4491e65a4
         const drawnSnap = await db.ref('drawnNumbers').once('value');
         const drawnData = drawnSnap.val() || {};
         let drawnNums   = Object.values(drawnData).map(n => parseInt(n)).filter(n => !isNaN(n));
 
         if (drawnNums.length >= 75) {
             console.log('[drawEngine] All 75 balls drawn — auto-reset.');
+<<<<<<< HEAD
+=======
             // Notify players no winner this round
+>>>>>>> 4f0fcdd87ae126d9d910cb9996bc98b4491e65a4
             await sendPushToAll(
                 '😔 Walang Nagwagi',
                 'Nabasa na ang lahat ng 75 balls at walang nagbingo! Maghintay ng susunod na draw.',
@@ -343,6 +385,21 @@ exports.cloudDrawEngine = onSchedule(
             return null;
         }
 
+<<<<<<< HEAD
+        console.log(`[drawEngine] Starting draw loop. drawn=${drawnNums.length}, speed=${speed}ms, maxPerRun=${MAX_PER_RUN}`);
+
+        // ── Draw loop — one ball every `speed` ms ─────────────────────────
+        for (let i = 0; i < MAX_PER_RUN; i++) {
+
+            // Re-check winner before every ball
+            const wCheck = await db.ref('gameState/latestWinner').once('value');
+            if (wCheck.exists()) {
+                console.log('[drawEngine] Winner detected mid-loop — stopping.');
+                await triggerAutoReset(wCheck.val());
+                return null;
+            }
+
+=======
         // ── Calculate how many balls should have been drawn ──
         const elapsed     = now - startedAt;
         const totalShould = Math.floor(elapsed / speed) + 1;
@@ -356,6 +413,7 @@ exports.cloudDrawEngine = onSchedule(
                 await triggerAutoReset(wCheck.val());
                 return null;
             }
+>>>>>>> 4f0fcdd87ae126d9d910cb9996bc98b4491e65a4
             if (drawnNums.length >= 75) {
                 await sendPushToAll(
                     '😔 Walang Nagwagi',
@@ -375,12 +433,28 @@ exports.cloudDrawEngine = onSchedule(
 
             if (tries >= 300) break;
 
+<<<<<<< HEAD
+            // Write ball to DB — client reacts to this in real-time
+=======
+>>>>>>> 4f0fcdd87ae126d9d910cb9996bc98b4491e65a4
             await db.ref('drawnNumbers/' + next).set(next);
             await db.ref('gameState/lastCalled').set(next);
             await db.ref('gameState/drawConfig/lastDrawAt').set(Date.now());
             drawnNums.push(next);
+<<<<<<< HEAD
+
+            console.log(`[drawEngine] Drew ball #${next} (${drawnNums.length}/75). Waiting ${speed}ms...`);
+
+            // ✅ THE KEY FIX: wait before drawing the next ball
+            // This is what makes the draw feel smooth and even.
+            await sleep(speed);
         }
 
+        console.log(`[drawEngine] Run complete. Total drawn so far: ${drawnNums.length}/75`);
+=======
+        }
+
+>>>>>>> 4f0fcdd87ae126d9d910cb9996bc98b4491e65a4
         return null;
     });
 
