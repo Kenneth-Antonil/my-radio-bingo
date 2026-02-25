@@ -1,6 +1,5 @@
 // ============================================================
 // firebase-messaging-sw.js
-// I-lagay ito sa ROOT ng project (katabi ng index.html)
 // ============================================================
 
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
@@ -21,44 +20,143 @@ const messaging = firebase.messaging();
 const ICON  = 'https://i.imgur.com/7D8u8h6.png';
 const BADGE = 'https://i.imgur.com/7D8u8h6.png';
 
-// ── Handle background push messages ──────────────────────────
-// Laging tinatawag ito dahil data-only ang messages natin.
-// Kapag may "notification" field ang message, nilalampasan nito
-// at ang browser na mismo ang mag-show — hindi consistent sa web.
-messaging.onBackgroundMessage(payload => {
-    console.log('[SW] Background push received:', payload);
+// ─────────────────────────────────────────────────────────────
+// NOTIFICATION PROFILES
+// Bawat tag ay may sariling style — icon, vibrate, actions
+// ─────────────────────────────────────────────────────────────
+function getProfile(tag, title, body, url) {
+    const fullUrl = url.startsWith('http') ? url : self.location.origin + url;
 
-    // Kunin mula sa data field (data-only message)
-    const data  = payload.data || {};
-    const title = data.title || '🎯 Radio Bingo Live';
-    const body  = data.body  || 'May bagong notification!';
-    const url   = data.url   || '/?tab=bingo';
-    const tag   = data.tag   || 'rbl-notif';
-    const requireInteraction = data.requireInteraction === 'true';
-
-    // I-store ang FULL absolute URL para sa click handler
-    const fullUrl = url.startsWith('http')
-        ? url
-        : self.location.origin + url;
-
-    return self.registration.showNotification(title, {
-        body,
-        icon:  ICON,
+    // Default profile
+    const base = {
+        icon: ICON,
         badge: BADGE,
         tag,
         renotify: true,
-        requireInteraction,
+        requireInteraction: false,
         silent: false,
         data: { url: fullUrl },
-        vibrate: [200, 100, 200],
+        vibrate: [150, 80, 150],
         actions: [
-            { action: 'open',    title: '👀 Buksan' },
-            { action: 'dismiss', title: '✖ Dismiss' }
+            { action: 'open',    title: 'Open App' },
+            { action: 'dismiss', title: 'Dismiss'  }
         ]
+    };
+
+    // ── Draw is starting NOW ──────────────────────────────────
+    if (tag === 'rbl-draw-start') {
+        return {
+            ...base,
+            requireInteraction: true,
+            vibrate: [200, 100, 200, 100, 400],
+            actions: [
+                { action: 'open',    title: '🎯 Play Now' },
+                { action: 'dismiss', title: 'Later'       }
+            ]
+        };
+    }
+
+    // ── Winner announced ─────────────────────────────────────
+    if (tag === 'rbl-winner') {
+        return {
+            ...base,
+            requireInteraction: true,
+            vibrate: [300, 100, 300, 100, 300],
+            actions: [
+                { action: 'open',    title: '🎉 See Winner' },
+                { action: 'dismiss', title: 'Close'         }
+            ]
+        };
+    }
+
+    // ── Jackpot draw ─────────────────────────────────────────
+    if (tag === 'rbl-jackpot') {
+        return {
+            ...base,
+            requireInteraction: true,
+            vibrate: [400, 100, 400, 100, 400, 100, 400],
+            actions: [
+                { action: 'open',    title: '🏆 Join Now' },
+                { action: 'dismiss', title: 'Skip'        }
+            ]
+        };
+    }
+
+    // ── 10-minute warning ────────────────────────────────────
+    if (tag === 'rbl-10min') {
+        return {
+            ...base,
+            requireInteraction: false,
+            vibrate: [200, 100, 200],
+            actions: [
+                { action: 'open',    title: 'Get Ready' },
+                { action: 'dismiss', title: 'Got It'    }
+            ]
+        };
+    }
+
+    // ── 5-minute warning ────────────────────────────────────
+    if (tag === 'rbl-5min') {
+        return {
+            ...base,
+            requireInteraction: false,
+            vibrate: [300, 100, 300],
+            actions: [
+                { action: 'open',    title: 'Open Bingo Card' },
+                { action: 'dismiss', title: 'Later'           }
+            ]
+        };
+    }
+
+    // ── No winner this round ─────────────────────────────────
+    if (tag === 'rbl-no-winner') {
+        return {
+            ...base,
+            requireInteraction: false,
+            vibrate: [100],
+            actions: [
+                { action: 'open',    title: 'View Results' },
+                { action: 'dismiss', title: 'Close'        }
+            ]
+        };
+    }
+
+    return base;
+}
+
+// ─────────────────────────────────────────────────────────────
+// CLEAN UP TITLE/BODY — tanggalin ang emoji clutter
+// para mas mukhang professional notification
+// ─────────────────────────────────────────────────────────────
+function cleanText(str) {
+    // Strip leading emojis that look spammy when paired with action buttons
+    // Keep emojis that are part of actual content words
+    return (str || '').trim();
+}
+
+// ─────────────────────────────────────────────────────────────
+// BACKGROUND MESSAGE HANDLER
+// ─────────────────────────────────────────────────────────────
+messaging.onBackgroundMessage(payload => {
+    console.log('[SW] Background push received:', payload);
+
+    const data  = payload.data || {};
+    const title = cleanText(data.title) || 'Talim Connect';
+    const body  = cleanText(data.body)  || 'You have a new notification.';
+    const url   = data.url   || '/?tab=bingo';
+    const tag   = data.tag   || 'rbl-notif';
+
+    const profile = getProfile(tag, title, body, url);
+
+    return self.registration.showNotification(title, {
+        body,
+        ...profile
     });
 });
 
-// ── Notification click → navigate to correct page ─────────────
+// ─────────────────────────────────────────────────────────────
+// NOTIFICATION CLICK HANDLER
+// ─────────────────────────────────────────────────────────────
 self.addEventListener('notificationclick', event => {
     event.notification.close();
 
@@ -70,48 +168,40 @@ self.addEventListener('notificationclick', event => {
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-            // Kung may bukas na tab ng app — i-navigate at i-focus
             for (const client of clientList) {
                 if (client.url.startsWith(self.location.origin)) {
                     return client.navigate(targetUrl).then(c => c && c.focus());
                 }
             }
-            // Kung walang bukas na tab — mag-open ng bago
             return clients.openWindow(targetUrl);
         })
     );
 });
 
-// ── Push event fallback ────────────────────────────────────────
-// Safety net: kapag hindi nag-trigger ang onBackgroundMessage
-// (e.g. older browsers), ipapakita pa rin ang notification
+// ─────────────────────────────────────────────────────────────
+// RAW PUSH FALLBACK (older browsers)
+// ─────────────────────────────────────────────────────────────
 self.addEventListener('push', event => {
-    // Huwag mag-double-show kung nag-handle na ng Firebase messaging
     if (!event.data) return;
 
     let data = {};
     try { data = event.data.json(); } catch(e) { return; }
 
-    // Kung may notification field, huwag na mag-show dito
-    // (ibig sabihin, nag-handle na ang Firebase SDK)
+    // If Firebase SDK already handled it, skip
     if (data.notification) return;
 
-    // Para sa raw data-only push na hindi nakuha ng Firebase SDK
     const payload = data.data || data;
-    const title   = payload.title || '🎯 Radio Bingo Live';
-    const body    = payload.body  || 'May bagong notification!';
-    const url     = payload.url   || '/?tab=bingo';
-    const fullUrl = url.startsWith('http') ? url : self.location.origin + url;
+    const title   = cleanText(payload.title) || 'Talim Connect';
+    const body    = cleanText(payload.body)  || 'You have a new notification.';
+    const url     = payload.url || '/?tab=bingo';
+    const tag     = payload.tag || 'rbl-notif';
+
+    const profile = getProfile(tag, title, body, url);
 
     event.waitUntil(
         self.registration.showNotification(title, {
             body,
-            icon:  ICON,
-            badge: BADGE,
-            tag:   payload.tag || 'rbl-notif',
-            renotify: true,
-            data: { url: fullUrl },
-            vibrate: [200, 100, 200],
+            ...profile
         })
     );
 });
