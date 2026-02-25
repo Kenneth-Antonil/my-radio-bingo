@@ -7167,7 +7167,7 @@
             <div><span class="rb">RB</span><span class="live">LIVE</span></div>
         </div>
 
-        <p class="login-tagline">Connect. Play. Win Rewards.<br>Play Bingo. Win Rewards. Shop with your coins..</p>
+        <p class="login-tagline">Connect. Play. Win Rewards.<br>Join the RB Live community.</p>
 
         <div class="login-feature-row">
             <div class="login-feature-pill">🎱 Live Bingo</div>
@@ -8872,7 +8872,7 @@ function runMathBlitz(problems) {
              </div>
         
         <h2 id="pageProfileName" class="profile-page-name">User Name</h2>
-        <p id="pageProfileBio" class="profile-page-bio">Radio Bingo Player</p>
+        <p id="pageProfileBio" class="profile-page-bio">RB Live Member</p>
         
         <div class="profile-btn-group">
             <button id="profileMainActionBtn" class="profile-action-btn" onclick="handleProfileMainAction()">Add Friend</button>
@@ -10223,7 +10223,7 @@ function runMathBlitz(problems) {
                     const pendingInfCode = window._pendingInfluencerCode || null;
                     const finalReferredBy = pendingInfCode || referredBy || null;
                     userRef.set({ name: u.displayName, photo: u.photoURL, points: 200, refCode: newRefCode, referredBy: finalReferredBy, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false, ownedSkins: ['default'], equippedSkin: 'default' }); 
-                    if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 300); // Track invite for Special Events trackSpecialEventInvite(referrerUid, u.uid, u.displayName, u.photoURL); } }); }
+                    if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 300); trackSpecialEventInvite(referrerUid, u.uid, u.displayName, u.photoURL); } }); }
                     if (pendingInfCode) { setTimeout(() => { if(typeof trackInfluencerRecruit === 'function') trackInfluencerRecruit(pendingInfCode, u.uid, u.displayName, u.photoURL); }, 1000); } 
                 } else { 
                     // Existing User
@@ -13012,7 +13012,7 @@ function runMathBlitz(problems) {
             const verificationBadge = u.verified ? `<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check" style="width:10px; height:10px; color:white;"></i></span>` : '';
             const creatorBadge = isCreator ? `<span class="creator-badge" style="margin-left:8px;"><i data-lucide="star"></i> Creator</span>` : '';
             document.getElementById('pageProfileName').innerHTML = `${escapeHtml(u.name)}${verificationBadge}${creatorBadge}`;
-            document.getElementById('pageProfileBio').innerText = u.bio || "Radio Bingo Player";
+            document.getElementById('pageProfileBio').innerText = u.bio || "RB Live Member";
             
             // Add creator glow effect to cover if creator
             const coverEl = document.getElementById('pageProfileCover');
@@ -20365,7 +20365,8 @@ var _urlRef = (new URLSearchParams(window.location.search)).get('ref') || '';
 window._pendingInfluencerCode = _urlRef.startsWith('INF-') ? _urlRef : null;
 
 })();
-
+</script>
+<script>
 // ── SPECIAL EVENT INVITE TRACKER ──────────────────────────────────
 function trackSpecialEventInvite(inviterUid, newUid, newName, newPhoto) {
     db.ref('specialEvents').orderByChild('status').equalTo('active').once('value', function(snap) {
@@ -20375,28 +20376,17 @@ function trackSpecialEventInvite(inviterUid, newUid, newName, newPhoto) {
             var evKey = evChild.key;
             var required = ev.requiredInvites || 5;
             var maxSlots = ev.maxSlots || 9999;
-
-            db.ref('specialEventInvites/' + evKey + '/' + inviterUid + '/' + newUid).set({
-                name: newName || 'Unknown',
-                photo: newPhoto || '',
-                joinedAt: Date.now()
-            });
-
+            db.ref('specialEventInvites/' + evKey + '/' + inviterUid + '/' + newUid).set({ name: newName || 'Unknown', photo: newPhoto || '', joinedAt: Date.now() });
             db.ref('specialEventInvites/' + evKey + '/' + inviterUid).once('value', function(invSnap) {
                 var inviteCount = invSnap.exists() ? Object.keys(invSnap.val()).length : 0;
-
                 db.ref('specialEventQualified/' + evKey + '/' + inviterUid).once('value', function(qualSnap) {
                     if (qualSnap.exists()) return;
-
                     if (inviteCount >= required) {
                         db.ref('specialEvents/' + evKey + '/qualifiedCount').transaction(function(current) {
                             if ((current || 0) >= maxSlots) return;
                             return (current || 0) + 1;
                         }, function(err, committed) {
-                            if (!committed) {
-                                db.ref('notifications/' + inviterUid).push({ type:'event', message:'😔 Puno na ang slots para sa "' + ev.name + '". Next time!', timestamp:Date.now(), read:false });
-                                return;
-                            }
+                            if (!committed) { db.ref('notifications/' + inviterUid).push({ type:'event', message:'😔 Puno na ang slots para sa "' + ev.name + '". Next time!', timestamp:Date.now(), read:false }); return; }
                             db.ref('users/' + inviterUid).once('value', function(uSnap) {
                                 var uData = uSnap.val() || {};
                                 db.ref('specialEventQualified/' + evKey + '/' + inviterUid).set({ name: uData.name || 'Unknown', photo: uData.photo || '', inviteCount: inviteCount, qualifiedAt: Date.now() });
