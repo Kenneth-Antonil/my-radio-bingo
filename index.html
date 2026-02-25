@@ -6705,10 +6705,10 @@
         </button>
     </div>
     <div class="drawer-nav">
-        <button class="drawer-nav-item active" id="dnav-home" onclick="closeDrawer(); switchTab('home')">
+        <button class="drawer-nav-item" id="dnav-home" onclick="closeDrawer(); switchTab('home')">
             <i data-lucide="home"></i> Home
         </button>
-        <button class="drawer-nav-item" id="dnav-bingo" onclick="closeDrawer(); switchTab('bingo')">
+        <button class="drawer-nav-item active" id="dnav-bingo" onclick="closeDrawer(); switchTab('bingo')">
             <i data-lucide="play-circle"></i> Bingo
         </button>
         <button class="drawer-nav-item" id="dnav-store" onclick="closeDrawer(); openStorePage()">
@@ -6735,11 +6735,11 @@
 
 <!-- ===== OLD BOTTOM NAV (hidden, kept for JS compatibility) ===== -->
 <div class="bottom-nav" style="display:none!important;">
-    <button class="nav-item active" onclick="switchTab('home')" id="nav-home">
+    <button class="nav-item" onclick="switchTab('home')" id="nav-home">
         <i data-lucide="home" class="nav-icon"></i>
         <span class="nav-label">Home</span>
     </button>
-    <button class="nav-item" onclick="switchTab('bingo')" id="nav-bingo">
+    <button class="nav-item active" onclick="switchTab('bingo')" id="nav-bingo">
         <i data-lucide="play-circle" class="nav-icon"></i>
         <span class="nav-label">Bingo</span>
     </button>
@@ -7433,7 +7433,7 @@
 </div>
 
 <div class="container">
-    <div id="view-home" style="display:block;">
+    <div id="view-home" style="display:none;">
         <div id="friendRequestsSection"></div>
 
         <!-- 📸 STORIES ROW -->
@@ -7570,7 +7570,7 @@
         </div>
     </div>
 
-    <div id="view-bingo" style="display:none; padding-top:0;">
+    <div id="view-bingo" style="display:block; padding-top:0;">
 
         <!-- ── ARTISTIC BINGO HEADER CARD ── -->
         <div class="bingo-section-header">
@@ -10223,7 +10223,7 @@ function runMathBlitz(problems) {
                     const pendingInfCode = window._pendingInfluencerCode || null;
                     const finalReferredBy = pendingInfCode || referredBy || null;
                     userRef.set({ name: u.displayName, photo: u.photoURL, points: 200, refCode: newRefCode, referredBy: finalReferredBy, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false, ownedSkins: ['default'], equippedSkin: 'default' }); 
-                    if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 300); } }); }
+                    if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 300); // Track invite for Special Events trackSpecialEventInvite(referrerUid, u.uid, u.displayName, u.photoURL); } }); }
                     if (pendingInfCode) { setTimeout(() => { if(typeof trackInfluencerRecruit === 'function') trackInfluencerRecruit(pendingInfCode, u.uid, u.displayName, u.photoURL); }, 1000); } 
                 } else { 
                     // Existing User
@@ -20365,6 +20365,54 @@ var _urlRef = (new URLSearchParams(window.location.search)).get('ref') || '';
 window._pendingInfluencerCode = _urlRef.startsWith('INF-') ? _urlRef : null;
 
 })();
+
+// ── SPECIAL EVENT INVITE TRACKER ──────────────────────────────────
+function trackSpecialEventInvite(inviterUid, newUid, newName, newPhoto) {
+    db.ref('specialEvents').orderByChild('status').equalTo('active').once('value', function(snap) {
+        if (!snap.exists()) return;
+        snap.forEach(function(evChild) {
+            var ev = evChild.val();
+            var evKey = evChild.key;
+            var required = ev.requiredInvites || 5;
+            var maxSlots = ev.maxSlots || 9999;
+
+            db.ref('specialEventInvites/' + evKey + '/' + inviterUid + '/' + newUid).set({
+                name: newName || 'Unknown',
+                photo: newPhoto || '',
+                joinedAt: Date.now()
+            });
+
+            db.ref('specialEventInvites/' + evKey + '/' + inviterUid).once('value', function(invSnap) {
+                var inviteCount = invSnap.exists() ? Object.keys(invSnap.val()).length : 0;
+
+                db.ref('specialEventQualified/' + evKey + '/' + inviterUid).once('value', function(qualSnap) {
+                    if (qualSnap.exists()) return;
+
+                    if (inviteCount >= required) {
+                        db.ref('specialEvents/' + evKey + '/qualifiedCount').transaction(function(current) {
+                            if ((current || 0) >= maxSlots) return;
+                            return (current || 0) + 1;
+                        }, function(err, committed) {
+                            if (!committed) {
+                                db.ref('notifications/' + inviterUid).push({ type:'event', message:'😔 Puno na ang slots para sa "' + ev.name + '". Next time!', timestamp:Date.now(), read:false });
+                                return;
+                            }
+                            db.ref('users/' + inviterUid).once('value', function(uSnap) {
+                                var uData = uSnap.val() || {};
+                                db.ref('specialEventQualified/' + evKey + '/' + inviterUid).set({ name: uData.name || 'Unknown', photo: uData.photo || '', inviteCount: inviteCount, qualifiedAt: Date.now() });
+                                db.ref('notifications/' + inviterUid).push({ type:'event', message:'🎟️ Qualified ka na sa "' + ev.name + '"! Kumpleto ang ' + required + ' invites mo. Abangan ang event!', timestamp:Date.now(), read:false });
+                            });
+                        });
+                    } else {
+                        var remaining = required - inviteCount;
+                        db.ref('notifications/' + inviterUid).push({ type:'event', message:'🎟️ +1 invite para sa "' + ev.name + '"! ' + remaining + ' pa para maging qualified.', timestamp:Date.now(), read:false });
+                    }
+                });
+            });
+        });
+    });
+}
+window.trackSpecialEventInvite = trackSpecialEventInvite;
 </script>
 </body>
 </html>
