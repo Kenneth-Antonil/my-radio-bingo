@@ -8171,16 +8171,31 @@
         </div>
 
         <!-- ═══ PINAKABAGONG WINNER CARD ═══ -->
-        <div id="lastWinnerCard" style="margin-bottom:12px; background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:10px 14px; display:flex; align-items:center; gap:12px;">
-            <div style="flex-shrink:0; width:38px; height:38px; border-radius:10px; background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.3); display:flex; align-items:center; justify-content:center; font-size:18px;">🏆</div>
-            <div style="flex:1; min-width:0;">
-                <div style="font-size:9px; font-weight:800; color:rgba(255,255,255,0.35); letter-spacing:1px; text-transform:uppercase; margin-bottom:3px;">PINAKABAGONG WINNER</div>
-                <div id="lastWinnerName" style="font-size:14px; font-weight:800; color:rgba(255,255,255,0.3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">WALA</div>
-                <div id="lastWinnerTime" style="font-size:10px; font-weight:700; color:rgba(255,255,255,0.25); margin-top:2px; display:none;">🕐 --</div>
+        <div id="lastWinnerCard" style="margin-bottom:12px; border-radius:18px; overflow:hidden; position:relative; background:linear-gradient(135deg,#1c0a00,#3d1500,#1a0800); border:2px solid rgba(251,191,36,0.35); box-shadow:0 0 25px rgba(251,191,36,0.15); display:none;">
+            <!-- Shimmer overlay -->
+            <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(251,191,36,0.06),transparent);animation:shimmer 3s infinite linear;z-index:1;"></div>
+            <!-- Header label -->
+            <div style="position:relative;z-index:2;padding:8px 14px 0;display:flex;align-items:center;gap:6px;">
+                <span style="font-size:10px;font-weight:900;letter-spacing:2px;color:rgba(251,191,36,0.6);text-transform:uppercase;font-family:'Fredoka One',sans-serif;">🏆 Pinakabagong Winner</span>
             </div>
-            <div id="lastWinnerPrize" style="flex-shrink:0; font-size:11px; font-weight:800; color:rgba(255,255,255,0.25); text-align:right; display:none;">
-                <span style="font-size:14px; color:#fbbf24;">+<span id="lastWinnerPrizeAmt">0</span></span>
-                <div style="font-size:9px; color:rgba(255,255,255,0.3);">RB COINS</div>
+            <!-- Main winner row -->
+            <div style="position:relative;z-index:2;padding:10px 14px 12px;display:flex;align-items:center;gap:12px;">
+                <!-- Photo with glow ring -->
+                <div style="position:relative;flex-shrink:0;">
+                    <img id="lastWinnerPhoto" src="" alt="" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid #fbbf24;box-shadow:0 0 14px rgba(251,191,36,0.5);display:none;background:#1e293b;">
+                    <div id="lastWinnerPhotoFallback" style="width:54px;height:54px;border-radius:50%;background:rgba(251,191,36,0.12);border:2px solid rgba(251,191,36,0.35);display:flex;align-items:center;justify-content:center;font-size:22px;">🏆</div>
+                </div>
+                <!-- Name + time -->
+                <div style="flex:1;min-width:0;">
+                    <div id="lastWinnerName" style="font-size:16px;font-weight:900;color:#fbbf24;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'Fredoka One',sans-serif;text-shadow:0 0 12px rgba(251,191,36,0.4);">WALA</div>
+                    <div id="lastWinnerTime" style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);margin-top:2px;display:none;">🕐 --</div>
+                </div>
+                <!-- Prize -->
+                <div id="lastWinnerPrize" style="flex-shrink:0;text-align:right;display:none;">
+                    <div style="font-size:9px;font-weight:800;color:rgba(251,191,36,0.55);text-transform:uppercase;letter-spacing:0.5px;">Prize</div>
+                    <div style="font-size:18px;font-weight:900;color:#fde68a;text-shadow:0 0 10px rgba(251,191,36,0.5);">+<span id="lastWinnerPrizeAmt">0</span></div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.3);">RB Coins</div>
+                </div>
             </div>
         </div>
         <!-- ═══ END PINAKABAGONG WINNER ═══ -->
@@ -11796,22 +11811,62 @@ function runMathBlitz(problems) {
     function listenForNextDraw() { db.ref('gameState').on('value', s => { updateNextDrawDisplay(); }); }
 
     // ── Listen for lastGameWinner → update Pinakabagong Winner card ──
+    var _lastWinnerKey = null; // track to detect NEW winner
+
     function listenForLastWinner() {
         db.ref('gameState/lastGameWinner').on('value', snap => {
-            const nameEl  = document.getElementById('lastWinnerName');
-            const prizeEl = document.getElementById('lastWinnerPrize');
-            const amtEl   = document.getElementById('lastWinnerPrizeAmt');
-            const timeEl  = document.getElementById('lastWinnerTime');
+            const nameEl    = document.getElementById('lastWinnerName');
+            const prizeEl   = document.getElementById('lastWinnerPrize');
+            const amtEl     = document.getElementById('lastWinnerPrizeAmt');
+            const timeEl    = document.getElementById('lastWinnerTime');
+            const photoEl   = document.getElementById('lastWinnerPhoto');
+            const fallbackEl= document.getElementById('lastWinnerPhotoFallback');
+            const card      = document.getElementById('lastWinnerCard');
             if(!nameEl) return;
+
             if(snap.exists()) {
                 const w = snap.val();
-                nameEl.textContent  = w.name || 'Unknown';
-                nameEl.style.color  = '#fbbf24';
+                const isNewWinner = _lastWinnerKey !== (w.wonAt || w.resetAt || w.uid);
+
+                // ── Show the card ──
+                if(card) card.style.display = 'block';
+
+                // ── Name ──
+                nameEl.textContent = w.name || 'Unknown';
+
+                // ── Photo ──
+                if(photoEl && fallbackEl) {
+                    if(w.photo) {
+                        photoEl.src = w.photo;
+                        photoEl.style.display = 'block';
+                        fallbackEl.style.display = 'none';
+                    } else {
+                        // Try to fetch from users node
+                        if(w.uid) {
+                            db.ref('users/' + w.uid + '/photo').once('value', pSnap => {
+                                if(pSnap.exists() && pSnap.val()) {
+                                    photoEl.src = pSnap.val();
+                                    photoEl.style.display = 'block';
+                                    fallbackEl.style.display = 'none';
+                                } else {
+                                    photoEl.style.display = 'none';
+                                    fallbackEl.style.display = 'flex';
+                                }
+                            });
+                        } else {
+                            photoEl.style.display = 'none';
+                            fallbackEl.style.display = 'flex';
+                        }
+                    }
+                }
+
+                // ── Prize ──
                 if(prizeEl && amtEl && w.prize) {
                     amtEl.textContent = (w.prize || 300).toLocaleString();
                     prizeEl.style.display = 'block';
                 }
-                // ── Show draw time ──
+
+                // ── Time ──
                 if(timeEl) {
                     const ts = w.wonAt || w.resetAt || null;
                     if(ts) {
@@ -11821,20 +11876,61 @@ function runMathBlitz(problems) {
                             hour: 'numeric', minute: '2-digit',
                             hour12: true, timeZone: 'Asia/Manila'
                         });
-                        timeEl.textContent  = '\u{1F550} ' + formatted;
+                        timeEl.textContent  = '🕐 ' + formatted;
                         timeEl.style.display = 'block';
-                        timeEl.style.color   = 'rgba(255,255,255,0.45)';
                     } else {
                         timeEl.style.display = 'none';
                     }
                 }
+
+                // ── Push notification for NEW winner (not on initial load) ──
+                if(isNewWinner && _lastWinnerKey !== null) {
+                    _sendWinnerPushNotif(w);
+                }
+                _lastWinnerKey = w.wonAt || w.resetAt || w.uid || null;
+
             } else {
-                nameEl.textContent  = 'WALA';
-                nameEl.style.color  = 'rgba(255,255,255,0.3)';
+                if(card) card.style.display = 'none';
+                nameEl.textContent = 'WALA';
                 if(prizeEl) prizeEl.style.display = 'none';
                 if(timeEl)  timeEl.style.display  = 'none';
+                _lastWinnerKey = null;
             }
         });
+    }
+
+    function _sendWinnerPushNotif(w) {
+        if(Notification.permission !== 'granted') return;
+        const prize = (w.prize || 300).toLocaleString();
+        const name  = w.name || 'Someone';
+        try {
+            // Use service worker notification for better support (shows even if app backgrounded)
+            if(navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification('🏆 May Nanalo sa Bingo!', {
+                        body: name + ' just won ' + prize + ' RB Coins! 🎉',
+                        icon: 'https://i.imgur.com/4nljOtR.png',
+                        badge: 'https://i.imgur.com/4nljOtR.png',
+                        image: w.photo || undefined,
+                        vibrate: [200, 100, 200, 100, 400],
+                        tag: 'bingo-winner',
+                        renotify: true,
+                        data: { url: window.location.href }
+                    });
+                }).catch(() => {
+                    // Fallback to basic Notification
+                    new Notification('🏆 May Nanalo sa Bingo!', {
+                        body: name + ' just won ' + prize + ' RB Coins! 🎉',
+                        icon: 'https://i.imgur.com/4nljOtR.png',
+                    });
+                });
+            } else {
+                new Notification('🏆 May Nanalo sa Bingo!', {
+                    body: name + ' just won ' + prize + ' RB Coins! 🎉',
+                    icon: 'https://i.imgur.com/4nljOtR.png',
+                });
+            }
+        } catch(e) { console.log('Push notif error:', e); }
     }
 
     function updateNextDrawDisplay() { db.ref('gameState').on('value', s => { const gameData = s.val() || {}; const now = Date.now(); if(gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0) { const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const ndIcon = document.querySelector('.nd-icon'); banner.style.display = 'flex'; banner.style.background = 'rgba(71, 85, 105, 0.9)'; banner.style.borderColor = '#94a3b8'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; labelEl.innerText = "GAME STATUS"; labelEl.style.color = "#e2e8f0"; timeEl.innerText = "GAME ONGOING"; timeEl.style.fontSize = "20px"; timeEl.style.color = "#ffffff"; timeEl.style.fontWeight = "900"; if(ndIcon) { ndIcon.style.background = 'rgba(255,255,255,0.1)'; ndIcon.style.color = 'white'; ndIcon.style.borderColor = 'rgba(255,255,255,0.2)'; } return; } let displayTime = null; if(gameData.schedules) { const rawScheds = Object.values(gameData.schedules); const times = rawScheds.map(val => (typeof val === 'object' && val.time) ? val.time : val); const futureTimes = times.filter(t => t > now); const sorted = futureTimes.sort((a,b) => a - b); if(sorted.length > 0) { displayTime = sorted[0]; } } if(!displayTime && gameData.nextDraw) { if(gameData.nextDraw > now) { displayTime = gameData.nextDraw; } } const banner = document.getElementById('nextDrawBanner'); const timeEl = document.getElementById('nextDrawTime'); const labelEl = document.querySelector('.next-draw-label'); const lateSched = document.getElementById('lateNextSched'); const ndIcon = document.querySelector('.nd-icon'); if(ndIcon) { ndIcon.style.background = ''; ndIcon.style.color = ''; ndIcon.style.borderColor = ''; } if(displayTime && displayTime > now) { banner.style.display = 'flex'; banner.style.background = 'rgba(15, 23, 42, 0.8)'; banner.style.borderColor = 'rgba(251, 191, 36, 0.4)'; banner.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)'; const formatted = fixDate(displayTime); timeEl.innerText = formatted; timeEl.style.fontSize = "18px"; timeEl.style.color = "white"; labelEl.innerText = "SUSUNOD NA BOLA"; labelEl.style.color = "var(--gold)"; lateSched.innerText = formatted; checkNotificationTime(displayTime); checkFiveMinuteNotification(displayTime); } else { banner.style.display = 'flex'; banner.style.background = 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))'; banner.style.borderColor = '#3b82f6'; banner.style.boxShadow = '0 10px 30px rgba(59, 130, 246, 0.2)'; labelEl.innerText = "WAITING FOR DRAW"; labelEl.style.color = "#93c5fd"; timeEl.innerText = "MAGHINTAY SA SUSUNOD NA DRAW."; timeEl.style.fontSize = "11px"; timeEl.style.fontWeight = "700"; timeEl.style.lineHeight = "1.4"; lateSched.innerText = "--:--"; } }); }
@@ -11875,6 +11971,22 @@ function runMathBlitz(problems) {
     // ===== END PATTERN BAR RENDERER =====
 
     function initBingo() {
+        // ── Real-time listener for latestWinner → push notification ──
+        var _latestWinnerSeen = null;
+        db.ref('gameState/latestWinner').on('value', snap => {
+            if(!snap.exists()) { _latestWinnerSeen = null; return; }
+            const w = snap.val();
+            const key = w.wonAt || w.uid || null;
+            if(_latestWinnerSeen === null) { _latestWinnerSeen = key; return; } // skip initial load
+            if(key === _latestWinnerSeen) return; // same winner, no repeat
+            _latestWinnerSeen = key;
+            // Only notify OTHER players (not the winner themselves)
+            const myUid = auth.currentUser ? auth.currentUser.uid : null;
+            if(w.uid !== myUid) {
+                _sendWinnerPushNotif(w);
+            }
+        });
+
         // Listen to gameState/winners (multi-winner support) for banner display
         db.ref('gameState/winners').on('value', wSnap => {
             const winnersObj = wSnap.val();
@@ -12105,7 +12217,7 @@ function runMathBlitz(problems) {
         let winPrize = 300;
         if (isJackpotActive) winPrize = currentJackpotAmount;
         // cardId: 'main' or 'extra-0', 'extra-1', etc.
-        const winnerData = { name: userData.name, uid: uid, prize: winPrize, winCard: cardId || 'main', wonAt: Date.now() };
+        const winnerData = { name: userData.name, uid: uid, photo: userData.photo || '', prize: winPrize, winCard: cardId || 'main', wonAt: Date.now() };
         db.ref('gameState/latestWinner').set(winnerData);
         db.ref('gameState/winners/' + uid).set(winnerData); // multi-winner support
         db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize);
