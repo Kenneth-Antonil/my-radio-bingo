@@ -19,7 +19,7 @@
     <link rel="apple-touch-icon" href="https://i.imgur.com/4nljOtR.png">
     <link rel="manifest" href="manifest.json">
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Comic+Neue:wght@700&family=Cinzel:wght@700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Comic+Neue:wght@700&family=Cinzel:wght@700;900&family=Bebas+Neue&family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -32,7 +32,6 @@
     <style>
         /* === CORE VARIABLES === */
         :root { 
-    
     /* 
     DATABASE NORMALIZATION - PROPER 3NF STRUCTURE
     ALL DATA IS PROPERLY NORMALIZED - NO REDUNDANCY!
@@ -40,23 +39,33 @@
     users/{uid}: name, photo, bio, verified, points, bingoWins, etc.
     */
 
-            --bg-overlay: rgba(15, 23, 42, 0.95); 
-            --glass-surface: rgba(30, 41, 59, 0.75);
-            --glass-border: rgba(255, 255, 255, 0.1);
+            /* === BINGO BLITZ DARK THEME === */
+            --bg-overlay: rgba(12, 8, 28, 0.97); 
+            --glass-surface: rgba(30, 18, 60, 0.75);
+            --glass-border: rgba(180, 120, 255, 0.18);
             
-            --accent: #0ea5e9; /* Ocean Blue */
-            --accent-glow: #38bdf8;
+            --accent: #a855f7;         /* Vibrant purple */
+            --accent-glow: #c084fc;
+            --accent-blue: #06b6d4;    /* Cyan gem accent */
             --text: #ffffff; 
             --gold: #fbbf24; 
-            --gold-shine: #fcd34d;
+            --gold-shine: #fde68a;
+            --gold-deep: #d97706;
             --success: #10b981; 
             --danger: #ef4444; 
             --minigame: #f472b6;
             
+            /* Bingo Blitz gem colors */
+            --gem-purple: #9333ea;
+            --gem-blue: #2563eb;
+            --gem-cyan: #0891b2;
+            --gem-gold: #d97706;
+            --gem-pink: #db2777;
+            
             /* Messenger Colors */
-            --messenger-blue: #3b82f6;
-            --messenger-grey: #334155;
-            --messenger-bg: #020617;
+            --messenger-blue: #7c3aed;
+            --messenger-grey: #2d1b5e;
+            --messenger-bg: #0a0618;
             
             /* Spacing System */
             --spacing-xs: 8px;
@@ -76,8 +85,12 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
         
         body { 
-            font-family: 'Inter', sans-serif; 
-            background: #0f172a;
+            font-family: 'Nunito', 'Inter', sans-serif; 
+            background: #0a0618;
+            background-image: 
+                radial-gradient(ellipse at 20% 0%, rgba(120, 40, 200, 0.18) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 100%, rgba(6, 182, 212, 0.10) 0%, transparent 60%),
+                radial-gradient(ellipse at 50% 50%, rgba(88, 28, 135, 0.12) 0%, transparent 80%);
             color: var(--text); 
             margin: 0; 
             padding-bottom: calc(20px + env(safe-area-inset-bottom)); 
@@ -85,6 +98,366 @@
             min-height: 100vh;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
         }
+        /* ============================================================
+           🎰 BINGO BLITZ DARK MODE UI OVERHAUL
+        ============================================================ */
+
+        /* === GEM BUTTON BASE === */
+        .btn-post-modern,
+        .btn-do-task,
+        .btn-allow-notif,
+        .btn-google-signin,
+        .btn-pymk-add,
+        .btn-pymk-add:not(.sent) {
+            font-family: 'Fredoka One', 'Nunito', sans-serif !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        /* Primary Gem Button (purple) */
+        .btn-post-modern {
+            background: linear-gradient(180deg, #c084fc 0%, #9333ea 40%, #6b21a8 100%) !important;
+            border: none !important;
+            border-radius: 50px !important;
+            box-shadow:
+                0 2px 0 #4a1272,
+                0 4px 14px rgba(168, 85, 247, 0.55),
+                inset 0 1px 0 rgba(255,255,255,0.35),
+                inset 0 -2px 0 rgba(0,0,0,0.25) !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.4) !important;
+            transition: all 0.15s ease !important;
+        }
+        .btn-post-modern:hover:not(:disabled) {
+            background: linear-gradient(180deg, #d8b4fe 0%, #a855f7 40%, #7e22ce 100%) !important;
+            transform: translateY(-2px) !important;
+            box-shadow:
+                0 4px 0 #4a1272,
+                0 8px 20px rgba(168, 85, 247, 0.65),
+                inset 0 1px 0 rgba(255,255,255,0.4),
+                inset 0 -2px 0 rgba(0,0,0,0.25) !important;
+        }
+        .btn-post-modern:active:not(:disabled) {
+            transform: translateY(1px) !important;
+            box-shadow:
+                0 1px 0 #4a1272,
+                0 2px 8px rgba(168, 85, 247, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2) !important;
+        }
+
+        /* Gold Gem Button variant */
+        .btn-gold-gem {
+            font-family: 'Fredoka One', sans-serif;
+            background: linear-gradient(180deg, #fde68a 0%, #f59e0b 40%, #b45309 100%);
+            border: none;
+            border-radius: 50px;
+            color: #431407;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow:
+                0 2px 0 #78350f,
+                0 4px 14px rgba(245, 158, 11, 0.5),
+                inset 0 1px 0 rgba(255,255,255,0.5),
+                inset 0 -2px 0 rgba(0,0,0,0.2);
+            text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+            transition: all 0.15s ease;
+        }
+        .btn-gold-gem:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 0 #78350f, 0 2px 8px rgba(245,158,11,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        /* Add Friend button — cyan gem */
+        .btn-pymk-add:not(.sent) {
+            background: linear-gradient(180deg, #67e8f9 0%, #06b6d4 40%, #0e7490 100%) !important;
+            border: none !important;
+            border-radius: 50px !important;
+            box-shadow:
+                0 2px 0 #0c4a6e,
+                0 4px 12px rgba(6, 182, 212, 0.5),
+                inset 0 1px 0 rgba(255,255,255,0.4),
+                inset 0 -2px 0 rgba(0,0,0,0.2) !important;
+            color: white !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+        }
+        .btn-pymk-add:not(.sent):active { transform: translateY(1px) !important; }
+
+        /* Remove / secondary button */
+        .btn-pymk-remove {
+            background: linear-gradient(180deg, rgba(80,50,120,0.6) 0%, rgba(50,25,80,0.8) 100%) !important;
+            border: 1px solid rgba(180,120,255,0.25) !important;
+            border-radius: 50px !important;
+            color: rgba(200,170,255,0.85) !important;
+        }
+
+        /* Do-task button — green gem */
+        .btn-do-task {
+            background: linear-gradient(180deg, #6ee7b7 0%, #10b981 40%, #065f46 100%) !important;
+            border: none !important;
+            border-radius: 50px !important;
+            box-shadow:
+                0 2px 0 #064e3b,
+                0 4px 12px rgba(16, 185, 129, 0.45),
+                inset 0 1px 0 rgba(255,255,255,0.35) !important;
+            color: white !important;
+        }
+        .btn-do-task:disabled {
+            background: linear-gradient(180deg, rgba(71,85,105,0.5), rgba(51,65,85,0.5)) !important;
+            box-shadow: none !important;
+            color: rgba(255,255,255,0.3) !important;
+        }
+
+        /* === GLASS PANELS — Bingo Blitz style === */
+        .glass-panel {
+            background: linear-gradient(135deg, rgba(45, 20, 90, 0.7), rgba(20, 10, 50, 0.85)) !important;
+            border: 1px solid rgba(180, 120, 255, 0.22) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(200, 150, 255, 0.12) !important;
+        }
+
+        /* === BINGO CARD — ornate gem border === */
+        .card {
+            background: linear-gradient(160deg, rgba(40, 18, 85, 0.9), rgba(20, 8, 50, 0.95)) !important;
+            border: 1.5px solid rgba(168, 85, 247, 0.3) !important;
+            box-shadow:
+                0 0 0 1px rgba(100, 40, 180, 0.2),
+                0 15px 40px rgba(0, 0, 0, 0.6),
+                inset 0 1px 0 rgba(200, 150, 255, 0.1) !important;
+        }
+
+        /* === POINTS / COINS BADGE — gold gem === */
+        .points-badge {
+            background: linear-gradient(180deg, rgba(253, 230, 138, 0.25), rgba(180, 83, 9, 0.4)) !important;
+            border: 1px solid rgba(251, 191, 36, 0.7) !important;
+            box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3), inset 0 1px 0 rgba(255, 245, 180, 0.2) !important;
+        }
+
+        /* === ICON BUTTONS — gem style === */
+        .icon-btn {
+            background: linear-gradient(180deg, rgba(90, 50, 160, 0.5), rgba(50, 20, 100, 0.7)) !important;
+            border: 1px solid rgba(168, 85, 247, 0.35) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(200,150,255,0.15) !important;
+        }
+        .icon-btn:active { transform: scale(0.93) !important; }
+
+        /* === NAV BAR — dark purple glass === */
+        .nav {
+            background: linear-gradient(180deg, rgba(15, 6, 40, 0.98), rgba(10, 4, 28, 0.99)) !important;
+            border-bottom: 1px solid rgba(140, 80, 220, 0.25) !important;
+            box-shadow: 0 2px 20px rgba(100, 40, 180, 0.2) !important;
+        }
+
+        /* === DRAWER NAV — dark gem sidebar === */
+        .drawer-nav-item.active {
+            background: linear-gradient(90deg, rgba(120, 50, 220, 0.25), rgba(90, 30, 180, 0.1)) !important;
+            border-left: 3px solid #a855f7 !important;
+            color: #c084fc !important;
+        }
+        .hamburger-nav-item.active {
+            color: #c084fc !important;
+            background: rgba(120, 50, 220, 0.15) !important;
+        }
+
+        /* === BINGO QUICK BTNS — gem style === */
+        .bingo-quick-btn {
+            background: linear-gradient(160deg, rgba(40, 18, 85, 0.8), rgba(20, 8, 55, 0.9)) !important;
+            border: 1px solid rgba(140, 80, 220, 0.25) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(200,150,255,0.08) !important;
+            border-radius: 18px !important;
+        }
+        .bingo-quick-btn.gold {
+            border-color: rgba(251, 191, 36, 0.4) !important;
+            background: linear-gradient(160deg, rgba(80, 40, 0, 0.7), rgba(40, 15, 0, 0.9)) !important;
+            box-shadow: 0 4px 12px rgba(251,191,36,0.15), inset 0 1px 0 rgba(253,230,138,0.12) !important;
+        }
+        .bingo-quick-btn.blue {
+            border-color: rgba(6, 182, 212, 0.4) !important;
+            background: linear-gradient(160deg, rgba(0, 50, 80, 0.7), rgba(0, 20, 40, 0.9)) !important;
+            box-shadow: 0 4px 12px rgba(6,182,212,0.15), inset 0 1px 0 rgba(103,232,249,0.12) !important;
+        }
+        .bingo-quick-btn.red {
+            border-color: rgba(239, 68, 68, 0.35) !important;
+            background: linear-gradient(160deg, rgba(80, 15, 15, 0.7), rgba(40, 5, 5, 0.9)) !important;
+            box-shadow: 0 4px 12px rgba(239,68,68,0.12), inset 0 1px 0 rgba(252,165,165,0.1) !important;
+        }
+
+        /* === JACKPOT BANNER — more dramatic === */
+        #jackpotBanner {
+            background: linear-gradient(135deg, #1c0a00 0%, #3d1500 40%, #1a0800 100%) !important;
+            border: 2px solid #f59e0b !important;
+            box-shadow: 0 0 30px rgba(251,191,36,0.4), 0 0 60px rgba(251,191,36,0.15), inset 0 0 30px rgba(251,191,36,0.08) !important;
+        }
+
+        /* === NEXT DRAW BANNER === */
+        .next-draw-container {
+            background: linear-gradient(135deg, rgba(20, 8, 55, 0.9), rgba(40, 18, 85, 0.8)) !important;
+            border: 1px solid rgba(168, 85, 247, 0.4) !important;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5), 0 0 15px rgba(168,85,247,0.1) !important;
+        }
+
+        /* === WINNER BANNER === */
+        #winnerBanner {
+            background: linear-gradient(135deg, #0f4c15 0%, #166534 50%, #0a3d0f 100%) !important;
+            border-color: #22c55e !important;
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.3), inset 0 0 20px rgba(34,197,94,0.08) !important;
+        }
+
+        /* === SOCIAL POSTS — purple gem tint === */
+        .post-card {
+            background: linear-gradient(160deg, rgba(32, 15, 70, 0.85), rgba(18, 8, 42, 0.95)) !important;
+            border: 1px solid rgba(140, 80, 220, 0.18) !important;
+        }
+
+        /* === PYMK CARDS === */
+        .pymk-card {
+            background: linear-gradient(160deg, rgba(35, 15, 75, 0.95), rgba(18, 8, 45, 0.98)) !important;
+            border: 1px solid rgba(140, 80, 220, 0.2) !important;
+        }
+
+        /* === GIFTCARD ITEMS — gem border === */
+        .giftcard-item {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+        }
+        .giftcard-btn.can-redeem {
+            background: linear-gradient(180deg, #fde68a 0%, #f59e0b 45%, #b45309 100%) !important;
+            border: none !important;
+            border-radius: 50px !important;
+            color: #431407 !important;
+            font-family: 'Fredoka One', sans-serif !important;
+            font-size: 13px !important;
+            box-shadow: 0 2px 0 #78350f, 0 4px 10px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.4) !important;
+            text-shadow: 0 1px 0 rgba(255,230,100,0.3) !important;
+        }
+
+        /* === BINGO BALL === */
+        .cb-ball {
+            border: 3px solid rgba(168, 85, 247, 0.5) !important;
+            box-shadow: 0 0 20px rgba(168,85,247,0.3), inset 0 0 15px rgba(168,85,247,0.1) !important;
+        }
+
+        /* === BINGO HEADER TITLE — Fredoka font === */
+        .bingo-hdr-title {
+            font-family: 'Fredoka One', sans-serif !important;
+            background: linear-gradient(180deg, #fde68a 0%, #f59e0b 50%, #fbbf24 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            filter: drop-shadow(0 2px 8px rgba(251,191,36,0.4)) !important;
+        }
+
+        /* === DRAWER / SIDEBAR === */
+        .drawer {
+            background: linear-gradient(180deg, #0d0626 0%, #080416 100%) !important;
+            border-right: 1px solid rgba(140, 80, 220, 0.2) !important;
+        }
+
+        /* === HAMBURGER MENU === */
+        .hamburger-menu {
+            background: linear-gradient(180deg, #0d0626, #060312) !important;
+            border-right: 1px solid rgba(140, 80, 220, 0.2) !important;
+        }
+
+        /* === ANNOUNCEMENT CAROUSEL === */
+        #annCarouselWrap {
+            background: #0a0618 !important;
+            border-bottom: 1px solid rgba(140, 80, 220, 0.2) !important;
+        }
+
+        /* === MODALS — dark purple gem === */
+        .modal-content {
+            background: linear-gradient(160deg, #120830, #0a0420) !important;
+            border: 1px solid rgba(168, 85, 247, 0.25) !important;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 40px rgba(120, 50, 220, 0.15) !important;
+        }
+
+        /* === SPARKLE ANIMATION === */
+        @keyframes bb-sparkle {
+            0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1) rotate(180deg); }
+        }
+        @keyframes bb-float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        @keyframes bb-pulse-gem {
+            0%, 100% { box-shadow: 0 0 8px rgba(168,85,247,0.3); }
+            50% { box-shadow: 0 0 20px rgba(168,85,247,0.6), 0 0 40px rgba(168,85,247,0.2); }
+        }
+
+        /* Score / stat badges */
+        .user-stat-badge, .lb-rank-badge {
+            background: linear-gradient(180deg, #c084fc, #7e22ce) !important;
+            box-shadow: 0 2px 8px rgba(126,34,206,0.4) !important;
+        }
+
+        /* Section labels */
+        .section-label {
+            color: #c084fc !important;
+            font-family: 'Fredoka One', sans-serif !important;
+            letter-spacing: 1.5px !important;
+        }
+
+        /* Chat bubble FAB — purple gem */
+        .chat-bubble-btn {
+            background: linear-gradient(180deg, #c084fc 0%, #9333ea 50%, #6b21a8 100%) !important;
+            box-shadow: 0 4px 0 #4a1272, 0 6px 20px rgba(168,85,247,0.55), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+            border: none !important;
+        }
+
+        /* RB Store page */
+        .rbstore-page {
+            background: linear-gradient(160deg, #0d0626, #060312) !important;
+        }
+        .rbstore-header {
+            background: linear-gradient(180deg, rgba(15, 6, 40, 0.99), rgba(10, 4, 28, 0.98)) !important;
+            border-bottom: 1px solid rgba(140, 80, 220, 0.25) !important;
+        }
+        .rbstore-tab {
+            color: rgba(180, 130, 255, 0.6) !important;
+        }
+        .rbstore-tab.active {
+            background: linear-gradient(180deg, rgba(168,85,247,0.25), rgba(126,34,206,0.15)) !important;
+            color: #c084fc !important;
+            border-bottom: 2px solid #a855f7 !important;
+        }
+
+        /* Beats tab header */
+        .beats-header {
+            background: linear-gradient(180deg, rgba(10, 4, 28, 0.98), transparent) !important;
+            border-bottom: 1px solid rgba(140, 80, 220, 0.2) !important;
+        }
+
+        /* Login button override */
+        .btn-google-signin {
+            background: linear-gradient(180deg, #c084fc 0%, #9333ea 45%, #6b21a8 100%) !important;
+            box-shadow: 0 3px 0 #4a1272, 0 6px 20px rgba(168,85,247,0.45), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+        }
+
+        /* Streak / notification modal */
+        #streakModal, #notifGateModal, #installGateModal {
+            background: linear-gradient(160deg, rgba(20, 8, 55, 0.98), rgba(10, 4, 28, 0.99)) !important;
+        }
+
+        /* Toasts */
+        #toastContainer > div {
+            background: linear-gradient(135deg, rgba(40, 18, 90, 0.97), rgba(20, 8, 55, 0.98)) !important;
+            border: 1px solid rgba(168, 85, 247, 0.35) !important;
+        }
+
+        /* Bingo grid cell */
+        .grid-cell {
+            background: linear-gradient(160deg, rgba(45, 20, 90, 0.6), rgba(25, 10, 55, 0.8)) !important;
+            border: 1px solid rgba(140, 80, 220, 0.2) !important;
+        }
+        .grid-cell.called {
+            background: linear-gradient(160deg, #7c3aed, #5b21b6) !important;
+            border-color: #a855f7 !important;
+            box-shadow: 0 0 10px rgba(168,85,247,0.4) !important;
+        }
+
+        /* Buy extra card slot */
+        .bento-buy-slot {
+            border: 2px dashed rgba(168, 85, 247, 0.35) !important;
+            background: linear-gradient(160deg, rgba(40, 18, 85, 0.4), rgba(20, 8, 50, 0.6)) !important;
+        }
+
+
 
         /* === FULLSCREEN PHOTO VIEWER === */
         .fullscreen-photo-viewer {
