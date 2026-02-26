@@ -10394,6 +10394,9 @@ function runMathBlitz(problems) {
                 } 
             });
             initBingo(); _renderPatternBar('Normal Bingo'); setupChat(); listenForNextDraw(); listenForLastWinner(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate(); if(typeof setupCallListener === 'function') setupCallListener();
+            // Show chat bubble since bingo tab is active by default
+            var _chatBubble = document.getElementById('chatBubbleBtn');
+            if (_chatBubble) _chatBubble.classList.add('bingo-visible');
             initHeadlessDrawEngine(u.uid); // start headless draw engine
             initSocialSystem(u.uid);
             if(typeof initInfluencerSystem === 'function') initInfluencerSystem(u.uid);
@@ -17013,6 +17016,13 @@ function openStorePage() {
     var page = document.getElementById('rbStorePage');
     if (!page) { console.error('RB Store page not found'); return; }
     page.classList.add('active');
+    // Hide chat bubble while store is open
+    var chatBtn = document.getElementById('chatBubbleBtn');
+    if (chatBtn) { chatBtn.classList.remove('bingo-visible'); }
+    // Highlight Store in drawer nav
+    document.querySelectorAll('.drawer-nav-item').forEach(function(el) { el.classList.remove('active'); });
+    var dnavStore = document.getElementById('dnav-store');
+    if (dnavStore) dnavStore.classList.add('active');
     // Scroll to top
     var body = page.querySelector('.rbstore-body');
     if (body) body.scrollTop = 0;
@@ -17036,6 +17046,23 @@ function openStorePage() {
 function closeStorePage() {
     var page = document.getElementById('rbStorePage');
     if (page) page.classList.remove('active');
+    // Restore chat bubble if bingo tab is currently active
+    var bingoView = document.getElementById('view-bingo');
+    var chatBtn = document.getElementById('chatBubbleBtn');
+    if (chatBtn && bingoView && bingoView.style.display !== 'none') {
+        chatBtn.classList.add('bingo-visible');
+    }
+    // Restore drawer highlight to the currently visible tab
+    var tabs = ['home', 'bingo', 'beats', 'games'];
+    document.querySelectorAll('.drawer-nav-item').forEach(function(el) { el.classList.remove('active'); });
+    for (var i = 0; i < tabs.length; i++) {
+        var view = document.getElementById('view-' + tabs[i]);
+        if (view && view.style.display !== 'none') {
+            var dnavBtn = document.getElementById('dnav-' + tabs[i]);
+            if (dnavBtn) dnavBtn.classList.add('active');
+            break;
+        }
+    }
 }
 
 function switchStoreSection(section) {
