@@ -3335,12 +3335,54 @@
         /* ── NAME ROW ── */
         .prof-name-row {
             padding: 10px 16px 2px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .prof-name {
             font-size: 22px; font-weight: 900; color: white;
             margin: 0;
             display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
             line-height: 1.2;
+            flex: 1;
+        }
+
+        /* ── INLINE ICON ACTION BUTTONS (next to username) ── */
+        .prof-action-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .prof-inline-icon-btn {
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.65);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: color 0.15s, transform 0.1s;
+            padding: 0;
+        }
+        .prof-inline-icon-btn i { width: 18px; height: 18px; }
+        .prof-inline-icon-btn:active { transform: scale(0.88); }
+        .prof-inline-icon-btn:hover { color: white; }
+
+        /* Color variants */
+        .prof-inline-purple { color: #c084fc; }
+        .prof-inline-purple:hover { color: #e9d5ff; }
+        .prof-inline-gold { color: #fbbf24; }
+        .prof-inline-gold:hover { color: #fde68a; }
+        .prof-inline-red { color: #f87171; }
+        .prof-inline-red:hover { color: #fca5a5; }
+
+        /* Own-profile small icon row stays in avatar row */
+        .prof-own-btns {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
         }
 
         /* ── @HANDLE ── */
@@ -3418,6 +3460,13 @@
         /* Feed container */
         .profile-feed-section { width: 100%; padding: 0; }
         .profile-feed-section::before { display: none; }
+
+        /* Clean creator star icon — no box background */
+        .creator-badge-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            vertical-align: middle; flex-shrink: 0;
+            line-height: 1;
+        }
 
         /* Verification badge */
         .verified-badge {
@@ -9861,11 +9910,10 @@ function runMathBlitz(problems) {
     
     <div class="prof-body">
 
-        <!-- ROW 1: Avatar overlaps cover, buttons on right -->
+        <!-- ROW 1: Avatar overlaps cover, own-profile icon buttons on right -->
         <div class="prof-avatar-row">
             <div class="prof-avatar-wrap" id="pageProfileAvatarContainer"></div>
-            <div class="prof-action-group" id="profileBtnGroup">
-                <!-- Own profile: icon buttons + Edit -->
+            <div class="prof-own-btns">
                 <button class="prof-icon-btn" id="profSettingsBtn" style="display:none;" onclick="openEditProfile()">
                     <i data-lucide="settings-2"></i>
                 </button>
@@ -9875,24 +9923,30 @@ function runMathBlitz(problems) {
                 <button class="prof-icon-btn" id="profBellBtn" style="display:none;">
                     <i data-lucide="bell"></i>
                 </button>
-                <!-- Main CTA button -->
-                <button id="profileMainActionBtn" class="prof-cta-btn" onclick="handleProfileMainAction()" style="display:none;">Following</button>
-                <!-- Other user buttons -->
-                <button id="creatorMessageBtn" class="prof-cta-btn prof-cta-purple" style="display:none;">
-                    <i data-lucide="message-circle"></i> Message
-                </button>
-                <button id="giftSkinBtn" class="prof-cta-btn prof-cta-gold" style="display:none;">
-                    <i data-lucide="gift"></i> Gift
-                </button>
-                <button id="unfriendBtn" class="prof-cta-btn prof-cta-red" style="display:none;" onclick="unfriendUser()">
-                    <i data-lucide="user-x"></i> Unfriend
-                </button>
             </div>
         </div>
 
-        <!-- ROW 2: Name + badges -->
+        <!-- ROW 2: Name + badges + inline action icons -->
         <div class="prof-name-row">
             <h2 id="pageProfileName" class="prof-name">User Name</h2>
+            <div class="prof-action-group" id="profileBtnGroup">
+                <!-- Main action icon (Follow/Following/Add Friend/Edit) -->
+                <button id="profileMainActionBtn" class="prof-inline-icon-btn" onclick="handleProfileMainAction()" style="display:none;" title="Follow">
+                    <i data-lucide="user-plus"></i>
+                </button>
+                <!-- Message (creators) -->
+                <button id="creatorMessageBtn" class="prof-inline-icon-btn prof-inline-purple" style="display:none;" title="Message">
+                    <i data-lucide="message-circle"></i>
+                </button>
+                <!-- Gift -->
+                <button id="giftSkinBtn" class="prof-inline-icon-btn prof-inline-gold" style="display:none;" title="Gift">
+                    <i data-lucide="gift"></i>
+                </button>
+                <!-- Unfriend -->
+                <button id="unfriendBtn" class="prof-inline-icon-btn prof-inline-red" style="display:none;" onclick="unfriendUser()" title="Unfriend">
+                    <i data-lucide="user-x"></i>
+                </button>
+            </div>
         </div>
 
         <!-- ROW 3: @handle -->
@@ -14309,7 +14363,7 @@ function runMathBlitz(problems) {
 
             // Name + verified badge + creator badge
             const vBadge = u.verified ? `<span class="verified-badge" onclick="showVerificationInfo(event)"><i data-lucide="check"></i></span>` : '';
-            const cBadge = isCreator ? `<span class="creator-badge"><i data-lucide="star"></i> Creator</span>` : '';
+            const cBadge = isCreator ? `<span class="creator-badge-icon" title="Content Creator"><i data-lucide="star" style="width:14px;height:14px;color:#fbbf24;fill:#fbbf24;"></i></span>` : '';
             document.getElementById('pageProfileName').innerHTML = `${escapeHtml(u.name || 'User')}${vBadge}${cBadge}`;
 
             // @handle
@@ -14602,8 +14656,9 @@ Please explain why you want a verification badge:`;
         if (uid === myUid) {
             // Own profile: show ⚙️ icon + "Edit Profile" button + 3-dot menu
             if (settingsBtn) settingsBtn.style.display = 'flex';
-            btn.textContent = 'Edit Profile';
-            btn.className = 'prof-cta-btn';
+            btn.innerHTML = '<i data-lucide="pencil"></i>';
+            btn.className = 'prof-inline-icon-btn';
+            btn.title = 'Edit Profile';
             btn.onclick = openEditProfile;
             btn.style.display = 'inline-flex';
             menuBtn.style.display = 'flex';
@@ -14627,43 +14682,54 @@ Please explain why you want a verification badge:`;
                             openPrivateChat(uid, name, target.photo || '');
                         };
                     }
-                    // Follow / Following button
+                    // Follow / Following button (icon only)
                     db.ref('users/' + myUid + '/following/' + uid).once('value', fSnap => {
                         if (fSnap.exists()) {
-                            btn.textContent = 'Following';
-                            btn.className = 'prof-cta-btn';
-                            btn.style.border = '2px solid rgba(255,255,255,0.45)';
+                            btn.innerHTML = '<i data-lucide="user-check"></i>';
+                            btn.className = 'prof-inline-icon-btn';
+                            btn.title = 'Following';
+                            btn.style.color = '#a855f7';
+                            btn.style.border = 'none';
                         } else {
-                            btn.textContent = 'Follow';
-                            btn.className = 'prof-cta-btn';
-                            btn.style.border = '2px solid rgba(255,255,255,0.45)';
+                            btn.innerHTML = '<i data-lucide="user-plus"></i>';
+                            btn.className = 'prof-inline-icon-btn';
+                            btn.title = 'Follow';
+                            btn.style.color = '';
+                            btn.style.border = 'none';
                         }
                         btn.onclick = () => { toggleFollow(uid); setTimeout(() => updateProfileButtonState(uid), 500); };
                         btn.style.display = 'inline-flex';
+                        lucide.createIcons();
                     });
                 } else {
-                    // Regular user: Add Friend / Message + Unfriend
+                    // Regular user: Add Friend / Message + Unfriend (icon only)
                     db.ref('friends/' + myUid + '/' + uid).once('value', fSnap => {
                         if (fSnap.exists()) {
-                            btn.textContent = 'Message';
-                            btn.className = 'prof-cta-btn prof-cta-purple';
+                            btn.innerHTML = '<i data-lucide="message-circle"></i>';
+                            btn.className = 'prof-inline-icon-btn prof-inline-purple';
+                            btn.title = 'Message';
                             btn.style.border = 'none';
                             btn.onclick = () => openPrivateChat(uid, document.getElementById('pageProfileName').innerText, target.photo || '');
                             if (unfriendBtn) unfriendBtn.style.display = 'inline-flex';
                         } else {
                             db.ref('friendRequests/' + uid + '/' + myUid).once('value', reqSnap => {
                                 if (reqSnap.exists()) {
-                                    btn.textContent = 'Requested';
-                                    btn.className = 'prof-cta-btn';
-                                    btn.style.border = '2px solid rgba(255,255,255,0.3)';
+                                    btn.innerHTML = '<i data-lucide="clock"></i>';
+                                    btn.className = 'prof-inline-icon-btn';
+                                    btn.title = 'Requested';
+                                    btn.style.color = 'rgba(255,255,255,0.4)';
+                                    btn.style.border = 'none';
                                     btn.onclick = () => { db.ref('friendRequests/' + uid + '/' + myUid).remove(); updateProfileButtonState(uid); showToast('Request cancelled'); };
                                 } else {
-                                    btn.textContent = 'Add Friend';
-                                    btn.className = 'prof-cta-btn';
-                                    btn.style.border = '2px solid rgba(255,255,255,0.45)';
+                                    btn.innerHTML = '<i data-lucide="user-plus"></i>';
+                                    btn.className = 'prof-inline-icon-btn';
+                                    btn.title = 'Add Friend';
+                                    btn.style.color = '';
+                                    btn.style.border = 'none';
                                     btn.onclick = () => { db.ref('friendRequests/' + uid + '/' + myUid).set(true); updateProfileButtonState(uid); showToast('Request sent!'); };
                                 }
                                 btn.style.display = 'inline-flex';
+                                lucide.createIcons();
                             });
                         }
                     });
