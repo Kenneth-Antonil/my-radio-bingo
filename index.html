@@ -5545,6 +5545,64 @@
             border-color: transparent;
             color: white;
         }
+        /* ── ONLINE USERS BUBBLES — Bingo Header ── */
+        @keyframes bubble-fade-in {
+            from { opacity: 0; transform: scale(0.4) translateY(8px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes bubble-fade-out {
+            from { opacity: 1; transform: scale(1); }
+            to   { opacity: 0; transform: scale(0.4); }
+        }
+        @keyframes bubble-float {
+            0%, 100% { transform: translateY(0px); }
+            50%       { transform: translateY(-3px); }
+        }
+        .online-bubbles-row {
+            position: absolute;
+            bottom: 10px;
+            right: 12px;
+            display: flex;
+            flex-direction: row-reverse;
+            align-items: center;
+            gap: 0;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .online-bubble {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid rgba(16,185,129,0.7);
+            object-fit: cover;
+            margin-left: -8px;
+            box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4);
+            background: #1a0a3e;
+            animation: bubble-fade-in 0.45s cubic-bezier(0.16,1,0.3,1) both,
+                       bubble-float calc(2.5s + var(--fi, 0) * 0.4s) ease-in-out infinite calc(var(--fi, 0) * 0.3s);
+            transition: border-color 0.3s;
+        }
+        .online-bubble.leaving {
+            animation: bubble-fade-out 0.35s ease forwards;
+        }
+        .online-bubble-more {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid rgba(168,85,247,0.6);
+            background: rgba(88,28,135,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 900;
+            color: #e9d5ff;
+            margin-left: -8px;
+            box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5);
+            animation: bubble-fade-in 0.45s cubic-bezier(0.16,1,0.3,1) both;
+            flex-shrink: 0;
+        }
+
         /* ====================================
            🎉 SPECIAL BINGO EVENT — MARCH 20
         ==================================== */
@@ -8411,6 +8469,9 @@
 
             <!-- Glass fade at bottom -->
             <div class="bingo-hdr-glass"></div>
+
+            <!-- Online user avatar bubbles -->
+            <div class="online-bubbles-row" id="onlineBubblesRow"></div>
 
             <!-- Text content -->
             <div class="bingo-hdr-content">
@@ -11798,10 +11859,86 @@ function runMathBlitz(problems) {
             const onlineCount = Object.values(onlineUsers).filter(status => status.state === 'online').length;
             document.getElementById('onlineCount').innerText = onlineCount || 0; 
             updateAllOnlineIndicators();
+            renderOnlineBubbles(onlineUsers, uid);
         }); 
     }
     
     function updatePresenceData(uid, name, points, photo) { db.ref('status/' + uid).update({ name: name, points: points, photo: photo }); }
+
+    /* ── Online Avatar Bubbles in Bingo Header ── */
+    var _prevOnlineBubbleUids = [];
+    function renderOnlineBubbles(onlineUsersMap, myUid) {
+        var container = document.getElementById('onlineBubblesRow');
+        if (!container) return;
+
+        const MAX_BUBBLES = 6;
+        // Get all online UIDs except self
+        var allOnline = Object.entries(onlineUsersMap)
+            .filter(function(e) { return e[1].state === 'online' && e[0] !== myUid; })
+            .sort(function(a, b) { return (b[1].last_seen || 0) - (a[1].last_seen || 0); });
+
+        var currentUids = allOnline.map(function(e) { return e[0]; });
+
+        // Find newly gone users — animate them out
+        _prevOnlineBubbleUids.forEach(function(uid) {
+            if (currentUids.indexOf(uid) === -1) {
+                var el = container.querySelector('[data-uid="' + uid + '"]');
+                if (el) {
+                    el.classList.add('leaving');
+                    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 350);
+                }
+            }
+        });
+
+        // Build new bubble list
+        var toShow = allOnline.slice(0, MAX_BUBBLES);
+        var overflow = allOnline.length - MAX_BUBBLES;
+
+        // Remove "+N" chip if exists
+        var moreChip = container.querySelector('.online-bubble-more');
+        if (moreChip) moreChip.parentNode.removeChild(moreChip);
+
+        // Add new bubbles for newly online users
+        toShow.forEach(function(entry, i) {
+            var uid = entry[0];
+            var data = entry[1];
+            if (container.querySelector('[data-uid="' + uid + '"]')) return; // already exists
+
+            var photo = (data.photo && data.photo.startsWith('http')) ? data.photo : 'https://via.placeholder.com/32/1a0a3e/a855f7?text=' + (data.name ? encodeURIComponent(data.name[0]) : '?');
+            var name  = data.name || 'User';
+
+            var img = document.createElement('img');
+            img.className = 'online-bubble';
+            img.src = photo;
+            img.alt = name;
+            img.title = name + ' (online)';
+            img.dataset.uid = uid;
+            img.style.setProperty('--fi', i);
+            img.onerror = function() { this.src = 'https://via.placeholder.com/32/1a0a3e/a855f7?text=' + encodeURIComponent(name[0] || '?'); };
+            // Insert before the first child (row-reverse so order looks natural)
+            container.insertBefore(img, container.firstChild);
+        });
+
+        // Add overflow chip
+        if (overflow > 0) {
+            var chip = document.createElement('div');
+            chip.className = 'online-bubble-more';
+            chip.textContent = '+' + overflow;
+            chip.title = overflow + ' more online';
+            container.appendChild(chip);
+        }
+
+        // Remove bubbles that are beyond MAX_BUBBLES (cleanup)
+        var allBubbles = container.querySelectorAll('.online-bubble');
+        if (allBubbles.length > MAX_BUBBLES) {
+            for (var j = MAX_BUBBLES; j < allBubbles.length; j++) {
+                allBubbles[j].classList.add('leaving');
+                setTimeout(function(el) { if (el.parentNode) el.parentNode.removeChild(el); }, 350, allBubbles[j]);
+            }
+        }
+
+        _prevOnlineBubbleUids = currentUids;
+    }
     
     // === UPDATED NOTIFICATION LOGIC (With Delete & Nav) ===
     function listenNotifications(uid) { 
