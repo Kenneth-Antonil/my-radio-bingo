@@ -8519,6 +8519,15 @@
                     <div class="seb-link-text" id="sebLinkText">Loading...</div>
                     <button class="seb-copy-btn" onclick="sebCopyLink()">Copy</button>
                 </div>
+
+                <div style="font-size:12px;font-weight:900;letter-spacing:1.5px;color:rgba(255,255,255,0.5);text-transform:uppercase;margin:16px 0 10px;display:flex;align-items:center;justify-content:space-between;">
+                    <span>👥 Users You Invited</span>
+                    <span id="sebInvitedCount" style="font-size:11px;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);border-radius:20px;padding:2px 8px;color:#c084fc;letter-spacing:0;font-weight:800;"></span>
+                </div>
+                <div id="sebInvitedList" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:4px 12px;min-height:48px;max-height:180px;overflow-y:auto;">
+                    <div style="font-size:12px;color:rgba(255,255,255,0.3);padding:12px;text-align:center;">Loading...</div>
+                </div>
+
                 <button class="seb-modal-close" onclick="closeSEB()">Close</button>
             </div>
         </div>
@@ -16483,14 +16492,15 @@ Please explain why you want a verification badge:`;
     function openSEB() {
         var modal = document.getElementById('sebModal');
         if (!modal) return;
-        // Set invite link
-        var uid = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.uid : null;
+        // Use refCode (same as the main referral system), not UID
+        var refCode = (typeof userData !== 'undefined' && userData && userData.refCode) ? userData.refCode : null;
         var base = window.location.origin + window.location.pathname;
-        var link = uid ? base + '?ref=' + uid : base;
+        var link = refCode ? base + '?ref=' + refCode : base + '?ref=loading...';
         var linkEl = document.getElementById('sebLinkText');
         if (linkEl) linkEl.textContent = link;
         modal.classList.add('open');
         sebLoadProgress();
+        sebLoadInvitedList();
     }
 
     function closeSEB() {
@@ -16502,6 +16512,7 @@ Please explain why you want a verification badge:`;
         var linkEl = document.getElementById('sebLinkText');
         if (!linkEl) return;
         var txt = linkEl.textContent;
+        if (txt.indexOf('loading') !== -1) { showToast('⏳ Wait for your link to load...'); return; }
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(txt).then(function() { showToast('🔗 Invite link copied!'); }).catch(function() { sebFallbackCopy(txt); });
         } else { sebFallbackCopy(txt); }
@@ -16518,8 +16529,24 @@ Please explain why you want a verification badge:`;
     function sebLoadProgress() {
         var uid = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.uid : null;
         if (!uid || typeof firebase === 'undefined') { sebUpdateUI(0); return; }
-        firebase.database().ref('specialEventInvites/' + uid + '/activeInvites').once('value').then(function(snap) {
-            sebUpdateUI(snap.exists() ? (snap.val() || 0) : 0);
+
+        // Refresh invite link with correct refCode from userData
+        var refCode = (typeof userData !== 'undefined' && userData && userData.refCode) ? userData.refCode : null;
+        var linkEl = document.getElementById('sebLinkText');
+        if (linkEl && refCode) {
+            linkEl.textContent = window.location.origin + window.location.pathname + '?ref=' + refCode;
+        }
+
+        // Read from the correct path used by trackSpecialEventInvite:
+        // specialEventInvites/{eventKey}/{inviterUid}/{invitedUid}
+        // We look for all active special events and count invites under this user
+        firebase.database().ref('specialEvents').orderByChild('status').equalTo('active').once('value').then(function(snap) {
+            if (!snap.exists()) { sebUpdateUI(0); return; }
+            var firstKey = Object.keys(snap.val())[0];
+            firebase.database().ref('specialEventInvites/' + firstKey + '/' + uid).once('value').then(function(invSnap) {
+                var count = invSnap.exists() ? Object.keys(invSnap.val()).length : 0;
+                sebUpdateUI(count);
+            }).catch(function() { sebUpdateUI(0); });
         }).catch(function() { sebUpdateUI(0); });
     }
 
@@ -16555,25 +16582,48 @@ Please explain why you want a verification badge:`;
                 actionBtn.className = 'seb-action-btn needs-invite';
             }
         }
+        // Update modal badge count
+        var countBadge = document.getElementById('sebInvitedCount');
+        if (countBadge) countBadge.textContent = inviteCount > 0 ? inviteCount + ' invited' : '';
     }
 
-    // On page load: check for ?ref= param and record invite after auth
-    (function() {
-        var ref = new URLSearchParams(window.location.search).get('ref');
-        if (ref) window._sebRef = ref;
-    })();
+    // sebRecordInviteIfNeeded is no longer needed — invite tracking is already
+    // handled by trackSpecialEventInvite() in the new-user registration block (line ~11168).
+    // This stub is kept to avoid errors from the call site.
+    function sebRecordInviteIfNeeded(uid) { /* handled by trackSpecialEventInvite */ }
 
-    function sebRecordInviteIfNeeded(uid) {
-        var ref = window._sebRef;
-        if (!ref || !uid || ref === uid || typeof firebase === 'undefined') return;
-        window._sebRef = null;
-        var refNode = firebase.database().ref('specialEventInvites/' + ref + '/invited/' + uid);
-        refNode.once('value').then(function(snap) {
-            if (!snap.exists()) {
-                refNode.set(true);
-                firebase.database().ref('specialEventInvites/' + ref + '/activeInvites').transaction(function(n) { return (n || 0) + 1; });
-            }
-        });
+    function sebLoadInvitedList() {
+        var uid = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.uid : null;
+        var listEl = document.getElementById('sebInvitedList');
+        if (!listEl || !uid || typeof firebase === 'undefined') return;
+        listEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35);padding:10px;text-align:center;">Loading...</div>';
+        firebase.database().ref('specialEvents').orderByChild('status').equalTo('active').once('value').then(function(snap) {
+            if (!snap.exists()) { listEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35);padding:10px;text-align:center;">No active event found.</div>'; return; }
+            var firstKey = Object.keys(snap.val())[0];
+            firebase.database().ref('specialEventInvites/' + firstKey + '/' + uid).once('value').then(function(invSnap) {
+                if (!invSnap.exists() || !Object.keys(invSnap.val()).length) {
+                    listEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.3);padding:12px;text-align:center;">No invited users yet.<br>Share your link to get cards!</div>';
+                    return;
+                }
+                var invited = invSnap.val();
+                var html = '';
+                Object.keys(invited).forEach(function(iUid) {
+                    var person = invited[iUid];
+                    var photo = (person && person.photo) ? person.photo : 'https://via.placeholder.com/32';
+                    var name  = (person && person.name)  ? person.name  : 'User';
+                    var time  = (person && person.joinedAt) ? new Date(person.joinedAt).toLocaleDateString('en-PH', {month:'short', day:'numeric'}) : '';
+                    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">'
+                          + '<img src="' + photo + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(168,85,247,0.4);" onerror="this.src=\'https://via.placeholder.com/32\'">'
+                          + '<div style="flex:1;min-width:0;">'
+                          +   '<div style="font-size:13px;font-weight:800;color:#e9d5ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + name + '</div>'
+                          +   (time ? '<div style="font-size:10px;color:rgba(255,255,255,0.35);">Joined ' + time + '</div>' : '')
+                          + '</div>'
+                          + '<div style="font-size:11px;font-weight:800;color:#10b981;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:20px;padding:2px 8px;">+1 Card</div>'
+                          + '</div>';
+                });
+                listEl.innerHTML = html || '<div style="font-size:12px;color:rgba(255,255,255,0.3);padding:12px;text-align:center;">No data found.</div>';
+            }).catch(function() { listEl.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.3);padding:10px;text-align:center;">Failed to load.</div>'; });
+        }).catch(function() { listEl.innerHTML = ''; });
     }
 
     function openLeaderboard() {
