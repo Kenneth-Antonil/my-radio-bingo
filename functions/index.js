@@ -12,9 +12,9 @@
  * REQUIRES: Firebase Blaze (pay-as-you-go) plan for scheduled functions.
  */
 
-const { onSchedule } = require('firebase-functions/v2/scheduler');
-const { onValueCreated } = require('firebase-functions/v2/database');
-const admin     = require('firebase-admin');
+const { onSchedule }      = require('firebase-functions/v2/scheduler');
+const { onValueCreated }  = require('firebase-functions/v2/database');
+const admin               = require('firebase-admin');
 
 admin.initializeApp();
 const db        = admin.database();
@@ -33,21 +33,15 @@ function randomPattern() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PUSH NOTIFICATION HELPER
-// Sends a push to all users who have a stored FCM token.
-// Silently skips invalid/expired tokens (cleans them from DB).
-//
-// @param title   string  — Notification title
-// @param body    string  — Notification body
-// @param data    object  — Extra key-value data (optional)
+// PUSH NOTIFICATION HELPER — sends to all users with a stored FCM token
+// Silently cleans invalid/expired tokens from DB.
 // ─────────────────────────────────────────────────────────────────────────────
 async function sendPushToAll(title, body, data = {}) {
     try {
         const usersSnap = await db.ref('users').once('value');
         if (!usersSnap.exists()) return;
 
-        // Collect all valid FCM tokens
-        const tokenMap = {};   // token → uid
+        const tokenMap = {};
         usersSnap.forEach(u => {
             const token = u.val() && u.val().fcmToken;
             if (token && typeof token === 'string') {
@@ -63,25 +57,19 @@ async function sendPushToAll(title, body, data = {}) {
 
         console.log(`[push] Sending "${title}" to ${tokens.length} device(s)...`);
 
-        // Split into batches of 500 (FCM multicast limit)
         const BATCH = 500;
         for (let i = 0; i < tokens.length; i += BATCH) {
             const batch = tokens.slice(i, i + BATCH);
 
-            // ── DATA-ONLY message ──────────────────────────────────────────
-            // BAKIT: Kapag may "notification" field, ang browser mismo ang
-            // nag-handle at nilalampasan ang Service Worker — unreliable sa web.
-            // Data-only = laging dumadaan sa SW onBackgroundMessage = reliable.
-            // ──────────────────────────────────────────────────────────────
             const message = {
                 tokens: batch,
-                // NO "notification" field — data-only para sa web
+                // DATA-ONLY — para laging dumaan sa SW onBackgroundMessage (reliable sa web)
                 data: {
                     title,
                     body,
                     icon: 'https://i.imgur.com/7D8u8h6.png',
-                    url: data.url || '/?tab=bingo',
-                    tag: data.tag || 'rbl-game',
+                    url:  data.url || '/?tab=bingo',
+                    tag:  data.tag || 'rbl-game',
                     requireInteraction: data.requireInteraction || 'false',
                     ...Object.fromEntries(
                         Object.entries(data).map(([k, v]) => [k, String(v)])
@@ -89,18 +77,15 @@ async function sendPushToAll(title, body, data = {}) {
                 },
                 android: {
                     priority: 'high',
-                    // Android: kailangan ng notification block kahit data-only
-                    // para lumabas sa notification tray
                     notification: {
                         title,
                         body,
-                        sound: 'default',
+                        sound:     'default',
                         channelId: 'radiobingo',
-                        icon: 'notification_icon',
+                        icon:      'notification_icon',
                     },
                 },
                 apns: {
-                    // iOS: kailangan din ng notification block
                     payload: {
                         aps: {
                             alert: { title, body },
@@ -112,7 +97,6 @@ async function sendPushToAll(title, body, data = {}) {
                 },
                 webpush: {
                     headers: { Urgency: 'high', TTL: '86400' },
-                    // Web: walang notification block — SW na ang bahala
                     fcmOptions: { link: data.url || '/?tab=bingo' },
                 },
             };
@@ -150,13 +134,70 @@ async function sendPushToAll(title, body, data = {}) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PUSH TO ONE USER — sends to a specific user's FCM token
+// ─────────────────────────────────────────────────────────────────────────────
+async function sendPushToUser(uid, title, body, data = {}) {
+    try {
+        const userSnap = await db.ref('users/' + uid).once('value');
+        if (!userSnap.exists()) return;
+
+        const token = userSnap.val().fcmToken;
+        if (!token || typeof token !== 'string') {
+            console.log(`[push] No FCM token for uid=${uid} — skipping.`);
+            return;
+        }
+
+        const message = {
+            token,
+            data: {
+                title,
+                body,
+                icon: 'https://i.imgur.com/7D8u8h6.png',
+                url:  data.url || '/?tab=messenger',
+                tag:  data.tag || 'rbl-msg',
+                requireInteraction: 'false',
+                ...Object.fromEntries(
+                    Object.entries(data).map(([k, v]) => [k, String(v)])
+                ),
+            },
+            android: {
+                priority: 'high',
+                notification: { title, body, sound: 'default', channelId: 'radiobingo' },
+            },
+            apns: {
+                payload: {
+                    aps: { alert: { title, body }, sound: 'default', badge: 1, 'content-available': 1 },
+                },
+            },
+            webpush: {
+                headers: { Urgency: 'high', TTL: '86400' },
+                fcmOptions: { link: data.url || '/?tab=messenger' },
+            },
+        };
+
+        const response = await messaging.send(message);
+        console.log(`[push] Sent to uid=${uid}: ${response}`);
+
+    } catch (err) {
+        // Clean up invalid token
+        const errCode = err && err.code;
+        if (['messaging/invalid-registration-token', 'messaging/registration-token-not-registered'].includes(errCode)) {
+            await db.ref('users/' + uid + '/fcmToken').remove();
+            console.log(`[push] Removed stale token for uid=${uid}`);
+        } else {
+            console.error(`[push] sendPushToUser error for uid=${uid}:`, err);
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FORMAT TIME HELPER — "2:30 PM" format (Asia/Manila)
 // ─────────────────────────────────────────────────────────────────────────────
 function formatTime(ts) {
     return new Date(ts).toLocaleTimeString('en-PH', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
+        hour:     'numeric',
+        minute:   '2-digit',
+        hour12:   true,
         timeZone: 'Asia/Manila',
     });
 }
@@ -166,7 +207,7 @@ function formatTime(ts) {
 // 1. SCHEDULED DRAW CHECKER — runs every 1 minute
 //    • Sends push 10 mins before a draw
 //    • Sends push 5 mins before a draw
-//    • Starts the game when draw time is reached (push "NOW DRAWING")
+//    • Starts the game when draw time is reached
 // ─────────────────────────────────────────────────────────────────────────────
 exports.scheduledDrawChecker = onSchedule(
     { schedule: 'every 1 minutes', timeZone: 'Asia/Manila' },
@@ -184,12 +225,10 @@ exports.scheduledDrawChecker = onSchedule(
 
             if (typeof schedTime !== 'number') continue;
 
-            const minsUntil = (schedTime - now) / 60000;    // float, can be negative
+            const minsUntil = (schedTime - now) / 60000;
 
             // ── 10-MINUTE WARNING ──────────────────────────────────────────
-            // Window: schedTime - 10min ±30s (so we don't skip if function fires late)
             if (minsUntil > 9.5 && minsUntil <= 10.5) {
-                // Only send once — track with a flag in DB
                 const flagRef  = db.ref(`gameState/notifSent/${key}_10min`);
                 const flagSnap = await flagRef.once('value');
                 if (!flagSnap.exists()) {
@@ -218,7 +257,7 @@ exports.scheduledDrawChecker = onSchedule(
                     await sendPushToAll(
                         'Draw in 5 Minutes',
                         `${drawLabel} magsisimula na sa ${formatTime(schedTime)}. Get your bingo card ready.`,
-                        { tag: 'rbl-10min', url: '/?tab=bingo', requireInteraction: 'true' }
+                        { tag: 'rbl-5min', url: '/?tab=bingo', requireInteraction: 'true' }
                     );
                     console.log(`[schedChecker] 5-min push sent for key=${key}`);
                 }
@@ -227,27 +266,22 @@ exports.scheduledDrawChecker = onSchedule(
             // ── DRAW TIME — start the game ─────────────────────────────────
             if (now < schedTime || now >= schedTime + 65000) continue;
 
-            // Remove schedule first (prevent double-trigger)
             await db.ref('gameState/schedules/' + key).remove();
-            // Clean up countdown notif flags for this schedule
             await db.ref(`gameState/notifSent/${key}_10min`).remove();
             await db.ref(`gameState/notifSent/${key}_5min`).remove();
 
-            // Skip if winner already exists (game still running from another source)
             const winnerSnap = await db.ref('gameState/latestWinner').once('value');
             if (winnerSnap.exists()) {
                 console.log(`[schedChecker] Skipping ${key} — winner already exists.`);
                 continue;
             }
 
-            // Skip if cloud draw already active
             const cfgSnap = await db.ref('gameState/drawConfig/cloudEnabled').once('value');
             if (cfgSnap.val() === true) {
                 console.log(`[schedChecker] Skipping ${key} — cloud draw already active.`);
                 continue;
             }
 
-            // ── Clear board from previous game ──
             await Promise.all([
                 db.ref('drawnNumbers').remove(),
                 db.ref('gameState/winners').remove(),
@@ -256,7 +290,6 @@ exports.scheduledDrawChecker = onSchedule(
                 db.ref('gameState/drawLock').remove(),
             ]);
 
-            // Reset all users' hasWonCurrent flag
             const usersSnap = await db.ref('users').once('value');
             if (usersSnap.exists()) {
                 const updates = {};
@@ -264,7 +297,6 @@ exports.scheduledDrawChecker = onSchedule(
                 await db.ref('users').update(updates);
             }
 
-            // ── Set pattern & jackpot ──
             let pattern;
             if (isJP) {
                 pattern = 'Blackout';
@@ -275,17 +307,15 @@ exports.scheduledDrawChecker = onSchedule(
             }
             await db.ref('gameState/currentPattern').set(pattern);
 
-            // ── Start Cloud Draw Engine ──
             await db.ref('gameState').update({ status: 'playing', gameStartTime: now });
             await db.ref('gameState/drawConfig').update({
-                cloudEnabled: true,
-                speed: 8000,
-                startedAt: now,
-                lastDrawAt: now,
-                triggeredBySchedule: key,
+                cloudEnabled:          true,
+                speed:                 8000,
+                startedAt:             now,
+                lastDrawAt:            now,
+                triggeredBySchedule:   key,
             });
 
-            // ── 🔔 NOW DRAWING push notification ──
             const patternLabel = pattern === 'Blackout'
                 ? `Blackout — Jackpot ₱${(jpAmt || 0).toLocaleString()}`
                 : pattern;
@@ -304,8 +334,6 @@ exports.scheduledDrawChecker = onSchedule(
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. CLOUD DRAW ENGINE — runs every 1 minute
-//    Draws balls according to configured speed.
-//    Handles winner detection, full-board detection, and auto-reset.
 // ─────────────────────────────────────────────────────────────────────────────
 exports.cloudDrawEngine = onSchedule(
     { schedule: 'every 1 minutes', timeZone: 'Asia/Manila' },
@@ -318,7 +346,6 @@ exports.cloudDrawEngine = onSchedule(
         const startedAt = cfg.startedAt || Date.now();
         const now       = Date.now();
 
-        // ── Check for winner ──
         const winnerSnap = await db.ref('gameState/latestWinner').once('value');
         if (winnerSnap.exists()) {
             console.log('[drawEngine] Winner found — triggering auto-reset.');
@@ -326,14 +353,12 @@ exports.cloudDrawEngine = onSchedule(
             return null;
         }
 
-        // ── Get currently drawn numbers ──
         const drawnSnap = await db.ref('drawnNumbers').once('value');
         const drawnData = drawnSnap.val() || {};
         let drawnNums   = Object.values(drawnData).map(n => parseInt(n)).filter(n => !isNaN(n));
 
         if (drawnNums.length >= 75) {
             console.log('[drawEngine] All 75 balls drawn — auto-reset.');
-            // Notify players no winner this round
             await sendPushToAll(
                 'No Winner This Round',
                 'All 75 balls drawn with no winner. Stay tuned for the next draw.',
@@ -343,7 +368,6 @@ exports.cloudDrawEngine = onSchedule(
             return null;
         }
 
-        // ── Calculate how many balls should have been drawn ──
         const elapsed     = now - startedAt;
         const totalShould = Math.floor(elapsed / speed) + 1;
         const ballsToDraw = Math.min(totalShould - drawnNums.length, 8);
@@ -352,27 +376,16 @@ exports.cloudDrawEngine = onSchedule(
 
         for (let i = 0; i < ballsToDraw; i++) {
             const wCheck = await db.ref('gameState/latestWinner').once('value');
-            if (wCheck.exists()) {
-                await triggerAutoReset(wCheck.val());
-                return null;
-            }
+            if (wCheck.exists()) { await triggerAutoReset(wCheck.val()); return null; }
             if (drawnNums.length >= 75) {
-                await sendPushToAll(
-                    'No Winner This Round',
-                    'All 75 balls drawn with no winner.',
-                    { tag: 'rbl-no-winner', url: '/?tab=bingo' }
-                );
+                await sendPushToAll('No Winner This Round', 'All 75 balls drawn with no winner.', { tag: 'rbl-no-winner', url: '/?tab=bingo' });
                 await triggerAutoReset(null);
                 return null;
             }
 
-            // Pick a unique random number 1–75
             let next, tries = 0;
-            do {
-                next = Math.floor(Math.random() * 75) + 1;
-                tries++;
-            } while (drawnNums.includes(next) && tries < 300);
-
+            do { next = Math.floor(Math.random() * 75) + 1; tries++; }
+            while (drawnNums.includes(next) && tries < 300);
             if (tries >= 300) break;
 
             await db.ref('drawnNumbers/' + next).set(next);
@@ -387,7 +400,6 @@ exports.cloudDrawEngine = onSchedule(
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. WINNER TRIGGER — fires instantly when a winner is written
-//    Sends winner push notification, then handles auto-reset.
 // ─────────────────────────────────────────────────────────────────────────────
 exports.onWinnerFound = onValueCreated(
     { ref: 'gameState/latestWinner', region: 'asia-southeast1' },
@@ -395,20 +407,17 @@ exports.onWinnerFound = onValueCreated(
         const winner = event.data.val();
         if (!winner) return null;
 
-        console.log(`[onWinnerFound] Winner: ${winner.name} — sending push & scheduling reset in 10s...`);
+        console.log(`[onWinnerFound] Winner: ${winner.name} — sending push...`);
 
-        // Stop cloud draw first
         await db.ref('gameState/drawConfig').update({ cloudEnabled: false });
         await db.ref('gameState/cloudDrawLock').remove();
         await db.ref('gameState/drawLock').remove();
 
-        // Save to persistent lastGameWinner
         await db.ref('gameState/lastGameWinner').set({
             ...winner,
             resetAt: Date.now() + 10000
         });
 
-        // ── 🔔 Winner push notification ──
         const winnerName    = winner.name    || 'A player';
         const winnerPattern = winner.pattern || 'Bingo';
         const prizeAmt      = winner.prize   ? ` · ₱${Number(winner.prize).toLocaleString()}` : '';
@@ -420,7 +429,6 @@ exports.onWinnerFound = onValueCreated(
             { tag: 'rbl-winner', url: '/?tab=bingo', requireInteraction: 'true' }
         );
 
-        // Wait 10 seconds then auto-reset
         await new Promise(r => setTimeout(r, 10000));
         await performReset();
 
@@ -429,7 +437,98 @@ exports.onWinnerFound = onValueCreated(
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HELPER: Trigger auto-reset (stops draw, saves winner, clears board)
+// 4. ✉️  MESSAGE NOTIFICATION — fires instantly when a new PM is written
+//    Sends a push notification ONLY to the recipient (hindi sa sender).
+//    Path: messages/{messageId} with fields: from, to, text, image, timestamp
+// ─────────────────────────────────────────────────────────────────────────────
+exports.onNewMessage = onValueCreated(
+    { ref: 'messages/{messageId}', region: 'asia-southeast1' },
+    async (event) => {
+        const msg = event.data.val();
+        if (!msg || !msg.to || !msg.from) return null;
+
+        const recipientUid = msg.to;
+        const senderUid    = msg.from;
+
+        // Don't notify if sender = recipient (shouldn't happen but safety check)
+        if (recipientUid === senderUid) return null;
+
+        // Get sender's name for the notification
+        const senderSnap = await db.ref('users/' + senderUid).once('value');
+        const sender     = senderSnap.val();
+        if (!sender) return null;
+
+        const senderName = sender.name || 'Someone';
+        const msgPreview = msg.isSticker
+            ? '(Sticker)'
+            : msg.isVoice
+            ? '(Voice note)'
+            : msg.image
+            ? '(Photo)'
+            : (msg.text || '').substring(0, 100);
+
+        console.log(`[onNewMessage] From ${senderName} → uid=${recipientUid}`);
+
+        await sendPushToUser(
+            recipientUid,
+            senderName,
+            msgPreview || 'Sent you a message',
+            {
+                tag: 'rbl-pm-' + senderUid,  // Group notifications per sender
+                url: '/?tab=messenger',
+                requireInteraction: 'false',
+            }
+        );
+
+        return null;
+    });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. 👥  GROUP MESSAGE NOTIFICATION — fires when a new group message is written
+//    Sends push to all group members EXCEPT the sender.
+//    Path: groupMessages/{groupId}/{messageId}
+// ─────────────────────────────────────────────────────────────────────────────
+exports.onNewGroupMessage = onValueCreated(
+    { ref: 'groupMessages/{groupId}/{messageId}', region: 'asia-southeast1' },
+    async (event) => {
+        const msg     = event.data.val();
+        const groupId = event.params.groupId;
+        if (!msg || !msg.from || !groupId) return null;
+
+        // Get group info
+        const groupSnap = await db.ref('groups/' + groupId).once('value');
+        const group     = groupSnap.val();
+        if (!group || !group.members) return null;
+
+        const senderUid  = msg.from;
+        const senderName = msg.senderName || 'Someone';
+        const groupName  = group.name || 'Group';
+        const msgPreview = msg.isSticker ? '(Sticker)' : msg.isVoice ? '(Voice note)' : msg.image ? '(Photo)' : (msg.text || '').substring(0, 80);
+
+        console.log(`[onNewGroupMessage] Group=${groupName}, From=${senderName}, Members=${Object.keys(group.members).length}`);
+
+        // Send to all members except the sender
+        const memberUids = Object.keys(group.members).filter(uid => uid !== senderUid);
+        await Promise.all(memberUids.map(uid =>
+            sendPushToUser(
+                uid,
+                `${groupName}`,
+                `${senderName}: ${msgPreview || 'Sent a message'}`,
+                {
+                    tag: 'rbl-grp-' + groupId,
+                    url: '/?tab=messenger',
+                    requireInteraction: 'false',
+                }
+            )
+        ));
+
+        return null;
+    });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 async function triggerAutoReset(winner) {
     await db.ref('gameState/drawConfig').update({ cloudEnabled: false });
@@ -466,7 +565,6 @@ async function performReset() {
 
     await db.ref('gameState').update({ status: 'waiting' });
 
-    // Reset hasWonCurrent for all users
     const usersSnap = await db.ref('users').once('value');
     if (usersSnap.exists()) {
         const updates = {};
@@ -474,8 +572,6 @@ async function performReset() {
         await db.ref('users').update(updates);
     }
 
-    // Set next random pattern
     await db.ref('gameState/currentPattern').set(randomPattern());
-
     console.log('[performReset] Board cleared. Ready for next draw.');
 }
