@@ -17,17 +17,15 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-const ICON  = 'https://i.imgur.com/7D8u8h6.png';
-const BADGE = 'https://i.imgur.com/7D8u8h6.png';
+const ICON  = 'https://i.imgur.com/4nljOtR.png';
+const BADGE = 'https://i.imgur.com/4nljOtR.png';
 
 // ─────────────────────────────────────────────────────────────
 // NOTIFICATION PROFILES
-// Bawat tag ay may sariling style — icon, vibrate, actions
 // ─────────────────────────────────────────────────────────────
 function getProfile(tag, title, body, url) {
     const fullUrl = url.startsWith('http') ? url : self.location.origin + url;
 
-    // Default profile
     const base = {
         icon: ICON,
         badge: BADGE,
@@ -43,7 +41,6 @@ function getProfile(tag, title, body, url) {
         ]
     };
 
-    // ── Draw is starting NOW ──────────────────────────────────
     if (tag === 'rbl-draw-start') {
         return {
             ...base,
@@ -56,7 +53,6 @@ function getProfile(tag, title, body, url) {
         };
     }
 
-    // ── Winner announced ─────────────────────────────────────
     if (tag === 'rbl-winner') {
         return {
             ...base,
@@ -69,7 +65,6 @@ function getProfile(tag, title, body, url) {
         };
     }
 
-    // ── Jackpot draw ─────────────────────────────────────────
     if (tag === 'rbl-jackpot') {
         return {
             ...base,
@@ -82,7 +77,6 @@ function getProfile(tag, title, body, url) {
         };
     }
 
-    // ── 10-minute warning ────────────────────────────────────
     if (tag === 'rbl-10min') {
         return {
             ...base,
@@ -95,7 +89,6 @@ function getProfile(tag, title, body, url) {
         };
     }
 
-    // ── 5-minute warning ────────────────────────────────────
     if (tag === 'rbl-5min') {
         return {
             ...base,
@@ -108,7 +101,6 @@ function getProfile(tag, title, body, url) {
         };
     }
 
-    // ── No winner this round ─────────────────────────────────
     if (tag === 'rbl-no-winner') {
         return {
             ...base,
@@ -124,18 +116,12 @@ function getProfile(tag, title, body, url) {
     return base;
 }
 
-// ─────────────────────────────────────────────────────────────
-// CLEAN UP TITLE/BODY — tanggalin ang emoji clutter
-// para mas mukhang professional notification
-// ─────────────────────────────────────────────────────────────
 function cleanText(str) {
-    // Strip leading emojis that look spammy when paired with action buttons
-    // Keep emojis that are part of actual content words
     return (str || '').trim();
 }
 
 // ─────────────────────────────────────────────────────────────
-// BACKGROUND MESSAGE HANDLER
+// BACKGROUND MESSAGE HANDLER (Firebase SDK — single handler)
 // ─────────────────────────────────────────────────────────────
 messaging.onBackgroundMessage(payload => {
     console.log('[SW] Background push received:', payload);
@@ -178,30 +164,6 @@ self.addEventListener('notificationclick', event => {
     );
 });
 
-// ─────────────────────────────────────────────────────────────
-// RAW PUSH FALLBACK (older browsers)
-// ─────────────────────────────────────────────────────────────
-self.addEventListener('push', event => {
-    if (!event.data) return;
-
-    let data = {};
-    try { data = event.data.json(); } catch(e) { return; }
-
-    // If Firebase SDK already handled it, skip
-    if (data.notification) return;
-
-    const payload = data.data || data;
-    const title   = cleanText(payload.title) || 'Talim Connect';
-    const body    = cleanText(payload.body)  || 'You have a new notification.';
-    const url     = payload.url || '/?tab=bingo';
-    const tag     = payload.tag || 'rbl-notif';
-
-    const profile = getProfile(tag, title, body, url);
-
-    event.waitUntil(
-        self.registration.showNotification(title, {
-            body,
-            ...profile
-        })
-    );
-});
+// NOTE: Raw push fallback removed intentionally.
+// Firebase SDK's onBackgroundMessage handles ALL FCM messages.
+// Having both caused every notification to appear twice.
