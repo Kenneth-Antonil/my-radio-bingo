@@ -10603,6 +10603,7 @@ function runMathBlitz(problems) {
     });
     let messaging; try { messaging = firebase.messaging(); } catch(e) { console.log("Messaging failed to init", e); }
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; let lastNotifiedDraw = ""; let selectedReplyId = null;
+    let gameStartTime = 0; // timestamp when current draw started (from Firebase)
     // ===== HEADLESS DRAW ENGINE VARS (global scope) =====
     let _hdeSchedules = {};   // live copy of Firebase schedules
     let _hdeDrawSpeed = 8000; // synced from gameState/drawConfig/speed
@@ -12975,6 +12976,10 @@ function runMathBlitz(problems) {
             extraCards.forEach((ec, idx) => updateGridHitsExtra(idx));
             renderPrevBalls(); checkWin(); checkWinExtra(); checkPuroStatus();
         });
+        db.ref('gameState/gameStartTime').on('value', s => {
+            gameStartTime = s.val() || 0;
+            checkLateJoiner();
+        });
         db.ref('gameState/lastCalled').on('value', s => {
             if(s.exists()) { const num = s.val(); updateCurrentBall(num); if (num !== lastSpokenNumber) { speakNumber(num); lastSpokenNumber = num; } }
             else { updateCurrentBall('--'); lastSpokenNumber = null; }
@@ -13098,6 +13103,15 @@ function runMathBlitz(problems) {
     }
     function triggerWin(cardId) {
         const uid = auth.currentUser.uid;
+        const LATE_CUTOFF_MS = 2 * 60 * 1000; // 2 minutes
+        const cardTimestamp = userData.cardTimestamp || 0;
+
+        // Block late joiners — card must have been generated before gameStartTime + 2 minutes
+        if (gameStartTime > 0 && cardTimestamp > (gameStartTime + LATE_CUTOFF_MS)) {
+            showToast("⛔ Hindi ka mananalo — bukás ka ng app makalipas ang 2 minuto mula nang magsimula ang laro.");
+            return;
+        }
+
         let winPrize = 300;
         if (isJackpotActive) winPrize = currentJackpotAmount;
         // cardId: 'main' or 'extra-0', 'extra-1', etc.
@@ -13232,9 +13246,17 @@ function runMathBlitz(problems) {
     }
     function checkLateJoiner() {
         const overlay = document.getElementById('lateOverlay');
-        if(gameDrawn.length > 0 && !userData.currentCard) { overlay.style.display = 'flex'; }
-        else if (gameDrawn.length > 0 && userData.cardTimestamp > db.ref('gameState/gameStartTime')) { overlay.style.display = 'none'; }
-        else { overlay.style.display = 'none'; }
+        if (!overlay) return;
+        const LATE_CUTOFF_MS = 2 * 60 * 1000; // 2 minutes
+        const isGameActive = gameDrawn.length > 0;
+        const cardTimestamp = userData.cardTimestamp || 0;
+        const joinedLate = gameStartTime > 0 && cardTimestamp > (gameStartTime + LATE_CUTOFF_MS);
+
+        if (isGameActive && (!userData.currentCard || joinedLate)) {
+            overlay.style.display = 'flex';
+        } else {
+            overlay.style.display = 'none';
+        }
     }
     // === BUY EXTRA CARD ===
     function buyExtraCard() {
