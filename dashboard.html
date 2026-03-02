@@ -1333,7 +1333,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
         </div>
     </div>
 
-    <div id="cashout-tab" class="tab-content"><div class="card"><h2><i data-lucide="wallet"></i> GCash Requests</h2><div id="cashoutList"></div></div></div>
+    <div id="cashout-tab" class="tab-content"><div class="card"><h2><i data-lucide="wallet"></i> Cashout Requests (GCash / Maya)</h2><div id="cashoutList"></div></div></div>
     
     <div id="tournament-tab" class="tab-content">
 
@@ -2672,7 +2672,19 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             const r = child.val(); const key = child.key; if(r.status !== 'pending') return;
             const safeName = cleanName(r.name);
             const div = document.createElement('div'); div.className = 'card'; div.style.padding = "15px"; div.style.marginBottom = "10px";
-            div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-weight:800;">${safeName} - <span style="color:var(--gold)">${r.item}</span></div><div style="font-size:11px; opacity:0.6;">GCash: ${r.gcash}</div></div><div style="display:flex; gap:10px;"><button class=\"btn btn-primary\" style=\"width:auto; padding:8px 20px\" onclick=\"updateStatus('${key}', 'sent', ${JSON.stringify(r).replace(/"/g, '&quot;')})\">PAID</button><button class=\"btn btn-danger\" style=\"width:auto; padding:8px 20px\" onclick=\"updateStatus('${key}', 'denied', ${JSON.stringify(r).replace(/"/g, '&quot;')})\">X</button></div></div>`;
+            var methodLabel = (r.method === 'maya' ? '\ud83d\udc9c Maya' : '\ud83d\udc9a GCash');
+            var amtLabel = r.amount ? '\u20B1' + parseFloat(r.amount).toFixed(2) : (r.cost ? '\u20B1' + (r.cost/2500).toFixed(2) : '\u2014');
+            div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+              <div style="flex:1; min-width:200px;">
+                <div style="font-weight:800; font-size:14px;">${safeName} — <span style="color:var(--gold)">${amtLabel}</span></div>
+                <div style="font-size:11px; opacity:0.7; margin-top:3px;">${methodLabel} · <b>${r.accountNumber || r.gcash || '—'}</b> · ${r.accountName || '—'}</div>
+                <div style="font-size:10px; opacity:0.45; margin-top:2px;">${new Date(r.timestamp).toLocaleString()}</div>
+              </div>
+              <div style="display:flex; gap:8px; flex-shrink:0;">
+                <button class=\"btn btn-primary\" style=\"width:auto; padding:8px 18px\" onclick=\"updateStatus('${key}', 'sent', ${JSON.stringify(r).replace(/\"/g, '&quot;')})\">\u2705 PAID</button>
+                <button class=\"btn btn-danger\" style=\"width:auto; padding:8px 14px\" onclick=\"updateStatus('${key}', 'denied', ${JSON.stringify(r).replace(/\"/g, '&quot;')})\">\u2717</button>
+              </div>
+            </div>`;
             list.prepend(div);
         });
     });
