@@ -1808,7 +1808,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
     let userPointsCache = {}; // For detecting live changes
     
     // === CURRENCY LOGIC (ADMIN SIDE) ===
-    const COIN_TO_PHP_RATE = 1; // Must match script.js
+    const COIN_TO_PHP_RATE = 2500; // 2500 coins = ₱1 (50,000 coins = ₱20)
     function formatCurrency(amount) {
         const pesoVal = (amount || 0) / COIN_TO_PHP_RATE;
         return '₱' + pesoVal.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -2262,7 +2262,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 <span style="font-size:9px; opacity:0.6;">${new Date().toLocaleTimeString()}</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="opacity:0.7;">${oldVal} ➝ ${newVal}</span>
+                <span style="opacity:0.7;">${formatCurrency(oldVal)} ➝ ${formatCurrency(newVal)}</span>
                 <span class="${colorClass}">${sign}${formatCurrency(diff)}</span>
             </div>
         `;
@@ -2370,7 +2370,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 '<div class="player-group-meta">' +
                     (hasAnyBingo ? '<span style="font-size:9px;background:var(--success);color:white;padding:2px 6px;border-radius:5px;font-weight:900;">BINGO!</span>' :
                      hasAnyPuro ? '<span style="font-size:9px;background:var(--puro);color:white;padding:2px 6px;border-radius:5px;font-weight:900;">PURO!</span>' : '') +
-                    '<span style="font-size:9px;background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:5px;color:rgba(255,255,255,0.5);">' + (user.points||0) + ' pts</span>' +
+                    '<span style="font-size:9px;background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:5px;color:rgba(255,255,255,0.5);">' + formatCurrency(user.points||0) + '</span>' +
                     (hasExtraCards ? '<span style="font-size:8px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;padding:2px 5px;border-radius:5px;font-weight:800;">' + (extraEntries.length+1) + ' cards</span>' : '') +
                 '</div>';
             group.appendChild(header);
@@ -2673,7 +2673,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             const safeName = cleanName(r.name);
             const div = document.createElement('div'); div.className = 'card'; div.style.padding = "15px"; div.style.marginBottom = "10px";
             var methodLabel = (r.method === 'maya' ? '\ud83d\udc9c Maya' : '\ud83d\udc9a GCash');
-            var amtLabel = r.amount ? '\u20B1' + parseFloat(r.amount).toFixed(2) : (r.cost ? '\u20B1' + (r.cost/2500).toFixed(2) : '\u2014');
+            var amtLabel = r.amount ? '₱' + parseFloat(r.amount).toFixed(2) : (r.cost ? '₱' + (r.cost/COIN_TO_PHP_RATE).toFixed(2) : '—');
             div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
               <div style="flex:1; min-width:200px;">
                 <div style="font-weight:800; font-size:14px;">${safeName} — <span style="color:var(--gold)">${amtLabel}</span></div>
@@ -2966,7 +2966,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                             </div>
                         </div>
                         <div style="font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:8px;">
-                            <span title="${req.uid}">UID: ${req.uid.substring(0,8)}</span> • ${req.bingoWins} wins • ${req.points} pts
+                            <span title="${req.uid}">UID: ${req.uid.substring(0,8)}</span> • ${req.bingoWins} wins • ${formatCurrency(req.points)}
                         </div>
                         <div style="font-size:12px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-bottom:8px;">
                             <strong>Reason:</strong> ${escapeHtml(req.reason)}
@@ -3267,7 +3267,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                     <div style="flex:1;">
                         <strong>${user.name || user.username || user.displayName || 'User'}</strong>
                         <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">
-                            ${user.points || 0} points • ${user.bingoWins || 0} wins
+                            ${formatCurrency(user.points || 0)} • ${user.bingoWins || 0} wins
                         </div>
                     </div>
                     <button class="btn btn-creator" onclick="promoteToCreator('${user.uid}', '${(user.name || '').replace(/'/g, "\\'")}'); event.stopPropagation();" style="padding:6px 12px; font-size:10px; margin:0;">
