@@ -8380,15 +8380,6 @@
             <!-- Dynamic stories load here -->
         </div>
 
-        <!-- STREAK WIDGET -->
-        <div class="streak-home-widget" id="streakHomeWidget" onclick="openLeaderboard()">
-            <div style="line-height:1;filter:drop-shadow(0 0 10px rgba(251,191,36,0.6));"><i data-lucide="flame" style="width:36px;height:36px;vertical-align:middle;color:#f59e0b;"></i></div>
-            <div style="flex:1;">
-                <div style="font-size:14px;font-weight:900;color:white;">Daily Streak</div>
-                <div style="font-size:12px;color:rgba(255,255,255,0.5);">Log in daily to earn bonus coins!</div>
-            </div>
-            <div style="font-size:12px;color:#fbbf24;font-weight:700;">▶ VIEW</div>
-        </div>
         
         <div class="post-creator-modern" id="mainPostCreator">
             <!-- Header with Avatar and Input -->
@@ -8469,16 +8460,6 @@
                     <button class="poll-add-btn" onclick="addPollOption()">+ Add Option</button>
                 </div>
             </div>
-        </div>
-
-        <div id="pymkSection" class="pymk-section" style="display:none;">
-            <div class="pymk-title">
-                <div class="pymk-title-left">
-                    <i data-lucide="users"></i>
-                    People You May Know
-                </div>
-            </div>
-            <div class="pymk-scroll" id="pymkList"></div>
         </div>
 
         <div class="feed-sort-modern">
@@ -15646,130 +15627,199 @@ Please explain why you want a verification badge:`;
 
         feedContainer.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>Loading Feed...</div>";
         
-        // Get my friends list
-        db.ref('friends/' + auth.currentUser.uid).once('value', fSnap => {
+        const currentUid = auth.currentUser.uid;
+        const now = Date.now();
+
+        // ── FB-style algorithm helpers ──────────────────────────────────────
+        // Recency decay: score drops to ~50% after `halfLifeMs` milliseconds
+        function recencyDecay(timestamp, halfLifeMs) {
+            const ageMs = now - (timestamp || 0);
+            return Math.pow(0.5, ageMs / halfLifeMs);
+        }
+
+        // Compute a FB-style EdgeRank-inspired score for a post
+        function computeFBScore(post, authorData, isFriend, isMe, interactedUids) {
+            const likes      = post.likes    || 0;
+            const comments   = post.commentCount || post.comments || 0;
+            const shares     = post.shares   || 0;
+            const isCreator  = !!(authorData && authorData.isContentCreator);
+
+            // --- Engagement signal (FB weights: comment > reaction > share > click) ---
+            const engagementRaw = (likes * 1) + (comments * 4) + (shares * 2);
+
+            // --- Affinity multiplier (who posted it) ---
+            let affinity = 0.3;                        // stranger
+            if (isMe)      affinity = 1.0;             // own posts always near top
+            else if (isMe) affinity = 1.0;
+            else if (isFriend && interactedUids.has(post.uid)) affinity = 0.92; // close friend (you've liked/commented their stuff)
+            else if (isFriend) affinity = 0.75;        // regular friend
+            else if (isCreator) affinity = 0.65;       // verified creator you follow
+            else if (engagementRaw >= 15) affinity = 0.50; // viral post
+            else if (engagementRaw >= 5)  affinity = 0.40; // somewhat popular
+
+            // --- Content-type weight (video > photo > link > text) ---
+            let contentWeight = 1.0;
+            if (post.video)  contentWeight = 1.4;
+            else if (post.image) contentWeight = 1.15;
+            else if (post.poll)  contentWeight = 1.1;
+
+            // --- Recency decay ---
+            // Friends/own posts: 6h half-life | creators: 12h | others: 3h
+            const halfLife = isMe ? 8 * 3600000
+                           : isFriend ? 6 * 3600000
+                           : isCreator ? 12 * 3600000
+                           : 3 * 3600000;
+            const decay = recencyDecay(post.timestamp, halfLife);
+
+            // --- Final score ---
+            return affinity * contentWeight * (1 + Math.log1p(engagementRaw)) * decay;
+        }
+
+        // Get my friends list + posts I've interacted with (for affinity)
+        Promise.all([
+            db.ref('friends/' + currentUid).once('value'),
+            db.ref('users').once('value')
+        ]).then(([fSnap, usersSnap]) => {
             const myFriends = fSnap.exists() ? Object.keys(fSnap.val()) : [];
-            
-            // Get all users to check content creator status
-            db.ref('users').once('value', usersSnap => {
-                const allUsersData = {};
-                usersSnap.forEach(uSnap => {
-                    allUsersData[uSnap.key] = uSnap.val();
+            const allUsersData = {};
+            usersSnap.forEach(uSnap => { allUsersData[uSnap.key] = uSnap.val(); });
+
+            // Build a set of UIDs this user has recently interacted with
+            // (approximated from reaction/comment records; fall back to empty set)
+            const interactedUids = new Set();
+            db.ref('reactions').orderByChild('uid').equalTo(currentUid).limitToLast(100)
+              .once('value', rSnap => {
+                rSnap.forEach(r => {
+                    const v = r.val();
+                    if (v && v.postUid) interactedUids.add(v.postUid);
+                });
+              }).catch(() => {}); // non-critical, ignore errors
+
+            postListener = db.ref('socialPosts').limitToLast(80);
+            postListener.on('value', pSnap => {
+                const allPosts = [];
+                pSnap.forEach(child => { 
+                    const val = child.val();
+                    if (typeof val === 'object' && val !== null && !val.deleted) {
+                        const authorData   = allUsersData[val.uid] || {};
+                        const isFriend     = myFriends.includes(val.uid);
+                        const isMe         = val.uid === currentUid;
+                        const isCreator    = !!(authorData.isContentCreator);
+                        const fbScore      = computeFBScore(val, authorData, isFriend, isMe, interactedUids);
+                        const likes        = val.likes || 0;
+
+                        allPosts.push({ 
+                            key: child.key,
+                            fbScore,
+                            hypeScore: (likes * 3) + recencyDecay(val.timestamp, 6 * 3600000) * 100,
+                            isContentCreator: isCreator,
+                            isFriend,
+                            isMe,
+                            ...val 
+                        }); 
+                    }
                 });
                 
-                postListener = db.ref('socialPosts').limitToLast(50);
-                postListener.on('value', pSnap => {
-                    const allPosts = [];
-                    pSnap.forEach(child => { 
-                        const val = child.val();
-                        if(typeof val === 'object' && val !== null && !val.deleted) {
-                            const likeCount = val.likes || 0;
-                            const authorData = allUsersData[val.uid] || {};
-                            const isContentCreator = authorData.isContentCreator || false;
-                            const isFriend = myFriends.includes(val.uid);
-                            const isHighEngagement = likeCount >= 5; // 5+ likes = high engagement
-                            
-                            // Calculate priority score
-                            let priorityScore = val.timestamp; // Base: timestamp
-                            
-                            if(isContentCreator) {
-                                // Content creators get massive boost (4 days worth)
-                                priorityScore += (345600000); // 4 days in milliseconds
-                            } else if(isFriend) {
-                                // Friends get big boost (2 days worth)
-                                priorityScore += (172800000); // 2 days in milliseconds
-                            } else if(isHighEngagement) {
-                                // High engagement non-friends get medium boost (1 day worth)
-                                priorityScore += (86400000); // 1 day in milliseconds
-                            }
-                            // Non-friends with low engagement stay at base timestamp
-                            
-                            // Add hype score for "HOT" sorting
-                            const hypeScore = val.timestamp + (likeCount * 3600000);
-                            
-                            allPosts.push({ 
-                                key: child.key, 
-                                priorityScore: priorityScore,
-                                hypeScore: hypeScore,
-                                isContentCreator: isContentCreator,
-                                isFriend: isFriend,
-                                ...val 
-                            }); 
-                        }
-                    });
+                // ── Sorting ──────────────────────────────────────────────
+                if (feedSortMethod === 'hype') {
+                    // HOT: pure engagement + recency (trending / viral)
+                    allPosts.sort((a, b) => b.hypeScore - a.hypeScore);
+                } else {
+                    // DEFAULT (FB-style): personalised ranking
+                    allPosts.sort((a, b) => b.fbScore - a.fbScore);
+                }
+
+                // ── Render ───────────────────────────────────────────────
+                const scrollPos = window.scrollY; 
+                feedContainer.innerHTML = "";
+
+                if (allPosts.length === 0) {
+                    feedContainer.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>No posts yet. Be the first!</div>";
+                    return;
+                }
+                
+                // Decide where to inject the PYMK block (roughly mid-feed, after ~4 posts)
+                const pymkInsertIndex = Math.min(4, Math.floor(allPosts.length / 2));
+                let visiblePostCount = 0;
+                let pymkInjected = false;
+                let adCounter = 0;
+                
+                allPosts.forEach(post => {
+                    const isFriend  = myFriends.includes(post.uid);
+                    const isMe      = post.uid === currentUid;
                     
-                    // Sort based on selected method
-                    if(feedSortMethod === 'hype') {
-                        // HOT: Use hype score but still respect priority tiers
-                        allPosts.sort((a, b) => {
-                            // Content creators always first
-                            if(a.isContentCreator && !b.isContentCreator) return -1;
-                            if(!a.isContentCreator && b.isContentCreator) return 1;
-                            
-                            // Then friends
-                            if(a.isFriend && !b.isFriend) return -1;
-                            if(!a.isFriend && b.isFriend) return 1;
-                            
-                            // Within same tier, sort by hype score
-                            return b.hypeScore - a.hypeScore;
-                        });
-                    } else {
-                        // NEW: Use priority score (content creators > friends > high engagement > rest)
-                        allPosts.sort((a, b) => b.priorityScore - a.priorityScore);
+                    // === VISIBILITY FILTERING ===
+                    const visibility = post.visibility || 'public';
+                    if (visibility === 'private'  && !isMe)           return;
+                    if (visibility === 'friends'  && !isMe && !isFriend) return;
+                    
+                    const div = createPostElement(post, isFriend || isMe);
+                    feedContainer.appendChild(div);
+                    loadCommentPreview(post.key);
+                    loadReactionSummary(post.key);
+                    visiblePostCount++;
+                    
+                    // === INJECT PYMK BLOCK MID-FEED ===
+                    if (!pymkInjected && visiblePostCount === pymkInsertIndex) {
+                        pymkInjected = true;
+                        const pymkWrapper = document.createElement('div');
+                        pymkWrapper.id = 'pymkSection';
+                        pymkWrapper.className = 'pymk-section';
+                        pymkWrapper.style.cssText = 'display:none; margin: 12px 0;';
+                        pymkWrapper.innerHTML = `
+                            <div class="pymk-title">
+                                <div class="pymk-title-left">
+                                    <i data-lucide="users"></i>
+                                    People You May Know
+                                </div>
+                            </div>
+                            <div class="pymk-scroll" id="pymkList"></div>
+                        `;
+                        feedContainer.appendChild(pymkWrapper);
+                        // Trigger PYMK load now that DOM element exists
+                        setTimeout(() => loadPYMK(), 100);
                     }
-                    
-                    const scrollPos = window.scrollY; 
-                    
-                    feedContainer.innerHTML = "";
-                    if(allPosts.length === 0) {
-                        feedContainer.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>No posts yet. Be the first!</div>";
-                        return;
-                    }
-                    
-                    let adCounter = 0;
-                    
-                    allPosts.forEach(post => {
-                        const isFriend = myFriends.includes(post.uid);
-                        const isMe = post.uid === auth.currentUser.uid;
-                        
-                        // === VISIBILITY FILTERING ===
-                        const visibility = post.visibility || 'public'; // Default to public for old posts
-                        
-                        // Only Me: only author can see
-                        if(visibility === 'private' && !isMe) return;
-                        
-                        // Friends Only: only friends and author can see
-                        if(visibility === 'friends' && !isMe && !isFriend) return;
-                        
-                        // Public: everyone can see (no filtering needed)
-                        
-                        const div = createPostElement(post, isFriend || isMe);
-                        feedContainer.appendChild(div);
-                        loadCommentPreview(post.key);
-                        loadReactionSummary(post.key);
-                        
-                        // === IN-FEED ADS INJECTION ===
-                        adCounter++;
-                        if(adCounter % 5 === 0) {
-                             const adDiv = document.createElement('div');
-                             adDiv.className = 'ad-container-global';
-                             adDiv.style.margin = '15px auto';
-                             adDiv.innerHTML = `
-                                <script type="text/javascript">
-                                    atOptions = { 'key' : '59f94c5cb7bcd84edb277947774c3b9d', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
-                                <\/script>
-                                <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"><\/script>
-                             `;
-                             feedContainer.appendChild(adDiv);
-                        }
-                    });
-                    lucide.createIcons();
-                    
-                    if(document.getElementById('view-home').style.display !== 'none' && window.scrollY > 200) {
-                         // Only restore scroll if we are down the page
-                         setTimeout(() => window.scrollTo(0, scrollPos), 10);
+
+                    // === IN-FEED ADS INJECTION ===
+                    adCounter++;
+                    if (adCounter % 5 === 0) {
+                         const adDiv = document.createElement('div');
+                         adDiv.className = 'ad-container-global';
+                         adDiv.style.margin = '15px auto';
+                         adDiv.innerHTML = `
+                            <script type="text/javascript">
+                                atOptions = { 'key' : '59f94c5cb7bcd84edb277947774c3b9d', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };
+                            <\/script>
+                            <script type="text/javascript" src="https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js"><\/script>
+                         `;
+                         feedContainer.appendChild(adDiv);
                     }
                 });
+
+                // If feed is too short for PYMK to be injected, append it at the end
+                if (!pymkInjected) {
+                    const pymkWrapper = document.createElement('div');
+                    pymkWrapper.id = 'pymkSection';
+                    pymkWrapper.className = 'pymk-section';
+                    pymkWrapper.style.cssText = 'display:none; margin: 12px 0;';
+                    pymkWrapper.innerHTML = `
+                        <div class="pymk-title">
+                            <div class="pymk-title-left">
+                                <i data-lucide="users"></i>
+                                People You May Know
+                            </div>
+                        </div>
+                        <div class="pymk-scroll" id="pymkList"></div>
+                    `;
+                    feedContainer.appendChild(pymkWrapper);
+                    setTimeout(() => loadPYMK(), 100);
+                }
+
+                lucide.createIcons();
+                
+                if (document.getElementById('view-home').style.display !== 'none' && window.scrollY > 200) {
+                     setTimeout(() => window.scrollTo(0, scrollPos), 10);
+                }
             });
         });
     }
