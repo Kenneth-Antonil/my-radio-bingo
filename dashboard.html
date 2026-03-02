@@ -191,10 +191,17 @@
             padding: var(--spacing-sm); 
             border-radius: var(--radius-xl); 
             background: linear-gradient(145deg, rgba(139, 92, 246, 0.05), rgba(0, 0, 0, 0.3));
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent) transparent;
         }
+        .tabs-nav::-webkit-scrollbar { height: 4px; }
+        .tabs-nav::-webkit-scrollbar-track { background: transparent; }
+        .tabs-nav::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
         .tab-btn { 
-            flex: 1; 
-            padding: var(--spacing-md); 
+            flex: 0 0 auto; 
+            padding: 10px var(--spacing-md); 
             border-radius: var(--radius-md); 
             border: none; 
             background: transparent; 
@@ -205,8 +212,9 @@
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            gap: var(--spacing-xs); 
-            font-size: 13px;
+            gap: 6px; 
+            font-size: 12px;
+            white-space: nowrap;
             position: relative;
             overflow: hidden;
         }
@@ -234,7 +242,7 @@
             box-shadow: 0 6px 20px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2); 
             transform: translateY(-2px); 
         }
-        .tab-content { display: none; height: calc(100vh - 140px); overflow-y: auto; padding-right: var(--spacing-sm); padding-bottom: var(--spacing-lg); }
+        .tab-content { display: none; height: calc(100vh - 175px); overflow-y: auto; padding-right: var(--spacing-sm); padding-bottom: var(--spacing-lg); }
         .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .winner-marquee { 
@@ -788,6 +796,12 @@
         
         @media (max-width: 1100px) { body { grid-template-columns: 250px 1fr; overflow-y: auto; height: auto; } .activity-panel { display: none; } }
         @media (max-width: 900px) { body { grid-template-columns: 1fr; } .sidebar { height: auto; max-height: 500px; } .tab-content { height: auto; overflow: visible; } .main-section { padding-bottom: 50px; } }
+        .main-section {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: calc(100vh - 40px);
+        }
         /* ===== TOURNAMENT MANAGER STYLES ===== */
         .tourn-status-badge {
             display: inline-flex;
@@ -1425,6 +1439,9 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             </div>
         </div>
     </div>
+
+    <!-- ===== SUPPORT TAB ===== -->
+    <div id="support-tab" class="tab-content">
         <div class="card">
             <h2><i data-lucide="message-square"></i> Support Messages</h2>
             <div style="font-size:11px; opacity:0.6; margin-bottom:15px;">User support requests and inquiries</div>
@@ -4302,7 +4319,9 @@ function deletePartnerApp(key, name) {
     window.openTab = function(tabId, btn) {
         _origOT(tabId, btn);
         if (tabId === 'partners-tab') loadPartnerApps();
+        if (tabId === 'influencers-tab') loadInfluencerApps();
         if (tabId === 'myshop-tab') { loadShopProducts(); loadShopVouchers(); loadShopOrders('all'); }
+        if (tabId === 'support-tab') { /* supportMessages listener is always active via db.ref.on() */ }
     };
 })();
 
@@ -5019,10 +5038,10 @@ function loadSpecialEvents() {
                     (ev.description ? '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px;">' + _seEsc(ev.description) + '</div>' : '') +
                   '</div>' +
                   '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">' +
-                    '<button onclick="viewQualifiedUsers('' + ev._key + '','' + _seEsc(ev.name).replace(/'/g,"\'") + '')" style="padding:7px 12px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#818cf8;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">👥 View Qualified</button>' +
+                    '<button data-key="' + _seEsc(ev._key) + '" data-name="' + _seEsc(ev.name) + '" onclick="viewQualifiedUsers(this.dataset.key, this.dataset.name)" style="padding:7px 12px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:#818cf8;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;">👥 View Qualified</button>' +
                     (isActive
-                      ? '<button onclick="endSpecialEvent('' + ev._key + '')" style="padding:7px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#f87171;font-size:11px;font-weight:800;cursor:pointer;">⏹ End Event</button>'
-                      : '<button onclick="deleteSpecialEvent('' + ev._key + '')" style="padding:7px 12px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.15);border-radius:8px;color:#ef4444;font-size:11px;font-weight:800;cursor:pointer;">🗑 Delete</button>'
+                      ? '<button data-key="' + _seEsc(ev._key) + '" onclick="endSpecialEvent(this.dataset.key)" style="padding:7px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#f87171;font-size:11px;font-weight:800;cursor:pointer;">⏹ End Event</button>'
+                      : '<button data-key="' + _seEsc(ev._key) + '" onclick="deleteSpecialEvent(this.dataset.key)" style="padding:7px 12px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.15);border-radius:8px;color:#ef4444;font-size:11px;font-weight:800;cursor:pointer;">🗑 Delete</button>'
                     ) +
                   '</div>' +
                 '</div>';
@@ -5053,7 +5072,7 @@ function viewQualifiedUsers(eventKey, eventName) {
             row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(0,0,0,0.2);border-radius:10px;margin-bottom:8px;border:1px solid rgba(16,185,129,0.15);';
             row.innerHTML =
                 '<span style="font-size:11px;font-weight:900;color:rgba(255,255,255,0.3);width:20px;text-align:center;">' + count + '</span>' +
-                '<img src="' + (u.photo||'') + '" style="width:34px;height:34px;border-radius:50%;object-fit:cover;background:#1e293b;" onerror="this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(u.name||'U') + '&background=1e293b&color=fff&size=34'">' +
+                '<img src="' + (u.photo||'') + '" style="width:34px;height:34px;border-radius:50%;object-fit:cover;background:#1e293b;" onerror="this.src=&apos;https://ui-avatars.com/api/?name=' + encodeURIComponent(u.name||'U') + '&background=1e293b&color=fff&size=34&apos;">' +
                 '<div style="flex:1;min-width:0;">' +
                   '<div style="font-size:13px;font-weight:700;color:white;">' + _seEsc(u.name||'Unknown') + '</div>' +
                   '<div style="font-size:10px;color:rgba(255,255,255,0.35);">Qualified: ' + new Date(u.qualifiedAt||Date.now()).toLocaleDateString('fil-PH') + ' · Invites: ' + (u.inviteCount||0) + '</div>' +
