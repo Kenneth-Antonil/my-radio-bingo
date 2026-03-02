@@ -3507,22 +3507,38 @@
         .verified-badge {
             display: inline-flex; align-items: center; justify-content: center;
             width: 18px; height: 18px;
-            background: linear-gradient(135deg, #9333ea, #6d28d9);
+            background: #1877f2;
             border-radius: 50%;
             cursor: pointer; vertical-align: middle; flex-shrink: 0;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(24,119,242,0.4);
+            flex-shrink: 0;
+        }
+        .verified-badge::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.25), transparent 65%);
+            pointer-events: none;
         }
         .verified-badge i { width: 10px; height: 10px; color: white; }
+        /* Gold badge for admins/top creators */
+        .verified-badge.gold {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 1px 3px rgba(245,158,11,0.4);
+        }
 
         /* Verification tooltip */
         .verification-tooltip {
-            position: fixed; background: rgba(10,6,24,0.98);
+            position: fixed; background: #1e2740;
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(147,51,234,0.3); border-radius: 14px;
-            padding: 18px; max-width: 280px; z-index: 10000;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6); display: none;
+            border: 1px solid rgba(24,119,242,0.3); border-radius: 14px;
+            padding: 16px; max-width: 260px; z-index: 10000;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(24,119,242,0.15); display: none;
         }
-        .verification-tooltip h4 { margin: 0 0 8px; color: #a855f7; font-size: 14px; font-weight: 800; }
-        .verification-tooltip p { margin: 0; font-size: 12px; line-height: 1.6; color: #cbd5e1; }
+        .verification-tooltip h4 { margin: 0 0 6px; color: white; font-size: 14px; font-weight: 900; display:flex; align-items:center; gap:6px; }
+        .verification-tooltip p { margin: 0; font-size: 12px; line-height: 1.6; color: rgba(255,255,255,0.6); }
 
         /* Conf textarea */
         .conf-textarea {
@@ -3955,14 +3971,20 @@
         }
 
         .shared-post-container {
-            margin: 0 16px 16px 16px;
-            padding: 12px;
+            margin: 0 0 16px 0;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            border-radius: 14px;
             background: rgba(0, 0, 0, 0.25);
             font-size: 13px;
             color: rgba(255, 255, 255, 0.7);
+            overflow: hidden;
         }
+        .shared-post-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px 6px; }
+        .shared-post-avatar { width: 32px !important; height: 32px !important; border-radius: 50% !important; object-fit: cover; flex-shrink: 0; }
+        .shared-post-body { padding: 0 12px 10px; }
+        .shared-post-media-wrap { width: 100%; overflow: hidden; border-top: 1px solid rgba(255,255,255,0.07); }
+        .shared-post-media-wrap img { width: 100%; max-height: 400px; object-fit: cover; display: block; border-radius: 0 !important; }
+        .shared-post-media-wrap video { width: 100%; max-height: 400px; display: block; }
         
         /* Reaction Popup - Facebook Style */
         .reaction-popup {
@@ -4825,20 +4847,9 @@
             }
             
             /* === SHARED POSTS MOBILE === */
-            .shared-post-container {
-                margin: 0 16px 14px 16px;
-                padding: 12px;
-                font-size: 12px;
-            }
-            
-            .shared-post-container img {
-                width: 28px !important;
-                height: 28px !important;
-            }
-            
-            .shared-post-container .post-image {
-                max-height: 250px;
-            }
+            .shared-post-container { margin: 0 0 14px 0; font-size: 12px; }
+            .shared-post-avatar { width: 28px !important; height: 28px !important; }
+            .shared-post-media-wrap img { max-height: 280px; }
             
             /* === PROFILE & OTHER ELEMENTS === */
             .profile-avatar-container .avatar-frame { width: 100px !important; height: 100px !important; }
@@ -5018,16 +5029,9 @@
             }
             
             /* === SHARED POSTS EXTRA SMALL === */
-            .shared-post-container {
-                margin: 0 14px 12px 14px;
-                padding: 10px;
-                font-size: 11px;
-            }
+            .shared-post-container { margin: 0 0 12px 0; font-size: 11px; }
             
-            .shared-post-container img {
-                width: 26px !important;
-                height: 26px !important;
-            }
+            .shared-post-avatar { width: 26px !important; height: 26px !important; }
             
             /* === STORE EXTRA SMALL === */
             .store-header {
@@ -15903,22 +15907,31 @@ Please explain why you want a verification badge:`;
                         
                         const sharedPostContainer = postDiv.querySelector('.shared-post-placeholder');
                         if(sharedPostContainer) {
+                            const sharedMediaHtml = post.sharedImage
+                                ? `<div class="shared-post-media-wrap"><img src="${post.sharedImage}" alt="shared media"></div>`
+                                : post.sharedVideo
+                                    ? `<div class="shared-post-media-wrap"><video src="${post.sharedVideo}" controls playsinline></video></div>`
+                                    : '';
+                            const verifiedBadge = sharedAuthor.verified
+                                ? `<span class="verified-badge" style="width:15px;height:15px;margin-left:3px;"><i data-lucide="check" style="width:9px;height:9px;color:white;"></i></span>`
+                                : '';
                             sharedPostContainer.innerHTML = `
-                                <div class="shared-post-container">
-                                    <div style="font-size:10px; color:#94a3b8; margin-bottom: var(--spacing-xs); display:flex; align-items:center; gap:5px;">
-                                        <i data-lucide="share-2" style="width:12px;"></i>
-                                        <span>Shared from ${escapeHtml(sharedAuthor.name)}</span>
-                                    </div>
-                                    <div style="display:flex; gap: var(--spacing-sm); align-items:flex-start;">
-                                        <img src="${sharedAuthor.photo || 'https://via.placeholder.com/30'}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" onclick="openUserProfile('${post.sharedFrom}')">
-                                        <div style="flex:1;">
-                                            <div style="font-weight:700; font-size:11px; color:white; margin-bottom:3px;">${escapeHtml(sharedAuthor.name)}</div>
-                                            ${sharedMoodHtml}
-                                            <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">${escapeHtml(post.sharedContent || '')}</div>
-                                            ${sharedImgHtml}
-                                            ${sharedVideoHtml}
+                                <div class="shared-post-container" onclick="openUserProfile('${post.sharedFrom}')" style="cursor:pointer;">
+                                    <div class="shared-post-header">
+                                        <img class="shared-post-avatar" src="${sharedAuthor.photo || 'https://via.placeholder.com/32'}" alt="${escapeHtml(sharedAuthor.name)}">
+                                        <div style="flex:1; min-width:0;">
+                                            <div style="display:flex; align-items:center; gap:2px;">
+                                                <span style="font-weight:800; font-size:13px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(sharedAuthor.name)}</span>
+                                                ${verifiedBadge}
+                                            </div>
+                                            <div style="font-size:10px; color:rgba(255,255,255,0.35); display:flex; align-items:center; gap:4px; margin-top:1px;">
+                                                <i data-lucide="share-2" style="width:10px;height:10px;"></i>
+                                                <span>Original post</span>
+                                            </div>
                                         </div>
                                     </div>
+                                    ${post.sharedContent ? `<div class="shared-post-body" style="font-size:13px; color:#cbd5e1; line-height:1.5;">${escapeHtml(post.sharedContent)}</div>` : ''}
+                                    ${sharedMediaHtml}
                                 </div>
                             `;
                             lucide.createIcons();
@@ -16338,12 +16351,12 @@ Please explain why you want a verification badge:`;
 <!-- Verification Badge Tooltip -->
 <div id="verificationTooltip" class="verification-tooltip">
     <h4>
-        <span class="verified-badge" style="cursor: default;">
-            <i data-lucide="check" style="width:10px; height:10px; color:white;"></i>
+        <span class="verified-badge" style="cursor:default; width:20px; height:20px;">
+            <i data-lucide="check" style="width:11px;height:11px;color:white;"></i>
         </span>
-        Verified Account
+        RB Live Verified
     </h4>
-    <p>This account has been verified by administrators. Verified accounts have met community standards and are confirmed to be authentic active members of the RB Live community.</p>
+    <p>This account has been verified by RB Live administrators. The blue badge confirms this is an authentic, active, and trusted member of the community.</p>
 </div>
 
 <script>
