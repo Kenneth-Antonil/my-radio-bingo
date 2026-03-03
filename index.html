@@ -26,6 +26,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <!-- Removed suspicious scripts from effectivegatecpm.com -->
@@ -14175,57 +14176,35 @@ function runMathBlitz(problems) {
         if(!isSelected) { el.classList.add('selected'); selectedMood = mood; } else { selectedMood = null; }
     }
     
-    // === CLOUDINARY MEDIA UPLOAD ===
+    // === FIREBASE STORAGE UPLOAD ===
     // ═══════════════════════════════════════════════════════════
-    // ✅ CLOUDINARY CONFIGURED FOR: dzifutb8l
+    // ✅ MIGRATED FROM CLOUDINARY → FIREBASE STORAGE (FREE)
     // ═══════════════════════════════════════════════════════════
-    
-    const CLOUDINARY_CLOUD_NAME = 'dzifutb8l'; // ✅ YOUR CLOUD NAME - READY!
-    const CLOUDINARY_UPLOAD_PRESET = 'radiobingo_uploads'; // Using default preset
-    
-    /* 
-    ✅ CLOUD NAME: SET UP ✅
-    
-    ⚠️ NEXT STEP: Create Upload Preset (OPTIONAL but RECOMMENDED)
-    
-    Your code will work with 'ml_default' preset, but for better control:
-    
-    1. Go to: https://console.cloudinary.com/console/dzifutb8l/settings/upload
-    2. Scroll to "Upload presets"
-    3. Click "Add upload preset"
-    4. Settings:
-       • Preset name: radiobingo_uploads
-       • Signing mode: Unsigned ⚠️ MUST BE UNSIGNED!
-       • Folder: (optional) radiobingo
-    5. Click "Save"
-    6. Update line 4948 to:
-       const CLOUDINARY_UPLOAD_PRESET = 'radiobingo_uploads';
-    
-    🎯 FOR NOW: It will use 'ml_default' - TEST FIRST before creating custom preset!
-    */
-    
+    //
+    // ⚠️ SETUP REQUIRED (one-time):
+    // 1. Go to Firebase Console → Storage → Get started
+    // 2. Choose region: asia-southeast1 (for PH)
+    // 3. Set Storage Rules:
+    //    allow read: if true;
+    //    allow write: if request.auth != null;
+    //
+    // ✅ No other changes needed — all upload calls work the same!
+
     async function uploadToCloudinary(file, resourceType = 'image') {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-        
-        const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
-        
         try {
             showToast('Uploading...');
-            const response = await fetch(uploadUrl, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            if(data.secure_url) {
-                return data.secure_url; // Return the Cloudinary URL
-            } else {
-                throw new Error('Upload failed');
-            }
+
+            const storageRef = firebase.storage().ref();
+            const fileName = Date.now() + '_' + file.name.replace(/\s+/g, '_');
+            const folder = resourceType === 'video' ? 'videos' : 'images';
+            const fileRef = storageRef.child(`uploads/${folder}/${fileName}`);
+
+            const snapshot = await fileRef.put(file);
+            const downloadURL = await snapshot.ref.getDownloadURL();
+
+            return downloadURL;
         } catch(error) {
-            console.error('Cloudinary upload error:', error);
+            console.error('Firebase Storage upload error:', error);
             showToast('Upload failed. Try again.');
             return null;
         }
