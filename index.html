@@ -6005,6 +6005,72 @@
         .bingo-quick-btn.blue .qbtn-icon { background: rgba(14,165,233,0.15); }
         .bingo-quick-btn.red { border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.08); color: #f87171; }
         .bingo-quick-btn.red .qbtn-icon { background: rgba(239,68,68,0.15); }
+        .bingo-quick-btn.green { border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.08); color: #34d399; }
+        .bingo-quick-btn.green .qbtn-icon { background: rgba(16,185,129,0.15); }
+
+        /* === JOIN / SKIP ROUND BANNER === */
+        .join-round-banner {
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(22,26,38,0.85); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px; padding: 12px 16px; margin-bottom: 12px;
+            gap: 12px;
+        }
+        .join-round-banner.skip-mode {
+            border-color: rgba(239,68,68,0.3);
+            background: rgba(239,68,68,0.05);
+        }
+        .jrb-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+        .jrb-icon {
+            width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
+            background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3);
+            transition: all 0.2s ease;
+        }
+        .skip-mode .jrb-icon { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); }
+        .jrb-text { flex: 1; min-width: 0; }
+        .jrb-label { font-size: 12px; font-weight: 800; color: white; }
+        .jrb-sub { font-size: 10px; color: rgba(255,255,255,0.45); margin-top: 2px; line-height: 1.4; }
+        .jrb-toggle {
+            position: relative; width: 52px; height: 28px; flex-shrink: 0;
+            background: #10b981; border: none; border-radius: 50px; cursor: pointer;
+            transition: background 0.25s ease; box-shadow: 0 2px 8px rgba(16,185,129,0.35);
+        }
+        .jrb-toggle.skipping { background: rgba(71,85,105,0.6); box-shadow: none; }
+        .jrb-toggle::after {
+            content: ''; position: absolute; top: 3px; left: 3px;
+            width: 22px; height: 22px; border-radius: 50%;
+            background: white; transition: transform 0.25s ease;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        .jrb-toggle.skipping::after { transform: translateX(24px); }
+
+        /* === SKIP OVERLAY on card === */
+        .skip-overlay {
+            position: absolute; inset: 0;
+            background: rgba(10,12,20,0.93);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            z-index: 101; display: none; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
+            padding: var(--spacing-lg); border-radius: var(--radius-xl);
+            border: 1px solid rgba(239,68,68,0.25);
+        }
+        .skip-overlay-icon { font-size: 44px; margin-bottom: 12px; line-height: 1; }
+        .skip-overlay-title {
+            font-size: 18px; font-weight: 900; color: white;
+            margin-bottom: 6px; font-family: 'Sora', sans-serif;
+        }
+        .skip-overlay-sub {
+            font-size: 11px; color: rgba(255,255,255,0.45);
+            line-height: 1.6; margin-bottom: 16px;
+        }
+        .skip-overlay-rejoin {
+            background: linear-gradient(135deg,#10b981,#059669);
+            border: none; color: white; font-size: 13px; font-weight: 800;
+            padding: 11px 24px; border-radius: 12px; cursor: pointer;
+            box-shadow: 0 4px 14px rgba(16,185,129,0.35);
+            transition: all 0.15s ease;
+        }
+        .skip-overlay-rejoin:active { transform: scale(0.97); }
         /* ============================================
            🎱 BENTO CARD GRID SYSTEM
         ============================================ */
@@ -8611,6 +8677,18 @@
             </button>
         </div>
         <div id="jackpotBanner" style="margin-bottom:12px;">
+
+        <!-- ═══ JOIN / SKIP ROUND BANNER ═══ -->
+        <div class="join-round-banner" id="joinSkipBanner">
+            <div class="jrb-left">
+                <div class="jrb-icon" id="jrbIcon">🎯</div>
+                <div class="jrb-text">
+                    <div class="jrb-label" id="jrbLabel">Joining this Round</div>
+                    <div class="jrb-sub" id="jrbSub">I-toggle para mag-skip ng round na ito</div>
+                </div>
+            </div>
+            <button class="jrb-toggle" id="jrbToggle" onclick="toggleRoundParticipation()" title="Toggle join/skip"></button>
+        </div>
             <div class="jp-label-new">
                 <i data-lucide="crown" style="width: 16px;"></i> JACKPOT ROUND <i data-lucide="crown" style="width: 16px;"></i>
             </div>
@@ -8708,6 +8786,15 @@
                             <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom: var(--spacing-md); filter: drop-shadow(0 0 15px var(--gold));"></i>
                             <div class="late-text">Game Finished</div>
                             <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
+                        </div>
+                        <!-- ═══ SKIP ROUND OVERLAY ═══ -->
+                        <div id="skipOverlay" class="skip-overlay">
+                            <div class="skip-overlay-icon">⏸️</div>
+                            <div class="skip-overlay-title">Round Skipped</div>
+                            <div class="skip-overlay-sub">Nag-opt out ka sa round na ito.<br>Panoorin mo lang ang mga kalaro!</div>
+                            <button class="skip-overlay-rejoin" onclick="rejoinRound()">
+                                ✅ Sumali Na
+                            </button>
                         </div>
                         <div class="change-card-wrapper-clean">
                             <button class="btn-change-full" id="newCardBtn" onclick="generateNewCard()"><i data-lucide="refresh-cw" style="width:14px"></i> CHANGE CARD</button>
@@ -10343,6 +10430,7 @@ function runMathBlitz(problems) {
     });
     let messaging; try { messaging = firebase.messaging(); } catch(e) { console.log("Messaging failed to init", e); }
     let userData = {}; let cardNumbers = []; let marks = [12]; let gameDrawn = []; let currentPattern = "Normal Bingo"; let lastNotifiedDraw = ""; let selectedReplyId = null;
+    let isSkippingRound = false; // join/skip round state
     let gameStartTime = 0; // timestamp when current draw started (from Firebase)
     // ===== HEADLESS DRAW ENGINE VARS (global scope) =====
     let _hdeSchedules = {};   // live copy of Firebase schedules
@@ -11268,6 +11356,13 @@ function runMathBlitz(problems) {
                     if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none'; 
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash; 
                     if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
+                    // Restore skip-round preference (reset if no active game)
+                    if (userData.skipCurrentRound && gameDrawn.length === 0) {
+                        isSkippingRound = true;
+                    } else {
+                        isSkippingRound = false;
+                    }
+                    updateSkipUI();
                     // Load extra cards if any (only once on initial load)
                     if (userData.extraCards && extraCards.length === 0) {
                         const savedExtras = userData.extraCards;
@@ -12720,12 +12815,18 @@ function runMathBlitz(problems) {
                 });
                 // Remove all purchased extra cards (they must buy again next game)
                 removeAllExtraCardsFromDOM();
+                // Reset skip status for the new round
+                isSkippingRound = false;
+                if (auth.currentUser) {
+                    db.ref('users/' + auth.currentUser.uid).update({ skipCurrentRound: false });
+                }
             }
             gameDrawn = newGameDrawn;
             const btn = document.getElementById('newCardBtn');
             if(gameDrawn.length > 0) { btn.disabled = true; btn.innerHTML = '<i data-lucide="lock" style="width:14px"></i> IN GAME'; }
             else { btn.disabled = false; btn.innerHTML = '<i data-lucide="refresh-cw" style="width:14px"></i> NEW CARD'; }
             lucide.createIcons();
+            updateSkipUI();
             checkLateJoiner(); updateGridHits();
             extraCards.forEach((ec, idx) => updateGridHitsExtra(idx));
             renderPrevBalls(); checkWin(); checkWinExtra(); checkPuroStatus();
@@ -12759,7 +12860,7 @@ function runMathBlitz(problems) {
         return allLines; // Normal Bingo
     }
     function checkWin() {
-        if(userData.hasWonCurrent || gameDrawn.length === 0) return;
+        if(isSkippingRound || userData.hasWonCurrent || gameDrawn.length === 0) return;
         db.ref('gameState/latestWinner').once('value', snap => {
             if(snap.exists()) return;
             const winningWays = getWinningWays(currentPattern);
@@ -12998,6 +13099,76 @@ function runMathBlitz(problems) {
         // After flip, start pulse
         setTimeout(() => { ball.classList.add('ball-pulse'); }, 700);
     }
+    // === JOIN / SKIP ROUND ===
+    function toggleRoundParticipation() {
+        // Cannot skip once the game is already in progress
+        if (!isSkippingRound && gameDrawn.length > 0) {
+            return showToast("Hindi na maka-skip — may laro na ngayon!");
+        }
+        isSkippingRound = !isSkippingRound;
+        // Persist to Firebase so it survives refreshes (cleared on new round)
+        if (auth.currentUser) {
+            db.ref('users/' + auth.currentUser.uid).update({ skipCurrentRound: isSkippingRound });
+        }
+        updateSkipUI();
+        const msg = isSkippingRound
+            ? "⏸️ Nag-skip ka sa round na ito. Panoorin mo lang!"
+            : "✅ Sumali ka na sa round na ito!";
+        showToast(msg);
+        playSound('click');
+    }
+
+    function rejoinRound() {
+        if (gameDrawn.length > 0) {
+            return showToast("Hindi na makasali — may laro na ngayon!");
+        }
+        isSkippingRound = false;
+        if (auth.currentUser) {
+            db.ref('users/' + auth.currentUser.uid).update({ skipCurrentRound: false });
+        }
+        updateSkipUI();
+        showToast("✅ Sumali ka na sa susunod na round!");
+        playSound('click');
+    }
+
+    function updateSkipUI() {
+        const banner = document.getElementById('joinSkipBanner');
+        const toggle = document.getElementById('jrbToggle');
+        const icon = document.getElementById('jrbIcon');
+        const label = document.getElementById('jrbLabel');
+        const sub = document.getElementById('jrbSub');
+        const skipOverlay = document.getElementById('skipOverlay');
+        const lateOverlay = document.getElementById('lateOverlay');
+
+        if (!banner) return;
+
+        if (isSkippingRound) {
+            banner.classList.add('skip-mode');
+            toggle.classList.add('skipping');
+            icon.textContent = '⏸️';
+            label.textContent = 'Nag-skip sa Round na Ito';
+            label.style.color = '#f87171';
+            sub.textContent = 'Hindi ka sasali sa susunod na draw';
+            // Show skip overlay on card if game not yet started
+            if (skipOverlay && (!gameDrawn || gameDrawn.length === 0)) {
+                skipOverlay.style.display = 'flex';
+            }
+        } else {
+            banner.classList.remove('skip-mode');
+            toggle.classList.remove('skipping');
+            icon.textContent = '🎯';
+            label.textContent = 'Joining this Round';
+            label.style.color = 'white';
+            sub.textContent = 'I-toggle para mag-skip ng round na ito';
+            if (skipOverlay) skipOverlay.style.display = 'none';
+        }
+
+        // Hide skip button when game is actively in progress (lock it in)
+        if (banner) {
+            banner.style.display = (gameDrawn && gameDrawn.length > 0) ? 'none' : 'flex';
+        }
+    }
+
     function checkLateJoiner() {
         const overlay = document.getElementById('lateOverlay');
         if (!overlay) return;
