@@ -784,6 +784,15 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        @keyframes uploadArc {
+            0%   { stroke-dashoffset: 138; opacity: 0.4; }
+            50%  { stroke-dashoffset: 30;  opacity: 1; }
+            100% { stroke-dashoffset: 138; opacity: 0.4; }
+        }
+        @keyframes dotPulse {
+            0%, 100% { opacity: 0.25; transform: scale(0.8); }
+            50%       { opacity: 1;    transform: scale(1.2); }
+        }
         .btn-remove-img {
             position: absolute;
             top: 12px;
@@ -3512,11 +3521,22 @@
         .verified-badge {
             display: inline-flex; align-items: center; justify-content: center;
             width: 18px; height: 18px;
-            background: linear-gradient(135deg, #9333ea, #6d28d9);
-            border-radius: 50%;
+            background: none;
+            border-radius: 0;
             cursor: pointer; vertical-align: middle; flex-shrink: 0;
         }
-        .verified-badge i { width: 10px; height: 10px; color: white; }
+        .verified-badge::after {
+            content: '';
+            display: block;
+            width: 18px;
+            height: 18px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='vg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233b82f6'/%3E%3Cstop offset='100%25' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3ClinearGradient id='vg2' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563eb'/%3E%3Cstop offset='100%25' stop-color='%230891b2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23vg)' d='M12 1.5L14.16 4.1 17.5 3l.9 3.4 3.4.9-1.1 3.34L23 12l-2.3 2.36 1.1 3.34-3.4.9-.9 3.4-3.34-1.1L12 22.5l-2.36-2.3-3.34 1.1-.9-3.4-3.4-.9 1.1-3.34L1 12l2.3-2.36-1.1-3.34 3.4-.9.9-3.4 3.34 1.1z'/%3E%3Cpath fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M7.5 12.5l3 3 6-6'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            filter: drop-shadow(0 0 3px rgba(59,130,246,0.6));
+        }
+        .verified-badge i { display: none; }
 
         /* Verification tooltip */
         .verification-tooltip {
@@ -4697,8 +4717,7 @@
             }
             
             .verified-badge i {
-                width: 9px !important;
-                height: 9px !important;
+                display: none !important;
             }
             
             .post-time {
@@ -8409,19 +8428,52 @@
                 <div class="image-preview-container" id="imgPreviewCont">
                     <img id="postImgPreview" class="image-preview-img">
                     <div class="btn-remove-img" onclick="removePostImage()"><i data-lucide="x"></i></div>
-                    <div id="imgUploadOverlay" style="display:none;position:absolute;inset:0;background:rgba(10,12,18,0.75);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:10;">
-                        <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,0.15);border-top:3px solid #3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-                        <div style="font-size:12px;font-weight:700;color:white;letter-spacing:0.5px;">Uploading...</div>
+                    <div id="imgUploadOverlay" style="display:none;position:absolute;inset:0;background:rgba(10,12,18,0.82);backdrop-filter:blur(6px);border-radius:12px;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10;">
+                        <div style="position:relative;width:56px;height:56px;">
+                            <svg viewBox="0 0 56 56" style="width:56px;height:56px;transform:rotate(-90deg);">
+                                <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3"/>
+                                <circle cx="28" cy="28" r="22" fill="none" stroke="url(#blueGrad)" stroke-width="3" stroke-linecap="round" stroke-dasharray="138" stroke-dashoffset="138" style="animation:uploadArc 1.6s ease-in-out infinite;">
+                                    <defs>
+                                        <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" style="stop-color:#3b82f6"/>
+                                            <stop offset="100%" style="stop-color:#06b6d4"/>
+                                        </linearGradient>
+                                    </defs>
+                                </circle>
+                            </svg>
+                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;">🖼️</div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                            <div style="font-size:13px;font-weight:800;color:white;letter-spacing:0.3px;">Uploading photo</div>
+                            <div style="display:flex;gap:5px;align-items:center;">
+                                <div style="width:5px;height:5px;border-radius:50%;background:#3b82f6;animation:dotPulse 1.2s ease-in-out infinite;"></div>
+                                <div style="width:5px;height:5px;border-radius:50%;background:#3b82f6;animation:dotPulse 1.2s ease-in-out 0.2s infinite;"></div>
+                                <div style="width:5px;height:5px;border-radius:50%;background:#3b82f6;animation:dotPulse 1.2s ease-in-out 0.4s infinite;"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="image-preview-container" id="videoPreviewCont" style="display:none;">
                     <video id="postVideoPreview" class="image-preview-img" controls style="width:100%; max-height:300px;"></video>
                     <div class="btn-remove-img" onclick="removePostVideo()"><i data-lucide="x"></i></div>
-                    <div id="videoUploadOverlay" style="display:none;position:absolute;inset:0;background:rgba(10,12,18,0.75);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:10;">
-                        <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,0.15);border-top:3px solid #3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-                        <div style="font-size:12px;font-weight:700;color:white;letter-spacing:0.5px;">Uploading video...</div>
-                        <div style="font-size:11px;color:rgba(255,255,255,0.45);">This may take a moment</div>
+                    <div id="videoUploadOverlay" style="display:none;position:absolute;inset:0;background:rgba(10,12,18,0.82);backdrop-filter:blur(6px);border-radius:12px;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10;">
+                        <div style="position:relative;width:56px;height:56px;">
+                            <svg viewBox="0 0 56 56" style="width:56px;height:56px;transform:rotate(-90deg);">
+                                <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3"/>
+                                <circle cx="28" cy="28" r="22" fill="none" stroke="url(#blueGrad)" stroke-width="3" stroke-linecap="round" stroke-dasharray="138" stroke-dashoffset="138" style="animation:uploadArc 1.6s ease-in-out infinite;"/>
+                            </svg>
+                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;">🎬</div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                            <div style="font-size:13px;font-weight:800;color:white;letter-spacing:0.3px;">Uploading video</div>
+                            <div style="display:flex;gap:5px;align-items:center;">
+                                <div style="width:5px;height:5px;border-radius:50%;background:#3b82f6;animation:dotPulse 1.2s ease-in-out infinite;"></div>
+                                <div style="width:5px;height:5px;border-radius:50%;background:#3b82f6;animation:dotPulse 1.2s ease-in-out 0.2s infinite;"></div>
+                                <div style="width:5px;height:5px;border-radius:50%;background:#3b82f6;animation:dotPulse 1.2s ease-in-out 0.4s infinite;"></div>
+                            </div>
+                            <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px;">This may take a moment</div>
+                        </div>
                     </div>
                 </div>
 
