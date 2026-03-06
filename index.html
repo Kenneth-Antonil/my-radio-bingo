@@ -12073,15 +12073,16 @@ function runMathBlitz(problems) {
                         const mutualFriends = myFriends.filter(f => theirFriends.includes(f));
                         const mutualCount = mutualFriends.length;
                         
-                        // Only include if there are mutual friends OR if they're a content creator
-                        if(mutualCount > 0 || userData.isContentCreator) {
-                            candidates.push({
-                                uid: uid,
-                                ...userData,
-                                mutualCount: mutualCount,
-                                mutualFriends: mutualFriends
-                            });
-                        }
+                    // Include if: mutual friends, content creator, OR just any member
+                    // (dismissed cards are filtered below)
+                    if(!window._pymkDismissed || !window._pymkDismissed[uid]) {
+                        candidates.push({
+                            uid: uid,
+                            ...userData,
+                            mutualCount: mutualCount,
+                            mutualFriends: mutualFriends
+                        });
+                    }
                         
                         processedCount++;
                         if(processedCount === totalUsers) {
@@ -12175,19 +12176,17 @@ function runMathBlitz(problems) {
         db.ref('friendRequests/' + uid + '/' + auth.currentUser.uid).remove();
         showToast("Request Cancelled");
         loadPYMK();
+    }
 
     // Dismiss (hide) a PYMK suggestion without adding
     window._pymkDismissed = window._pymkDismissed || {};
     function dismissPYMK(uid) {
         window._pymkDismissed[uid] = true;
-        // Animate out the card
         var card = document.querySelector('.pymk-card[data-uid="' + uid + '"]');
         if (card) { card.style.transition = 'opacity 0.25s, transform 0.25s'; card.style.opacity = '0'; card.style.transform = 'scale(0.92)'; setTimeout(function(){ card.remove(); }, 260); }
-        // If no cards left, hide section
         setTimeout(function(){ var list = document.getElementById('pymkList'); if(list && !list.children.length) { var sec = document.getElementById('pymkSection'); if(sec) sec.style.display='none'; } }, 400);
     }
     window.dismissPYMK = dismissPYMK;
-    }
     
     // PYMK Profile Preview Functions
     function showPYMKPreview(user) {
@@ -12462,6 +12461,10 @@ function runMathBlitz(problems) {
         });
 
         // ── Online count (reads 1 number, not all users) ──
+        countRef.once('value', snap => {
+            // Auto-initialize the node if it doesn't exist yet
+            if (!snap.exists()) countRef.set(0);
+        });
         countRef.on('value', s => {
             const c = Math.max(0, s.val() || 0);
             const el = document.getElementById('onlineCount');
