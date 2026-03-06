@@ -1657,73 +1657,113 @@
         /* ============================================================
            😊 REACT BUTTON + EMOJI PICKER
         ============================================================ */
+        /* ══════════════════════════════════════════════════
+           MESSENGER-STYLE REACTIONS
+        ══════════════════════════════════════════════════ */
+
+        /* Wrapper sits OUTSIDE the bubble, relative to chat-content */
         .kra-react-wrap {
-            position: relative;
-            margin-top: 5px;
-            display: inline-block;
+            position: absolute;
+            bottom: -10px;
+            /* Others: right side of bubble. Own: left side. */
+            right: -10px;
+            z-index: 10;
         }
+        .chat-row[style*="row-reverse"] .kra-react-wrap {
+            right: auto;
+            left: -10px;
+        }
+
+        /* The tiny "add reaction" face — hidden until row is hovered */
         .kra-react-trigger {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.09);
-            border-radius: 20px;
-            padding: 3px 10px 3px 8px;
-            font-size: 11px;
-            font-weight: 600;
-            color: rgba(255,255,255,0.4);
+            background: #1e2d3d;
+            border: 1.5px solid #0e1621;
+            border-radius: 50%;
+            width: 24px; height: 24px;
+            font-size: 13px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            transition: all 0.15s ease;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.15s ease, opacity 0.15s ease;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
+            opacity: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            padding: 0;
         }
-        .kra-react-trigger:active { transform: scale(0.93); }
+        /* Show trigger on row hover (desktop) or always on touch */
+        .chat-row:hover .kra-react-trigger,
+        .kra-react-trigger.kra-visible,
         .kra-react-trigger.kra-has-react {
-            background: rgba(59,130,246,0.12);
-            border-color: rgba(59,130,246,0.35);
-            color: #93c5fd;
+            opacity: 1;
         }
-        .kra-react-trigger .kra-my-emoji { font-size: 13px; }
-        .kra-react-trigger .kra-total-count { font-size: 10px; opacity: 0.7; }
+        .kra-react-trigger:active { transform: scale(0.88); }
 
-        /* Emoji picker bubble */
+        /* When already reacted — show chosen emoji as the badge */
+        .kra-react-trigger.kra-has-react {
+            background: #1e2d3d;
+            border-color: rgba(255,255,255,0.12);
+            width: auto;
+            min-width: 28px;
+            padding: 0 5px;
+            border-radius: 12px;
+            gap: 3px;
+            font-size: 13px;
+        }
+        .kra-react-trigger .kra-my-emoji { font-size: 13px; line-height: 1; }
+        .kra-react-trigger .kra-total-count {
+            font-size: 10px; font-weight: 700;
+            color: rgba(255,255,255,0.6);
+        }
+
+        /* ── Floating emoji picker — Messenger pill ── */
         .kra-emoji-picker {
             position: absolute;
-            bottom: calc(100% + 6px);
-            left: 0;
-            background: rgba(15,20,35,0.98);
+            bottom: calc(100% + 10px);
+            left: 50%; transform-origin: bottom center;
+            transform: translateX(-50%) translateY(8px) scale(0.8);
+            background: #1a2535;
             border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 30px;
-            padding: 6px 10px;
-            display: flex;
-            gap: 2px;
-            box-shadow: 0 8px 28px rgba(0,0,0,0.6);
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(6px) scale(0.92);
-            transition: opacity 0.18s ease, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
-            z-index: 500;
+            border-radius: 40px;
+            padding: 8px 10px;
+            display: flex; gap: 2px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.4);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.34,1.4,0.64,1);
+            z-index: 600;
             white-space: nowrap;
         }
-        .kra-emoji-picker.kra-picker-open {
-            opacity: 1;
-            pointer-events: auto;
-            transform: translateY(0) scale(1);
+        /* For own messages — anchor picker to the right */
+        .chat-row[style*="row-reverse"] .kra-emoji-picker {
+            left: auto; right: 50%;
+            transform: translateX(50%) translateY(8px) scale(0.8);
+            transform-origin: bottom center;
         }
+        .kra-emoji-picker.kra-picker-open {
+            opacity: 1; pointer-events: auto;
+            transform: translateX(-50%) translateY(0) scale(1);
+        }
+        .chat-row[style*="row-reverse"] .kra-emoji-picker.kra-picker-open {
+            transform: translateX(50%) translateY(0) scale(1);
+        }
+
+        /* Individual emoji in picker */
         .kra-emoji-opt {
-            font-size: 20px;
+            font-size: 26px;
             padding: 4px 5px;
             border-radius: 50%;
             cursor: pointer;
-            transition: transform 0.12s ease, background 0.12s ease;
+            transition: transform 0.12s cubic-bezier(0.34,1.6,0.64,1), background 0.1s;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
             display: inline-block;
+            line-height: 1;
         }
-        .kra-emoji-opt:active { transform: scale(1.35); }
-        .kra-emoji-opt:hover  { background: rgba(255,255,255,0.08); transform: scale(1.2); }
-        .kra-emoji-opt.kra-opted { background: rgba(59,130,246,0.18); }
+        .kra-emoji-opt:active  { transform: scale(1.5); }
+        .kra-emoji-opt:hover   { transform: scale(1.35); background: rgba(255,255,255,0.08); }
+        .kra-emoji-opt.kra-opted {
+            transform: scale(1.15);
+            filter: drop-shadow(0 0 6px rgba(255,255,255,0.5));
+        }
 
         /* ── BINGO AD SLOT ── */
         .kra-bingo-ad-wrap {
@@ -22698,7 +22738,7 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
     // 3. REACT BUTTON + EMOJI PICKER on chat messages
     // ─────────────────────────────────────────────────────
     var KRA_EMOJIS = ['❤️','😂','😮','🔥','👏','😢'];
-    var _openPicker = null; // track currently open picker
+    var _openPicker = null;
 
     // Close picker when tapping outside
     document.addEventListener('click', function(e) {
@@ -22720,38 +22760,48 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
         var bubbleEl = chatRowEl.querySelector('.bubble');
         if (!bubbleEl) return;
 
-        // Unique key — hash of message text
+        // Key based on message text
         var msgEl  = bubbleEl.querySelector('.chat-text');
         var msgTxt = msgEl ? msgEl.textContent : '';
         var msgKey = _hash(msgTxt + Math.floor(Date.now() / 15000));
 
-        // ── Wrapper ──
+        // ── Wrapper — attached to bubble so it floats at its edge ──
         var wrap = document.createElement('div');
         wrap.className = 'kra-react-wrap';
 
-        // ── Trigger button ──
+        // ── Trigger: tiny smiley face ──
         var trigger = document.createElement('button');
-        trigger.className  = 'kra-react-trigger';
-        trigger.innerHTML  = '<span style="font-size:13px;">🙂</span><span>React</span>';
+        trigger.className = 'kra-react-trigger';
+        trigger.innerHTML = '😊';
         _kraUpdateTrigger(trigger, msgKey);
 
+        // Long-press on mobile to open picker
+        var _lpTimer = null;
+        trigger.addEventListener('touchstart', function(e) {
+            _lpTimer = setTimeout(function() {
+                _kraOpenPicker(wrap, picker, trigger);
+            }, 400);
+        }, { passive: true });
+        trigger.addEventListener('touchend', function() { clearTimeout(_lpTimer); });
+        trigger.addEventListener('touchmove', function() { clearTimeout(_lpTimer); });
+
+        // Regular tap / click
         trigger.addEventListener('click', function(e) {
             e.stopPropagation();
-            var picker = wrap.querySelector('.kra-emoji-picker');
+            clearTimeout(_lpTimer);
             var isOpen = picker.classList.contains('kra-picker-open');
-            // Close any other open picker first
             if (_openPicker && _openPicker !== wrap) _closePicker(_openPicker);
             if (isOpen) { _closePicker(wrap); }
-            else { picker.classList.add('kra-picker-open'); _openPicker = wrap; }
+            else { _kraOpenPicker(wrap, picker, trigger); }
         });
 
-        // ── Emoji picker ──
+        // ── Emoji picker pill ──
         var picker = document.createElement('div');
         picker.className = 'kra-emoji-picker';
 
         KRA_EMOJIS.forEach(function(emoji) {
             var opt = document.createElement('span');
-            opt.className   = 'kra-emoji-opt';
+            opt.className = 'kra-emoji-opt';
             opt.textContent = emoji;
             if (_getMyReact(msgKey) === emoji) opt.classList.add('kra-opted');
 
@@ -22759,19 +22809,32 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
                 e.stopPropagation();
                 _toggleReact(msgKey, emoji);
                 _kraUpdateTrigger(trigger, msgKey);
-                // Update opted states
                 picker.querySelectorAll('.kra-emoji-opt').forEach(function(o) {
                     o.classList.toggle('kra-opted', o.textContent === _getMyReact(msgKey));
                 });
                 _closePicker(wrap);
             });
-
             picker.appendChild(opt);
         });
 
         wrap.appendChild(trigger);
         wrap.appendChild(picker);
+
+        // Attach to bubble (position:relative needed on bubble)
+        bubbleEl.style.position = 'relative';
         bubbleEl.appendChild(wrap);
+
+        // Show trigger briefly on new message (mobile UX hint)
+        trigger.classList.add('kra-visible');
+        setTimeout(function() { trigger.classList.remove('kra-visible'); }, 2500);
+    }
+
+    function _kraOpenPicker(wrap, picker, trigger) {
+        picker.classList.add('kra-picker-open');
+        _openPicker = wrap;
+        // Small bounce on trigger
+        trigger.style.transform = 'scale(1.2)';
+        setTimeout(function() { trigger.style.transform = ''; }, 180);
     }
 
     function _kraUpdateTrigger(trigger, msgKey) {
@@ -22779,12 +22842,11 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
         var total   = _getTotal(msgKey);
         trigger.classList.toggle('kra-has-react', !!myReact);
         if (myReact) {
-            trigger.innerHTML = '<span class="kra-my-emoji">' + myReact + '</span>' +
-                (total > 0 ? '<span class="kra-total-count">' + total + '</span>' : '');
+            trigger.innerHTML =
+                '<span class="kra-my-emoji">' + myReact + '</span>' +
+                (total > 1 ? '<span class="kra-total-count">' + total + '</span>' : '');
         } else {
-            trigger.innerHTML = '<span style="font-size:13px;opacity:0.5;">🙂</span>' +
-                '<span>React</span>' +
-                (total > 0 ? '<span class="kra-total-count">' + total + '</span>' : '');
+            trigger.innerHTML = '😊';
         }
     }
 
