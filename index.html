@@ -10665,6 +10665,9 @@ function runMathBlitz(problems) {
     let _hdeInterval = null;  // setInterval handle for draw ticks
     let _hdeSchedTimer = null;// setInterval handle for schedule checker (5s)
     let _hdeInitialized = false; // guard: only init once per auth session
+    let _hdeTickBusy = false; // prevent overlapping async ticks
+    let _hdeLastTickAt = 0;   // timestamp of last draw tick (anti-burst guard)
+    let _hdeMyUid = null;     // UID of the lock holder (this client)
 
     // Multi-card support (up to 5 extra cards)
     let extraCards = []; // array of { numbers: [], marks: [] }
@@ -12586,131 +12589,156 @@ function runMathBlitz(problems) {
     function listenVideoUpdate() { db.ref('gameState/videoSettings').on('value', s => { const v = s.val(); const iframe = document.getElementById('liveVideoFrame'); const offline = document.getElementById('videoOfflineState'); if (v && v.type === 'offline') { iframe.style.display = 'none'; iframe.src = ""; offline.style.display = 'flex'; } else if(v && v.url) { offline.style.display = 'none'; iframe.style.display = 'block'; const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/; const match = v.url.match(regExp); let videoId = (match && match[2].length === 11) ? match[2] : null; if(!videoId && v.url.length === 11) videoId = v.url; if (videoId) { const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1`; if(iframe.src !== embedUrl) { iframe.src = embedUrl; } } } }); }
 
     // ===================================================================
-// HEADLESS DRAW ENGINE (HDE) — CLIENT-SIDE FALLBACK
+    // HEADLESS DRAW ENGINE (HDE) — CLIENT-SIDE FALLBACK  v2 (stable)
     // ===================================================================
-    // PRIMARY draw engine is now Firebase Cloud Functions (runs 24/7).
+    // PRIMARY draw engine is Firebase Cloud Functions (runs 24/7).
     // HDE acts as a FALLBACK only when:
     //   - cloudDrawConfig.cloudEnabled === false, AND
     //   - No dashboard is open (drawLock not held), AND
     //   - A scheduled game time arrives
     //
-    // In normal operation, Cloud Functions handle everything server-side.
+    // FIXES in v2:
+    //   1. _hdeTickBusy flag — prevents overlapping async ticks (no burst)
+    //   2. _hdeLastTickAt guard — minimum 3s between balls even if interval fires early
+    //   3. Speed change now RESTARTS the interval cleanly
+    //   4. drawLock verified on EVERY tick — stops immediately if lock stolen
+    //   5. Schedule checker is a no-op if this client is already drawing
     // ===================================================================
     let _hdeCloudActive = false; // true when CF is drawing
 
     function initHeadlessDrawEngine(uid) {
         if(_hdeInitialized) return;
         _hdeInitialized = true;
+        _hdeMyUid = uid;
 
         // 1. Listen to schedules
         db.ref('gameState/schedules').on('value', snap => {
             _hdeSchedules = snap.val() || {};
         });
 
-        // 2. Sync draw speed
+        // 2. Sync draw speed — restart interval if speed changes while drawing
         db.ref('gameState/drawConfig/speed').on('value', snap => {
-            if(snap && snap.exists() && snap.val() > 0) _hdeDrawSpeed = snap.val();
+            if(!snap || !snap.exists() || snap.val() <= 0) return;
+            const newSpeed = snap.val();
+            if(newSpeed === _hdeDrawSpeed) return;
+            _hdeDrawSpeed = newSpeed;
+            // Restart interval cleanly so new speed takes effect immediately
+            if(_hdeIsDrawing) {
+                clearInterval(_hdeInterval);
+                _hdeInterval = setInterval(_hdeDrawTick, _hdeDrawSpeed);
+            }
         });
 
         // 3. Monitor Cloud Function draw status — HDE yields when CF is active
         db.ref('gameState/drawConfig/cloudEnabled').on('value', snap => {
             _hdeCloudActive = !!snap.val();
             if(_hdeCloudActive && _hdeIsDrawing) {
-                // CF has taken over — stop client draw
-                _hdeStopDraw(true);
+                _hdeStopDraw(true); // CF has taken over — release lock
             }
         });
 
-        // 4. Listen to drawLock — yield if another client holds it
+        // 4. Listen to drawLock — stop if lock was removed or taken by someone else
         db.ref('gameState/drawLock').on('value', snap => {
             const lock = snap.val();
-            if(!lock && _hdeIsDrawing) _hdeStopDraw();
+            if(_hdeIsDrawing) {
+                // Stop if lock is gone OR if a different client owns it now
+                if(!lock || lock.by !== _hdeMyUid) {
+                    _hdeStopDraw(false); // don't try to remove — we don't own it
+                }
+            }
         });
 
-        // 5. Schedule checker runs every 5 seconds — but only triggers HDE
-        //    if Cloud Functions are NOT already handling the draw
-        _hdeSchedTimer = setInterval(() => _hdeCheckSchedules(uid), 5000);
+        // 5. Schedule checker — runs every 5 seconds, skips if already drawing
+        _hdeSchedTimer = setInterval(() => _hdeCheckSchedules(), 5000);
     }
 
-    function _hdeCheckSchedules(uid) {
-        // ── CLOUD FUNCTION ACTIVE: skip client-side draw entirely ──
-        if(_hdeCloudActive) return;
+    function _hdeCheckSchedules() {
+        // Skip entirely if cloud or this client is already drawing
+        if(_hdeCloudActive || _hdeIsDrawing) return;
 
         const now = Date.now();
+        const uid = _hdeMyUid;
+
         Object.entries(_hdeSchedules).forEach(([key, val]) => {
             let schedTime = (typeof val === 'object') ? val.time : val;
             if(typeof schedTime !== 'number') return;
             const isJP  = (typeof val === 'object') && val.isJackpot;
             const jpAmt = (typeof val === 'object') ? (val.jackpotAmount || null) : null;
 
-            if(now >= schedTime && now < schedTime + 60000) {
-                db.ref('gameState/schedules/' + key).remove();
+            // Only trigger within the 60-second window of the scheduled time
+            if(now < schedTime || now >= schedTime + 60000) return;
 
-                db.ref('gameState/latestWinner').once('value', wSnap => {
-                    if(wSnap.exists()) return;
+            // Remove schedule first to prevent other clients from also triggering
+            db.ref('gameState/schedules/' + key).remove();
 
-                    // Re-check: if cloud became active between now and lock attempt, abort
-                    if(_hdeCloudActive) return;
+            db.ref('gameState/latestWinner').once('value', wSnap => {
+                if(wSnap.exists()) return;
+                if(_hdeCloudActive || _hdeIsDrawing) return; // re-check after async
 
-                    db.ref('gameState/drawLock').transaction(cur => {
-                        if(cur !== null) return;
-                        return { by: uid, at: now, expires: now + 600000 };
-                    }, (err, committed) => {
-                        if(!committed || err) return;
-
-                        // One more cloud check after lock claim
-                        if(_hdeCloudActive) {
-                            db.ref('gameState/drawLock').remove();
-                            return;
-                        }
-
-                        db.ref('gameState/drawLock').onDisconnect().remove();
-                        _hdeSetPattern(isJP);
-                        if(isJP && jpAmt) {
-                            db.ref('gameState/jackpot').set({ amount: jpAmt, active: true });
-                        } else {
-                            db.ref('gameState/jackpot').update({ active: false });
-                        }
-                        db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() });
-                        _hdeStartDraw();
-                    });
+                // Use Firebase transaction so only ONE client wins the lock
+                db.ref('gameState/drawLock').transaction(cur => {
+                    if(cur !== null) return; // lock already taken — abort
+                    return { by: uid, at: now, expires: now + 600000 };
+                }, (err, committed) => {
+                    if(!committed || err) return;
+                    if(_hdeCloudActive) {
+                        // CF activated between transaction and now — release lock
+                        db.ref('gameState/drawLock').remove();
+                        return;
+                    }
+                    db.ref('gameState/drawLock').onDisconnect().remove();
+                    _hdeSetPattern(isJP);
+                    if(isJP && jpAmt) {
+                        db.ref('gameState/jackpot').set({ amount: jpAmt, active: true });
+                    } else {
+                        db.ref('gameState/jackpot').update({ active: false });
+                    }
+                    db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() });
+                    _hdeStartDraw();
                 });
-            }
+            });
         });
     }
 
     function _hdeSetPattern(forceBlackout) {
-        let pattern;
-        if(forceBlackout) {
-            pattern = 'Blackout';
-        } else {
-            const patterns = ['Normal Bingo', 'Four Corners', 'Letter X', 'Letter T',
-                              'Letter L', 'Letter C', 'Plus Sign', 'Normal Bingo', 'Normal Bingo'];
-            pattern = patterns[Math.floor(Math.random() * patterns.length)];
-        }
+        const pattern = forceBlackout ? 'Blackout' :
+            ['Normal Bingo','Four Corners','Letter X','Letter T',
+             'Letter L','Letter C','Plus Sign','Normal Bingo','Normal Bingo']
+            [Math.floor(Math.random() * 9)];
         db.ref('gameState/currentPattern').set(pattern);
     }
 
     function _hdeStartDraw() {
         if(_hdeIsDrawing || _hdeCloudActive) return;
         _hdeIsDrawing = true;
+        _hdeTickBusy = false;
+        _hdeLastTickAt = 0;
+        // Fire first tick immediately, then on interval
         _hdeDrawTick();
         _hdeInterval = setInterval(_hdeDrawTick, _hdeDrawSpeed);
     }
 
-    function _hdeStopDraw(releaselock) {
+    function _hdeStopDraw(releaseLock) {
         clearInterval(_hdeInterval);
         _hdeInterval = null;
         _hdeIsDrawing = false;
-        if(releaselock) {
+        _hdeTickBusy = false;
+        if(releaseLock) {
             db.ref('gameState/drawLock').remove();
             db.ref('gameState/drawLock').onDisconnect().cancel();
         }
     }
 
     function _hdeDrawTick() {
-        // Yield to Cloud Function if it became active mid-draw
+        // Guard 1: yield to CF
         if(_hdeCloudActive) { _hdeStopDraw(true); return; }
+
+        // Guard 2: prevent overlapping async ticks (burst protection)
+        if(_hdeTickBusy) return;
+
+        // Guard 3: minimum 3 seconds between balls (even if interval fires early)
+        const now = Date.now();
+        if(now - _hdeLastTickAt < 3000) return;
 
         const drawnInts = gameDrawn.map(n => parseInt(n)).filter(n => !isNaN(n));
 
@@ -12720,21 +12748,37 @@ function runMathBlitz(problems) {
             return;
         }
 
-        db.ref('gameState/latestWinner').once('value', wSnap => {
-            if(wSnap.exists()) {
+        _hdeTickBusy = true;
+        _hdeLastTickAt = now;
+
+        // Verify we still own the lock before writing to Firebase
+        db.ref('gameState/drawLock').once('value', lockSnap => {
+            const lock = lockSnap.val();
+            if(!lock || lock.by !== _hdeMyUid) {
+                // Lock is gone or stolen — stop without releasing
                 _hdeStopDraw(false);
-                _hdeAutoReset('May BINGO winner!');
+                _hdeTickBusy = false;
                 return;
             }
 
-            let next, tries = 0;
-            do { next = Math.floor(Math.random() * 75) + 1; tries++; }
-            while(drawnInts.includes(next) && tries < 200);
+            db.ref('gameState/latestWinner').once('value', wSnap => {
+                if(wSnap.exists()) {
+                    _hdeStopDraw(false);
+                    _hdeAutoReset('May BINGO winner!');
+                    _hdeTickBusy = false;
+                    return;
+                }
 
-            if(tries >= 200) { _hdeStopDraw(true); return; }
+                let next, tries = 0;
+                do { next = Math.floor(Math.random() * 75) + 1; tries++; }
+                while(drawnInts.includes(next) && tries < 200);
 
-            db.ref('drawnNumbers/' + next).set(next);
-            db.ref('gameState/lastCalled').set(next);
+                if(tries >= 200) { _hdeStopDraw(true); _hdeTickBusy = false; return; }
+
+                db.ref('drawnNumbers/' + next).set(next);
+                db.ref('gameState/lastCalled').set(next);
+                _hdeTickBusy = false;
+            });
         });
     }
 
