@@ -1622,29 +1622,6 @@
             .splash-logo-ring   { width: 118px; height: 118px; }
             .splash-logo-ring-2 { width: 138px; height: 138px; }
         }
-
-        /* Powered by K.R.A Stories */
-        .splash-powered {
-            position: absolute;
-            bottom: calc(16px + env(safe-area-inset-bottom));
-            left: 0;
-            right: 0;
-            text-align: center;
-            z-index: 3;
-            animation: splash-logo-enter 1s cubic-bezier(0.16, 1, 0.3, 1) 0.7s both;
-        }
-        .splash-powered-text {
-            font-size: 10px;
-            font-weight: 400;
-            color: rgba(255, 255, 255, 0.28);
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-        }
-        .splash-powered-text strong {
-            font-weight: 700;
-            color: rgba(6, 182, 212, 0.55);
-            letter-spacing: 1.5px;
-        }
         @keyframes pulseLogo { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         #customToast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-150%); background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); padding: 16px 24px; border-radius: var(--radius-lg); z-index: 100000; display: flex; align-items: center; justify-content: center; text-align: center; gap: var(--spacing-sm); box-shadow: 0 10px 40px rgba(0,0,0,0.8); backdrop-filter: blur(12px); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 280px; max-width: 90%; }
@@ -2024,6 +2001,60 @@
             border: 2px solid #0f172a; line-height: 1;
         }
         .chat-bubble-badge.show { display: flex; }
+
+        /* === CHAT MESSAGE POP PREVIEW (Messenger-style) === */
+        #chatMsgPop {
+            position: fixed;
+            bottom: calc(86px + env(safe-area-inset-bottom));
+            right: 14px;
+            max-width: 240px;
+            background: #1e2d45;
+            border: 1px solid rgba(14,165,233,0.25);
+            border-radius: 18px 18px 4px 18px;
+            padding: 10px 13px;
+            z-index: 4998;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(14,165,233,0.1);
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(12px) scale(0.95);
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16,1,0.3,1);
+        }
+        #chatMsgPop.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+        #chatMsgPop .pop-pfp {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1.5px solid rgba(14,165,233,0.3);
+        }
+        #chatMsgPop .pop-body { flex: 1; min-width: 0; }
+        #chatMsgPop .pop-name {
+            font-size: 10px;
+            font-weight: 800;
+            color: #7dd3fc;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 2px;
+        }
+        #chatMsgPop .pop-msg {
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.85);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+        }
 
         /* === CHAT DRAWER === */
         .chat-drawer-backdrop {
@@ -7847,6 +7878,15 @@
     <span class="chat-bubble-badge" id="chatBubbleBadge">0</span>
 </button>
 
+<!-- Chat Message Pop Preview -->
+<div id="chatMsgPop" onclick="openChatDrawer()">
+    <img class="pop-pfp" id="chatPopPfp" src="" alt="">
+    <div class="pop-body">
+        <div class="pop-name" id="chatPopName"></div>
+        <div class="pop-msg" id="chatPopMsg"></div>
+    </div>
+</div>
+
 <!-- Chat Drawer Backdrop -->
 <div class="chat-drawer-backdrop" id="chatDrawerBackdrop" onclick="closeChatDrawer()"></div>
 
@@ -8205,10 +8245,6 @@
     <!-- Loading bar -->
     <div class="splash-loader">
         <div class="splash-dot"></div>
-    </div>
-    <!-- Powered by -->
-    <div class="splash-powered">
-        <span class="splash-powered-text">Powered by <strong>K.R.A Stories</strong></span>
     </div>
 </div>
 
@@ -13442,12 +13478,30 @@ function runMathBlitz(problems) {
 
     let chatUnreadCount = 0;
     let chatDrawerOpen = false;
+    let chatPopTimer = null;
+
+    function showChatMsgPop(name, msg, pfp) {
+        if (chatPopTimer) clearTimeout(chatPopTimer);
+        const pop = document.getElementById('chatMsgPop');
+        const popName = document.getElementById('chatPopName');
+        const popMsg = document.getElementById('chatPopMsg');
+        const popPfp = document.getElementById('chatPopPfp');
+        if (!pop) return;
+        popName.textContent = name;
+        popMsg.textContent = msg;
+        popPfp.src = pfp || '';
+        pop.classList.add('show');
+        chatPopTimer = setTimeout(() => { pop.classList.remove('show'); }, 4000);
+    }
 
     function openChatDrawer() {
         chatDrawerOpen = true;
         chatUnreadCount = 0;
         const badge = document.getElementById('chatBubbleBadge');
         if(badge) { badge.textContent = '0'; badge.classList.remove('show'); }
+        // Hide pop preview when drawer opens
+        const pop = document.getElementById('chatMsgPop');
+        if(pop) { pop.classList.remove('show'); if(chatPopTimer) clearTimeout(chatPopTimer); }
         var onlineEl = document.getElementById('chatOnlineCount');
         var mainCount = document.getElementById('onlineCount');
         if(onlineEl && mainCount) onlineEl.textContent = mainCount.textContent + ' online';
@@ -13482,6 +13536,8 @@ function runMathBlitz(problems) {
                 chatUnreadCount++;
                 const badge = document.getElementById('chatBubbleBadge');
                 if(badge) { badge.textContent = chatUnreadCount > 9 ? '9+' : chatUnreadCount; badge.classList.add('show'); }
+                // Show messenger-style pop preview
+                showChatMsgPop(d.name, d.msg, d.pfp);
             }
             isFirst = false;
         });
