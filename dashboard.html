@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <style>
         :root { 
             --bg-dark: #0a0a0f; 
@@ -931,6 +932,34 @@
 </head>
 <body>
 
+<!-- ===== ADMIN LOGIN WALL ===== -->
+<div id="adminLoginWall" style="
+    position:fixed;inset:0;z-index:999999;
+    background:#07090f;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:'Inter',sans-serif;
+">
+    <div style="text-align:center;max-width:340px;width:90%;padding:0 20px;">
+        <img src="https://i.imgur.com/4nljOtR.png" style="width:72px;height:72px;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,0.6);margin-bottom:24px;">
+        <div style="font-size:22px;font-weight:900;color:white;letter-spacing:-0.5px;margin-bottom:6px;">Admin Dashboard</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.35);margin-bottom:32px;">Radio Bingo</div>
+        <button id="adminGoogleBtn" onclick="adminSignIn()" style="
+            width:100%;padding:15px;
+            background:white;color:#1e293b;
+            border:none;border-radius:14px;
+            font-size:14px;font-weight:800;
+            cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+            box-shadow:0 4px 20px rgba(0,0,0,0.4);
+            transition:opacity 0.2s;
+        ">
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+            Sign in with Google
+        </button>
+        <div id="adminLoginError" style="margin-top:16px;font-size:12px;color:#f87171;display:none;"></div>
+        <div style="margin-top:24px;font-size:11px;color:rgba(255,255,255,0.18);">Admin access only</div>
+    </div>
+</div>
+
 <div id="lockScreen" style="position:fixed; inset:0; background:#0f0f14; z-index:999999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white;">
     <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);">
         <i data-lucide="lock" style="width: 40px; height: 40px; color: var(--accent);"></i>
@@ -973,8 +1002,8 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
     </div>
 
     <div class="card" style="padding: 15px; margin: 0; background: linear-gradient(145deg, rgba(245, 158, 11, 0.1), rgba(0,0,0,0)); border: 1px solid rgba(245, 158, 11, 0.3);">
-        <label style="color:var(--gold)"><i data-lucide="trophy" style="width:12px"></i> Jackpot Prize (₱)</label>
-        <input type="text" id="jackpotAmount" placeholder="e.g. ₱5000" style="margin-bottom:10px; text-align:center; font-weight:900; color:var(--gold); font-size:18px;">
+        <label style="color:var(--gold)"><i data-lucide="trophy" style="width:12px"></i> Jackpot Prize</label>
+        <input type="text" id="jackpotAmount" placeholder="e.g. 5000" style="margin-bottom:10px; text-align:center; font-weight:900; color:var(--gold); font-size:18px;">
         <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" id="jackpotToggle" onclick="toggleJackpot()">
             <div style="width:44px; height:24px; background:rgba(0,0,0,0.3); border-radius:20px; position:relative; transition:0.3s;" id="jackpotKnobBg">
                 <div style="width:18px; height:18px; background:white; border-radius:50%; position:absolute; top:3px; left:3px; transition:0.3s;" id="jackpotKnob"></div>
@@ -1382,7 +1411,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
 
             <div class="form-row">
                 <div class="input-group">
-                    <label>Entry Fee (Piso)</label>
+                    <label>Entry Fee (RB Coins)</label>
                     <input type="number" id="t-fee" placeholder="100" min="0" value="100">
                 </div>
                 <div class="input-group">
@@ -1544,11 +1573,11 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                         </select>
                     </div>
                     <div>
-                        <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-bottom:5px;text-transform:uppercase;">Price (Piso) *</label>
-                        <input id="shopPPrice" type="number" min="1" placeholder="e.g. ₱5000" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;color:white;font-size:13px;outline:none;box-sizing:border-box;">
+                        <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-bottom:5px;text-transform:uppercase;">Price (RB Coins) *</label>
+                        <input id="shopPPrice" type="number" min="1" placeholder="e.g. 5000" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;color:white;font-size:13px;outline:none;box-sizing:border-box;">
                     </div>
                     <div>
-                        <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-bottom:5px;text-transform:uppercase;">Delivery Fee (Piso)</label>
+                        <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-bottom:5px;text-transform:uppercase;">Delivery Fee (RB Coins)</label>
                         <input id="shopPDelivery" type="number" min="0" placeholder="e.g. 1000 (0 = free)" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;color:white;font-size:13px;outline:none;box-sizing:border-box;">
                     </div>
                     <div>
@@ -1601,7 +1630,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                         <input id="vcDiscount" type="number" min="1" max="100" placeholder="e.g. 20" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;color:white;font-size:13px;outline:none;box-sizing:border-box;">
                     </div>
                     <div>
-                        <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-bottom:5px;text-transform:uppercase;">Min. Order (Piso)</label>
+                        <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-bottom:5px;text-transform:uppercase;">Min. Order (RB Coins)</label>
                         <input id="vcMinOrder" type="number" min="0" placeholder="e.g. 5000 (0 = no minimum)" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;color:white;font-size:13px;outline:none;box-sizing:border-box;">
                     </div>
                 </div>
@@ -1649,7 +1678,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                         style="width:100%;padding:11px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:white;font-size:13px;font-weight:600;outline:none;cursor:pointer;">
                         <option value="announcement">📣 Announcement</option>
                         <option value="bingo_win">🎉 Bingo Event</option>
-                        <option value="coin">💰 Peso Reward</option>
+                        <option value="coin">🪙 Coin Reward</option>
                         <option value="like">❤️ Engagement</option>
                         <option value="support">🛠️ System</option>
                     </select>
@@ -1713,7 +1742,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 </div>
                 <div>
                     <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-bottom:6px;text-transform:uppercase;">Prize / Reward *</label>
-                    <input id="seEventPrize" type="text" placeholder="e.g. ₱500, Groceries..." style="width:100%;padding:11px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(244,114,182,0.2);border-radius:10px;color:white;font-size:13px;font-weight:600;outline:none;">
+                    <input id="seEventPrize" type="text" placeholder="e.g. 500 RB Coins, Groceries..." style="width:100%;padding:11px 14px;background:rgba(0,0,0,0.3);border:1px solid rgba(244,114,182,0.2);border-radius:10px;color:white;font-size:13px;font-weight:600;outline:none;">
                 </div>
             </div>
 
@@ -1800,6 +1829,40 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiobingo-9ac29.firebaseapp.com", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const auth = firebase.auth();
+
+    // ===== ADMIN AUTH GATE =====
+    function adminSignIn() {
+        const btn = document.getElementById('adminGoogleBtn');
+        btn.style.opacity = '0.6';
+        btn.textContent = 'Signing in...';
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(function(err) {
+            btn.style.opacity = '1';
+            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg> Sign in with Google';
+            document.getElementById('adminLoginError').style.display = 'block';
+            document.getElementById('adminLoginError').textContent = 'Sign-in failed. Try again.';
+        });
+    }
+
+    auth.onAuthStateChanged(function(user) {
+        if (!user) {
+            document.getElementById('adminLoginWall').style.display = 'flex';
+            return;
+        }
+        // Check if user is in /admins
+        db.ref('admins/' + user.uid).once('value', function(snap) {
+            if (!snap.exists()) {
+                auth.signOut();
+                document.getElementById('adminLoginWall').style.display = 'flex';
+                document.getElementById('adminLoginError').style.display = 'block';
+                document.getElementById('adminLoginError').textContent = '⛔ Access denied. Not an admin.';
+                return;
+            }
+            // Verified admin — hide the wall
+            document.getElementById('adminLoginWall').style.display = 'none';
+        });
+    });
     
     // --- SERVICE ACCOUNT LOGIC (REQUIRED FOR HTTP V1) ---
 
@@ -1893,7 +1956,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
         const jp3pm = parseInt(document.getElementById('jp3pmAmount').value) || 5000;
         const jp8pm = parseInt(document.getElementById('jp8pmAmount').value) || 5000;
 
-        if(!confirm(`Generate today's full schedule?\n\n• 8:00 AM → 12:00 Midnight (every 30 mins)\n• 3:00 PM Jackpot: ₱${jp3pm.toLocaleString()}\n• 8:00 PM Jackpot: ₱${jp8pm.toLocaleString()}\n\nExisting schedules will be cleared!`)) return;
+        if(!confirm(`Generate today's full schedule?\n\n• 8:00 AM → 12:00 Midnight (every 30 mins)\n• 3:00 PM Jackpot: ${jp3pm.toLocaleString()} RB Coins\n• 8:00 PM Jackpot: ${jp8pm.toLocaleString()} RB Coins\n\nExisting schedules will be cleared!`)) return;
 
         // Clear old then write new
         db.ref('gameState/schedules').remove(() => {
@@ -1927,7 +1990,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 if(err) { alert("Error: " + err.message); return; }
                 
                 // Push announcement to players
-                const msg = `📅 NEW BINGO SCHEDULE!\n\nDraws every 30 minutes, 8:00 AM – 12:00 Midnight!\n\n⚡ JACKPOT ROUNDS:\n• 3:00 PM — ₱${jp3pm.toLocaleString()}\n• 8:00 PM — ₱${jp8pm.toLocaleString()}\n\nGood luck to everyone! 🍀`;
+                const msg = `📅 NEW BINGO SCHEDULE!\n\nDraws every 30 minutes, 8:00 AM – 12:00 Midnight!\n\n⚡ JACKPOT ROUNDS:\n• 3:00 PM — ${jp3pm.toLocaleString()} RB Coins\n• 8:00 PM — ${jp8pm.toLocaleString()} RB Coins\n\nGood luck to everyone! 🍀`;
                 db.ref('gameState/scheduleAnnouncement').set({ 
                     message: msg, 
                     title: "🆕 Draw Schedule Updated!",
@@ -1936,7 +1999,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 });
                 
                 // Broadcast push notification
-                sendPushToAll("📅 NEW BINGO SCHEDULE!", `Draws every 30 mins from 8AM to 12MN! Jackpot rounds at 3PM & 8PM. ₱${jp3pm.toLocaleString()} jackpot prize!`);
+                sendPushToAll("📅 NEW BINGO SCHEDULE!", `Draws every 30 mins from 8AM to 12MN! Jackpot rounds at 3PM & 8PM. ${jp3pm.toLocaleString()} RB Coins jackpot prize!`);
                 
                 if(typeof addActivityItem === 'function') addActivityItem(`📅 Auto Schedule generated: ${count} draws (Jackpot 3PM: ${jp3pm} | 8PM: ${jp8pm})`);
                 alert(`✅ ${count} draw slots generated!\n\nPlayers will see an announcement popup.`);
@@ -1949,8 +2012,8 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
         if(isOn && amount < 100) return alert("Enter a valid jackpot amount first!");
         db.ref('gameState/jackpot').set({ amount: isOn ? amount : 0, active: isOn });
         if(isOn) {
-            sendPushToAll("⚡ JACKPOT ROUND!", `JACKPOT is now ACTIVE! Prize: ₱${amount.toLocaleString()}! Join the draw NOW! 🏆`);
-            if(typeof addActivityItem === 'function') addActivityItem(`⚡ Jackpot OVERRIDE ON: ₱${amount.toLocaleString()}`);
+            sendPushToAll("⚡ JACKPOT ROUND!", `JACKPOT is now ACTIVE! Prize: ${amount.toLocaleString()} RB Coins! Join the draw NOW! 🏆`);
+            if(typeof addActivityItem === 'function') addActivityItem(`⚡ Jackpot OVERRIDE ON: ${amount.toLocaleString()} RB Coins`);
             // Update toggle UI
             jackpotVisible = true;
             document.getElementById('jackpotKnob').style.left = "23px";
@@ -2019,14 +2082,14 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             
             // 10-minute warning
             if(!notified10 && diff <= 600000 && diff > 540000) { 
-                const msg = isJP ? `⚡ JACKPOT ROUND in 10 minutes! Prize: ₱${(jpAmt||5000).toLocaleString()}! Get ready! 🏆` : "⏰ Bingo draw in 10 minutes! Prepare your cards!";
+                const msg = isJP ? `⚡ JACKPOT ROUND in 10 minutes! Prize: ${(jpAmt||5000).toLocaleString()} RB Coins! Get ready! 🏆` : "⏰ Bingo draw in 10 minutes! Prepare your cards!";
                 sendPushToAll("🎯 DRAW REMINDER", msg); 
                 if(typeof val === 'object') db.ref('gameState/schedules/' + key).update({ notified10min: true }); 
             }
             
             // 5-minute warning
             if(!notified5 && diff <= 300000 && diff > 240000) { 
-                const msg = isJP ? `⚡ JACKPOT ROUND starts in 5 minutes! ₱${(jpAmt||5000).toLocaleString()} on the line! 🔥` : "⚠️ Starting in 5 minutes! The Bingo draw is about to begin!";
+                const msg = isJP ? `⚡ JACKPOT ROUND starts in 5 minutes! ${(jpAmt||5000).toLocaleString()} RB Coins on the line! 🔥` : "⚠️ Starting in 5 minutes! The Bingo draw is about to begin!";
                 sendPushToAll("🎯 DRAW ALERT", msg); 
                 if(typeof val === 'object') db.ref('gameState/schedules/' + key).update({ notified5min: true }); 
             }
@@ -2048,7 +2111,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                             // ⚡ JACKPOT = BLACKOUT PATTERN
                             randomizePatternForGame(true); // Force Blackout
                             document.getElementById('patternSelect').value = "Blackout";
-                            sendPushToAll("⚡ JACKPOT ROUND STARTING!", `The JACKPOT draw is LIVE! Prize: ₱${jpAmt.toLocaleString()}! Open the app NOW! 🏆🔥`);
+                            sendPushToAll("⚡ JACKPOT ROUND STARTING!", `The JACKPOT draw is LIVE! Prize: ${jpAmt.toLocaleString()} RB Coins! Open the app NOW! 🏆🔥`);
                         } else {
                             // Turn off jackpot for normal rounds + randomize pattern
                             db.ref('gameState/jackpot').update({ active: false });
