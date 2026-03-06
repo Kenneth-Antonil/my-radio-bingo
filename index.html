@@ -10341,6 +10341,36 @@ function runMathBlitz(problems) {
     function requestGatePermission() { Notification.requestPermission().then(permission => { if (permission === "granted") { localStorage.setItem('notif_accepted', 'true'); checkNotifGate(); requestNotifyPermission(); } else { checkNotifGate(); } }); }
     function showToast(msg) { const toast = document.getElementById('customToast'); document.getElementById('toastMsg').innerText = msg; toast.classList.add('show'); playSound('click'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
 
+    function claimReferral() {
+        const code = (document.getElementById('referralInput').value || '').trim().toUpperCase();
+        if (!code) { showToast('Enter a referral code first!'); return; }
+        const currentUser = auth.currentUser;
+        if (!currentUser) { showToast('You must be logged in.'); return; }
+        // Prevent self-referral
+        if (userData && userData.refCode && userData.refCode === code) { showToast('Hindi mo magagamit ang sarili mong code!'); return; }
+        // Check if already referred
+        if (userData && userData.referredBy) { showToast('May referral code ka na!'); document.getElementById('referralInputSection').style.display = 'none'; return; }
+        // Find referrer by code
+        db.ref('users').orderByChild('refCode').equalTo(code).once('value', function(snap) {
+            if (!snap.exists()) { showToast('Invalid referral code!'); return; }
+            const referrerUid = Object.keys(snap.val())[0];
+            if (referrerUid === currentUser.uid) { showToast('Hindi mo magagamit ang sarili mong code!'); return; }
+            // Save referredBy on current user
+            db.ref('users/' + currentUser.uid).update({ referredBy: code }, function(err) {
+                if (err) { showToast('Error. Try again.'); return; }
+                // Give referrer their bonus points
+                db.ref('users/' + referrerUid + '/points').transaction(function(p) { return (p || 0) + 25000; });
+                // Give current user a bonus too
+                db.ref('users/' + currentUser.uid + '/points').transaction(function(p) { return (p || 0) + 25000; });
+                // Log it
+                db.ref('coinHistory/' + referrerUid).push({ label: '🎉 Referral Bonus: Someone used your code! (+₱10)', amount: 25000, type: 'referral', timestamp: Date.now() });
+                db.ref('coinHistory/' + currentUser.uid).push({ label: '🎉 Referral Bonus: Code claimed! (+₱10)', amount: 25000, type: 'referral', timestamp: Date.now() });
+                document.getElementById('referralInputSection').style.display = 'none';
+                showToast('✅ Referral claimed! Bonus points added!');
+            });
+        });
+    }
+
     let confirmCallback = null;
     function showCustomConfirm(title, msg, onYes, yesText = 'CONFIRM', noText = 'CANCEL', singleButton = false, showTextarea = false) { 
         document.getElementById('confTitle').innerText = title; 
@@ -11327,7 +11357,7 @@ function runMathBlitz(problems) {
                     const pendingInfCode = window._pendingInfluencerCode || null;
                     const finalReferredBy = pendingInfCode || referredBy || null;
                     userRef.set({ name: u.displayName, photo: u.photoURL, points: 200, refCode: newRefCode, referredBy: finalReferredBy, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false, ownedSkins: ['default'], equippedSkin: 'default' }); 
-                    if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 300); } }); }
+                    if (finalReferredBy && !pendingInfCode) { db.ref('users').orderByChild('refCode').equalTo(finalReferredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; if (referrerUid !== u.uid) { db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 25000); db.ref('coinHistory/' + referrerUid).push({ label: '🎉 Referral Bonus: Someone used your link! (+₱10)', amount: 25000, type: 'referral', timestamp: Date.now() }); } } }); }
                     if (pendingInfCode) { setTimeout(() => { if(typeof trackInfluencerRecruit === 'function') trackInfluencerRecruit(pendingInfCode, u.uid, u.displayName, u.photoURL); }, 1000); } 
                 } else { 
                     // Existing User
