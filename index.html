@@ -12436,35 +12436,66 @@ function runMathBlitz(problems) {
 
 </body></html>`); win.document.close(); } else { showToast("Pop-up blocked! Please allow pop-ups."); } }); }
 
-    function setupPresence(uid) { 
-        const onlineRef = db.ref('.info/connected'); 
-        const userStatusRef = db.ref('status/' + uid); 
-        onlineRef.on('value', (snapshot) => { 
-            if (snapshot.val() === false) return; 
-            // When user disconnects, update status to offline with timestamp
-            userStatusRef.onDisconnect().set({ 
-                state: 'offline', 
-                last_seen: firebase.database.ServerValue.TIMESTAMP 
-            }).then(() => { 
-                // While online, set status to online
-                userStatusRef.set({ 
-                    state: 'online', 
-                    last_seen: firebase.database.ServerValue.TIMESTAMP 
-                }); 
-            }); 
-        }); 
-        // Global Presence Listener
-        db.ref('status').on('value', (s) => { 
-            onlineUsers = s.val() || {};
-            // Count only truly online users
-            const onlineCount = Object.values(onlineUsers).filter(status => status.state === 'online').length;
-            document.getElementById('onlineCount').innerText = onlineCount || 0; 
+    function setupPresence(uid) {
+        const onlineRef     = db.ref('.info/connected');
+        const userStatusRef = db.ref('status/' + uid);
+        const countRef      = db.ref('onlineCount');
+
+        // ── Connect / Disconnect ──
+        onlineRef.on('value', (snapshot) => {
+            if (snapshot.val() === false) return;
+            userStatusRef.onDisconnect().set({
+                state: 'offline',
+                last_seen: firebase.database.ServerValue.TIMESTAMP
+            });
+            countRef.onDisconnect().transaction(n => Math.max(0, (n || 0) - 1));
+
+            userStatusRef.once('value', prev => {
+                const wasOnline = prev.exists() && prev.val().state === 'online';
+                userStatusRef.set({
+                    state: 'online',
+                    last_seen: firebase.database.ServerValue.TIMESTAMP
+                });
+                // Increment counter only if transitioning from offline
+                if (!wasOnline) countRef.transaction(n => (n || 0) + 1);
+            });
+        });
+
+        // ── Online count (reads 1 number, not all users) ──
+        countRef.on('value', s => {
+            const c = Math.max(0, s.val() || 0);
+            const el = document.getElementById('onlineCount');
+            if (el) el.innerText = c;
+            const chatEl = document.getElementById('chatOnlineCount');
+            if (chatEl) chatEl.textContent = c + ' online';
+        });
+
+        // ── Incremental status updates (child events = much less data) ──
+        db.ref('status').on('child_added', s => {
+            onlineUsers[s.key] = s.val();
             updateAllOnlineIndicators();
             renderOnlineBubbles(onlineUsers, uid);
-        }); 
+        });
+        db.ref('status').on('child_changed', s => {
+            onlineUsers[s.key] = s.val();
+            updateAllOnlineIndicators();
+            renderOnlineBubbles(onlineUsers, uid);
+        });
+        db.ref('status').on('child_removed', s => {
+            delete onlineUsers[s.key];
+            updateAllOnlineIndicators();
+            renderOnlineBubbles(onlineUsers, uid);
+        });
     }
-    
-    function updatePresenceData(uid, name, points, photo) { db.ref('status/' + uid).update({ name: name, points: points, photo: photo }); }
+
+    // Only write to Firebase if data actually changed
+    let _lastPresenceData = {};
+    function updatePresenceData(uid, name, points, photo) {
+        const key = name + '|' + points + '|' + photo;
+        if (_lastPresenceData[uid] === key) return; // skip if nothing changed
+        _lastPresenceData[uid] = key;
+        db.ref('status/' + uid).update({ name, points, photo });
+    }
 
     /* ── Online Floating Bubbles in Bingo Header ── */
     var _activeBubbles = {}; // uid → img element
@@ -13956,7 +13987,8 @@ function runMathBlitz(problems) {
         });
     }
 
-    /* ── typing indicator ── */
+    /* ── Typing indicator — throttled, max 1 Firebase write per 4 seconds ── */
+    let _typingActive = false;
     function onChatInput(el) {
         const sendBtn = document.getElementById('chatSendBtn');
         if(el.value.trim()) {
@@ -13967,12 +13999,18 @@ function runMathBlitz(problems) {
             sendBtn.innerHTML = '👍';
         }
         lucide.createIcons();
-        // Typing presence
         if(!auth.currentUser) return;
         const uid = auth.currentUser.uid;
-        db.ref('chatTyping/' + uid).set({ name: userData.name, pfp: userData.photo || '', ts: Date.now() });
+        // Only write to Firebase if not already marked as typing
+        if(!_typingActive) {
+            _typingActive = true;
+            db.ref('chatTyping/' + uid).set({ name: userData.name, pfp: userData.photo || '', ts: Date.now() });
+        }
         clearTimeout(_chatTypingTimer);
-        _chatTypingTimer = setTimeout(() => db.ref('chatTyping/' + uid).remove(), 3000);
+        _chatTypingTimer = setTimeout(() => {
+            _typingActive = false;
+            db.ref('chatTyping/' + uid).remove();
+        }, 3000);
     }
 
     /* ── emoji helpers ── */
@@ -14209,51 +14247,50 @@ function runMathBlitz(problems) {
     function renderActiveFriends() {
         const bar = document.getElementById('pmActiveFriendsBar');
         bar.innerHTML = '';
-        
         if(!auth.currentUser) return;
-        
+
         db.ref('friends/' + auth.currentUser.uid).once('value', s => {
             if(!s.exists()) return;
-            
             const friendsList = [];
             s.forEach(f => friendsList.push(f.key));
-            
-            // Check each friend's online status
+
+            // Use local onlineUsers map (already synced via child_added/changed/removed)
+            // No extra Firebase reads needed — just filter what we already have
             friendsList.forEach(friendId => {
-                db.ref('status/' + friendId).on('value', statusSnap => {
-                    const status = statusSnap.val();
-                    
-                    // Only show if truly online
-                    if(status && status.state === 'online') {
-                        db.ref('users/' + friendId).once('value', uSnap => {
-                            const u = uSnap.val();
-                            if(!u) return;
-                            
-                            // Remove existing item if present
-                            const existingItem = bar.querySelector(`[data-friend-id="${friendId}"]`);
-                            if(existingItem) existingItem.remove();
-                            
-                            const item = document.createElement('div');
-                            item.className = 'active-friend-item';
-                            item.dataset.friendId = friendId;
-                            item.onclick = () => openPrivateChat(friendId, u.name, u.photo); 
-                            item.innerHTML = `
-                                <div class="active-img-wrap">
-                                    <img src="${u.photo}" class="active-img">
-                                    <div class="online-dot-large"></div>
-                                </div>
-                                <div class="active-name">${u.name.split(' ')[0]}</div>
-                            `;
-                            bar.appendChild(item);
-                        });
-                    } else {
-                        // Remove from active bar if user went offline
-                        const existingItem = bar.querySelector(`[data-friend-id="${friendId}"]`);
-                        if(existingItem) existingItem.remove();
-                    }
-                });
+                const status = onlineUsers[friendId];
+                if(!status || status.state !== 'online') return;
+
+                // Only fetch user profile once if not in onlineUsers data yet
+                const name  = status.name  || null;
+                const photo = status.photo || null;
+
+                if(name && photo) {
+                    _appendActiveFriend(bar, friendId, name, photo);
+                } else {
+                    db.ref('users/' + friendId).once('value', uSnap => {
+                        const u = uSnap.val();
+                        if(!u) return;
+                        _appendActiveFriend(bar, friendId, u.name, u.photo);
+                    });
+                }
             });
         });
+    }
+
+    function _appendActiveFriend(bar, friendId, name, photo) {
+        if(bar.querySelector(`[data-friend-id="${friendId}"]`)) return;
+        const item = document.createElement('div');
+        item.className = 'active-friend-item';
+        item.dataset.friendId = friendId;
+        item.onclick = () => openPrivateChat(friendId, name, photo);
+        item.innerHTML = `
+            <div class="active-img-wrap">
+                <img src="${photo}" class="active-img">
+                <div class="online-dot-large"></div>
+            </div>
+            <div class="active-name">${(name||'').split(' ')[0]}</div>
+        `;
+        bar.appendChild(item);
     }
 
     // === GROUP CHAT LOGIC ===
@@ -16120,7 +16157,8 @@ Please explain why you want a verification badge:`;
     }
 
     function _loadPdReactionBar(postKey) {
-        db.ref('postLikes/' + postKey).on('value', s => {
+        // once() — post detail is opened one at a time, no need for permanent listener here
+        db.ref('postLikes/' + postKey).once('value', s => {
             const bar = document.getElementById('pd-reaction-bar-' + postKey);
             if(!bar) return;
             if(!s.exists()) { bar.innerHTML = ''; return; }
@@ -16807,7 +16845,8 @@ Please explain why you want a verification badge:`;
 
             // Real-time poll updates
             if (post.poll) {
-                db.ref(`socialPosts/${post.key}/poll/votes`).on('value', () => {
+                // once() — poll renders on load, updates only when user votes
+                db.ref(`socialPosts/${post.key}/poll/votes`).once('value', () => {
                     db.ref(`socialPosts/${post.key}`).once('value', freshSnap => {
                         const fresh = freshSnap.val();
                         if (!fresh || !fresh.poll) return;
@@ -16841,8 +16880,8 @@ Please explain why you want a verification badge:`;
                 }
             });
             
-            // Load comment count
-            db.ref('postComments/' + post.key).on('value', snapshot => {
+            // Load comment count (once — not a realtime listener per post)
+            db.ref('postComments/' + post.key).once('value', snapshot => {
                 const count = snapshot.numChildren();
                 const btnText = postDiv.querySelector('#comment-btn-text-' + post.key);
                 if (btnText) {
@@ -16855,16 +16894,15 @@ Please explain why you want a verification badge:`;
     }
 
     function loadReactionSummary(postKey) {
-        db.ref('postLikes/' + postKey).on('value', s => {
+        // once() — no permanent listener per post (saves massive Firebase reads)
+        db.ref('postLikes/' + postKey).once('value', s => {
             const bar = document.getElementById('reaction-summary-' + postKey);
             if (!bar) return;
 
-            // Always fetch comment count alongside, then do ONE DOM update
             db.ref('postComments/' + postKey).once('value', commentSnapshot => {
                 const commentCount = commentSnapshot.numChildren();
 
                 if (!s.exists()) {
-                    // Reserve space but show nothing — no height collapse
                     bar.innerHTML = commentCount > 0
                         ? `<span></span><span class="comment-count-text">${commentCount === 1 ? '1 comment' : commentCount + ' comments'}</span>`
                         : '';
@@ -16886,7 +16924,6 @@ Please explain why you want a verification badge:`;
                 const reactionText = totalReactions === 1 ? '1 reaction' : `${totalReactions} reactions`;
                 const commentText = commentCount > 0 ? (commentCount === 1 ? '1 comment' : `${commentCount} comments`) : '';
 
-                // Single atomic DOM write — no double render
                 bar.innerHTML =
                     `<div class="rsb-inner"><div class="reaction-emojis-group">${emojisHtml}</div><span class="reaction-count-text">${reactionText}</span></div>` +
                     (commentText ? `<span class="comment-count-text">${commentText}</span>` : '');
@@ -18368,7 +18405,7 @@ Please explain why you want a verification badge:`;
         container.innerHTML = '';
         // Count hashtag usage across recent posts
         const tagCounts = {};
-        db.ref('socialPosts').limitToLast(100).once('value', snap => {
+        db.ref('socialPosts').limitToLast(30).once('value', snap => {
             snap.forEach(c => {
                 const content = c.val().content || '';
                 const matches = content.match(/#(\w+)/g);
@@ -18391,7 +18428,7 @@ Please explain why you want a verification badge:`;
         container.innerHTML = `<div style="text-align:center;padding:40px;opacity:0.4;">Searching for #${tag}...</div>`;
         document.getElementById('explorerSubtitle').textContent = `Posts with #${tag}`;
 
-        db.ref('socialPosts').limitToLast(200).once('value', snap => {
+        db.ref('socialPosts').limitToLast(40).once('value', snap => {
             const posts = [];
             snap.forEach(c => {
                 const p = c.val();
@@ -18464,7 +18501,7 @@ Please explain why you want a verification badge:`;
         }
 
         function showTagAutocomplete(query, anchorEl) {
-            db.ref('socialPosts').limitToLast(100).once('value', snap => {
+            db.ref('socialPosts').limitToLast(30).once('value', snap => {
                 const tags = new Set();
                 snap.forEach(c => {
                     const content = c.val().content || '';
@@ -20605,19 +20642,12 @@ function processShopOrder(costs, addr) {
         }
     }
 
-    // ── 5. HEARTBEAT (keeps Firebase alive) ─────────────────────
+    // ── 5. HEARTBEAT — removed (Firebase .info/connected handles reconnection natively)
     function absStartHeartbeat() {
+        // No-op: Firebase SDK automatically manages connection state via .info/connected.
+        // Polling .info/serverTimeOffset every 30s was generating ~576,000 unnecessary
+        // reads/day across all users with zero benefit.
         if (ABS.heartbeatTimer) clearInterval(ABS.heartbeatTimer);
-        ABS.heartbeatTimer = setInterval(function() {
-            if (!ABS.isOnline || !window.db) return;
-            try {
-                window.db.ref('.info/serverTimeOffset').once('value', function() {
-                    // heartbeat ok
-                }, function(err) {
-                    absLog('HEARTBEAT_FAIL', err.message);
-                });
-            } catch(e) { /* silent */ }
-        }, ABS.heartbeatInterval);
     }
 
     // ── 6. SAFE DOM WRAPPER ──────────────────────────────────────
