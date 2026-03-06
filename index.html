@@ -1393,7 +1393,6 @@
         }
         #splash-screen::before { content: none; }
         #splash-screen::after  { content: none; }
-
         .splash-logo {
             position: relative;
             z-index: 2;
@@ -1406,7 +1405,6 @@
         .splash-logo .tc-icon-lg { display: none; }
         .splash-logo .tc-text    { display: none; }
         .splash-logo span        { -webkit-text-fill-color: transparent; }
-
         .splash-logo img {
             width: 90px !important;
             height: 90px !important;
@@ -1416,7 +1414,6 @@
             display: block !important;
             margin-bottom: 20px !important;
         }
-
         .splash-app-name {
             font-size: 26px;
             font-weight: 800;
@@ -1425,7 +1422,6 @@
             line-height: 1;
             margin-bottom: 8px;
         }
-
         .splash-tagline {
             position: relative;
             z-index: 2;
@@ -1437,7 +1433,6 @@
             margin-top: 0;
             animation: splash-logo-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
         }
-
         .splash-loader {
             position: absolute;
             bottom: calc(60px + env(safe-area-inset-bottom));
@@ -1460,7 +1455,6 @@
             animation: splash-spin 0.9s linear infinite;
         }
         .splash-loader::after { content: none; }
-
         .splash-powered {
             position: absolute;
             bottom: calc(20px + env(safe-area-inset-bottom));
@@ -1473,7 +1467,6 @@
             white-space: nowrap;
             z-index: 2;
         }
-
         @keyframes splash-logo-enter {
             from { opacity: 0; transform: translateY(16px) scale(0.96); }
             to   { opacity: 1; transform: translateY(0)    scale(1);    }
@@ -1491,7 +1484,6 @@
             0%, 100% { background-position: 0% 50%; }
             50%       { background-position: 100% 50%; }
         }
-
         @media (max-width: 480px) {
             .splash-logo img { width: 80px !important; height: 80px !important; }
         }
@@ -1874,6 +1866,58 @@
             border: 2px solid #0f172a; line-height: 1;
         }
         .chat-bubble-badge.show { display: flex; }
+
+        /* === LIVE COMMENT PREVIEW (FB-style) === */
+        .live-comment-preview {
+            position: fixed;
+            bottom: calc(90px + env(safe-area-inset-bottom));
+            right: 14px;
+            max-width: 260px;
+            background: rgba(15, 23, 42, 0.97);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 18px 18px 4px 18px;
+            padding: 10px 13px;
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            z-index: 4998;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px) scale(0.95);
+            transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.16,1,0.3,1);
+        }
+        .live-comment-preview.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        .live-comment-preview img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1.5px solid rgba(255,255,255,0.1);
+        }
+        .live-comment-preview-body { flex: 1; min-width: 0; }
+        .live-comment-preview-name {
+            font-size: 11px;
+            font-weight: 800;
+            color: #e2e8f0;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .live-comment-preview-msg {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.4;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
 
         /* === CHAT DRAWER === */
         .chat-drawer-backdrop {
@@ -7696,6 +7740,14 @@
     <span class="chat-bubble-btn-label">Chat</span>
     <span class="chat-bubble-badge" id="chatBubbleBadge">0</span>
 </button>
+<!-- Live Comment Preview Bubble -->
+<div class="live-comment-preview" id="liveCommentPreview">
+    <img id="liveCommentAvatar" src="" alt="">
+    <div class="live-comment-preview-body">
+        <div class="live-comment-preview-name" id="liveCommentName"></div>
+        <div class="live-comment-preview-msg" id="liveCommentMsg"></div>
+    </div>
+</div>
 
 <!-- Chat Drawer Backdrop -->
 <div class="chat-drawer-backdrop" id="chatDrawerBackdrop" onclick="closeChatDrawer()"></div>
@@ -13311,6 +13363,9 @@ function runMathBlitz(problems) {
     let chatDrawerOpen = false;
 
     function openChatDrawer() {
+        // hide live preview when user opens chat
+        const prev = document.getElementById('liveCommentPreview');
+        if (prev) prev.classList.remove('show');
         chatDrawerOpen = true;
         chatUnreadCount = 0;
         const badge = document.getElementById('chatBubbleBadge');
@@ -13349,6 +13404,16 @@ function runMathBlitz(problems) {
                 chatUnreadCount++;
                 const badge = document.getElementById('chatBubbleBadge');
                 if(badge) { badge.textContent = chatUnreadCount > 9 ? '9+' : chatUnreadCount; badge.classList.add('show'); }
+                // FB-style live comment preview
+                const preview = document.getElementById('liveCommentPreview');
+                if (preview) {
+                    document.getElementById('liveCommentAvatar').src = d.pfp || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(d.name||'?') + '&background=1e293b&color=fff&size=30';
+                    document.getElementById('liveCommentName').textContent = d.name || 'Someone';
+                    document.getElementById('liveCommentMsg').textContent = d.msg || '';
+                    preview.classList.add('show');
+                    clearTimeout(window._lcpTimer);
+                    window._lcpTimer = setTimeout(function(){ preview.classList.remove('show'); }, 3500);
+                }
             }
             isFirst = false;
         });
@@ -22031,15 +22096,13 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
             s1.text = "atOptions = { 'key' : '59f94c5cb7bcd84edb277947774c3b9d', 'format' : 'iframe', 'height' : 50, 'width' : 320, 'params' : {} };";
             var s2 = document.createElement('script');
             s2.src = 'https://directoryeditorweep.com/59f94c5cb7bcd84edb277947774c3b9d/invoke.js';
-            inner.appendChild(s1);
-            inner.appendChild(s2);
+            inner.appendChild(s1); inner.appendChild(s2);
         }
         var nc = document.getElementById('container-rbad-native');
         if(nc){
             nc.innerHTML = '';
             var ns = document.createElement('script');
-            ns.async = true;
-            ns.setAttribute('data-cfasync','false');
+            ns.async = true; ns.setAttribute('data-cfasync','false');
             ns.src = 'https://directoryeditorweep.com/9cfeacff830bbe7f52524136fca6bed6/invoke.js';
             nc.parentNode.insertBefore(ns, nc);
         }
