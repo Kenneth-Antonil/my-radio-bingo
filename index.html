@@ -10364,6 +10364,7 @@ function runMathBlitz(problems) {
                 db.ref('users/' + currentUser.uid + '/points').transaction(function(p) { return (p || 0) + 25000; });
                 // Log it
                 db.ref('coinHistory/' + referrerUid).push({ label: '🎉 Referral Bonus: Someone used your code! (+₱10)', amount: 25000, type: 'referral', timestamp: Date.now() });
+                db.ref('notifications/' + referrerUid).push({ msg: (userData && userData.name ? userData.name : 'Someone') + ' used your referral code! 🎉 +₱10 added to your balance.', time: Date.now(), type: 'gift', from: currentUser.uid, fromName: userData && userData.name ? userData.name : 'Someone', image: userData && userData.photo ? userData.photo : '' });
                 db.ref('coinHistory/' + currentUser.uid).push({ label: '🎉 Referral Bonus: Code claimed! (+₱10)', amount: 25000, type: 'referral', timestamp: Date.now() });
                 document.getElementById('referralInputSection').style.display = 'none';
                 showToast('✅ Referral claimed! Bonus points added!');
@@ -11357,7 +11358,7 @@ function runMathBlitz(problems) {
                     const pendingInfCode = window._pendingInfluencerCode || null;
                     const finalReferredBy = pendingInfCode || referredBy || null;
                     userRef.set({ name: u.displayName, photo: u.photoURL, points: 200, refCode: newRefCode, referredBy: finalReferredBy, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false, ownedSkins: ['default'], equippedSkin: 'default' }); 
-                    if (finalReferredBy && !pendingInfCode) { db.ref('users').orderByChild('refCode').equalTo(finalReferredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; if (referrerUid !== u.uid) { db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 25000); db.ref('coinHistory/' + referrerUid).push({ label: '🎉 Referral Bonus: Someone used your link! (+₱10)', amount: 25000, type: 'referral', timestamp: Date.now() }); } } }); }
+                    if (finalReferredBy && !pendingInfCode) { db.ref('users').orderByChild('refCode').equalTo(finalReferredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; if (referrerUid !== u.uid) { db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 25000); db.ref('coinHistory/' + referrerUid).push({ label: '🎉 Referral Bonus: Someone used your link! (+₱10)', amount: 25000, type: 'referral', timestamp: Date.now() }); db.ref('notifications/' + referrerUid).push({ msg: (u.displayName || 'Someone') + ' joined using your referral link! 🎉 +₱10 added to your balance.', time: Date.now(), type: 'gift', from: u.uid, fromName: u.displayName || 'Someone', image: u.photoURL || '' }); } } }); }
                     if (pendingInfCode) { setTimeout(() => { if(typeof trackInfluencerRecruit === 'function') trackInfluencerRecruit(pendingInfCode, u.uid, u.displayName, u.photoURL); }, 1000); } 
                 } else { 
                     // Existing User
