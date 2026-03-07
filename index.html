@@ -12438,7 +12438,6 @@ function runMathBlitz(problems) {
     function setupPresence(uid) {
         const onlineRef     = db.ref('.info/connected');
         const userStatusRef = db.ref('status/' + uid);
-        const countRef      = db.ref('onlineCount');
 
         // ── Connect / Disconnect ──
         onlineRef.on('value', (snapshot) => {
@@ -12447,26 +12446,16 @@ function runMathBlitz(problems) {
                 state: 'offline',
                 last_seen: firebase.database.ServerValue.TIMESTAMP
             });
-            countRef.onDisconnect().transaction(n => Math.max(0, (n || 0) - 1));
-
-            userStatusRef.once('value', prev => {
-                const wasOnline = prev.exists() && prev.val().state === 'online';
-                userStatusRef.set({
-                    state: 'online',
-                    last_seen: firebase.database.ServerValue.TIMESTAMP
-                });
-                // Increment counter only if transitioning from offline
-                if (!wasOnline) countRef.transaction(n => (n || 0) + 1);
+            userStatusRef.set({
+                state: 'online',
+                last_seen: firebase.database.ServerValue.TIMESTAMP
             });
         });
 
-        // ── Online count (reads 1 number, not all users) ──
-        countRef.once('value', snap => {
-            // Auto-initialize the node if it doesn't exist yet
-            if (!snap.exists()) countRef.set(0);
-        });
-        countRef.on('value', s => {
-            const c = Math.max(0, s.val() || 0);
+        // ── Online count: count directly from status node (reliable) ──
+        db.ref('status').on('value', snap => {
+            const data = snap.val() || {};
+            const c = Object.values(data).filter(u => u && u.state === 'online').length;
             const el = document.getElementById('onlineCount');
             if (el) el.innerText = c;
             const chatEl = document.getElementById('chatOnlineCount');
