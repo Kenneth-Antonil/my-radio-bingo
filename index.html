@@ -12770,21 +12770,30 @@ function runMathBlitz(problems) {
                     const rawAmt = data.amount;
                     let numAmt = typeof rawAmt === 'number' ? rawAmt : parseInt(String(rawAmt).replace(/[^0-9]/g, ''));
                     if (isNaN(numAmt) || numAmt <= 0) numAmt = 10;
-                    // ✅ Cap jackpot prize at ₱50
+                    // ✅ Cap jackpot prize at ₱50 — single source of truth
                     if (numAmt > 50) numAmt = 50;
-                    banner.style.display = 'block';
-                    document.getElementById('jackpotDisplayVal').innerText = toPeso(numAmt);
-                    isJackpotActive = true;
+
+                    // ──────────────────────────────────────────────
+                    // currentJackpotAmount is THE single source of
+                    // truth. ALL displays and the winner prize read
+                    // from this variable — never from Firebase again.
+                    // ──────────────────────────────────────────────
                     currentJackpotAmount = numAmt;
-                    // Show reveal animation only once per new jackpot activation
-                    if (_lastJackpotRevealAmt !== numAmt) {
-                        _lastJackpotRevealAmt = numAmt;
-                        showJackpotReveal(numAmt);
+                    isJackpotActive = true;
+
+                    // 1. Bingo tab banner display
+                    banner.style.display = 'block';
+                    document.getElementById('jackpotDisplayVal').innerText = toPeso(currentJackpotAmount);
+
+                    // 2. Reveal animation (shows the same amount)
+                    if (_lastJackpotRevealAmt !== currentJackpotAmount) {
+                        _lastJackpotRevealAmt = currentJackpotAmount;
+                        showJackpotReveal(currentJackpotAmount);
                     }
                 } else {
                     banner.style.display = 'none';
                     isJackpotActive = false;
-                    currentJackpotAmount = 500;
+                    currentJackpotAmount = 0;
                     _lastJackpotRevealAmt = null;
                 }
             });
@@ -12831,8 +12840,12 @@ function runMathBlitz(problems) {
                 counter.style.transform = `scale(${1 + (1 - eased) * 0.3})`;
                 if (step >= steps) {
                     clearInterval(tick);
+                    // ✅ Final display = exact same value as banner & winner prize
                     counter.textContent = targetAmount;
                     counter.style.transform = 'scale(1)';
+                    // Also sync the bingo tab banner to make 100% sure they match
+                    const bannerVal = document.getElementById('jackpotDisplayVal');
+                    if (bannerVal) bannerVal.innerText = toPeso(currentJackpotAmount);
                     // Final confetti burst
                     if (typeof confetti !== 'undefined') {
                         confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 }, colors: ['#fcd34d','#fbbf24','#f59e0b','#ffffff','#fb923c'] });
@@ -13556,7 +13569,7 @@ function runMathBlitz(problems) {
         }
 
         let winPrize = 12500;
-        if (isJackpotActive) winPrize = currentJackpotAmount;
+        if (isJackpotActive) winPrize = currentJackpotAmount; // ✅ exact same amount as animation & banner
         // cardId: 'main' or 'extra-0', 'extra-1', etc.
         const winnerData = { name: userData.name, uid: uid, photo: userData.photo || '', prize: winPrize, winCard: cardId || 'main', wonAt: Date.now() };
         db.ref('gameState/latestWinner').set(winnerData);
@@ -13568,7 +13581,8 @@ function runMathBlitz(problems) {
         userData.hasWonCurrent = true;
         if (isJackpotActive) {
             const jpModal = document.getElementById('grandJackpotModal');
-            document.getElementById('grandPrizeAmount').innerText = winPrize.toLocaleString() + " RB COINS";
+            // ✅ Show exact same amount as animation & banner (toPeso format)
+            document.getElementById('grandPrizeAmount').innerText = toPeso(currentJackpotAmount);
             document.getElementById('jpWinnerName').innerText = userData.name;
             jpModal.style.display = 'flex';
             confetti({ particleCount: 500, spread: 120, startVelocity: 60 });
