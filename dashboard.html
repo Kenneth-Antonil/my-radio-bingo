@@ -1040,6 +1040,14 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                     <label style="font-size:9px; color:rgba(255,255,255,0.4); font-weight:700; text-transform:uppercase;">8:00 PM Prize</label>
                     <input type="number" id="jp8pmAmount" value="5000" min="100" style="padding:7px; font-size:12px; font-weight:900; color:#fbbf24; text-align:center; background:rgba(0,0,0,0.3); border:1px solid rgba(251,191,36,0.3); border-radius:8px;">
                 </div>
+                <div>
+                    <label style="font-size:9px; color:rgba(255,255,255,0.4); font-weight:700; text-transform:uppercase;">10:00 PM Prize</label>
+                    <input type="number" id="jp10pmAmount" value="5000" min="100" style="padding:7px; font-size:12px; font-weight:900; color:#fbbf24; text-align:center; background:rgba(0,0,0,0.3); border:1px solid rgba(251,191,36,0.3); border-radius:8px;">
+                </div>
+                <div>
+                    <label style="font-size:9px; color:rgba(255,255,255,0.4); font-weight:700; text-transform:uppercase;">10:30 PM Prize</label>
+                    <input type="number" id="jp1030pmAmount" value="5000" min="100" style="padding:7px; font-size:12px; font-weight:900; color:#fbbf24; text-align:center; background:rgba(0,0,0,0.3); border:1px solid rgba(251,191,36,0.3); border-radius:8px;">
+                </div>
             </div>
         </div>
 
@@ -1927,7 +1935,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
         }
     }
     // JACKPOT ROUND TIMES (hour in 24h)
-    const JACKPOT_HOURS = [15, 20]; // 3PM and 8PM
+    const JACKPOT_HOURS = [15, 20, 22]; // 3PM, 8PM, 10PM and 10:30PM
     
     db.ref('gameState/schedules').on('value', s => { schedules = s.val() || {}; renderSchedules(); });
 
@@ -1953,10 +1961,12 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
     }
 
     function generateAutoSchedule() {
-        const jp3pm = parseInt(document.getElementById('jp3pmAmount').value) || 5000;
-        const jp8pm = parseInt(document.getElementById('jp8pmAmount').value) || 5000;
+        const jp3pm   = parseInt(document.getElementById('jp3pmAmount').value)    || 5000;
+        const jp8pm   = parseInt(document.getElementById('jp8pmAmount').value)    || 5000;
+        const jp10pm  = parseInt(document.getElementById('jp10pmAmount').value)   || 5000;
+        const jp1030pm= parseInt(document.getElementById('jp1030pmAmount').value) || 5000;
 
-        if(!confirm(`Generate today's full schedule?\n\n• 8:00 AM → 12:00 Midnight (every 30 mins)\n• 3:00 PM Jackpot: ${jp3pm.toLocaleString()} RB Coins\n• 8:00 PM Jackpot: ${jp8pm.toLocaleString()} RB Coins\n\nExisting schedules will be cleared!`)) return;
+        if(!confirm(`Generate today's full schedule?\n\n• 8:00 AM → 12:00 Midnight (every 30 mins)\n• 3:00 PM Jackpot: ${jp3pm.toLocaleString()} RB Coins\n• 8:00 PM Jackpot: ${jp8pm.toLocaleString()} RB Coins\n• 10:00 PM Jackpot: ${jp10pm.toLocaleString()} RB Coins\n• 10:30 PM Jackpot: ${jp1030pm.toLocaleString()} RB Coins\n\nExisting schedules will be cleared!`)) return;
 
         // Clear old then write new
         db.ref('gameState/schedules').remove(() => {
@@ -1968,9 +1978,15 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             let cursor = base.getTime();
             let count = 0;
             while(cursor <= end.getTime()) {
-                const hr = new Date(cursor).getHours();
+                const d = new Date(cursor);
+                const hr  = d.getHours();
+                const min = d.getMinutes();
                 const isJP = JACKPOT_HOURS.includes(hr);
-                const jpAmt = hr === 15 ? jp3pm : (hr === 20 ? jp8pm : null);
+                let jpAmt = null;
+                if      (hr === 15)              jpAmt = jp3pm;
+                else if (hr === 20)              jpAmt = jp8pm;
+                else if (hr === 22 && min === 0) jpAmt = jp10pm;
+                else if (hr === 22 && min === 30)jpAmt = jp1030pm;
                 const key = db.ref('gameState/schedules').push().key;
                 updates['gameState/schedules/' + key] = { 
                     time: cursor, 
@@ -1984,13 +2000,13 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             }
 
             // Save jackpot override amounts for reference
-            updates['gameState/autoScheduleConfig'] = { jp3pmAmount: jp3pm, jp8pmAmount: jp8pm, generatedAt: Date.now() };
+            updates['gameState/autoScheduleConfig'] = { jp3pmAmount: jp3pm, jp8pmAmount: jp8pm, jp10pmAmount: jp10pm, jp1030pmAmount: jp1030pm, generatedAt: Date.now() };
 
             db.ref().update(updates, (err) => {
                 if(err) { alert("Error: " + err.message); return; }
                 
                 // Push announcement to players
-                const msg = `📅 NEW BINGO SCHEDULE!\n\nDraws every 30 minutes, 8:00 AM – 12:00 Midnight!\n\n⚡ JACKPOT ROUNDS:\n• 3:00 PM — ${jp3pm.toLocaleString()} RB Coins\n• 8:00 PM — ${jp8pm.toLocaleString()} RB Coins\n\nGood luck to everyone! 🍀`;
+                const msg = `📅 NEW BINGO SCHEDULE!\n\nDraws every 30 minutes, 8:00 AM – 12:00 Midnight!\n\n⚡ JACKPOT ROUNDS:\n• 3:00 PM — ${jp3pm.toLocaleString()} RB Coins\n• 8:00 PM — ${jp8pm.toLocaleString()} RB Coins\n• 10:00 PM — ${jp10pm.toLocaleString()} RB Coins\n• 10:30 PM — ${jp1030pm.toLocaleString()} RB Coins\n\nGood luck to everyone! 🍀`;
                 db.ref('gameState/scheduleAnnouncement').set({ 
                     message: msg, 
                     title: "🆕 Draw Schedule Updated!",
@@ -1999,9 +2015,9 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 });
                 
                 // Broadcast push notification
-                sendPushToAll("📅 NEW BINGO SCHEDULE!", `Draws every 30 mins from 8AM to 12MN! Jackpot rounds at 3PM & 8PM. ${jp3pm.toLocaleString()} RB Coins jackpot prize!`);
+                sendPushToAll("📅 NEW BINGO SCHEDULE!", `Draws every 30 mins from 8AM to 12MN! Jackpot rounds at 3PM, 8PM, 10PM & 10:30PM. ${jp3pm.toLocaleString()} RB Coins jackpot prize!`);
                 
-                if(typeof addActivityItem === 'function') addActivityItem(`📅 Auto Schedule generated: ${count} draws (Jackpot 3PM: ${jp3pm} | 8PM: ${jp8pm})`);
+                if(typeof addActivityItem === 'function') addActivityItem(`📅 Auto Schedule generated: ${count} draws (Jackpot 3PM: ${jp3pm} | 8PM: ${jp8pm} | 10PM: ${jp10pm} | 10:30PM: ${jp1030pm})`);
                 alert(`✅ ${count} draw slots generated!\n\nPlayers will see an announcement popup.`);
             });
         });
