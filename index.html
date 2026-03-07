@@ -12435,49 +12435,31 @@ function runMathBlitz(problems) {
 
 </body></html>`); win.document.close(); } else { showToast("Pop-up blocked! Please allow pop-ups."); } }); }
 
-    function setupPresence(uid) {
-        const onlineRef     = db.ref('.info/connected');
-        const userStatusRef = db.ref('status/' + uid);
-
-        // ── Connect / Disconnect ──
-        onlineRef.on('value', (snapshot) => {
-            if (snapshot.val() === false) return;
-            userStatusRef.onDisconnect().set({
-                state: 'offline',
-                last_seen: firebase.database.ServerValue.TIMESTAMP
-            });
-            userStatusRef.set({
-                state: 'online',
-                last_seen: firebase.database.ServerValue.TIMESTAMP
-            });
-        });
-
-        // ── Online count: count directly from status node (reliable) ──
-        db.ref('status').on('value', snap => {
-            const data = snap.val() || {};
-            const c = Object.values(data).filter(u => u && u.state === 'online').length;
-            const el = document.getElementById('onlineCount');
-            if (el) el.innerText = c;
+    function setupPresence(uid) { 
+        const onlineRef = db.ref('.info/connected'); 
+        const userStatusRef = db.ref('status/' + uid); 
+        onlineRef.on('value', (snapshot) => { 
+            if (snapshot.val() === false) return; 
+            userStatusRef.onDisconnect().set({ 
+                state: 'offline', 
+                last_seen: firebase.database.ServerValue.TIMESTAMP 
+            }).then(() => { 
+                userStatusRef.set({ 
+                    state: 'online', 
+                    last_seen: firebase.database.ServerValue.TIMESTAMP 
+                }); 
+            }); 
+        }); 
+        // Global Presence Listener
+        db.ref('status').on('value', (s) => { 
+            onlineUsers = s.val() || {};
+            const onlineCount = Object.values(onlineUsers).filter(status => status.state === 'online').length;
+            document.getElementById('onlineCount').innerText = onlineCount || 0; 
             const chatEl = document.getElementById('chatOnlineCount');
-            if (chatEl) chatEl.textContent = c + ' online';
-        });
-
-        // ── Incremental status updates (child events = much less data) ──
-        db.ref('status').on('child_added', s => {
-            onlineUsers[s.key] = s.val();
+            if (chatEl) chatEl.textContent = onlineCount + ' online';
             updateAllOnlineIndicators();
             renderOnlineBubbles(onlineUsers, uid);
-        });
-        db.ref('status').on('child_changed', s => {
-            onlineUsers[s.key] = s.val();
-            updateAllOnlineIndicators();
-            renderOnlineBubbles(onlineUsers, uid);
-        });
-        db.ref('status').on('child_removed', s => {
-            delete onlineUsers[s.key];
-            updateAllOnlineIndicators();
-            renderOnlineBubbles(onlineUsers, uid);
-        });
+        }); 
     }
 
     // Only write to Firebase if data actually changed
