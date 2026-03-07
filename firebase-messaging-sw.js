@@ -127,7 +127,7 @@ messaging.onBackgroundMessage(payload => {
     console.log('[SW] Background push received:', payload);
 
     const data  = payload.data || {};
-    const title = cleanText(data.title) || 'Talim Connect';
+    const title = cleanText(data.title) || 'RB Live';
     const body  = cleanText(data.body)  || 'You have a new notification.';
     const url   = data.url   || '/?tab=bingo';
     const tag   = data.tag   || 'rbl-notif';
