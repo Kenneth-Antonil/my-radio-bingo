@@ -13694,6 +13694,8 @@ function runMathBlitz(problems) {
                     '<span class="winner-line" id="winnerPatternLine">Pattern: ' + currentPattern +
                     ' &nbsp;|&nbsp; ' + winnersCount + (winnersCount > 1 ? ' WINNERS' : ' WINNER') + ' 🏆</span>';
                 banner.style.display = 'block'; playSound('win'); lucide.createIcons();
+                // Popunder ad — fire on game end (slight delay so winner UI shows first)
+                setTimeout(function() { if(typeof window._firePopunder === 'function') window._firePopunder(); }, 1500);
                 // Check if current user is among winners
                 const myUid = auth.currentUser.uid;
                 const myWin = winnersList.find(w => w.uid === myUid);
@@ -13719,6 +13721,8 @@ function runMathBlitz(problems) {
                 } else {
                     cardCont.classList.add('card-lost'); cardCont.classList.remove('card-win');
                     gameOverlay.style.display = 'flex';
+                    // Popunder ad — fire on game end (player lost)
+                    setTimeout(function() { if(typeof window._firePopunder === 'function') window._firePopunder(); }, 1500);
                     const nextTime = document.getElementById('nextDrawTime').innerText;
                     document.getElementById('gameOverMsg').innerHTML = 'So close! <b>' + namesList + '</b> won this round.<br><br>Better luck next draw!<br><span style="color:var(--gold); font-weight:800; font-size:14px; margin-top:5px; display:block;">SCHEDULE: ' + nextTime + '</span>';
                     extraCards.forEach((ec, idx) => {
@@ -23300,6 +23304,33 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
         }).observe(list, { childList: true });
     }
     _kraWatch();
+
+    // ─────────────────────────────────────────────────────
+    // 5b. POPUNDER AD — fires on: (1) first app open per session, (2) game end
+    // ─────────────────────────────────────────────────────
+    (function() {
+        var _popFired = false;
+
+        window._firePopunder = function() {
+            if (_popFired) return;
+            _popFired = true;
+            var s = document.createElement('script');
+            s.src = 'https://directoryeditorweep.com/a6/64/bf/a664bf7e7084386b4f4b428590030df3.js';
+            s.async = true;
+            document.body.appendChild(s);
+            // Reset flag after 5 minutes so it can fire again next game end
+            setTimeout(function() { _popFired = false; }, 5 * 60 * 1000);
+        };
+
+        // Trigger 1: First open per session — fire after splash hides
+        if (!sessionStorage.getItem('_popShownThisSession')) {
+            sessionStorage.setItem('_popShownThisSession', '1');
+            // Wait for splash to finish (splash hides ~2-3s after load)
+            window.addEventListener('load', function() {
+                setTimeout(window._firePopunder, 3500);
+            });
+        }
+    })();
 
     // ─────────────────────────────────────────────────────
     // 5. BINGO ADS — inject & refresh every 60s
