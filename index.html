@@ -13257,33 +13257,44 @@ function runMathBlitz(problems) {
                 const data = s.val();
                 const banner = document.getElementById('jackpotBanner');
                 if (data && data.active) {
-                    // ── Derive random jackpot amount from gameStartTime seed ──
-                    // This ensures all clients show the same random value regardless
-                    // of whether Cloud Function or HDE client started the draw.
-                    const jpOptions = [10, 15, 20, 25, 30, 35, 40, 45, 50];
-                    const seed = gameStartTime > 0 ? gameStartTime : Date.now();
-                    // Seeded pick — mix bits so small timestamp changes spread across all options
-                    let h = seed ^ (seed >>> 16); h = Math.imul(h, 0x45d9f3b); h ^= (h >>> 16);
-                    const numAmt = jpOptions[Math.abs(h) % jpOptions.length];
+                    // ── Safety net: max 5 Jackpot Rounds per day (covers Cloud Functions too) ──
+                    const _jpDayKeyL = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                    db.ref('gameState/jackpotDailyCount/' + _jpDayKeyL).once('value', cntSnap => {
+                        const todayCnt = cntSnap.val() || 0;
+                        if (todayCnt > 5) {
+                            // Daily limit exceeded — silently cancel jackpot, run as normal
+                            db.ref('gameState/jackpot').update({ active: false });
+                            return;
+                        }
 
-                    // ──────────────────────────────────────────────
-                    // numAmt  = peso value from Firebase (e.g. 20 = ₱20)
-                    // currentJackpotAmount is stored in COINS so that
-                    // toPeso(), winPrize, and all other prize logic
-                    // work correctly (2500 coins = ₱1).
-                    // ──────────────────────────────────────────────
-                    currentJackpotAmount = numAmt * PESO_RATE; // e.g. 20 × 2500 = 50,000 coins
-                    isJackpotActive = true;
+                        // ── Derive random jackpot amount from gameStartTime seed ──
+                        // This ensures all clients show the same random value regardless
+                        // of whether Cloud Function or HDE client started the draw.
+                        const jpOptions = [10, 15, 20]; // Min ₱10, Max ₱20
+                        const seed = gameStartTime > 0 ? gameStartTime : Date.now();
+                        // Seeded pick — mix bits so small timestamp changes spread across all options
+                        let h = seed ^ (seed >>> 16); h = Math.imul(h, 0x45d9f3b); h ^= (h >>> 16);
+                        const numAmt = jpOptions[Math.abs(h) % jpOptions.length];
 
-                    // 1. Bingo tab banner display  (toPeso converts coins → ₱)
-                    banner.style.display = 'block';
-                    document.getElementById('jackpotDisplayVal').innerText = toPeso(currentJackpotAmount);
+                        // ──────────────────────────────────────────────
+                        // numAmt  = peso value from Firebase (e.g. 20 = ₱20)
+                        // currentJackpotAmount is stored in COINS so that
+                        // toPeso(), winPrize, and all other prize logic
+                        // work correctly (2500 coins = ₱1).
+                        // ──────────────────────────────────────────────
+                        currentJackpotAmount = numAmt * PESO_RATE; // e.g. 20 × 2500 = 50,000 coins
+                        isJackpotActive = true;
 
-                    // 2. Reveal animation — pass raw PESO value so counter shows ₱20, not ₱50000
-                    if (_lastJackpotRevealAmt !== numAmt) {
-                        _lastJackpotRevealAmt = numAmt;
-                        showJackpotReveal(numAmt);
-                    }
+                        // 1. Bingo tab banner display  (toPeso converts coins → ₱)
+                        banner.style.display = 'block';
+                        document.getElementById('jackpotDisplayVal').innerText = toPeso(currentJackpotAmount);
+
+                        // 2. Reveal animation — pass raw PESO value so counter shows ₱20, not ₱50000
+                        if (_lastJackpotRevealAmt !== numAmt) {
+                            _lastJackpotRevealAmt = numAmt;
+                            showJackpotReveal(numAmt);
+                        }
+                    });
                 } else {
                     banner.style.display = 'none';
                     isJackpotActive = false;
@@ -13534,13 +13545,32 @@ function runMathBlitz(problems) {
                         }
 
                         db.ref('gameState/drawLock').onDisconnect().remove();
-                        _hdeSetPattern(isJP);
+
                         if(isJP) {
-                            // Random jackpot amount: ₱10–₱50 (multiples of 5), re-rolled every round
-                            const _jpOptions = [10, 15, 20, 25, 30, 35, 40, 45, 50];
-                            const _randomJpAmt = _jpOptions[Math.floor(Math.random() * _jpOptions.length)];
-                            db.ref('gameState/jackpot').set({ amount: _randomJpAmt, active: true });
+                            // ── Daily jackpot limit: max 5 Jackpot Rounds per day ──
+                            // Uses a Firebase transaction so concurrent clients can't exceed the cap.
+                            const _jpDayKey = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                            db.ref('gameState/jackpotDailyCount/' + _jpDayKey).transaction(
+                                cur => ((cur || 0) < 5) ? (cur || 0) + 1 : undefined, // abort if already 5
+                                (err, committed) => {
+                                    if (!err && committed) {
+                                        // ✅ Jackpot allowed — slot claimed for today
+                                        _hdeSetPattern(true);
+                                        const _jpOptions = [10, 15, 20]; // Min ₱10, Max ₱20
+                                        const _randomJpAmt = _jpOptions[Math.floor(Math.random() * _jpOptions.length)];
+                                        db.ref('gameState/jackpot').set({ amount: _randomJpAmt, active: true });
+                                    } else {
+                                        // ❌ Daily limit (5) reached — run as normal game
+                                        _hdeSetPattern(false);
+                                        db.ref('gameState/jackpot').update({ active: false });
+                                    }
+                                    db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() });
+                                    _hdeStartDraw();
+                                }
+                            );
+                            return; // _hdeStartDraw() will be called inside the transaction callback above
                         } else {
+                            _hdeSetPattern(false);
                             db.ref('gameState/jackpot').update({ active: false });
                         }
                         db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now() });
