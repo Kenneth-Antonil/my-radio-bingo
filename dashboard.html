@@ -1370,7 +1370,19 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
         </div>
     </div>
 
-    <div id="cashout-tab" class="tab-content"><div class="card"><h2><i data-lucide="wallet"></i> Cashout Requests (GCash / Maya)</h2><div id="cashoutList"></div></div></div>
+    <div id="cashout-tab" class="tab-content">
+        <div class="card">
+            <h2><i data-lucide="wallet"></i> Cashout Requests (GCash / Maya)</h2>
+            <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+                <button onclick="filterCashouts('pending')" id="cof-pending" style="padding:7px 16px;border-radius:10px;border:1px solid rgba(251,191,36,0.4);background:rgba(251,191,36,0.15);color:#fbbf24;font-weight:800;font-size:11px;cursor:pointer;">⏳ PENDING</button>
+                <button onclick="filterCashouts('sent')" id="cof-sent" style="padding:7px 16px;border-radius:10px;border:1px solid rgba(16,185,129,0.4);background:rgba(16,185,129,0.1);color:#10b981;font-weight:800;font-size:11px;cursor:pointer;">✅ PAID</button>
+                <button onclick="filterCashouts('denied')" id="cof-denied" style="padding:7px 16px;border-radius:10px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.1);color:#ef4444;font-weight:800;font-size:11px;cursor:pointer;">❌ DENIED</button>
+                <button onclick="filterCashouts('all')" id="cof-all" style="padding:7px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.6);font-weight:800;font-size:11px;cursor:pointer;">ALL</button>
+                <span id="cashoutCountBadge" style="margin-left:auto;font-size:11px;color:rgba(255,255,255,0.35);"></span>
+            </div>
+            <div id="cashoutList"></div>
+        </div>
+    </div>
     
     <div id="tournament-tab" class="tab-content">
 
@@ -1665,6 +1677,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             </div>
         </div>
 
+    </div><!-- /myshop-tab -->
 
     <!-- ===== PUSH NOTIFICATIONS TAB ===== -->
     <div id="push-tab" class="tab-content">
@@ -1804,14 +1817,9 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             <div id="seQualifiedList"></div>
         </div>
 
-    </div>
+    </div><!-- /special-event-tab -->
 
-
-    </div>
-
-    </div>
-
-</div>
+</div><!-- /main-section -->
 
 <div class="activity-panel">
     <h2 style="font-size:13px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;"><i data-lucide="activity" style="width:14px"></i> Live Activity Feed</h2>
@@ -2745,50 +2753,85 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
         }, DELAY);
     }
 
+    var _cashoutFilter = 'pending';
+    var _allRedemptions = {};
+
     db.ref('redemptions').on('value', s => {
-        const list = document.getElementById('cashoutList'); list.innerHTML = "";
-        s.forEach(child => {
-            const r = child.val(); const key = child.key; if(r.status !== 'pending') return;
-            const safeName = cleanName(r.name);
-            const div = document.createElement('div'); div.className = 'card'; div.style.padding = "15px"; div.style.marginBottom = "10px";
-            var methodLabel = (r.method === 'maya' ? '\ud83d\udc9c Maya' : '\ud83d\udc9a GCash');
-            var amtLabel = r.amount ? '₱' + parseFloat(r.amount).toFixed(2) : (r.cost ? '₱' + (r.cost/COIN_TO_PHP_RATE).toFixed(2) : '—');
-            div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-              <div style="flex:1; min-width:200px;">
-                <div style="font-weight:800; font-size:14px;">${safeName} — <span style="color:var(--gold)">${amtLabel}</span></div>
-                <div style="font-size:11px; opacity:0.7; margin-top:3px;">${methodLabel} · <b>${r.accountNumber || r.gcash || '—'}</b> · ${r.accountName || '—'}</div>
-                <div style="font-size:10px; opacity:0.45; margin-top:2px;">${new Date(r.timestamp).toLocaleString()}</div>
-              </div>
-              <div style="display:flex; gap:8px; flex-shrink:0;">
-                <button class=\"btn btn-primary\" style=\"width:auto; padding:8px 18px\" onclick=\"updateStatus('${key}', 'sent', ${JSON.stringify(r).replace(/\"/g, '&quot;')})\">\u2705 PAID</button>
-                <button class=\"btn btn-danger\" style=\"width:auto; padding:8px 14px\" onclick=\"updateStatus('${key}', 'denied', ${JSON.stringify(r).replace(/\"/g, '&quot;')})\">\u2717</button>
-              </div>
-            </div>`;
-            list.prepend(div);
-        });
+        _allRedemptions = {};
+        s.forEach(child => { _allRedemptions[child.key] = child.val(); });
+        renderCashouts();
     });
 
+    window.filterCashouts = function(filter) {
+        _cashoutFilter = filter;
+        renderCashouts();
+    };
+
+    function renderCashouts() {
+        const list = document.getElementById('cashoutList');
+        if (!list) return;
+        list.innerHTML = '';
+        var count = 0;
+        var entries = Object.entries(_allRedemptions).sort((a,b) => (b[1].timestamp||0) - (a[1].timestamp||0));
+        entries.forEach(function([key, r]) {
+            if (_cashoutFilter !== 'all' && r.status !== _cashoutFilter) return;
+            count++;
+            const safeName = cleanName(r.name);
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.style.cssText = 'padding:15px;margin-bottom:10px;border:1px solid ' +
+                (r.status === 'pending' ? 'rgba(251,191,36,0.25)' : r.status === 'sent' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)') + ';';
+            var methodLabel = (r.method === 'maya' ? '💜 Maya' : '💚 GCash');
+            var amtLabel = r.amount ? '₱' + parseFloat(r.amount).toFixed(2) : (r.cost ? '₱' + (r.cost / COIN_TO_PHP_RATE).toFixed(2) : '—');
+            var statusBadge = r.status === 'pending'
+                ? '<span style="font-size:9px;font-weight:900;padding:2px 8px;border-radius:20px;background:rgba(251,191,36,0.15);color:#fbbf24;">⏳ PENDING</span>'
+                : r.status === 'sent'
+                ? '<span style="font-size:9px;font-weight:900;padding:2px 8px;border-radius:20px;background:rgba(16,185,129,0.15);color:#10b981;">✅ PAID</span>'
+                : '<span style="font-size:9px;font-weight:900;padding:2px 8px;border-radius:20px;background:rgba(239,68,68,0.15);color:#ef4444;">❌ DENIED</span>';
+            var actionBtns = r.status === 'pending'
+                ? `<button class="btn btn-primary" style="width:auto;padding:8px 18px" onclick="updateStatus('${key}','sent',${JSON.stringify(r).replace(/"/g,'&quot;')})">✅ PAID</button>
+                   <button class="btn btn-danger" style="width:auto;padding:8px 14px" onclick="updateStatus('${key}','denied',${JSON.stringify(r).replace(/"/g,'&quot;')})">✕ DENY</button>`
+                : '';
+            div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:200px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                  <span style="font-weight:800;font-size:14px;">${safeName}</span>
+                  ${statusBadge}
+                </div>
+                <div style="font-size:15px;font-weight:900;color:var(--gold);margin-bottom:4px;">${amtLabel}</div>
+                <div style="font-size:11px;opacity:0.7;">${methodLabel} · <b>${r.accountNumber || r.gcash || '—'}</b> · ${r.accountName || '—'}</div>
+                <div style="font-size:10px;opacity:0.4;margin-top:2px;">${new Date(r.timestamp||0).toLocaleString('fil-PH')}</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-shrink:0;">${actionBtns}</div>
+            </div>`;
+            list.appendChild(div);
+        });
+        var badge = document.getElementById('cashoutCountBadge');
+        if (badge) badge.textContent = count + ' record' + (count !== 1 ? 's' : '');
+        if (count === 0) list.innerHTML = '<div style="text-align:center;padding:40px;opacity:0.35;font-size:13px;font-weight:700;">Walang cashout requests.</div>';
+    }
+
     function updateStatus(key, status, data) {
-        if(confirm(`${status} this?`)) {
-            db.ref('redemptions/' + key).update({ status: status });
-            const statusMsg = status === 'sent' ? `Your ${data.item} has been sent! 頂` : `Your ${data.item} was denied. 笶形`;
+        var label = status === 'sent' ? 'PAID' : 'DENIED';
+        if(confirm('Mark this cashout as ' + label + '?')) {
+            db.ref('redemptions/' + key).update({ status: status, updatedAt: Date.now() });
+            var statusMsg = status === 'sent'
+                ? '\u2705 Ang iyong cashout na ' + (data.item || 'request') + ' ay na-send na!'
+                : '\u274c Ang iyong cashout na ' + (data.item || 'request') + ' ay na-deny. Makipag-ugnayan sa support.';
             db.ref('notifications/' + data.uid).push({ msg: statusMsg, time: Date.now() });
-            
-            // Refund points if denied
             if(status === 'denied') {
-                db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + data.cost, (err, committed) => {
-                     if(committed) {
-                         db.ref(`pointLogs/${data.uid}`).push({
-                             amount: data.cost,
-                             reason: `Refund: ${data.item}`,
-                             timestamp: firebase.database.ServerValue.TIMESTAMP,
-                             by: "System/Admin"
-                         });
-                         if(document.getElementById('selectedUserForPoints').value === data.uid) {
-                             renderUserHistory(data.uid);
-                         }
-                     }
-                 });
+                db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + (data.cost || 0), (err, committed) => {
+                    if(committed) {
+                        db.ref('pointLogs/' + data.uid).push({
+                            amount: data.cost,
+                            reason: 'Refund: ' + (data.item || 'cashout'),
+                            timestamp: firebase.database.ServerValue.TIMESTAMP,
+                            by: 'System/Admin'
+                        });
+                        var selEl = document.getElementById('selectedUserForPoints');
+                        if(selEl && selEl.value === data.uid) renderUserHistory(data.uid);
+                    }
+                });
             }
         }
     }
@@ -4413,6 +4456,9 @@ function deletePartnerApp(key, name) {
         if (tabId === 'influencers-tab') loadInfluencerApps();
         if (tabId === 'myshop-tab') { loadShopProducts(); loadShopVouchers(); loadShopOrders('all'); }
         if (tabId === 'support-tab') { /* supportMessages listener is always active via db.ref.on() */ }
+        if (tabId === 'verification-tab') loadVerificationRequests();
+        if (tabId === 'creators-tab') loadCreators();
+        if (tabId === 'special-event-tab') loadSpecialEvents();
     };
 })();
 
