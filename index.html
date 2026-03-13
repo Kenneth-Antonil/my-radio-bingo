@@ -13125,21 +13125,22 @@ function runMathBlitz(problems) {
                     if (numAmt > 50) numAmt = 50;
 
                     // ──────────────────────────────────────────────
-                    // currentJackpotAmount is THE single source of
-                    // truth. ALL displays and the winner prize read
-                    // from this variable — never from Firebase again.
+                    // numAmt  = peso value from Firebase (e.g. 20 = ₱20)
+                    // currentJackpotAmount is stored in COINS so that
+                    // toPeso(), winPrize, and all other prize logic
+                    // work correctly (2500 coins = ₱1).
                     // ──────────────────────────────────────────────
-                    currentJackpotAmount = numAmt;
+                    currentJackpotAmount = numAmt * PESO_RATE; // e.g. 20 × 2500 = 50,000 coins
                     isJackpotActive = true;
 
-                    // 1. Bingo tab banner display
+                    // 1. Bingo tab banner display  (toPeso converts coins → ₱)
                     banner.style.display = 'block';
                     document.getElementById('jackpotDisplayVal').innerText = toPeso(currentJackpotAmount);
 
-                    // 2. Reveal animation (shows the same amount)
-                    if (_lastJackpotRevealAmt !== currentJackpotAmount) {
-                        _lastJackpotRevealAmt = currentJackpotAmount;
-                        showJackpotReveal(currentJackpotAmount);
+                    // 2. Reveal animation — pass raw PESO value so counter shows ₱20, not ₱50000
+                    if (_lastJackpotRevealAmt !== numAmt) {
+                        _lastJackpotRevealAmt = numAmt;
+                        showJackpotReveal(numAmt);
                     }
                 } else {
                     banner.style.display = 'none';
