@@ -13104,9 +13104,8 @@ function runMathBlitz(problems) {
                 if (data && data.active) {
                     const rawAmt = data.amount;
                     let numAmt = typeof rawAmt === 'number' ? rawAmt : parseInt(String(rawAmt).replace(/[^0-9]/g, ''));
-                    if (isNaN(numAmt) || numAmt <= 0) numAmt = 10;
-                    // ✅ Cap jackpot prize at ₱50 — single source of truth
-                    if (numAmt > 50) numAmt = 50;
+                    if (isNaN(numAmt) || numAmt < 10) numAmt = 10; // ✅ Minimum ₱10
+                    if (numAmt > 50) numAmt = 50;                  // ✅ Maximum ₱50
 
                     // ──────────────────────────────────────────────
                     // numAmt  = peso value from Firebase (e.g. 20 = ₱20)
@@ -13377,8 +13376,11 @@ function runMathBlitz(problems) {
 
                         db.ref('gameState/drawLock').onDisconnect().remove();
                         _hdeSetPattern(isJP);
-                        if(isJP && jpAmt) {
-                            db.ref('gameState/jackpot').set({ amount: jpAmt, active: true });
+                        if(isJP) {
+                            // Random jackpot amount: ₱10–₱50 (multiples of 5), re-rolled every round
+                            const _jpOptions = [10, 15, 20, 25, 30, 35, 40, 45, 50];
+                            const _randomJpAmt = _jpOptions[Math.floor(Math.random() * _jpOptions.length)];
+                            db.ref('gameState/jackpot').set({ amount: _randomJpAmt, active: true });
                         } else {
                             db.ref('gameState/jackpot').update({ active: false });
                         }
