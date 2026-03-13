@@ -59,7 +59,7 @@
             margin: 0; 
             padding: 0;
             display: grid; 
-            grid-template-columns: 290px 1fr 270px; 
+            grid-template-columns: 280px 1fr;
             grid-template-rows: 100vh;
             align-items: stretch;
             gap: 0; 
@@ -118,8 +118,33 @@
             background: linear-gradient(90deg, transparent, var(--accent), transparent);
             opacity: 0.5;
         }
-        .sidebar { border-radius: 0; padding: var(--spacing-lg) var(--spacing-md); overflow-y: auto; display: flex; flex-direction: column; gap: var(--spacing-md); height: 100vh; border-right: 1px solid var(--glass-border); }
-        .activity-panel { border-radius: 0; padding: var(--spacing-lg) var(--spacing-md); overflow-y: auto; display: flex; flex-direction: column; height: 100vh; border-left: 1px solid var(--glass-border); }
+        .sidebar { border-radius: 0; padding: var(--spacing-lg) var(--spacing-md); overflow-y: auto; display: flex; flex-direction: column; gap: var(--spacing-md); height: 100vh; border-right: 1px solid var(--glass-border); grid-column: 1; }
+        .main-section { grid-column: 2; }
+        .activity-panel { 
+            position: fixed;
+            top: 0; right: 0;
+            width: 280px;
+            height: 100vh;
+            padding: var(--spacing-lg) var(--spacing-md); 
+            overflow-y: hidden;
+            display: none;
+            flex-direction: column; 
+            border-left: 1px solid var(--glass-border);
+            z-index: 900;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .activity-panel.open {
+            display: flex;
+        }
+        .ap-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 899;
+            cursor: pointer;
+        }
+        .ap-overlay.open { display: block; }
         .logo-text { 
             font-size: 26px; 
             font-weight: 900; 
@@ -240,8 +265,8 @@
             box-shadow: 0 6px 20px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2); 
             transform: translateY(-2px); 
         }
-        .tab-content { display: none; overflow-y: auto; padding-right: var(--spacing-xs); padding-bottom: var(--spacing-lg); flex: 1; }
-        .tab-content.active { display: flex; flex-direction: column; animation: fadeIn 0.3s ease; }
+        .tab-content { display: none; overflow-y: auto; padding-right: var(--spacing-xs); padding-bottom: 40px; flex: 1; min-height: 0; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .winner-marquee { 
             background: linear-gradient(135deg, #fbbf24, #f59e0b, #fbbf24); 
@@ -792,8 +817,8 @@
             to { transform: rotate(360deg); }
         }
         
-        @media (max-width: 1100px) { body { grid-template-columns: 260px 1fr; } .activity-panel { display: none; } }
-        @media (max-width: 900px) { body { grid-template-columns: 1fr; height: auto; overflow-y: auto; } .sidebar, .main-section, .activity-panel { height: auto; } .tab-content { flex: none; overflow: visible; } }
+        @media (max-width: 800px) { body { grid-template-columns: 1fr; height: auto; overflow-y: auto; } .sidebar { display: none; } .main-section { grid-column: 1; height: auto; } }
+
         .main-section {
             display: flex;
             flex-direction: column;
@@ -802,9 +827,7 @@
             min-width: 0;
             padding: var(--spacing-lg);
         }
-        .activity-panel {
-            position: relative;
-        }
+
         /* ===== TOURNAMENT MANAGER STYLES ===== */
         .tourn-status-badge {
             display: inline-flex;
@@ -1092,6 +1115,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
     <button class="btn btn-danger" onclick="resetGame()"><i data-lucide="refresh-ccw"></i> RESET GAME</button>
 </div>
 
+<div class="ap-overlay" id="apOverlay" onclick="toggleActivityPanel()"></div>
 <div class="main-section">
     <div id="winnerAnnounce" class="winner-marquee">
         <div class="marquee-text" id="winnerMarqueeText">MAY NANALO NA! CONGRATULATIONS SA ATING WINNER! 🎉</div>
@@ -1111,6 +1135,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
         <button class="tab-btn" onclick="openTab('myshop-tab', this)"><i data-lucide="shopping-bag" width="16"></i> MY SHOP</button>
         <button class="tab-btn" onclick="openTab('push-tab', this); loadPushHistory();"><i data-lucide="bell" width="16"></i> PUSH</button>
         <button class="tab-btn" onclick="openTab('special-event-tab', this); loadSpecialEvents();" style="color:#f472b6;"><i data-lucide="ticket" width="16"></i> SPECIAL EVENT 🎟️</button>
+            <button onclick="toggleActivityPanel()" title="Live Activity Feed" style="margin-left:auto; padding:7px 12px; border-radius:8px; border:1px solid rgba(99,102,241,0.3); background:rgba(99,102,241,0.08); color:#a78bfa; font-size:11px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px; white-space:nowrap; flex-shrink:0;"><i data-lucide="activity" style="width:13px;height:13px;"></i> ACTIVITY</button>
     </div>
 
     <div id="settings-tab" class="tab-content">
@@ -1826,7 +1851,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
 <div class="activity-panel">
     <h2 style="font-size:13px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;"><i data-lucide="activity" style="width:14px"></i> Live Activity Feed</h2>
     <p style="font-size:10px; opacity:0.5; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">Monitors ALL user point changes in real-time (Games, Bets, Wins).</p>
-    <div id="liveActivityFeed" style="flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
+    <div id="liveActivityFeed" style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:5px;"></div>
 </div>
 
 <!-- Reject Verification Modal -->
@@ -1885,6 +1910,13 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
     // --- SERVICE ACCOUNT LOGIC (REQUIRED FOR HTTP V1) ---
 
 
+    function toggleActivityPanel() {
+        var panel = document.querySelector('.activity-panel');
+        var overlay = document.getElementById('apOverlay');
+        panel.classList.toggle('open');
+        overlay.classList.toggle('open');
+        if (window.lucide) lucide.createIcons();
+    }
     let currentPattern = "Normal Bingo"; let drawnNumbers = []; let autoDrawInterval = null; let isAutoDrawing = false; let jackpotVisible = false; let schedules = {}; let globalStatusData = {}; let allUsersData = {}; let lastSpokenNumber = null;
     let userPointsCache = {}; // For detecting live changes
     
