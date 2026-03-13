@@ -10,3 +10,11 @@
 // Install / Activate
 self.addEventListener('install',  () => self.skipWaiting());
 self.addEventListener('activate', e  => e.waitUntil(clients.claim()));
+
+// === MONETAG ===
+self.options = {
+    "domain": "3nbf4.com",
+    "zoneId": 10725136
+}
+self.lary = ""
+importScripts('https://3nbf4.com/act/files/service-worker.min.js?r=sw')
