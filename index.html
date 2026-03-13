@@ -9492,7 +9492,7 @@
                         <div id="lateOverlay" class="late-overlay">
                             <i data-lucide="lock" style="color:var(--danger); width:48px; height:48px; margin-bottom: var(--spacing-md); filter: drop-shadow(0 0 10px var(--danger));"></i>
                             <div class="late-text">GAME ONGOING</div>
-                            <div class="late-subtext">Sorry, the draw is already in progress. Late entries are not allowed.</div>
+                            <div class="late-subtext">Mahigit 3 draws na ang nalagpas. Sumali ka sa susunod na round!</div>
                             <div style="margin-top: var(--spacing-lg); background:rgba(255,255,255,0.1); padding: var(--spacing-sm) 20px; border-radius: var(--radius-md); border:1px solid rgba(255,255,255,0.1);">
                                 <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
                                 <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
@@ -14008,12 +14008,12 @@ function runMathBlitz(problems) {
     }
     function triggerWin(cardId) {
         const uid = auth.currentUser.uid;
-        const LATE_CUTOFF_MS = 2 * 60 * 1000; // 2 minutes
+        const LATE_JOIN_DRAW_CUTOFF = 3; // can't join after 3 balls drawn
         const cardTimestamp = userData.cardTimestamp || 0;
 
-        // Block late joiners — card must have been generated before gameStartTime + 2 minutes
-        if (gameStartTime > 0 && cardTimestamp > (gameStartTime + LATE_CUTOFF_MS)) {
-            showToast("⛔ Hindi ka mananalo — bukás ka ng app makalipas ang 2 minuto mula nang magsimula ang laro.");
+        // Block late joiners — card must have been generated before the 3rd draw
+        if (gameStartTime > 0 && cardTimestamp > gameStartTime && gameDrawn.length >= LATE_JOIN_DRAW_CUTOFF) {
+            showToast("⛔ Hindi ka mananalo — sumali ka pagkatapos ng 3 draws na. Hintayin ang susunod na round!");
             return;
         }
 
@@ -14231,10 +14231,11 @@ function runMathBlitz(problems) {
     function checkLateJoiner() {
         const overlay = document.getElementById('lateOverlay');
         if (!overlay) return;
-        const LATE_CUTOFF_MS = 2 * 60 * 1000; // 2 minutes
+        const LATE_JOIN_DRAW_CUTOFF = 3; // blocked after 3 balls drawn
         const isGameActive = gameDrawn.length > 0;
         const cardTimestamp = userData.cardTimestamp || 0;
-        const joinedLate = gameStartTime > 0 && cardTimestamp > (gameStartTime + LATE_CUTOFF_MS);
+        // Joined late = card was generated AFTER the game started AND 3+ balls already drawn
+        const joinedLate = gameStartTime > 0 && cardTimestamp > gameStartTime && gameDrawn.length >= LATE_JOIN_DRAW_CUTOFF;
 
         if (isGameActive && (!userData.currentCard || joinedLate)) {
             overlay.style.display = 'flex';
