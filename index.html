@@ -8337,17 +8337,15 @@
             height: 34px;
             overflow: hidden;
             position: relative;
+            margin: 0 calc(-1 * var(--spacing-sm));
         }
         .online-ticker-label {
             flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            display: flex; align-items: center; gap: 6px;
             padding: 0 12px;
             background: #1A0A2E;
             border-right: 1px solid rgba(139,92,246,0.3);
-            height: 100%;
-            z-index: 2;
+            height: 100%; z-index: 2;
         }
         .online-ticker-dot {
             width: 7px; height: 7px; border-radius: 50%;
@@ -8356,26 +8354,25 @@
         }
         @keyframes ticker-dot-pulse {
             0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
-            50% { box-shadow: 0 0 0 4px rgba(34,197,94,0); }
+            50%      { box-shadow: 0 0 0 4px rgba(34,197,94,0); }
         }
         .online-ticker-label-text {
             font-size: 10px; font-weight: 900; color: #22C55E;
             letter-spacing: 0.8px; text-transform: uppercase; white-space: nowrap;
-            font-family: 'DM Sans', sans-serif;
         }
         .online-ticker-track {
             flex: 1; overflow: hidden; height: 100%;
             display: flex; align-items: center;
-            -webkit-mask-image: linear-gradient(90deg,transparent 0%,black 6%,black 94%,transparent 100%);
-            mask-image: linear-gradient(90deg,transparent 0%,black 6%,black 94%,transparent 100%);
+            -webkit-mask-image: linear-gradient(90deg,transparent 0%,black 5%,black 95%,transparent 100%);
+            mask-image: linear-gradient(90deg,transparent 0%,black 5%,black 95%,transparent 100%);
         }
         .online-ticker-inner {
             display: flex; align-items: center;
             white-space: nowrap;
-            animation: online-ticker-scroll 20s linear infinite;
+            animation: online-ticker-scroll 22s linear infinite;
         }
         @keyframes online-ticker-scroll {
-            0% { transform: translateX(0); }
+            0%   { transform: translateX(0); }
             100% { transform: translateX(-50%); }
         }
         .online-ticker-item {
@@ -8387,11 +8384,10 @@
             display: inline-flex; align-items: center; justify-content: center;
             font-size: 8px; font-weight: 900; flex-shrink: 0;
             border: 1.5px solid rgba(139,92,246,0.4);
-            overflow: hidden; object-fit: cover;
+            overflow: hidden;
         }
         .online-ticker-name {
             font-size: 12px; font-weight: 700; color: #C4B5FD;
-            font-family: 'DM Sans', sans-serif;
         }
         .online-ticker-sep {
             width: 3px; height: 3px; border-radius: 50%;
@@ -8399,9 +8395,7 @@
         }
         .online-ticker-empty {
             font-size: 12px; color: #4B2994; font-weight: 600; padding: 0 16px;
-            font-family: 'DM Sans', sans-serif;
         }
-
 </style>
 </head>
 <body>
@@ -9426,7 +9420,7 @@
             </div>
             <div class="online-ticker-track">
                 <div class="online-ticker-inner" id="onlineTickerInner">
-                    <span class="online-ticker-empty">Loading players...</span>
+                    <span class="online-ticker-empty">Loading...</span>
                 </div>
             </div>
         </div>
@@ -12785,43 +12779,55 @@ function runMathBlitz(problems) {
 </body></html>`); win.document.close(); } else { showToast("Pop-up blocked! Please allow pop-ups."); } }); }
 
 
-    /* ── UPDATE ONLINE TICKER ── */
+    /* ── ONLINE TICKER ── */
     function updateOnlineTicker(onlineUsersMap, myUid) {
         var inner = document.getElementById('onlineTickerInner');
         if (!inner) return;
         var colors = ['#A78BFA','#34D399','#FFD700','#F472B6','#60A5FA','#FB7185','#FBBF24','#6EE7B7'];
         var bgs    = ['#1E0B38','#0A1E20','#1A1200','#1E0A1A','#0A1820','#1A0A2E','#1A1000','#0A1E14'];
-        var online = Object.entries(onlineUsersMap).filter(function(e){
+        var online = Object.entries(onlineUsersMap).filter(function(e) {
             return e[1].state === 'online' && e[0] !== myUid;
         });
         if (online.length === 0) {
-            inner.innerHTML = '<span class="online-ticker-empty">Be the first online!</span>';
+            inner.innerHTML = '<span class="online-ticker-empty">Wala pang ibang online</span>';
             inner.style.animation = 'none';
             return;
         }
-        // Build items × 2 for seamless loop
-        var items = '';
-        function buildItem(uid, data, idx) {
-            var name = data.name || 'Player';
+        function buildItem(name, photo, idx) {
+            if (!name || !name.trim()) return '';
+            name = name.trim();
             var initials = name.split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase();
             var color = colors[idx % colors.length];
             var bg    = bgs[idx % bgs.length];
-            var avHtml;
-            if (data.photo && data.photo.startsWith('http')) {
-                avHtml = '<img class="online-ticker-av" src="' + data.photo + '" alt="' + initials + '" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1.5px solid rgba(139,92,246,0.4);">';
-            } else {
-                avHtml = '<span class="online-ticker-av" style="background:' + bg + ';color:' + color + ';">' + initials + '</span>';
-            }
-            return '<span class="online-ticker-item">' + avHtml + '<span class="online-ticker-name">' + name + '</span></span><span class="online-ticker-sep"></span>';
+            var avHtml = (photo && photo.startsWith('http'))
+                ? '<img class="online-ticker-av" src="'+photo+'" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1.5px solid rgba(139,92,246,0.4);">'
+                : '<span class="online-ticker-av" style="background:'+bg+';color:'+color+';">'+initials+'</span>';
+            return '<span class="online-ticker-item">'+avHtml+'<span class="online-ticker-name">'+name+'</span></span><span class="online-ticker-sep"></span>';
         }
-        var half = '';
-        online.forEach(function(e, i){ half += buildItem(e[0], e[1], i); });
-        items = half + half; // duplicate for seamless loop
-        inner.innerHTML = items;
-        inner.style.animation = '';
-        // Adjust speed based on count — more users = faster
-        var dur = Math.max(12, 20 - online.length);
-        inner.style.animationDuration = dur + 's';
+        // If status already has name use it; otherwise fetch from users/ node
+        var promises = online.map(function(entry, i) {
+            var uid = entry[0], data = entry[1];
+            if (data.name && data.name.trim()) {
+                return Promise.resolve({ name: data.name, photo: data.photo||'', idx: i });
+            }
+            return db.ref('users/'+uid).once('value').then(function(snap) {
+                var u = snap.val() || {};
+                return { name: u.name||u.displayName||'', photo: u.photo||u.photoURL||data.photo||'', idx: i };
+            });
+        });
+        Promise.all(promises).then(function(results) {
+            var half = '';
+            results.forEach(function(r) { half += buildItem(r.name, r.photo, r.idx); });
+            if (!half) {
+                inner.innerHTML = '<span class="online-ticker-empty">Wala pang ibang online</span>';
+                inner.style.animation = 'none';
+                return;
+            }
+            inner.innerHTML = half + half;
+            inner.style.animation = '';
+            var dur = Math.max(12, 22 - online.length);
+            inner.style.animationDuration = dur + 's';
+        });
     }
 
     function setupPresence(uid) { 
