@@ -13231,10 +13231,14 @@ function runMathBlitz(problems) {
                 const data = s.val();
                 const banner = document.getElementById('jackpotBanner');
                 if (data && data.active) {
-                    const rawAmt = data.amount;
-                    let numAmt = typeof rawAmt === 'number' ? rawAmt : parseInt(String(rawAmt).replace(/[^0-9]/g, ''));
-                    if (isNaN(numAmt) || numAmt < 10) numAmt = 10; // ✅ Minimum ₱10
-                    if (numAmt > 50) numAmt = 50;                  // ✅ Maximum ₱50
+                    // ── Derive random jackpot amount from gameStartTime seed ──
+                    // This ensures all clients show the same random value regardless
+                    // of whether Cloud Function or HDE client started the draw.
+                    const jpOptions = [10, 15, 20, 25, 30, 35, 40, 45, 50];
+                    const seed = gameStartTime > 0 ? gameStartTime : Date.now();
+                    // Seeded pick — mix bits so small timestamp changes spread across all options
+                    let h = seed ^ (seed >>> 16); h = Math.imul(h, 0x45d9f3b); h ^= (h >>> 16);
+                    const numAmt = jpOptions[Math.abs(h) % jpOptions.length];
 
                     // ──────────────────────────────────────────────
                     // numAmt  = peso value from Firebase (e.g. 20 = ₱20)
@@ -13664,7 +13668,7 @@ function runMathBlitz(problems) {
 
                 // ── Prize ──
                 if(prizeEl && amtEl && w.prize) {
-                    amtEl.textContent = toPeso(w.prize || 12500);
+                    amtEl.textContent = toPeso(w.prize || 5000);
                     prizeEl.style.display = 'block';
                 }
 
@@ -13703,7 +13707,7 @@ function runMathBlitz(problems) {
 
     function _sendWinnerPushNotif(w) {
         if(Notification.permission !== 'granted') return;
-        const prize = toPeso(w.prize || 12500);
+        const prize = toPeso(w.prize || 5000);
         const name  = w.name || 'Someone';
         try {
             // Use service worker notification for better support (shows even if app backgrounded)
@@ -14146,7 +14150,7 @@ function runMathBlitz(problems) {
             return;
         }
 
-        let winPrize = 12500;
+        let winPrize = 5000; // ₱2
         if (isJackpotActive) winPrize = currentJackpotAmount; // ✅ exact same amount as animation & banner
         // cardId: 'main' or 'extra-0', 'extra-1', etc.
         const winnerData = { name: userData.name, uid: uid, photo: userData.photo || '', prize: winPrize, winCard: cardId || 'main', wonAt: Date.now() };
