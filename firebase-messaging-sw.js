@@ -113,6 +113,18 @@ function getProfile(tag, title, body, url) {
         };
     }
 
+    if (tag === 'rbl-cashout') {
+        return {
+            ...base,
+            requireInteraction: true,
+            vibrate: [200, 100, 200, 100, 400, 100, 200],
+            actions: [
+                { action: 'open',    title: '💸 Open App' },
+                { action: 'dismiss', title: 'OK'          }
+            ]
+        };
+    }
+
     return base;
 }
 
