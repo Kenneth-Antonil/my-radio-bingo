@@ -20362,7 +20362,10 @@ function processShopOrder(costs, addr) {
             'NetworkError when attempting to fetch',
             'Load failed',
             'cancelled',
-            'AbortError'
+            'AbortError',
+            'PERMISSION_DENIED',
+            'permission_denied',
+            'Permission denied'
         ]
     };
 
@@ -20435,12 +20438,17 @@ function processShopOrder(costs, addr) {
     window.addEventListener('unhandledrejection', function(e) {
         var reason = e.reason ? (e.reason.message || String(e.reason)) : 'Unknown';
         if (isSuppressed(reason)) return;
+        // Silently log Firebase permission/browser API permission errors — no toast
+        // (mic/camera/notification denials are handled separately; Firebase denials
+        //  should not exist if rules are correct — just log for debugging)
+        if (reason.indexOf('PERMISSION_DENIED') !== -1 ||
+            reason.indexOf('permission_denied') !== -1 ||
+            reason.toLowerCase().indexOf('permission') !== -1) {
+            absLog('FIREBASE_PERM', 'Permission denied (silenced): ' + reason);
+            return;
+        }
         absLog('PROMISE_REJECTION', reason);
-        // Firebase permission errors
-        if (reason.indexOf('permission') !== -1 || reason.indexOf('PERMISSION_DENIED') !== -1) {
-            absLog('FIREBASE_PERM', 'Permission denied - user may need to re-login');
-            absThrottledError('🔒 Permission denied. Subukan mag-login ulit.');
-        } else if (reason.indexOf('network') !== -1 || reason.indexOf('fetch') !== -1) {
+        if (reason.indexOf('network') !== -1 || reason.indexOf('fetch') !== -1) {
             absLog('NETWORK_ERR', 'Network error in promise');
         }
     });
