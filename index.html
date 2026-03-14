@@ -15988,18 +15988,12 @@ Please explain why you want a verification badge:`;
         }
         _postDetailListener = postKey;
 
-        // Generation counter — cancels stale async renders when listener re-fires
-        let _commentRenderGen = 0;
-
         db.ref('postComments/' + postKey).on('value', snap => {
             const commentList = document.getElementById('postDetailCommentList');
             if(!commentList) return;
 
             const scrollEl = document.getElementById('postDetailBody');
             const wasAtBottom = scrollEl && (scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight) < 100;
-
-            // Bump generation so any pending async from last fire will bail out
-            const myGen = ++_commentRenderGen;
 
             commentList.innerHTML = '';
             const countEl = document.getElementById('postDetailCommentCount');
@@ -16028,8 +16022,8 @@ Please explain why you want a verification badge:`;
             );
 
             Promise.all(userFetches).then(results => {
-                // Bail out if a newer render has started
-                if(myGen !== _commentRenderGen) return;
+                // Make sure we are still on the same post
+                if(currentOpenPostKey !== postKey) return;
 
                 commentList.innerHTML = '';
 
@@ -16242,7 +16236,7 @@ Please explain why you want a verification badge:`;
         
         if(!previewContainer || !previewList) return;
         
-        db.ref('postComments/' + postKey).limitToLast(2).once('value', s => {
+        db.ref('postComments/' + postKey).limitToLast(3).once('value', s => {
             if(!s.exists()) {
                 previewContainer.style.display = 'none';
                 return;
@@ -16259,8 +16253,7 @@ Please explain why you want a verification badge:`;
             // NORMALIZED: Fetch user data for each comment
             comments.forEach(com => {
                 db.ref('users/' + com.uid).once('value', userSnap => {
-                    const user = userSnap.val();
-                    if(!user) return;
+                    const user = userSnap.val() || { name: 'User', photo: '' };
                     
                     const div = document.createElement('div');
                     div.className = 'preview-item';
