@@ -4651,12 +4651,24 @@
 
         /* SEARCH MODAL */
         .search-modal-container { position: fixed; inset: 0; background: #0f172a; z-index: 7000; display: none; flex-direction: column; }
-        .search-header { padding: var(--spacing-md); background: #1e293b; display: flex; gap: var(--spacing-sm); align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .search-bar-wrap { flex: 1; background: rgba(0,0,0,0.3); border-radius: var(--radius-xl); padding: 8px 15px; display: flex; align-items: center; gap: var(--spacing-xs); border: 1px solid rgba(255,255,255,0.1); }
-        .search-input { background: none; border: none; color: white; outline: none; width: 100%; font-size: 14px; }
-        .search-results { flex: 1; overflow-y: auto; padding: var(--spacing-md); }
-        .search-res-item { display: flex; align-items: center; gap: var(--spacing-sm); padding: var(--spacing-sm); border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
-        .search-res-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .search-header { padding: var(--spacing-md); background: #0f172a; display: flex; gap: var(--spacing-sm); align-items: center; border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .search-bar-wrap { flex: 1; background: rgba(255,255,255,0.07); border-radius: var(--radius-xl); padding: 8px 14px; display: flex; align-items: center; gap: var(--spacing-xs); border: 1px solid rgba(255,255,255,0.1); }
+        .search-input { background: none; border: none; color: white; outline: none; width: 100%; font-size: 15px; font-family: 'DM Sans', sans-serif; }
+        .search-input::placeholder { color: rgba(255,255,255,0.35); }
+        .search-results { flex: 1; overflow-y: auto; }
+        .search-tab { flex: 1; background: none; border: none; border-bottom: 2px solid transparent; color: rgba(255,255,255,0.45); font-size: 13px; font-weight: 700; padding: 11px 4px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+        .search-tab.active { color: white; border-bottom-color: var(--accent); }
+        .search-res-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .search-res-item:active { background: rgba(255,255,255,0.05); }
+        .search-res-img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+        .search-res-info { flex: 1; min-width: 0; }
+        .search-res-name { font-size: 14px; font-weight: 700; color: white; display: flex; align-items: center; gap: 5px; }
+        .search-res-sub { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .search-add-btn { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.4); color: #60a5fa; font-size: 12px; font-weight: 700; border-radius: 20px; padding: 5px 14px; cursor: pointer; flex-shrink: 0; font-family: 'DM Sans', sans-serif; }
+        .search-add-btn:active { opacity: 0.7; }
+        .search-post-item { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+        .search-post-item:active { background: rgba(255,255,255,0.04); }
+        .search-section-label { padding: 12px 16px 6px; font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.35); letter-spacing: 0.8px; text-transform: uppercase; }
 
         /* VIEW TOGGLING */
         #view-home, #view-bingo { display: none; animation: fadeIn 0.3s ease; }
@@ -10322,15 +10334,22 @@ function runMathBlitz(problems) {
 
 <div id="searchModal" class="search-modal-container">
     <div class="search-header">
-        <button onclick="document.getElementById('searchModal').style.display='none'" style="background:none; border:none; color:white;"><i data-lucide="arrow-left"></i></button>
+        <button onclick="closeSearch()" style="background:none; border:none; color:white; flex-shrink:0; padding:4px; cursor:pointer;"><i data-lucide="arrow-left" style="width:22px;height:22px;"></i></button>
         <div class="search-bar-wrap">
-            <i data-lucide="search" style="width:16px; opacity:0.5;"></i>
-            <input type="text" id="searchInput" class="search-input" placeholder="Search users or posts..." onkeyup="handleSearch()">
+            <i data-lucide="search" style="width:16px; opacity:0.5; flex-shrink:0;"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search users or posts..." oninput="handleSearch()" autocomplete="off" autocorrect="off">
+            <button id="searchClearBtn" onclick="clearSearch()" style="display:none;background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;padding:0;flex-shrink:0;"><i data-lucide="x" style="width:15px;height:15px;"></i></button>
         </div>
     </div>
-    <div id="searchResults" class="search-results">
-        <div style="text-align:center; opacity:0.5; padding: var(--spacing-lg);">Type to search...</div>
+
+    <!-- Search filter tabs -->
+    <div id="searchTabs" style="display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.07);background:#0f172a;">
+        <button class="search-tab active" id="stab-all" onclick="switchSearchTab('all')">All</button>
+        <button class="search-tab" id="stab-people" onclick="switchSearchTab('people')">People</button>
+        <button class="search-tab" id="stab-posts" onclick="switchSearchTab('posts')">Posts</button>
     </div>
+
+    <div id="searchResults" class="search-results"></div>
 </div>
 
 <div id="userProfilePage" class="profile-page-container">
@@ -10963,6 +10982,7 @@ function runMathBlitz(problems) {
             document.getElementById('nav-home').classList.add('active');
             loadSocialFeed();
             loadPYMK();
+            _cacheFriendsList();
         } else if(tab === 'bingo') {
             document.getElementById('view-bingo').style.display = 'block';
             document.getElementById('nav-bingo').classList.add('active');
@@ -15832,51 +15852,201 @@ Please explain why you want a verification badge:`;
 
     function openSearch() {
         document.getElementById('searchModal').style.display = 'flex';
-        document.getElementById('searchInput').focus();
+        lucide.createIcons({ nodes: [document.getElementById('searchModal')] });
+        setTimeout(() => document.getElementById('searchInput').focus(), 100);
+        _renderSearchHome();
     }
-    
-    let searchTimeout = null;
+
+    function closeSearch() {
+        document.getElementById('searchModal').style.display = 'none';
+    }
+
+    function clearSearch() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('searchClearBtn').style.display = 'none';
+        _renderSearchHome();
+    }
+
+    var _searchTab = 'all';
+    function switchSearchTab(tab) {
+        _searchTab = tab;
+        document.querySelectorAll('.search-tab').forEach(b => b.classList.remove('active'));
+        var el = document.getElementById('stab-' + tab);
+        if (el) el.classList.add('active');
+        var q = document.getElementById('searchInput').value.trim();
+        if (q.length >= 2) _doSearch(q);
+    }
+
+    function _renderSearchHome() {
+        var resDiv = document.getElementById('searchResults');
+        // Show recent searches from localStorage
+        var recent = _getRecentSearches();
+        var html = '';
+        if (recent.length > 0) {
+            html += '<div class="search-section-label">Recent</div>';
+            recent.forEach(function(r) {
+                html += '<div class="search-res-item" onclick="_searchFromRecent(\'' + escapeHtml(r.uid) + '\',\'' + escapeHtml(r.name) + '\')">'
+                    + '<img src="' + (r.photo || 'https://via.placeholder.com/46') + '" class="search-res-img" onerror="this.src=\'https://via.placeholder.com/46\'">'
+                    + '<div class="search-res-info"><div class="search-res-name">' + escapeHtml(r.name) + '</div><div class="search-res-sub">Tap to view profile</div></div>'
+                    + '<button onclick="event.stopPropagation();_removeRecentSearch(\'' + r.uid + '\')" style="background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;padding:4px;"><i data-lucide="x" style="width:14px;height:14px;pointer-events:none;"></i></button>'
+                    + '</div>';
+            });
+        } else {
+            html = '<div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,0.3);font-size:14px;">Search for people or posts</div>';
+        }
+        resDiv.innerHTML = html;
+        lucide.createIcons({ nodes: [resDiv] });
+    }
+
+    function _getRecentSearches() {
+        try { return JSON.parse(localStorage.getItem('rbSearchRecent') || '[]'); } catch(e) { return []; }
+    }
+    function _saveRecentSearch(uid, name, photo) {
+        var recent = _getRecentSearches().filter(function(r){ return r.uid !== uid; });
+        recent.unshift({ uid: uid, name: name, photo: photo || '' });
+        if (recent.length > 8) recent = recent.slice(0, 8);
+        try { localStorage.setItem('rbSearchRecent', JSON.stringify(recent)); } catch(e) {}
+    }
+    function _removeRecentSearch(uid) {
+        var recent = _getRecentSearches().filter(function(r){ return r.uid !== uid; });
+        try { localStorage.setItem('rbSearchRecent', JSON.stringify(recent)); } catch(e) {}
+        _renderSearchHome();
+    }
+    function _searchFromRecent(uid, name) {
+        _saveRecentSearch(uid, name, '');
+        closeSearch();
+        openUserProfile(uid);
+    }
+
+    var searchTimeout = null;
     function handleSearch() {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const q = document.getElementById('searchInput').value.toLowerCase().trim();
-            const resDiv = document.getElementById('searchResults');
-            if(q.length < 2) {
-                resDiv.innerHTML = "<div style='text-align:center; opacity:0.5; padding: var(--spacing-lg);'>Type more to search...</div>";
+        var q = document.getElementById('searchInput').value.trim();
+        document.getElementById('searchClearBtn').style.display = q.length > 0 ? 'block' : 'none';
+        if (q.length < 2) { _renderSearchHome(); return; }
+        document.getElementById('searchResults').innerHTML = '<div style="text-align:center;padding:30px;color:rgba(255,255,255,0.35);font-size:13px;">Searching…</div>';
+        searchTimeout = setTimeout(function(){ _doSearch(q); }, 350);
+    }
+
+    function _doSearch(q) {
+        var resDiv = document.getElementById('searchResults');
+        var ql = q.toLowerCase();
+        resDiv.innerHTML = '';
+
+        if (_searchTab === 'posts') { _searchPosts(q, ql, resDiv); return; }
+
+        // Fetch all users and filter client-side — fixes case-sensitivity bug
+        db.ref('users').once('value', function(s) {
+            var users = [];
+            s.forEach(function(uSnap) {
+                var u = uSnap.val();
+                if (!u || !u.name) return;
+                if (u.name.toLowerCase().includes(ql)) {
+                    users.push({ uid: uSnap.key, ...u });
+                }
+            });
+
+            if (_searchTab === 'all') {
+                _renderUserResults(users, ql, resDiv);
+                if (users.length > 0) {
+                    var postLabel = document.createElement('div');
+                    postLabel.className = 'search-section-label';
+                    postLabel.textContent = 'Posts';
+                    resDiv.appendChild(postLabel);
+                    _searchPosts(q, ql, resDiv);
+                }
+            } else {
+                _renderUserResults(users, ql, resDiv);
+            }
+        });
+    }
+
+    function _renderUserResults(users, ql, resDiv) {
+        if (users.length === 0) {
+            if (_searchTab !== 'all') resDiv.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.35);">No users found for "' + escapeHtml(ql) + '"</div>';
+            return;
+        }
+        var label = document.createElement('div');
+        label.className = 'search-section-label';
+        label.textContent = 'People';
+        resDiv.appendChild(label);
+
+        // Sort: exact match first, then starts-with, then contains
+        users.sort(function(a, b) {
+            var an = a.name.toLowerCase(), bn = b.name.toLowerCase();
+            if (an === ql && bn !== ql) return -1;
+            if (bn === ql && an !== ql) return 1;
+            if (an.startsWith(ql) && !bn.startsWith(ql)) return -1;
+            if (bn.startsWith(ql) && !an.startsWith(ql)) return 1;
+            return 0;
+        });
+
+        var myFriends = window._myFriendsCache || {};
+        users.forEach(function(u) {
+            var isFriend = myFriends[u.uid];
+            var subText = u.isContentCreator ? '✦ Content Creator' : (isFriend ? '• Friends' : '');
+            if (!subText && u.bio) subText = u.bio.substring(0, 40);
+
+            var item = document.createElement('div');
+            item.className = 'search-res-item';
+            item.innerHTML = '<img src="' + (u.photo || 'https://via.placeholder.com/46') + '" class="search-res-img" onerror="this.src=\'https://via.placeholder.com/46\'"><div class="search-res-info"><div class="search-res-name">' + escapeHtml(u.name) + (u.isContentCreator ? ' <span style="color:#f59e0b;font-size:12px;">✦</span>' : '') + (u.verified ? ' <span style="background:#3b82f6;border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;"><i data-lucide="check" style="width:9px;height:9px;color:white;pointer-events:none;"></i></span>' : '') + '</div><div class="search-res-sub">' + escapeHtml(subText) + '</div></div>'
+                + (!isFriend && u.uid !== (auth.currentUser && auth.currentUser.uid) ? '<button class="search-add-btn" onclick="event.stopPropagation();_searchAddFriend(\'' + u.uid + '\',this)">Add</button>' : '');
+            item.onclick = function(e) {
+                if (e.target.closest('.search-add-btn')) return;
+                _saveRecentSearch(u.uid, u.name, u.photo);
+                closeSearch();
+                openUserProfile(u.uid);
+            };
+            resDiv.appendChild(item);
+        });
+        lucide.createIcons({ nodes: [resDiv] });
+    }
+
+    function _searchAddFriend(uid, btn) {
+        if (!auth.currentUser) return;
+        db.ref('friendRequests/' + uid + '/' + auth.currentUser.uid).set(true);
+        btn.textContent = 'Sent';
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        showToast('Friend request sent!');
+    }
+
+    function _searchPosts(q, ql, resDiv) {
+        db.ref('socialPosts').limitToLast(200).once('value', function(s) {
+            var posts = [];
+            s.forEach(function(pSnap) {
+                var p = pSnap.val();
+                if (!p || p.deleted) return;
+                var content = (p.content || '').toLowerCase();
+                if (content.includes(ql)) {
+                    posts.push({ key: pSnap.key, ...p });
+                }
+            });
+            if (posts.length === 0) {
+                if (_searchTab === 'posts') resDiv.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.35);">No posts found for "' + escapeHtml(ql) + '"</div>';
                 return;
             }
-            resDiv.innerHTML = "<div style='text-align:center; opacity:0.5; padding: var(--spacing-lg);'>Searching...</div>";
-            // FIX #6: Use startAt/endAt prefix query instead of downloading all users
-            db.ref('users')
-              .orderByChild('name')
-              .startAt(q)
-              .endAt(q + '\uf8ff')
-              .limitToFirst(20)
-              .once('value', s => {
-                resDiv.innerHTML = "";
-                let found = false;
-                s.forEach(uSnap => {
-                    const u = uSnap.val();
-                    const uid = uSnap.key;
-                    if(u.name.toLowerCase().includes(q)) {
-                        found = true;
-                        const div = document.createElement('div');
-                        div.className = 'search-res-item';
-                        div.onclick = () => {
-                            document.getElementById('searchModal').style.display = 'none';
-                            openUserProfile(uid);
-                        };
-                        div.innerHTML = `
-                            <img src="${u.photo || 'https://via.placeholder.com/40'}" class="search-res-img">
-                            <div style="font-size:14px; font-weight:700; color:white;">${u.name} ${getBadgeHtml(u.bingoWins || 0)}</div>
-                        `;
-                        resDiv.appendChild(div);
-                    }
-                });
-                if(!found) resDiv.innerHTML = "<div style='text-align:center; opacity:0.5; padding: var(--spacing-lg);'>No users found.</div>";
-                lucide.createIcons();
+            posts.slice(0, 10).forEach(function(p) {
+                var snippet = (p.content || '').substring(0, 100);
+                var item = document.createElement('div');
+                item.className = 'search-post-item';
+                item.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:4px;">' + escapeHtml(p.authorName || 'User') + '</div>'
+                    + '<div style="font-size:14px;color:#e2e8f0;line-height:1.4;">' + escapeHtml(snippet) + (p.content && p.content.length > 100 ? '…' : '') + '</div>';
+                item.onclick = function() {
+                    closeSearch();
+                    openComments(p.key);
+                };
+                resDiv.appendChild(item);
             });
-        }, 500);
+        });
+    }
+
+    // Cache friends list for quick lookup in search
+    function _cacheFriendsList() {
+        if (!auth.currentUser) return;
+        db.ref('friends/' + auth.currentUser.uid).once('value', function(s) {
+            window._myFriendsCache = s.exists() ? s.val() : {};
+        });
     }
 
     let currentOpenPostKey = null;
