@@ -528,6 +528,39 @@ exports.onNewGroupMessage = onValueCreated(
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 6. 💸  CASHOUT APPROVED PUSH — fires when admin approves a cashout
+//    Sends a personal push notification to the specific user.
+//    Path: userPush/{jobId}  fields: uid, title, body, timestamp, sent
+// ─────────────────────────────────────────────────────────────────────────────
+exports.onUserPushCreated = onValueCreated(
+    { ref: 'userPush/{jobId}', region: 'asia-southeast1' },
+    async (event) => {
+        const job   = event.data.val();
+        const jobId = event.params.jobId;
+        if (!job || job.sent) return null;
+
+        const { uid, title, body } = job;
+        if (!uid || !title || !body) {
+            await db.ref('userPush/' + jobId).update({ sent: true, error: 'Missing uid/title/body', processedAt: Date.now() });
+            return null;
+        }
+
+        console.log(`[onUserPushCreated] Cashout push → uid=${uid}`);
+
+        await sendPushToUser(uid, title, body, {
+            tag: 'rbl-cashout',
+            url: '/?tab=store',
+            requireInteraction: 'true',
+        });
+
+        // Mark job as done
+        await db.ref('userPush/' + jobId).update({ sent: true, processedAt: Date.now() });
+
+        return null;
+    });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 async function triggerAutoReset(winner) {
