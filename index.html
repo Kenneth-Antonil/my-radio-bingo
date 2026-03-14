@@ -2041,8 +2041,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 6px 12px 2px;
-            min-height: 58px;
+            padding: 0;
+            min-height: 0;
         }
         .kra-bingo-ad-inner {
             border-radius: 10px;
@@ -9396,8 +9396,7 @@
             <!-- Glass fade at bottom -->
             <div class="bingo-hdr-glass"></div>
 
-            <!-- Online user floating bubbles — behind the content layer -->
-            <div class="online-bubbles-area" id="onlineBubblesRow"></div>
+
 
             <!-- Text content -->
             <div class="bingo-hdr-content">
@@ -12852,85 +12851,9 @@ function runMathBlitz(problems) {
     
     function updatePresenceData(uid, name, points, photo) { db.ref('status/' + uid).update({ name: name, points: points, photo: photo }); }
 
-    /* ── Online Floating Bubbles in Bingo Header ── */
-    var _activeBubbles = {}; // uid → img element
-
-    function renderOnlineBubbles(onlineUsersMap, myUid) {
-        var container = document.getElementById('onlineBubblesRow');
-        if (!container) return;
-
-        var headerEl = container.closest('.bingo-section-header');
-        var headerW = headerEl ? headerEl.offsetWidth  : 320;
-        var headerH = headerEl ? headerEl.offsetHeight : 130;
-
-        // Get currently online UIDs (excluding self)
-        var nowOnline = {};
-        Object.entries(onlineUsersMap).forEach(function(e) {
-            if (e[1].state === 'online' && e[0] !== myUid) nowOnline[e[0]] = e[1];
-        });
-
-        // Remove bubbles for users who went offline
-        Object.keys(_activeBubbles).forEach(function(uid) {
-            if (!nowOnline[uid]) {
-                var el = _activeBubbles[uid];
-                if (el && el.parentNode) el.parentNode.removeChild(el);
-                delete _activeBubbles[uid];
-            }
-        });
-
-        // Add bubbles for newly online users
-        Object.entries(nowOnline).forEach(function(entry) {
-            var uid  = entry[0];
-            var data = entry[1];
-            if (_activeBubbles[uid]) return; // already rendered
-
-            var photo = (data.photo && data.photo.startsWith('http'))
-                ? data.photo
-                : 'https://via.placeholder.com/40/1a0a3e/a855f7?text=' + encodeURIComponent((data.name || '?')[0]);
-            var name = data.name || 'User';
-
-            // Random size between 24px and 48px — bula effect
-            var size    = 24 + Math.random() * 24;
-            var scale   = size / 36; // normalized scale around 36px base
-            var opacity = 0.55 + Math.random() * 0.35;
-
-            // Random starting position — spread across header
-            var leftPct = 5  + Math.random() * 80;
-            var topPct  = 8  + Math.random() * 70;
-
-            // Random drift direction — slow wind carry effect
-            var dx = (Math.random() - 0.4) * 30; // slightly biased rightward
-            var dy = -(10 + Math.random() * 30);  // mostly upward
-
-            // Random duration 6s–12s
-            var dur   = 6 + Math.random() * 6;
-            var delay = Math.random() * -dur; // start mid-cycle so they're already moving
-
-            var img = document.createElement('img');
-            img.className = 'online-bubble';
-            img.src   = photo;
-            img.alt   = name;
-            img.title = name + ' is online';
-            img.dataset.uid = uid;
-            img.style.cssText =
-                'width:'  + size + 'px;' +
-                'height:' + size + 'px;' +
-                'left:'   + leftPct + '%;' +
-                'top:'    + topPct  + '%;' +
-                '--bub-s:'     + scale   + ';' +
-                '--bub-o:'     + opacity + ';' +
-                '--bub-dx:'    + dx  + 'px;' +
-                '--bub-dy:'    + dy  + 'px;' +
-                '--bub-dur:'   + dur + 's;' +
-                '--bub-delay:' + delay + 's;';
-            img.onerror = function() {
-                this.src = 'https://via.placeholder.com/40/1a0a3e/a855f7?text=' + encodeURIComponent((name||'?')[0]);
-            };
-
-            container.appendChild(img);
-            _activeBubbles[uid] = img;
-        });
-    }
+    /* ── Online Floating Bubbles in Bingo Header — disabled ── */
+    var _activeBubbles = {};
+    function renderOnlineBubbles(onlineUsersMap, myUid) { return; }
     
     // === UPDATED NOTIFICATION LOGIC (With Delete & Nav) ===
     function listenNotifications(uid) { 
