@@ -8061,7 +8061,7 @@
         .online-ticker-bar {
             background: rgba(8, 12, 20, 0.98);
             border-bottom: 1px solid rgba(59,130,246,0.15);
-            border-top: 1px solid rgba(59,130,246,0.08);
+            border-top: none;
             display: flex;
             align-items: center;
             height: 34px;
@@ -22958,19 +22958,24 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
     if (!header || !ticker) return;
 
     function reposition() {
-        var navH    = nav    ? nav.offsetHeight    : 60;
-        var headerH = header ? header.offsetHeight : 145;
+        var navH    = nav    ? nav.getBoundingClientRect().height : 60;
+        var headerH = header ? header.getBoundingClientRect().height : 145;
         var newTop  = navH + headerH;
         ticker.style.top = newTop + 'px';
         if (viewBingo) viewBingo.style.paddingTop = (headerH + 34) + 'px';
     }
 
+    /* Run immediately, on DOM ready, and on full load */
     reposition();
+    document.addEventListener('DOMContentLoaded', reposition);
+    window.addEventListener('load', reposition);
 
     if (window.ResizeObserver) {
-        new ResizeObserver(reposition).observe(header);
+        var ro = new ResizeObserver(reposition);
+        ro.observe(header);
+        if (nav) ro.observe(nav);
     } else {
-        setInterval(reposition, 500);
+        setInterval(reposition, 300);
     }
 })();
 </script>
