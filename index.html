@@ -6217,11 +6217,7 @@
         }
 
         .bingo-section-header {
-            position: fixed;
-            top: 60px;
-            left: 0;
-            right: 0;
-            z-index: 150;
+            position: relative;
             margin: 0;
             border-radius: 0;
             overflow: hidden;
@@ -8066,11 +8062,7 @@
             align-items: center;
             height: 34px;
             overflow: hidden;
-            position: fixed;
-            top: 204px;
-            left: 0;
-            right: 0;
-            z-index: 149;
+            position: relative;
             margin: 0;
             box-shadow: 0 2px 10px rgba(0,0,0,0.35);
         }
@@ -8918,6 +8910,9 @@
 
     <div id="view-bingo" style="display:block; padding-top:179px;">
 
+        <!-- ── FIXED HEADER + TICKER WRAPPER ── -->
+        <div id="bingoFixedWrap" style="position:fixed;top:60px;left:0;right:0;z-index:150;">
+
         <!-- ── ARTISTIC BINGO HEADER CARD ── -->
         <div class="bingo-section-header">
 
@@ -9036,6 +9031,8 @@
                 </div>
             </div>
         </div>
+
+        </div><!-- /#bingoFixedWrap -->
 
         <!-- Quick actions -->
         <div class="bingo-quick-actions">
@@ -22946,46 +22943,22 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
 </script>
 
 <script>
-/* ── DYNAMIC TICKER POSITION ──
-   Keeps .online-ticker-bar directly below .bingo-section-header
-   even as the header grows (e.g. prev-balls strip fills up). */
+/* Keep view-bingo padding-top in sync with fixed wrapper height */
 (function() {
-    var nav       = document.querySelector('.nav');
-    var header    = document.querySelector('.bingo-section-header');
-    var ticker    = document.getElementById('onlineTickerBar');
-    var viewBingo = document.getElementById('view-bingo');
-
-    if (!header || !ticker) return;
-
-    function reposition() {
-        var navH    = nav    ? nav.getBoundingClientRect().height : 60;
-        var headerH = header ? header.getBoundingClientRect().height : 145;
-        var newTop  = navH + headerH - 1;
-        ticker.style.top = newTop + 'px';
-        if (viewBingo) viewBingo.style.paddingTop = (headerH + 34) + 'px';
+    function sync() {
+        var wrap  = document.getElementById('bingoFixedWrap');
+        var vb    = document.getElementById('view-bingo');
+        if (!wrap || !vb) return;
+        vb.style.paddingTop = wrap.getBoundingClientRect().height + 'px';
     }
-
-    /* Run immediately, on DOM ready, and on full load */
-    reposition();
-    document.addEventListener('DOMContentLoaded', function() {
-        reposition();
-        setTimeout(reposition, 100);
-        setTimeout(reposition, 500);
-    });
-    window.addEventListener('load', function() {
-        reposition();
-        setTimeout(reposition, 100);
-    });
-
+    sync();
+    window.addEventListener('load', sync);
     if (window.ResizeObserver) {
-        var ro = new ResizeObserver(reposition);
-        ro.observe(header);
-        if (nav) ro.observe(nav);
+        new ResizeObserver(sync).observe(document.getElementById('bingoFixedWrap') || document.body);
     } else {
-        setInterval(reposition, 300);
+        setInterval(sync, 400);
     }
 })();
 </script>
-
 </body>
 </html>
