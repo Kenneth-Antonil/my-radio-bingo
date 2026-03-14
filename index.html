@@ -15988,12 +15988,20 @@ Please explain why you want a verification badge:`;
         }
         _postDetailListener = postKey;
 
+        // Generation counter in OUTER scope — survives multiple on('value') fires.
+        // Each fire bumps it; any stale Promise.all that resolves late sees a
+        // mismatched gen and bails out instead of overwriting fresher data.
+        let _commentGen = 0;
+
         db.ref('postComments/' + postKey).on('value', snap => {
             const commentList = document.getElementById('postDetailCommentList');
             if(!commentList) return;
 
             const scrollEl = document.getElementById('postDetailBody');
             const wasAtBottom = scrollEl && (scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight) < 100;
+
+            // Bump gen — any Promise.all still pending from a previous fire will bail
+            const myGen = ++_commentGen;
 
             commentList.innerHTML = '';
             const countEl = document.getElementById('postDetailCommentCount');
@@ -16022,7 +16030,8 @@ Please explain why you want a verification badge:`;
             );
 
             Promise.all(userFetches).then(results => {
-                // Make sure we are still on the same post
+                // Bail out if a newer on('value') fire has already started rendering
+                if(myGen !== _commentGen) return;
                 if(currentOpenPostKey !== postKey) return;
 
                 commentList.innerHTML = '';
