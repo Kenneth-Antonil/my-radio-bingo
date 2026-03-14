@@ -15982,99 +15982,89 @@ Please explain why you want a verification badge:`;
             });
         });
 
-        // Real-time comments listener
+        // Load comments once — avoids double-fire race condition from on('value') cache+server
         if(_postDetailListener) {
             db.ref('postComments/' + _postDetailListener).off();
         }
         _postDetailListener = postKey;
 
-        // Generation counter in OUTER scope — survives multiple on('value') fires.
-        // Each fire bumps it; any stale Promise.all that resolves late sees a
-        // mismatched gen and bails out instead of overwriting fresher data.
-        let _commentGen = 0;
-
-        db.ref('postComments/' + postKey).on('value', snap => {
+        function _loadComments() {
             const commentList = document.getElementById('postDetailCommentList');
-            if(!commentList) return;
+            if (!commentList) return;
+            commentList.innerHTML = '<div style="padding:20px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px;">Loading comments…</div>';
 
-            const scrollEl = document.getElementById('postDetailBody');
-            const wasAtBottom = scrollEl && (scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight) < 100;
+            db.ref('postComments/' + postKey).orderByChild('time').once('value', snap => {
+                if (currentOpenPostKey !== postKey) return;
+                const scrollEl = document.getElementById('postDetailBody');
+                const countEl = document.getElementById('postDetailCommentCount');
 
-            // Bump gen — any Promise.all still pending from a previous fire will bail
-            const myGen = ++_commentGen;
-
-            commentList.innerHTML = '';
-            const countEl = document.getElementById('postDetailCommentCount');
-
-            if(!snap.exists()) {
-                if(countEl) countEl.textContent = 'No comments yet';
-                commentList.innerHTML = `
-                    <div style="padding:48px 20px; text-align:center;">
-                        <div style="font-size:48px; margin-bottom:12px;">💬</div>
-                        <div style="font-size:15px; font-weight:800; color:white; margin-bottom:6px;">No comments yet</div>
-                        <div style="font-size:13px; color:rgba(255,255,255,0.38);">Be the first to comment!</div>
-                    </div>`;
-                return;
-            }
-
-            const allComments = [];
-            snap.forEach(c => allComments.push({ key: c.key, ...c.val() }));
-            if(countEl) countEl.textContent = allComments.length + ' comment' + (allComments.length !== 1 ? 's' : '');
-
-            // Fetch ALL user data in parallel, then render in correct order
-            const userFetches = allComments.map(com =>
-                db.ref('users/' + com.uid).once('value').then(userSnap => ({
-                    com,
-                    user: userSnap.val() || { name: 'User', photo: '' }
-                }))
-            );
-
-            Promise.all(userFetches).then(results => {
-                // Bail out if a newer on('value') fire has already started rendering
-                if(myGen !== _commentGen) return;
-                if(currentOpenPostKey !== postKey) return;
-
-                commentList.innerHTML = '';
-
-                // Section label
-                const sectionLabel = document.createElement('div');
-                sectionLabel.style.cssText = 'padding:12px 16px 4px; font-size:13px; font-weight:800; color:white;';
-                sectionLabel.textContent = 'All Comments';
-                commentList.appendChild(sectionLabel);
-
-                results.forEach(({ com, user }) => {
-                    const isOwn = auth.currentUser && com.uid === auth.currentUser.uid;
-                    const div = document.createElement('div');
-                    div.className = 'pd-comment-item';
-                    div.id = 'pd-cmt-' + com.key;
-
-                    const deleteBtn = isOwn
-                        ? `<button class="pd-comment-delete" onclick="deletePdComment('${postKey}','${com.key}')" title="Delete"><i data-lucide="trash-2" style="width:13px;height:13px;pointer-events:none;"></i></button>`
-                        : '';
-
-                    div.innerHTML = `
-                        <img class="pd-comment-avatar" src="${escapeHtml(user.photo||'https://via.placeholder.com/36')}" onclick="closeComments();openUserProfile('${com.uid}')">
-                        <div class="pd-comment-body">
-                            <div class="pd-comment-bubble">
-                                <div class="pd-comment-author">${escapeHtml(user.name)}${user.verified?'<span class="verified-badge"><i data-lucide="check" style="width:9px;height:9px;color:white;"></i></span>':''}</div>
-                                <div class="pd-comment-text">${escapeHtml(com.text)}</div>
-                            </div>
-                            <div class="pd-comment-meta">
-                                <span>${getNotifTimeLabel(com.time)}</span>
-                                <button onclick="replyPdComment('${escapeHtml(user.name)}')">Reply</button>
-                            </div>
-                        </div>
-                        ${deleteBtn}
-                    `;
-                    commentList.appendChild(div);
-                    lucide.createIcons({ nodes: [div] });
-                });
-
-                if(wasAtBottom && scrollEl) {
-                    setTimeout(() => scrollEl.scrollTop = scrollEl.scrollHeight, 50);
+                if (!snap.exists()) {
+                    if (countEl) countEl.textContent = 'No comments yet';
+                    commentList.innerHTML = `
+                        <div style="padding:48px 20px; text-align:center;">
+                            <div style="font-size:48px; margin-bottom:12px;">💬</div>
+                            <div style="font-size:15px; font-weight:800; color:white; margin-bottom:6px;">No comments yet</div>
+                            <div style="font-size:13px; color:rgba(255,255,255,0.38);">Be the first to comment!</div>
+                        </div>`;
+                    return;
                 }
+
+                const allComments = [];
+                snap.forEach(c => allComments.push({ key: c.key, ...c.val() }));
+                if (countEl) countEl.textContent = allComments.length + ' comment' + (allComments.length !== 1 ? 's' : '');
+
+                const userFetches = allComments.map(com =>
+                    db.ref('users/' + com.uid).once('value').then(userSnap => ({
+                        com,
+                        user: userSnap.val() || { name: 'User', photo: '' }
+                    }))
+                );
+
+                Promise.all(userFetches).then(results => {
+                    if (currentOpenPostKey !== postKey) return;
+                    commentList.innerHTML = '';
+
+                    const sectionLabel = document.createElement('div');
+                    sectionLabel.style.cssText = 'padding:12px 16px 4px; font-size:13px; font-weight:800; color:white;';
+                    sectionLabel.textContent = 'All Comments';
+                    commentList.appendChild(sectionLabel);
+
+                    results.forEach(({ com, user }) => {
+                        const isOwn = auth.currentUser && com.uid === auth.currentUser.uid;
+                        const div = document.createElement('div');
+                        div.className = 'pd-comment-item';
+                        div.id = 'pd-cmt-' + com.key;
+
+                        const deleteBtn = isOwn
+                            ? `<button class="pd-comment-delete" onclick="deletePdComment('${postKey}','${com.key}')" title="Delete"><i data-lucide="trash-2" style="width:13px;height:13px;pointer-events:none;"></i></button>`
+                            : '';
+
+                        div.innerHTML = `
+                            <img class="pd-comment-avatar" src="${escapeHtml(user.photo||'https://via.placeholder.com/36')}" onclick="closeComments();openUserProfile('${com.uid}')">
+                            <div class="pd-comment-body">
+                                <div class="pd-comment-bubble">
+                                    <div class="pd-comment-author">${escapeHtml(user.name)}${user.verified?'<span class="verified-badge"><i data-lucide="check" style="width:9px;height:9px;color:white;"></i></span>':''}</div>
+                                    <div class="pd-comment-text">${escapeHtml(com.text)}</div>
+                                </div>
+                                <div class="pd-comment-meta">
+                                    <span>${getNotifTimeLabel(com.time)}</span>
+                                    <button onclick="replyPdComment('${escapeHtml(user.name)}')">Reply</button>
+                                </div>
+                            </div>
+                            ${deleteBtn}
+                        `;
+                        commentList.appendChild(div);
+                        lucide.createIcons({ nodes: [div] });
+                    });
+
+                    if (scrollEl) setTimeout(() => scrollEl.scrollTop = scrollEl.scrollHeight, 50);
+                });
             });
-        });
+        }
+        _loadComments();
+
+        // Re-load after sending a comment so new comment appears immediately
+        window._reloadDetailComments = _loadComments;
 
         // Focus input after animation
         setTimeout(() => document.getElementById('postDetailCommentInput').focus(), 380);
@@ -16142,6 +16132,8 @@ Please explain why you want a verification badge:`;
             uid: auth.currentUser.uid,
             text: txt,
             time: Date.now()
+        }).then(() => {
+            if (typeof window._reloadDetailComments === 'function') window._reloadDetailComments();
         });
 
         // Notify author
