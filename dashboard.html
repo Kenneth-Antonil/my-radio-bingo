@@ -1164,7 +1164,8 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 </div>
                 <p style="font-size:11px; color:rgba(255,255,255,0.6); margin:0; line-height:1.6;">
                     Push notifications ay pinamamahalaan na ng <b style="color:white;">Firebase Cloud Functions</b> — server-side, walang kailangan na bukas na browser.<br><br>
-                    <b style="color:white;">Automatic triggers:</b> 30 min, 10 min, 5 min bago mag-draw · Game LIVE · Winner announcement · Jackpot activation
+                    <b style="color:white;">Automatic triggers:</b> 30 min, 10 min, 5 min bago mag-draw · Game LIVE · Winner announcement · Jackpot activation<br><br>
+                    <b style="color:#34d399;">💸 Cashout Approved:</b> Kapag na-approve ang cashout ng user, automatic na may push notification kahit hindi bukas ang app (<code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;">/userPush/{uid}</code>) at may share banner na lalabas sa player app.
                 </p>
             </div>
         </div>
@@ -2714,6 +2715,30 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 ? '\u2705 Ang iyong cashout na ' + (data.item || 'request') + ' ay na-send na!'
                 : '\u274c Ang iyong cashout na ' + (data.item || 'request') + ' ay na-deny. Makipag-ugnayan sa support.';
             db.ref('notifications/' + data.uid).push({ msg: statusMsg, time: Date.now() });
+
+            // ── CASHOUT APPROVED: Push notification + share banner trigger ──
+            if (status === 'sent') {
+                var amtLabel = data.amount ? '\u20B1' + parseFloat(data.amount).toFixed(2) : (data.cost ? '\u20B1' + (data.cost / (window.COIN_TO_PHP_RATE || 1000)).toFixed(2) : '');
+                var pushTitle = '\uD83C\uDF89 Cashout Approved!';
+                var pushBody  = 'Na-approve ang iyong cashout' + (amtLabel ? ' na ' + amtLabel : '') + '. Darating na sa iyong account!';
+
+                // 1. Write push job — Cloud Function will deliver via FCM even if app is closed
+                db.ref('userPush').push({
+                    uid:       data.uid,
+                    title:     pushTitle,
+                    body:      pushBody,
+                    timestamp: Date.now(),
+                    sent:      false
+                });
+
+                // 2. Set flag on user record so app can show the share banner when opened
+                db.ref('users/' + data.uid).update({
+                    cashoutApproved:      true,
+                    cashoutApprovedAt:    Date.now(),
+                    cashoutApprovedAmt:   amtLabel
+                });
+            }
+
             if(status === 'denied') {
                 db.ref('users/' + data.uid + '/points').transaction(p => (p || 0) + (data.cost || 0), (err, committed) => {
                     if(committed) {
