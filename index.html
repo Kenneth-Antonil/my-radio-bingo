@@ -2258,7 +2258,7 @@
         .login-bg-blob, .login-app-container, .app-logo-lg, .app-tagline,
         .promo-badge, .auth-btn-group, .btn-main-auth, .btn-sec-auth,
         .login-footer-legal, .legal-text { display: none !important; }
-        .nav { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); padding: var(--spacing-sm) 15px; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; left: 0; right: 0; z-index: 200; border-bottom: 1px solid rgba(255,255,255,0.1); height: auto; min-height: 60px; }
+        .nav { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); padding: var(--spacing-sm) 15px; padding-top: max(var(--spacing-sm), env(safe-area-inset-top)); display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; left: 0; right: 0; z-index: 200; border-bottom: 1px solid rgba(255,255,255,0.1); height: auto; min-height: calc(60px + env(safe-area-inset-top)); }
         .user-stats { display: flex; align-items: center; gap: var(--spacing-xs); }
         .icon-btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.15); width: 38px; height: 38px; border-radius: var(--radius-md); cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         .icon-btn:active { transform: scale(0.95); }
@@ -3081,7 +3081,7 @@
         .nd-info { flex: 1; }
         .next-draw-label { font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
         .next-draw-time { font-size: 18px; font-weight: 900; color: white; text-shadow: 0 2px 5px rgba(0,0,0,0.8); }
-        .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 0; padding-top: 60px; padding-bottom: 80px; /* Space for Nav */ }
+        .container { width: 100%; max-width: 500px; margin: 0 auto; padding: 0; padding-top: calc(60px + env(safe-area-inset-top)); padding-bottom: 80px; /* Space for Nav */ }
         .card { background: var(--glass-surface); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 24px; padding: var(--spacing-md); margin-bottom: var(--spacing-lg); border: 1px solid var(--glass-border); position: relative; transition: all 0.3s ease; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
         
         /* === VIDEO FEED REMOVED — elements moved off-screen in DOM === */
@@ -9028,7 +9028,7 @@
     <div id="view-bingo" style="display:block; padding-top:179px;">
 
         <!-- ── FIXED HEADER + TICKER WRAPPER ── -->
-        <div id="bingoFixedWrap" style="position:fixed;top:60px;left:0;right:0;z-index:150;">
+        <div id="bingoFixedWrap" style="position:fixed;top:calc(60px + env(safe-area-inset-top));left:0;right:0;z-index:150;">
 
         <!-- ── ARTISTIC BINGO HEADER CARD ── -->
         <div class="bingo-section-header">
@@ -24377,7 +24377,7 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
 (function(){
 'use strict';
 var WAE_COINS=250,WAE_LIMIT=10,WAE_SECS=15,WAE_CIRC=2*Math.PI*45;
-var _timer=null,_secsLeft=WAE_SECS,_adWin=null,_cancelled=false;
+var _timer=null,_secsLeft=WAE_SECS,_cancelled=false;
 
 function _phToday(){
   var n=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Manila'}));
@@ -24405,12 +24405,39 @@ function _setRing(s){var fg=document.getElementById('waeRingFg');if(!fg)return;f
 var _msgs=['Naglo-load ang ad...','Nanunuod...','Konti na lang!','Halos tapos na!','Ilang segundo na lang...'];
 function _setStatus(s){var i=Math.floor((1-s/WAE_SECS)*(_msgs.length-1)),el=document.getElementById('waeStatusTxt');if(el)el.textContent=_msgs[Math.min(i,_msgs.length-1)];}
 
+// ── AdsTerra Rewarded Video ──
+// PAANO MAG-SETUP:
+//   1. Mag-sign up sa adsterra.com
+//   2. Pumunta sa Sites → Add Site → i-verify ang iyong site
+//   3. Gumawa ng bagong zone → piliin "Rewarded Video" o "Interstitial"
+//   4. Palitan ang ADSTERRA_ZONE_URL below ng script src URL mula sa AdsTerra
+var ADSTERRA_ZONE_URL = 'YOUR_ADSTERRA_ZONE_SCRIPT_URL'; // <-- palitan ng AdsTerra Zone script URL
+
 function _openAd(){
   try{
-    _adWin=window.open('about:blank','_blank','width=1,height=1,left=-9999,top=-9999');
-    if(_adWin){_adWin.document.write('<scr'+'ipt src="https://quge5.com/88/tag.min.js" data-zone="219305"><\/scr'+'ipt>');_adWin.document.close();}
+    // Remove any old iframe first
+    var old=document.getElementById('wae-ad-iframe');if(old)old.remove();
+    // Inject full-screen iframe with AdsTerra rewarded video tag
+    var iframe=document.createElement('iframe');
+    iframe.id='wae-ad-iframe';
+    iframe.setAttribute('allowfullscreen','true');
+    iframe.setAttribute('allow','autoplay; fullscreen');
+    iframe.style.cssText='position:fixed;width:100%;height:100%;top:0;left:0;z-index:99998;border:none;background:#000;';
+    document.body.appendChild(iframe);
+    var doc=iframe.contentDocument||iframe.contentWindow.document;
+    doc.open();
+    doc.write('<!DOCTYPE html><html><head>'
+      +'<meta name="viewport" content="width=device-width,initial-scale=1">'
+      +'<style>html,body{margin:0;padding:0;background:#000;width:100%;height:100%;overflow:hidden;}</style>'
+      +'</head><body>'
+      +'<scr'+'ipt async src="'+ADSTERRA_ZONE_URL+'"><\/scr'+'ipt>'
+      +'</body></html>');
+    doc.close();
   }catch(e){}
-  try{if(typeof window._monetagShow==='function')window._monetagShow();}catch(e){}
+}
+
+function _closeAdIframe(){
+  try{var f=document.getElementById('wae-ad-iframe');if(f)f.remove();}catch(e){}
 }
 
 window.startWatchAd=function(){
@@ -24438,7 +24465,7 @@ window.startWatchAd=function(){
 };
 
 function _doReward(uid,today,newCnt){
-  try{if(_adWin&&!_adWin.closed)_adWin.close();}catch(e){}
+  _closeAdIframe();
   var db=firebase.database();
   db.ref('users/'+uid).once('value',function(s){
     var u=s.val()||{};
@@ -24457,7 +24484,7 @@ function _doReward(uid,today,newCnt){
 
 window.cancelWatchAd=function(){
   _cancelled=true;if(_timer){clearInterval(_timer);_timer=null;}
-  try{if(_adWin&&!_adWin.closed)_adWin.close();}catch(e){}
+  _closeAdIframe();
   document.getElementById('waeOverlay').classList.remove('open');
 };
 window.closeWaeModal=function(){
