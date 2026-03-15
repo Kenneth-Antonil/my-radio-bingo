@@ -11033,6 +11033,7 @@ function runMathBlitz(problems) {
     function toPeso(coins){ return "₱" + (coins/PESO_RATE).toFixed(2); }
     function pesoCoins(pesos){ return pesos * PESO_RATE; }
     let onlineUsers = {};
+    window.onlineUsers = onlineUsers;
     
     // Skin Shop Data Structure
     const skinShop = {
@@ -12588,6 +12589,7 @@ function runMathBlitz(problems) {
                     const fallbackData = s.val() || {};
                     const fallbackCount = Object.keys(fallbackData).length;
                     onlineUsers = fallbackData;
+                    window.onlineUsers = onlineUsers;
                     _updateOnlineCountUI(fallbackCount, uid);
                 });
             } else {
@@ -12598,13 +12600,14 @@ function runMathBlitz(problems) {
         // ── Poll full user objects every 60s for friend indicators & ticker ──
         _refreshOnlineUsers(uid);
         if (window._onlineRefreshInterval) clearInterval(window._onlineRefreshInterval);
-        window._onlineRefreshInterval = setInterval(() => _refreshOnlineUsers(uid), 60000);
+        window._onlineRefreshInterval = setInterval(() => _refreshOnlineUsers(uid), 20000);
     }
 
     function _updateOnlineCountUI(count, uid) {
         _lastAutoCount = count;
         const el = document.getElementById('onlineCount');
         if (el) el.innerText = count;
+        window.onlineUsers = onlineUsers; // keep window in sync
         updateNextDrawDisplay();
         _hdeCheckPlayerCount(uid, count);
     }
@@ -12612,6 +12615,15 @@ function runMathBlitz(problems) {
     function _refreshOnlineUsers(uid) {
         db.ref('status').orderByChild('state').equalTo('online').once('value', s => {
             onlineUsers = s.val() || {};
+            window.onlineUsers = onlineUsers; // expose globally for social features
+            const count = Object.keys(onlineUsers).length;
+            // Sync count display if counterRef hasn't fired yet (e.g. first load)
+            if (count > 0) {
+                _lastAutoCount = count;
+                const el = document.getElementById('onlineCount');
+                if (el) el.innerText = count;
+                _hdeCheckPlayerCount(uid, count);
+            }
             updateAllOnlineIndicators();
             updateOnlineTicker(onlineUsers, uid);
         });
@@ -13190,9 +13202,14 @@ function runMathBlitz(problems) {
             _hdeCancelCountdown();
             return;
         }
-        const gameData = _cachedGameState || {};
+        // If gameState not loaded yet, retry shortly
+        if(!_cachedGameState) {
+            setTimeout(() => _hdeCheckPlayerCount(uid, count), 1500);
+            return;
+        }
+        const gameData = _cachedGameState;
         if(gameData.status === 'playing') return;
-        if(gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0) return;
+        // NOTE: drawnNumbers check removed — it blocked game start when old data lingered
         if(_autoStartFired || _countdownFired) return;
 
         // Threshold just crossed — start countdown
