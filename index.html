@@ -13158,8 +13158,14 @@ function runMathBlitz(problems) {
             if(status === 'waiting') {
                 _autoStartFired = false;
                 _countdownFired = false;
+                _countdownValue = 0;
                 if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
                 if(_hdeSyncInterval)   { clearInterval(_hdeSyncInterval);   _hdeSyncInterval   = null; }
+                // ── FIX: Always clear stale countdown node when returning to waiting ──
+                db.ref('gameState/countdown').once('value', cdSnap => {
+                    const cd = cdSnap.val();
+                    if(cd && cd.active) db.ref('gameState/countdown').set({ active: false });
+                });
                 // Clear any leftover jackpot from previous round
                 db.ref('gameState/jackpot').once('value', jSnap => {
                     if(jSnap.exists() && jSnap.val() && jSnap.val().active) {
@@ -13211,6 +13217,11 @@ function runMathBlitz(problems) {
             // Don't start sync if game is already playing
             const gs = _cachedGameState || {};
             if(gs.status === 'playing') return;
+            // ── FIX: Don't show countdown if player count is below threshold ──
+            if(_lastAutoCount < _AUTO_START_MIN) {
+                db.ref('gameState/countdown').set({ active: false });
+                return;
+            }
             const remaining = Math.round((cd.endsAt - Date.now()) / 1000);
             if(remaining <= 0) return;
             _countdownFired = true; // mark so we don't double-start
@@ -13222,6 +13233,14 @@ function runMathBlitz(problems) {
                 if(gsCurrent.status === 'playing') {
                     clearInterval(_hdeSyncInterval); _hdeSyncInterval = null;
                     _countdownFired = false;
+                    return;
+                }
+                // ── FIX: Stop if player count dropped below threshold mid-countdown ──
+                if(_lastAutoCount < _AUTO_START_MIN) {
+                    clearInterval(_hdeSyncInterval); _hdeSyncInterval = null;
+                    _countdownFired = false;
+                    _hdeUpdateCountdownUI(null, _lastAutoCount);
+                    db.ref('gameState/countdown').set({ active: false });
                     return;
                 }
                 s--;
@@ -13240,6 +13259,8 @@ function runMathBlitz(problems) {
         if(count < _AUTO_START_MIN) {
             // Not enough players — cancel any running countdown
             _hdeCancelCountdown();
+            // ── FIX: Also reset the banner back to "waiting for players" ──
+            updateNextDrawDisplay();
             return;
         }
         // If gameState not loaded yet, retry shortly
