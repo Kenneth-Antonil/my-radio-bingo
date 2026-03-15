@@ -13161,7 +13161,7 @@ function runMathBlitz(problems) {
                 _countdownValue = 0;
                 if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
                 if(_hdeSyncInterval)   { clearInterval(_hdeSyncInterval);   _hdeSyncInterval   = null; }
-                // ── FIX: Always clear stale countdown node when returning to waiting ──
+                // FIX: clear stale countdown node so other clients don't re-trigger it
                 db.ref('gameState/countdown').once('value', cdSnap => {
                     const cd = cdSnap.val();
                     if(cd && cd.active) db.ref('gameState/countdown').set({ active: false });
@@ -13217,7 +13217,7 @@ function runMathBlitz(problems) {
             // Don't start sync if game is already playing
             const gs = _cachedGameState || {};
             if(gs.status === 'playing') return;
-            // ── FIX: Don't show countdown if player count is below threshold ──
+            // FIX: don't show countdown if player count is below threshold
             if(_lastAutoCount < _AUTO_START_MIN) {
                 db.ref('gameState/countdown').set({ active: false });
                 return;
@@ -13235,7 +13235,7 @@ function runMathBlitz(problems) {
                     _countdownFired = false;
                     return;
                 }
-                // ── FIX: Stop if player count dropped below threshold mid-countdown ──
+                // FIX: stop countdown if players drop below minimum
                 if(_lastAutoCount < _AUTO_START_MIN) {
                     clearInterval(_hdeSyncInterval); _hdeSyncInterval = null;
                     _countdownFired = false;
@@ -13259,7 +13259,7 @@ function runMathBlitz(problems) {
         if(count < _AUTO_START_MIN) {
             // Not enough players — cancel any running countdown
             _hdeCancelCountdown();
-            // ── FIX: Also reset the banner back to "waiting for players" ──
+            // FIX: reset banner back to "waiting for players" immediately
             updateNextDrawDisplay();
             return;
         }
@@ -19368,6 +19368,10 @@ Please explain why you want a verification badge:`;
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
                 Skins
             </button>
+            <button class="rbstore-tab" onclick="switchStoreSection('earn')" id="rstab-earn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Kumita
+            </button>
             <button class="rbstore-tab" onclick="switchStoreSection('vouchers')" id="rstab-vouchers">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 History
@@ -19575,6 +19579,59 @@ Please explain why you want a verification badge:`;
                         <button class="rbs-sk-btn own" id="btn-skin-custom" onclick="equipSkin('custom')">Equip</button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- === EARN === -->
+        <div id="rs-section-earn" class="rbstore-section">
+            <div style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(30,10,60,0.6));border:1px solid rgba(139,92,246,0.3);border-radius:16px;padding:16px;margin-bottom:16px;text-align:center;">
+                <div style="font-size:10px;font-weight:800;color:rgba(196,181,253,0.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Iyong Balance</div>
+                <div style="font-size:26px;font-weight:900;color:#c4b5fd;" id="rsEarnBalance">&#x20B1;0.00</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px;">Manood ng ads para kumita!</div>
+            </div>
+            <div style="background:linear-gradient(135deg,rgba(30,10,60,0.9),rgba(15,23,42,0.95));border:1px solid rgba(139,92,246,0.4);border-radius:16px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#8b5cf6,#ec4899,#8b5cf6);background-size:200%;animation:wae-shimmer 2s linear infinite;border-radius:16px 16px 0 0;"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                            <span style="font-size:20px;">&#x1F4FA;</span>
+                            <span style="font-size:15px;font-weight:900;color:#c4b5fd;">Watch Ad to Earn</span>
+                        </div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.5);">Manood ng maikling ad, kumita agad!</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:18px;font-weight:900;color:#fbbf24;">+&#x20B1;0.10</div>
+                        <div style="font-size:9px;color:rgba(251,191,36,0.6);font-weight:700;">bawat ad</div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                    <div style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:6px;overflow:hidden;">
+                        <div id="rsWaeProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#8b5cf6,#ec4899);border-radius:6px;transition:width 0.4s;"></div>
+                    </div>
+                    <span id="rsWaeCountBadge" style="font-size:10px;font-weight:800;color:#a78bfa;white-space:nowrap;">0 / 10</span>
+                </div>
+                <button id="rs-btn-watch-ad" onclick="startWatchAd()" style="width:100%;padding:13px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);border:none;border-radius:12px;color:white;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 4px 16px rgba(139,92,246,0.45);font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    MANOOD NG AD
+                </button>
+                <div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.3);margin-top:8px;">Max 10x per araw &#x2022; I-reset araw-araw</div>
+            </div>
+            <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Iba pang Gawain</div>
+            <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div>
+                    <div style="font-size:13px;font-weight:800;color:#fca5a5;margin-bottom:2px;">&#x1F3AC; Watch Video Task</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);">Watch full video to unlock reward</div>
+                    <div style="font-size:12px;font-weight:900;color:#fbbf24;margin-top:4px;">+&#x20B1;0.20</div>
+                </div>
+                <button onclick="openVideoLocker('video')" style="padding:10px 16px;background:#ef4444;border:none;border-radius:10px;color:white;font-size:12px;font-weight:900;cursor:pointer;min-width:68px;font-family:'DM Sans',sans-serif;">WATCH</button>
+            </div>
+            <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <div style="font-size:13px;font-weight:800;color:#93c5fd;margin-bottom:2px;">&#x2B50; Premium Offer</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.4);">Complete simple offer to verify</div>
+                    <div style="font-size:12px;font-weight:900;color:#fbbf24;margin-top:4px;">+&#x20B1;0.60</div>
+                </div>
+                <button onclick="startTaskSafe('https://doctoredits.com/1874673', 1500, 'premium')" style="padding:10px 16px;background:#3b82f6;border:none;border-radius:10px;color:white;font-size:12px;font-weight:900;cursor:pointer;min-width:68px;font-family:'DM Sans',sans-serif;">GO</button>
             </div>
         </div>
 
@@ -19996,7 +20053,7 @@ function closeStorePage() {
 }
 
 function switchStoreSection(section) {
-    var sections = ['cashout', 'vouchers', 'partners', 'history', 'wallet', 'myshop', 'skins'];
+    var sections = ['cashout', 'vouchers', 'partners', 'history', 'wallet', 'myshop', 'skins', 'earn'];
     sections.forEach(function(s) {
         var el = document.getElementById('rs-section-' + s);
         var tab = document.getElementById('rstab-' + s);
@@ -20016,6 +20073,41 @@ function switchStoreSection(section) {
     if (section === 'partners') { try { loadApprovedPartnerStores(); } catch(e) {} }
     if (section === 'myshop') { try { loadMyShopProducts(); } catch(e) {} }
     if (section === 'skins') { try { refreshRbStoreSkinButtons(); } catch(e) {} }
+    if (section === 'earn') { try { _rsRefreshEarnTab(); } catch(e) {} }
+}
+
+function _rsRefreshEarnTab() {
+    if (!window.auth || !window.auth.currentUser || !window.db) return;
+    var uid = window.auth.currentUser.uid;
+    var PESO_RATE = typeof window.PESO_RATE !== 'undefined' ? window.PESO_RATE : 2500;
+    window.db.ref('users/' + uid + '/points').once('value', function(snap) {
+        var pts = snap.val() || 0;
+        var balEl = document.getElementById('rsEarnBalance');
+        if (balEl) balEl.textContent = '₱' + (pts / PESO_RATE).toFixed(2);
+    });
+    var today = (function() {
+        var n = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        return n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0') + '-' + String(n.getDate()).padStart(2,'0');
+    })();
+    window.db.ref('watchAdsDaily/' + uid + '/' + today).once('value', function(snap) {
+        var cnt = snap.val() || 0;
+        var MAX = 10;
+        var badge = document.getElementById('rsWaeCountBadge');
+        var bar   = document.getElementById('rsWaeProgressBar');
+        var btn   = document.getElementById('rs-btn-watch-ad');
+        if (badge) badge.textContent = cnt + ' / ' + MAX;
+        if (bar)   bar.style.width = Math.min(100, (cnt / MAX) * 100) + '%';
+        if (btn) {
+            var done = cnt >= MAX;
+            btn.disabled = done;
+            btn.innerHTML = done
+                ? '✅ TAPOS NA NGAYON (bukas ulit!)'
+                : '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> MANOOD NG AD';
+            btn.style.background = done ? 'rgba(71,85,105,0.5)' : 'linear-gradient(135deg,#8b5cf6,#7c3aed)';
+            btn.style.boxShadow  = done ? 'none' : '0 4px 16px rgba(139,92,246,0.45)';
+            btn.style.cursor     = done ? 'not-allowed' : 'pointer';
+        }
+    });
 }
 
 // === SKIN SECTION: Sync button states from Firebase ===
@@ -24301,6 +24393,11 @@ function refreshWaeBadge(){
     if(b)b.textContent=c+'/'+WAE_LIMIT;
     if(btn){var done=c>=WAE_LIMIT;btn.disabled=done;btn.textContent=done?'TAPOS NA':'WATCH';btn.style.background=done?'rgba(71,85,105,0.5)':'linear-gradient(135deg,#8b5cf6,#7c3aed)';btn.style.boxShadow=done?'none':'0 4px 12px rgba(139,92,246,0.4)';}
     if(item&&c>=WAE_LIMIT)item.style.opacity='0.6';
+    // sync Earn tab UI
+    var b2=document.getElementById('rsWaeCountBadge'),bar=document.getElementById('rsWaeProgressBar'),btn2=document.getElementById('rs-btn-watch-ad');
+    if(b2)b2.textContent=c+'/'+WAE_LIMIT;
+    if(bar)bar.style.width=Math.min(100,(c/WAE_LIMIT)*100)+'%';
+    if(btn2){var d2=c>=WAE_LIMIT;btn2.disabled=d2;btn2.innerHTML=d2?'✅ TAPOS NA NGAYON (bukas ulit!)':'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> MANOOD NG AD';btn2.style.background=d2?'rgba(71,85,105,0.5)':'linear-gradient(135deg,#8b5cf6,#7c3aed)';btn2.style.boxShadow=d2?'none':'0 4px 16px rgba(139,92,246,0.45)';btn2.style.cursor=d2?'not-allowed':'pointer';}
   });
 }
 
