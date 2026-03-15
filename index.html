@@ -10756,6 +10756,19 @@ function runMathBlitz(problems) {
             <div id="storeSection-earn" style="display:none;">
                 <p style="font-size:11px; opacity:0.7; margin-bottom: var(--spacing-md); text-align:center;">Complete tasks to earn Pesos instantly.</p>
                 <div class="task-list">
+                    <!-- ── Watch Ads to Earn ── -->
+                    <div class="task-item" id="watchAdTaskItem" style="border-color:#8b5cf6; background:linear-gradient(90deg,rgba(30,10,60,0.9),rgba(15,23,42,0.95)); position:relative; overflow:hidden;">
+                        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#8b5cf6,#ec4899,#8b5cf6);background-size:200%;animation:wae-shimmer 2s linear infinite;"></div>
+                        <div class="task-info">
+                            <h4 style="color:#c4b5fd; display:flex; align-items:center; gap:6px;">
+                                📺 Watch Ad to Earn
+                                <span id="waeCountBadge" style="font-size:9px;background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);color:#a78bfa;padding:2px 6px;border-radius:20px;font-weight:700;">0/10</span>
+                            </h4>
+                            <p>Manood ng maikling ad, kumita agad!</p>
+                            <span class="task-reward" style="background:rgba(139,92,246,0.15);border-color:#8b5cf6;color:#c4b5fd;">+₱0.10 per ad</span>
+                        </div>
+                        <button class="btn-do-task" id="btn-watch-ad" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 12px rgba(139,92,246,0.4);min-width:72px;" onclick="startWatchAd()">WATCH</button>
+                    </div>
                     <div class="task-item" style="border-color: #ef4444; background: linear-gradient(90deg, rgba(69,10,10,0.8), rgba(15,23,42,0.8));">
                         <div class="task-info"><h4 style="color:#fca5a5;">Watch Video Task</h4><p>Watch full video to unlock reward</p><span class="task-reward" style="background: rgba(239,68,68,0.2); border-color:#ef4444; color:#fca5a5;">+₱0.20</span></div>
                         <button class="btn-do-task" style="background:#ef4444;" id="btn-task-video" onclick="openVideoLocker('video')">WATCH</button>
@@ -11016,6 +11029,7 @@ function runMathBlitz(problems) {
     const _COUNTDOWN_SECS  = 60;  // 60-second countdown after threshold hit
     let _countdownInterval = null;
     let _countdownValue    = 0;
+    let _hdeSyncInterval   = null;  // tracks the Firebase-synced countdown for non-originator clients
     let _countdownFired    = false; // prevent duplicate countdowns
     // ── Scheduled draw times (24h format, Philippine time) ──
     const _SCHED_DRAWS = [
@@ -13140,16 +13154,26 @@ function runMathBlitz(problems) {
 
         // 1. Listen to gameState status — reset _autoStartFired when game ends
         db.ref('gameState/status').on('value', snap => {
-            if(snap.val() === 'waiting') {
+            const status = snap.val();
+            if(status === 'waiting') {
                 _autoStartFired = false;
                 _countdownFired = false;
                 if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
+                if(_hdeSyncInterval)   { clearInterval(_hdeSyncInterval);   _hdeSyncInterval   = null; }
                 // Clear any leftover jackpot from previous round
                 db.ref('gameState/jackpot').once('value', jSnap => {
                     if(jSnap.exists() && jSnap.val() && jSnap.val().active) {
                         db.ref('gameState/jackpot').set({ amount: 0, active: false, type: 'none' });
                     }
                 });
+            } else if(status === 'playing') {
+                // Game has started — immediately kill ALL countdown timers & update UI
+                if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
+                if(_hdeSyncInterval)   { clearInterval(_hdeSyncInterval);   _hdeSyncInterval   = null; }
+                _countdownFired = false;
+                _countdownValue = 0;
+                db.ref('gameState/countdown').set({ active: false });
+                updateNextDrawDisplay(); // show GAME ONGOING
             }
         });
 
@@ -13176,17 +13200,33 @@ function runMathBlitz(problems) {
         // 4b. Listen to countdown from Firebase — sync all clients to same countdown
         db.ref('gameState/countdown').on('value', snap => {
             const cd = snap.val();
-            if(!cd || !cd.active) return;
+            // If countdown is cancelled or game already playing — stop immediately
+            if(!cd || !cd.active) {
+                if(_hdeSyncInterval) { clearInterval(_hdeSyncInterval); _hdeSyncInterval = null; }
+                _countdownFired = false;
+                return;
+            }
             // Only non-originator clients sync — originator already has their own interval
             if(_countdownFired) return;
+            // Don't start sync if game is already playing
+            const gs = _cachedGameState || {};
+            if(gs.status === 'playing') return;
             const remaining = Math.round((cd.endsAt - Date.now()) / 1000);
             if(remaining <= 0) return;
             _countdownFired = true; // mark so we don't double-start
+            if(_hdeSyncInterval) { clearInterval(_hdeSyncInterval); _hdeSyncInterval = null; }
             let s = remaining;
-            const syncInterval = setInterval(() => {
+            _hdeSyncInterval = setInterval(() => {
+                // Stop if game became playing mid-countdown
+                const gsCurrent = _cachedGameState || {};
+                if(gsCurrent.status === 'playing') {
+                    clearInterval(_hdeSyncInterval); _hdeSyncInterval = null;
+                    _countdownFired = false;
+                    return;
+                }
                 s--;
                 _hdeUpdateCountdownUI(s, _lastAutoCount);
-                if(s <= 0) { clearInterval(syncInterval); _countdownFired = false; }
+                if(s <= 0) { clearInterval(_hdeSyncInterval); _hdeSyncInterval = null; _countdownFired = false; }
             }, 1000);
             _hdeUpdateCountdownUI(s, _lastAutoCount);
         });
@@ -13248,6 +13288,10 @@ function runMathBlitz(problems) {
         const labelEl = document.querySelector('.next-draw-label');
         const banner  = document.getElementById('nextDrawBanner');
         if(!timeEl || !banner) return;
+
+        // ── Guard: never overwrite the banner while a game is ongoing ──
+        const _gs = _cachedGameState || {};
+        if(_gs.status === 'playing') { updateNextDrawDisplay(); return; }
 
         if(secs === null) {
             // Back to normal waiting display
@@ -24139,5 +24183,180 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
     }
 })();
 </script>
+
+<!-- ════════════════════════════════════════════
+     WATCH ADS TO EARN — Modal + Styles + Logic
+════════════════════════════════════════════ -->
+<style>
+@keyframes wae-shimmer{0%{background-position:0%}100%{background-position:200%}}
+@keyframes wae-pop{0%{transform:scale(0.7);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+@keyframes wae-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+#waeOverlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
+#waeOverlay.open{display:flex;}
+#waeModal{background:linear-gradient(160deg,#1a0a38,#0f172a);border:1px solid rgba(139,92,246,0.35);border-radius:24px;width:calc(100% - 40px);max-width:360px;padding:28px 24px 24px;box-shadow:0 0 60px rgba(139,92,246,0.25);animation:wae-pop 0.35s ease;text-align:center;position:relative;}
+.wae-tv{font-size:52px;margin-bottom:8px;animation:wae-pulse 1.8s ease-in-out infinite;display:block;}
+.wae-title{font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:white;margin:0 0 4px;}
+.wae-sub{font-size:12px;color:rgba(196,181,253,0.8);margin:0 0 22px;}
+.wae-ring-wrap{position:relative;width:100px;height:100px;margin:0 auto 20px;}
+.wae-ring-svg{transform:rotate(-90deg);}
+.wae-ring-bg{fill:none;stroke:rgba(139,92,246,0.15);stroke-width:7;}
+.wae-ring-fg{fill:none;stroke:url(#waeGrad);stroke-width:7;stroke-linecap:round;stroke-dasharray:283;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear;}
+.wae-ring-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.wae-secs{font-family:'Sora',sans-serif;font-size:28px;font-weight:900;color:white;line-height:1;}
+.wae-slabel{font-size:9px;color:rgba(196,181,253,0.7);font-weight:600;margin-top:2px;}
+.wae-status{font-size:12px;color:rgba(196,181,253,0.9);font-weight:600;margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:6px;}
+.wae-dot{width:7px;height:7px;border-radius:50%;background:#8b5cf6;animation:wae-pulse 0.8s ease-in-out infinite;}
+.wae-reward-box{background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.25);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.wae-rl{font-size:11px;color:rgba(255,255,255,0.55);}
+.wae-rv{font-size:16px;font-weight:900;color:#c4b5fd;}
+.wae-btn{width:100%;padding:13px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);border-radius:12px;color:rgba(255,255,255,0.4);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;}
+.wae-btn.ready{background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-color:#8b5cf6;color:white;font-size:14px;font-weight:900;box-shadow:0 4px 20px rgba(139,92,246,0.5);animation:wae-pulse 1s ease-in-out infinite;}
+.wae-ok{display:none;}
+.wae-ok.show{display:block;animation:wae-pop 0.4s ease;}
+.wae-ok-icon{font-size:56px;margin-bottom:8px;}
+.wae-ok-title{font-family:'Sora',sans-serif;font-size:20px;font-weight:900;color:#c4b5fd;margin:0 0 4px;}
+.wae-ok-sub{font-size:13px;color:rgba(196,181,253,0.7);margin:0 0 20px;}
+.wae-ok-coins{font-size:36px;font-weight:900;color:#fbbf24;font-family:'Sora',sans-serif;margin-bottom:6px;}
+.wae-ok-php{font-size:13px;color:rgba(251,191,36,0.7);margin-bottom:24px;}
+</style>
+
+<div id="waeOverlay">
+  <div id="waeModal">
+    <svg width="0" height="0"><defs>
+      <linearGradient id="waeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#8b5cf6"/>
+        <stop offset="100%" stop-color="#ec4899"/>
+      </linearGradient>
+    </defs></svg>
+    <div id="waeWatch">
+      <span class="wae-tv">&#x1F4FA;</span>
+      <div class="wae-title">Nanunuod ng Ad...</div>
+      <div class="wae-sub">Huwag isara. Hintayin matapos!</div>
+      <div class="wae-ring-wrap">
+        <svg class="wae-ring-svg" width="100" height="100" viewBox="0 0 100 100">
+          <circle class="wae-ring-bg" cx="50" cy="50" r="45"/>
+          <circle class="wae-ring-fg" id="waeRingFg" cx="50" cy="50" r="45"/>
+        </svg>
+        <div class="wae-ring-txt">
+          <span class="wae-secs" id="waeTimerSecs">15</span>
+          <span class="wae-slabel">SECS LEFT</span>
+        </div>
+      </div>
+      <div class="wae-status"><div class="wae-dot"></div><span id="waeStatusTxt">Naglo-load ang ad...</span></div>
+      <div class="wae-reward-box">
+        <span class="wae-rl">&#x1F381; Matatanggap mo</span>
+        <span class="wae-rv">+250 &#x1FA99; (&#x20B10;.10)</span>
+      </div>
+      <button class="wae-btn" id="waeCancelBtn" onclick="cancelWatchAd()">&#x2715; I-cancel (mawawala ang reward)</button>
+    </div>
+    <div class="wae-ok" id="waeSuccess">
+      <div class="wae-ok-icon">&#x1F389;</div>
+      <div class="wae-ok-title">Salamat sa Panonood!</div>
+      <div class="wae-ok-sub">Na-credit na ang iyong reward</div>
+      <div class="wae-ok-coins">+250 &#x1FA99;</div>
+      <div class="wae-ok-php">= &#x20B10;.10 na dagdag sa iyong account</div>
+      <button class="wae-btn ready" onclick="closeWaeModal()" style="animation:none;">&#x1F38A; Ayos! Isara</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+var WAE_COINS=250,WAE_LIMIT=10,WAE_SECS=15,WAE_CIRC=2*Math.PI*45;
+var _timer=null,_secsLeft=WAE_SECS,_adWin=null,_cancelled=false;
+
+function _phToday(){
+  var n=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Manila'}));
+  return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+}
+function _uid(){try{return firebase.auth().currentUser&&firebase.auth().currentUser.uid;}catch(e){return null;}}
+function _loadCount(uid,cb){firebase.database().ref('watchAdsDaily/'+uid+'/'+_phToday()).once('value',function(s){cb(s.val()||0);});}
+
+function refreshWaeBadge(){
+  var uid=_uid(); if(!uid)return;
+  _loadCount(uid,function(c){
+    var b=document.getElementById('waeCountBadge'),btn=document.getElementById('btn-watch-ad'),item=document.getElementById('watchAdTaskItem');
+    if(b)b.textContent=c+'/'+WAE_LIMIT;
+    if(btn){var done=c>=WAE_LIMIT;btn.disabled=done;btn.textContent=done?'TAPOS NA':'WATCH';btn.style.background=done?'rgba(71,85,105,0.5)':'linear-gradient(135deg,#8b5cf6,#7c3aed)';btn.style.boxShadow=done?'none':'0 4px 12px rgba(139,92,246,0.4)';}
+    if(item&&c>=WAE_LIMIT)item.style.opacity='0.6';
+  });
+}
+
+function _setRing(s){var fg=document.getElementById('waeRingFg');if(!fg)return;fg.style.strokeDasharray=WAE_CIRC;fg.style.strokeDashoffset=WAE_CIRC*(1-s/WAE_SECS);}
+var _msgs=['Naglo-load ang ad...','Nanunuod...','Konti na lang!','Halos tapos na!','Ilang segundo na lang...'];
+function _setStatus(s){var i=Math.floor((1-s/WAE_SECS)*(_msgs.length-1)),el=document.getElementById('waeStatusTxt');if(el)el.textContent=_msgs[Math.min(i,_msgs.length-1)];}
+
+function _openAd(){
+  try{
+    _adWin=window.open('about:blank','_blank','width=1,height=1,left=-9999,top=-9999');
+    if(_adWin){_adWin.document.write('<scr'+'ipt src="https://quge5.com/88/tag.min.js" data-zone="219305"><\/scr'+'ipt>');_adWin.document.close();}
+  }catch(e){}
+  try{if(typeof window._monetagShow==='function')window._monetagShow();}catch(e){}
+}
+
+window.startWatchAd=function(){
+  var uid=_uid();if(!uid){if(window.showToast)window.showToast('Mag-login muna!');return;}
+  _loadCount(uid,function(cnt){
+    if(cnt>=WAE_LIMIT){if(window.showToast)window.showToast('Naabot mo na ang 10x limit ngayon. Bukas ulit!');return;}
+    _cancelled=false;_secsLeft=WAE_SECS;
+    document.getElementById('waeOverlay').classList.add('open');
+    document.getElementById('waeWatch').style.display='block';
+    document.getElementById('waeSuccess').classList.remove('show');
+    document.getElementById('waeTimerSecs').textContent=WAE_SECS;
+    var cb=document.getElementById('waeCancelBtn');cb.className='wae-btn';cb.textContent='I-cancel (mawawala ang reward)';cb.style.color='';
+    _setRing(WAE_SECS);_setStatus(WAE_SECS);
+    _openAd();
+    if(_timer)clearInterval(_timer);
+    _timer=setInterval(function(){
+      if(_cancelled){clearInterval(_timer);return;}
+      _secsLeft--;
+      var el=document.getElementById('waeTimerSecs');if(el)el.textContent=_secsLeft;
+      _setRing(_secsLeft);_setStatus(_secsLeft);
+      if(_secsLeft===5){var c=document.getElementById('waeCancelBtn');if(c){c.textContent='Konti na lang...';c.style.color='#fbbf24';}}
+      if(_secsLeft<=0){clearInterval(_timer);_doReward(uid,_phToday(),cnt+1);}
+    },1000);
+  });
+};
+
+function _doReward(uid,today,newCnt){
+  try{if(_adWin&&!_adWin.closed)_adWin.close();}catch(e){}
+  var db=firebase.database();
+  db.ref('users/'+uid).once('value',function(s){
+    var u=s.val()||{};
+    db.ref('users/'+uid).update({points:(u.points||0)+WAE_COINS});
+    db.ref('coinHistory/'+uid).push({label:'Watch Ad Reward',amount:WAE_COINS,type:'earn',timestamp:firebase.database.ServerValue.TIMESTAMP});
+    db.ref('users/'+uid+'/totalEarned').once('value',function(es){db.ref('users/'+uid+'/totalEarned').set((es.val()||0)+(WAE_COINS/2500));});
+  });
+  db.ref('watchAdsDaily/'+uid+'/'+today).set(newCnt);
+  document.getElementById('waeWatch').style.display='none';
+  document.getElementById('waeSuccess').classList.add('show');
+  if(window.confetti){try{window.confetti({particleCount:60,spread:80,origin:{y:0.6},colors:['#8b5cf6','#c4b5fd','#fbbf24','#ec4899','#10b981']});}catch(e){}}
+  try{if(window.spawnFlyingCoins)window.spawnFlyingCoins(12);}catch(e){}
+  setTimeout(function(){if(window.showToast)window.showToast('+250 coins na-credit! (P0.10)');},400);
+  setTimeout(refreshWaeBadge,800);
+}
+
+window.cancelWatchAd=function(){
+  _cancelled=true;if(_timer){clearInterval(_timer);_timer=null;}
+  try{if(_adWin&&!_adWin.closed)_adWin.close();}catch(e){}
+  document.getElementById('waeOverlay').classList.remove('open');
+};
+window.closeWaeModal=function(){
+  document.getElementById('waeOverlay').classList.remove('open');
+  document.getElementById('waeSuccess').classList.remove('show');
+  document.getElementById('waeWatch').style.display='block';
+};
+document.getElementById('waeOverlay').addEventListener('click',function(e){
+  if(e.target===this&&(_secsLeft<=0||_cancelled))closeWaeModal();
+});
+function _waitAuth(){
+  if(typeof firebase==='undefined'||!firebase.auth){setTimeout(_waitAuth,600);return;}
+  firebase.auth().onAuthStateChanged(function(u){if(u)refreshWaeBadge();});
+}
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',_waitAuth);}else{_waitAuth();}
+})();
+</script>
+
 </body>
 </html>
