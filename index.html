@@ -12559,38 +12559,55 @@ function runMathBlitz(problems) {
         });
     }
 
-    function setupPresence(uid) { 
-        const onlineRef = db.ref('.info/connected'); 
-        const userStatusRef = db.ref('status/' + uid); 
-        onlineRef.on('value', (snapshot) => { 
-            if (snapshot.val() === false) return; 
-            // When user disconnects, update status to offline with timestamp
-            userStatusRef.onDisconnect().set({ 
-                state: 'offline', 
-                last_seen: firebase.database.ServerValue.TIMESTAMP 
-            }).then(() => { 
-                // While online, set status to online
-                userStatusRef.set({ 
-                    state: 'online', 
-                    last_seen: firebase.database.ServerValue.TIMESTAMP 
-                }); 
-            }); 
-        }); 
-        // Global Presence Listener — FIX #1: Query online users only, not the entire status node
-        db.ref('status').orderByChild('state').equalTo('online').on('value', (s) => {
-            onlineUsers = s.val() || {};
-            const onlineCount = Object.keys(onlineUsers).length;
+    let _presenceThrottleTimer = null;
+    let _lastPresenceWrite = 0;
+
+    function setupPresence(uid) {
+        const userStatusRef = db.ref('status/' + uid);
+        const connectedRef  = db.ref('.info/connected');
+        const counterRef    = db.ref('onlineCounter');
+
+        // ── Write presence on connect / clear on disconnect ──
+        connectedRef.on('value', snap => {
+            if (!snap.val()) return;
+            userStatusRef.onDisconnect().set({ state: 'offline', last_seen: firebase.database.ServerValue.TIMESTAMP });
+            counterRef.child(uid).onDisconnect().remove();
+            userStatusRef.set({ state: 'online', last_seen: firebase.database.ServerValue.TIMESTAMP });
+            counterRef.child(uid).set(true);
+        });
+
+        // ── Listen ONLY to the lightweight counter node (booleans, not full user objects) ──
+        counterRef.on('value', snap => {
+            const data = snap.val() || {};
+            const onlineCount = Object.keys(data).length;
             _lastAutoCount = onlineCount;
-            document.getElementById('onlineCount').innerText = onlineCount;
-            updateAllOnlineIndicators();
-            renderOnlineBubbles(onlineUsers, uid);
-            updateOnlineTicker(onlineUsers, uid);
+            const el = document.getElementById('onlineCount');
+            if (el) el.innerText = onlineCount;
             updateNextDrawDisplay();
             _hdeCheckPlayerCount(uid, onlineCount);
         });
+
+        // ── Lazy-load full user objects only when needed for UI (friend list, bubbles, ticker) ──
+        // Poll every 60s instead of real-time listener on full status/ node
+        _refreshOnlineUsers(uid);
+        setInterval(() => _refreshOnlineUsers(uid), 60000);
     }
-    
-    function updatePresenceData(uid, name, points, photo) { db.ref('status/' + uid).update({ name: name, points: points, photo: photo }); }
+
+    function _refreshOnlineUsers(uid) {
+        db.ref('status').orderByChild('state').equalTo('online').once('value', s => {
+            onlineUsers = s.val() || {};
+            updateAllOnlineIndicators();
+            updateOnlineTicker(onlineUsers, uid);
+        });
+    }
+
+    function updatePresenceData(uid, name, points, photo) {
+        // Throttle: write at most once every 5 minutes
+        const now = Date.now();
+        if (now - _lastPresenceWrite < 300000) return;
+        _lastPresenceWrite = now;
+        db.ref('status/' + uid).update({ name: name, points: points, photo: photo });
+    }
 
     /* ── Online Floating Bubbles in Bingo Header — disabled ── */
     var _activeBubbles = {};
@@ -12888,41 +12905,31 @@ function runMathBlitz(problems) {
 
 
         let _lastJackpotRevealAmt = null;
-        function listenJackpot() {
-            db.ref('gameState/jackpot').on('value', s => {
-                const data = s.val();
-                const banner = document.getElementById('jackpotBanner');
-                if (data && data.active) {
-                    const rawAmt = data.amount;
-                    let numAmt = typeof rawAmt === 'number' ? rawAmt : parseInt(String(rawAmt).replace(/[^0-9]/g, ''));
-                    if (isNaN(numAmt) || numAmt < 1) numAmt = 1; // ✅ Minimum ₱1
-                    if (numAmt > 50) numAmt = 50;                  // ✅ Maximum ₱50
+        // listenJackpot merged into unified gameState listener — no separate DB connection
+        function listenJackpot() { /* no-op: handled by listenForNextDraw gameState root */ }
 
-                    // ──────────────────────────────────────────────
-                    // numAmt  = peso value from Firebase (e.g. 20 = ₱20)
-                    // currentJackpotAmount is stored in COINS so that
-                    // toPeso(), winPrize, and all other prize logic
-                    // work correctly (2500 coins = ₱1).
-                    // ──────────────────────────────────────────────
-                    currentJackpotAmount = numAmt * PESO_RATE; // e.g. 20 × 2500 = 50,000 coins
-                    isJackpotActive = true;
-
-                    // 1. Bingo tab banner display  (toPeso converts coins → ₱)
-                    banner.style.display = 'block';
-                    document.getElementById('jackpotDisplayVal').innerText = toPeso(currentJackpotAmount);
-
-                    // 2. Reveal animation — pass raw PESO value so counter shows ₱20, not ₱50000
-                    if (_lastJackpotRevealAmt !== numAmt) {
-                        _lastJackpotRevealAmt = numAmt;
-                        showJackpotReveal(numAmt);
-                    }
-                } else {
-                    banner.style.display = 'none';
-                    isJackpotActive = false;
-                    currentJackpotAmount = 0;
-                    _lastJackpotRevealAmt = null;
+        function _handleJackpotState(data) {
+            const banner = document.getElementById('jackpotBanner');
+            if (!banner) return;
+            if (data && data.active) {
+                const rawAmt = data.amount;
+                let numAmt = typeof rawAmt === 'number' ? rawAmt : parseInt(String(rawAmt).replace(/[^0-9]/g, ''));
+                if (isNaN(numAmt) || numAmt < 1) numAmt = 1;
+                if (numAmt > 50) numAmt = 50;
+                currentJackpotAmount = numAmt * PESO_RATE;
+                isJackpotActive = true;
+                banner.style.display = 'block';
+                document.getElementById('jackpotDisplayVal').innerText = toPeso(currentJackpotAmount);
+                if (_lastJackpotRevealAmt !== numAmt) {
+                    _lastJackpotRevealAmt = numAmt;
+                    showJackpotReveal(numAmt);
                 }
-            });
+            } else {
+                banner.style.display = 'none';
+                isJackpotActive = false;
+                currentJackpotAmount = 0;
+                _lastJackpotRevealAmt = null;
+            }
         }
 
         // ═══ JACKPOT REVEAL ANIMATION ═══
@@ -13510,9 +13517,33 @@ function runMathBlitz(problems) {
 
 
         function listenForForNextDraw() { db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); }); db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); }); }
+
+    // ── Feed refresh helper — call this to manually reload posts ──
+    window._feedRefreshCooldown = false;
+    window.refreshFeed = function() {
+        if(window._feedRefreshCooldown) return;
+        window._feedRefreshCooldown = true;
+        const btn = document.getElementById('feedRefreshBtn');
+        if(btn) { btn.style.opacity = '0.4'; btn.innerText = 'Loading...'; }
+        setTimeout(() => {
+            if(typeof loadFeed === 'function') loadFeed();
+            else if(typeof initSocialFeed === 'function') initSocialFeed();
+            window._feedRefreshCooldown = false;
+            if(btn) { btn.style.opacity = '1'; btn.innerText = '↻ Refresh'; }
+        }, 500);
+    };
     // FIX #2: Cache gameState so updateNextDrawDisplay never opens its own listener
     let _cachedGameState = null;
-    function listenForNextDraw() { db.ref('gameState').on('value', s => { _cachedGameState = s.val() || {}; updateNextDrawDisplay(); }); }
+    function listenForNextDraw() {
+        db.ref('gameState').on('value', s => {
+            _cachedGameState = s.val() || {};
+            updateNextDrawDisplay();
+            // Drive jackpot UI from the same snapshot — no extra listener
+            if (typeof _handleJackpotState === 'function') {
+                _handleJackpotState(_cachedGameState.jackpot || null);
+            }
+        });
+    }
 
     // ── Listen for lastGameWinner → update Pinakabagong Winner card ──
     var _lastWinnerKey = null; // track to detect NEW winner
@@ -16635,7 +16666,10 @@ Please explain why you want a verification badge:`;
     }
 
     function _loadPdReactionBar(postKey) {
-        db.ref('postLikes/' + postKey).on('value', s => {
+        // ── Detach previous postLikes listener before attaching new one ──
+        if(window._postLikesRef) { window._postLikesRef.off(); }
+        window._postLikesRef = db.ref('postLikes/' + postKey);
+        window._postLikesRef.on('value', s => {
             const bar = document.getElementById('pd-reaction-bar-' + postKey);
             if(!bar) return;
             if(!s.exists()) { bar.innerHTML = ''; return; }
@@ -16755,6 +16789,7 @@ Please explain why you want a verification badge:`;
         if(_postDetailListener) {
             db.ref('postComments/' + _postDetailListener).off();
             db.ref('postLikes/' + _postDetailListener).off();
+        if(window._postLikesRef) { window._postLikesRef.off(); window._postLikesRef = null; }
             _postDetailListener = null;
         }
         unlockScroll();
@@ -17049,8 +17084,9 @@ Please explain why you want a verification badge:`;
                     allUsersData[uSnap.key] = uSnap.val();
                 });
                 
+                // ── OPTIMIZED: .once() instead of real-time .on() — saves massive reads ──
                 postListener = db.ref('socialPosts').limitToLast(50);
-                postListener.on('value', pSnap => {
+                postListener.once('value', pSnap => {
                     const allPosts = [];
                     pSnap.forEach(child => { 
                         const val = child.val();
@@ -20556,7 +20592,9 @@ function loadWalletTab() {
         if (elBal)  elBal.textContent  = pts.toLocaleString();
         if (elSBal) elSBal.textContent = pts.toLocaleString();
         // Live sync balance
-        db.ref('users/' + uid + '/points').on('value', function(s) {
+        // Throttled balance refresh — .on() replaced with periodic .once()
+        function _refreshSendBalance() {
+            db.ref('users/' + uid + '/points').once('value', function(s) {
             var p = Number(s.val() || 0);
             if (elBal)  elBal.textContent  = p.toLocaleString();
             if (elSBal) elSBal.textContent = p.toLocaleString();
