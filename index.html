@@ -12624,6 +12624,22 @@ function runMathBlitz(problems) {
         window.onlineUsers = onlineUsers; // keep window in sync
         updateNextDrawDisplay();
         _hdeCheckPlayerCount(uid, count);
+        // ── Write count to Firebase so Cloud Function can trigger notifs ──
+        _writeOnlineCount(count);
+    }
+
+    // Throttled write — at most once every 30 seconds to avoid excess triggers
+    let _lastCountWrite = 0;
+    let _lastWrittenCount = -1;
+    function _writeOnlineCount(count) {
+        const now = Date.now();
+        if (count === _lastWrittenCount) return; // no change, skip
+        if (now - _lastCountWrite < 30000) return; // throttle 30s
+        _lastCountWrite = now;
+        _lastWrittenCount = count;
+        try {
+            db.ref('onlinePlayers/count').set(count);
+        } catch(e) {}
     }
 
     function _refreshOnlineUsers(uid) {
