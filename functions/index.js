@@ -608,3 +608,110 @@ async function performReset() {
     await db.ref('gameState/currentPattern').set(randomPattern());
     console.log('[performReset] Board cleared. Ready for next draw.');
 }
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. 🎯 PLAYER COUNT NOTIFICATIONS
+//    Triggers when onlinePlayers/count changes (written by the client).
+//    Sends push to ALL users when players are needed to start a draw.
+//
+//    Thresholds (same as _AUTO_START_MIN = 6 in client):
+//      1 online → "5 kulang pa para mag-draw!"
+//      2 online → "4 kulang pa para mag-draw!"
+//      3 online → "3 kulang pa para mag-draw!"
+//      4 online → "2 kulang pa para mag-draw!"
+//      5 online → "1 player na lang kulang — malapit na!"
+//
+//    Anti-spam: 5-minute cooldown per count value via notifCooldown/playerCount
+// ─────────────────────────────────────────────────────────────────────────────
+const { onValueWritten } = require('firebase-functions/v2/database');
+
+const AUTO_START_MIN = 6; // must match _AUTO_START_MIN in index.html
+
+exports.notifyPlayersNeeded = onValueWritten(
+    { ref: 'onlinePlayers/count', region: 'asia-southeast1' },
+    async (event) => {
+        const count = event.data.after.val();
+
+        // Only fire when below threshold and game is not already playing
+        if (count === null || count >= AUTO_START_MIN) return null;
+
+        // Check if game is currently playing — don't send if so
+        const statusSnap = await db.ref('gameState/status').once('value');
+        if (statusSnap.val() === 'playing') return null;
+
+        const needed = AUTO_START_MIN - count;
+
+        // ── Cooldown: fire once per count value per 5 minutes ──
+        const cooldownRef  = db.ref(`notifCooldown/playerCount/${count}`);
+        const cooldownSnap = await cooldownRef.once('value');
+        const lastFired    = cooldownSnap.val() || 0;
+        const now          = Date.now();
+        if (now - lastFired < 5 * 60 * 1000) {
+            console.log(`[notifyPlayersNeeded] Cooldown active for count=${count} — skipping.`);
+            return null;
+        }
+        await cooldownRef.set(now);
+
+        // ── Build message ──
+        let body;
+        if (needed === 1) {
+            body = '1 player na lang kulang para mag-draw — Sumali na ngayon! 🎯';
+        } else {
+            body = `${needed} players pa kulang para mag-draw! Imbitahan ang mga kaibigan! 🎰`;
+        }
+
+        console.log(`[notifyPlayersNeeded] count=${count}, needed=${needed} — sending push...`);
+
+        await sendPushToAll(
+            '🎲 RB Live Bingo — Kulang pa!',
+            body,
+            {
+                tag:                'rbl-players-needed',
+                url:                '/?tab=bingo',
+                requireInteraction: 'false',
+                count:              String(count),
+            }
+        );
+
+        return null;
+    }
+);
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 8. 🚨 COUNTDOWN STARTED NOTIFICATION
+//    Fires when gameState/countdown/active becomes true.
+//    Tells all users that the game is about to start — last chance to join!
+//    Anti-spam: 2-minute cooldown.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.notifyCountdownStarted = onValueWritten(
+    { ref: 'gameState/countdown/active', region: 'asia-southeast1' },
+    async (event) => {
+        const active = event.data.after.val();
+        if (!active) return null; // only fire when becoming true
+
+        // Cooldown: max once every 2 minutes
+        const cooldownRef  = db.ref('notifCooldown/countdown');
+        const cooldownSnap = await cooldownRef.once('value');
+        if (Date.now() - (cooldownSnap.val() || 0) < 2 * 60 * 1000) {
+            console.log('[notifyCountdownStarted] Cooldown active — skipping.');
+            return null;
+        }
+        await cooldownRef.set(Date.now());
+
+        console.log('[notifyCountdownStarted] Countdown started — sending push...');
+
+        await sendPushToAll(
+            '🚨 RB Live Bingo — Magsisimula na!',
+            'Sapat na ang players! Mag-JOIN na bago maging late! ⏱️',
+            {
+                tag:                'rbl-countdown',
+                url:                '/?tab=bingo',
+                requireInteraction: 'true',
+            }
+        );
+
+        return null;
+    }
+);
