@@ -9230,9 +9230,13 @@
 
         <div id="nextDrawBanner" class="next-draw-container" style="margin-bottom:12px;">
             <div class="nd-icon"><i data-lucide="users"></i></div>
-            <div class="nd-info">
+            <div class="nd-info" style="flex:1;min-width:0;">
                 <div class="next-draw-label">⏳ WAITING FOR PLAYERS</div>
                 <div id="nextDrawTime" class="next-draw-time">0 / 6 Players</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px;">
+                    Sched: <span id="lateNextSched" style="color:var(--gold);font-weight:800;">--:--</span>
+                    &nbsp;·&nbsp; Countdown sa <b style="color:rgba(255,255,255,0.55);">6 players</b>
+                </div>
             </div>
         </div>
         
@@ -9307,7 +9311,7 @@
                             <div class="late-subtext">Sorry, the draw is already in progress. Late entries are not allowed.</div>
                             <div style="margin-top: var(--spacing-lg); background:rgba(255,255,255,0.1); padding: var(--spacing-sm) 20px; border-radius: var(--radius-md); border:1px solid rgba(255,255,255,0.1);">
                                 <span style="font-size:10px; display:block; opacity:0.7;">NEXT GAME:</span>
-                                <strong id="lateNextSched" style="font-size:16px; color:var(--gold);">--:--</strong>
+                                <strong style="font-size:16px; color:var(--gold);" id="lateNextSchedOld">--:--</strong>
                             </div>
                         </div>
                         <div id="gameOverOverlay" class="game-over-overlay">
@@ -11008,6 +11012,18 @@ function runMathBlitz(problems) {
     const _AUTO_START_MJ  = 20;  // Mega Jackpot at 20 players
     let _autoStartFired   = false; // prevent re-triggering mid-game
     let _lastAutoCount    = 0;   // last known online count
+    // ── Countdown before game start ──
+    const _COUNTDOWN_SECS  = 60;  // 60-second countdown after threshold hit
+    let _countdownInterval = null;
+    let _countdownValue    = 0;
+    let _countdownFired    = false; // prevent duplicate countdowns
+    // ── Scheduled draw times (24h format, Philippine time) ──
+    const _SCHED_DRAWS = [
+        { hour: 15, minute: 0,  label: '3:00 PM Draw',  jackpotType: 'regular' },
+        { hour: 20, minute: 0,  label: '8:00 PM Draw',  jackpotType: 'mega'    },
+    ];
+    let _schedCheckInterval = null;
+    let _lastSchedFired     = '';  // 'HH:MM' of last fired scheduled draw
 
     // Multi-card support (up to 5 extra cards)
     let extraCards = []; // array of { numbers: [], marks: [] }
@@ -13091,6 +13107,8 @@ function runMathBlitz(problems) {
         db.ref('gameState/status').on('value', snap => {
             if(snap.val() === 'waiting') {
                 _autoStartFired = false;
+                _countdownFired = false;
+                if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
                 // Clear any leftover jackpot from previous round
                 db.ref('gameState/jackpot').once('value', jSnap => {
                     if(jSnap.exists() && jSnap.val() && jSnap.val().active) {
@@ -13120,45 +13138,131 @@ function runMathBlitz(problems) {
             if(!lock && _hdeIsDrawing) _hdeStopDraw();
         });
 
-        // 5. No schedule timer needed — auto-start is player-count driven
-        //    _hdeCheckPlayerCount() is called from the presence listener
+        // 4b. Listen to countdown from Firebase — sync all clients to same countdown
+        db.ref('gameState/countdown').on('value', snap => {
+            const cd = snap.val();
+            if(!cd || !cd.active) return;
+            // Only non-originator clients sync — originator already has their own interval
+            if(_countdownFired) return;
+            const remaining = Math.round((cd.endsAt - Date.now()) / 1000);
+            if(remaining <= 0) return;
+            _countdownFired = true; // mark so we don't double-start
+            let s = remaining;
+            const syncInterval = setInterval(() => {
+                s--;
+                _hdeUpdateCountdownUI(s, _lastAutoCount);
+                if(s <= 0) { clearInterval(syncInterval); _countdownFired = false; }
+            }, 1000);
+            _hdeUpdateCountdownUI(s, _lastAutoCount);
+        });
+
+        // 5. Scheduled draw engine — fires at 3pm & 8pm Philippine time
+        _hdeInitScheduledDraws(uid);
     }
 
     function _hdeCheckPlayerCount(uid, count) {
-        // ── CLOUD FUNCTION ACTIVE: skip client-side draw entirely ──
         if(_hdeCloudActive) return;
-        // ── Not enough players yet ──
-        if(count < _AUTO_START_MIN) return;
-        // ── Already fired this round ──
-        if(_autoStartFired) return;
-        // ── Check game is idle ──
+        if(count < _AUTO_START_MIN) {
+            // Not enough players — cancel any running countdown
+            _hdeCancelCountdown();
+            return;
+        }
         const gameData = _cachedGameState || {};
         if(gameData.status === 'playing') return;
         if(gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0) return;
+        if(_autoStartFired || _countdownFired) return;
 
-        // Determine round type
+        // Threshold just crossed — start countdown
+        _hdeStartCountdown(uid, count);
+    }
+
+    function _hdeStartCountdown(uid, count) {
+        if(_countdownFired || _countdownInterval) return; // already running
+        _countdownFired = true;
+        _countdownValue = _COUNTDOWN_SECS;
+
+        // Write countdown state to Firebase so ALL clients see it
+        db.ref('gameState/countdown').set({ active: true, endsAt: Date.now() + (_COUNTDOWN_SECS * 1000), startedBy: uid });
+
+        _countdownInterval = setInterval(() => {
+            _countdownValue--;
+            _hdeUpdateCountdownUI(_countdownValue, count);
+            if(_countdownValue <= 0) {
+                _hdeTriggerGameStart(uid, count);
+            }
+        }, 1000);
+
+        _hdeUpdateCountdownUI(_COUNTDOWN_SECS, count);
+    }
+
+    function _hdeCancelCountdown() {
+        if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
+        _countdownFired = false;
+        _countdownValue = 0;
+        db.ref('gameState/countdown').set({ active: false });
+        _hdeUpdateCountdownUI(null, _lastAutoCount);
+    }
+
+    function _hdeUpdateCountdownUI(secs, count) {
+        const timeEl  = document.getElementById('nextDrawTime');
+        const labelEl = document.querySelector('.next-draw-label');
+        const banner  = document.getElementById('nextDrawBanner');
+        if(!timeEl || !banner) return;
+
+        if(secs === null) {
+            // Back to normal waiting display
+            updateNextDrawDisplay();
+            return;
+        }
+
+        const isMegaJP    = count >= _AUTO_START_MJ;
+        const isRegularJP = count >= _AUTO_START_RJ;
+        let modeColor = isMegaJP ? '#f97316' : isRegularJP ? '#fbbf24' : '#10b981';
+        let modeLabel = isMegaJP ? '🔥 MEGA JACKPOT' : isRegularJP ? '⚡ REGULAR JACKPOT' : '🎯 NORMAL ROUND';
+
+        if(labelEl) { labelEl.innerText = modeLabel + ' — STARTING SOON!'; labelEl.style.color = modeColor; }
+
+        const mins = Math.floor(secs / 60);
+        const s    = String(secs % 60).padStart(2, '0');
+        const timeStr = mins > 0 ? mins + ':' + s : secs + 's';
+
+        timeEl.innerHTML =
+            '<span style="font-size:22px;font-weight:900;color:' + modeColor + ';">' + timeStr + '</span>' +
+            '<div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px;">' + count + ' players ready — game starting!</div>' +
+            '<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:4px;margin-top:6px;overflow:hidden;">' +
+            '<div style="height:100%;width:' + Math.round((secs / _COUNTDOWN_SECS) * 100) + '%;background:' + modeColor + ';border-radius:4px;transition:width 1s linear;"></div></div>';
+
+        // Play tick sound on last 10 seconds
+        if(secs <= 10 && secs > 0 && typeof playSound === 'function') {
+            try { playSound('countdown'); } catch(e) {}
+        }
+    }
+
+    function _hdeTriggerGameStart(uid, count) {
+        clearInterval(_countdownInterval);
+        _countdownInterval = null;
+        _autoStartFired = true;
+
         const isMegaJP    = count >= _AUTO_START_MJ;
         const isRegularJP = count >= _AUTO_START_RJ;
         const isJP        = isMegaJP || isRegularJP;
+        const now         = Date.now();
 
-        _autoStartFired = true; // flag early to prevent race
-
-        const now = Date.now();
+        db.ref('gameState/countdown').set({ active: false });
         db.ref('gameState/latestWinner').once('value', wSnap => {
-            if(wSnap.exists()) { _autoStartFired = false; return; }
-            if(_hdeCloudActive)  { _autoStartFired = false; return; }
+            if(wSnap.exists()) { _autoStartFired = false; _countdownFired = false; return; }
+            if(_hdeCloudActive)  { _autoStartFired = false; _countdownFired = false; return; }
 
             db.ref('gameState/drawLock').transaction(cur => {
-                if(cur !== null) return; // another client holds lock
+                if(cur !== null) return;
                 return { by: uid, at: now, expires: now + 600000 };
             }, (err, committed) => {
-                if(!committed || err) { _autoStartFired = false; return; }
+                if(!committed || err) { _autoStartFired = false; _countdownFired = false; return; }
                 if(_hdeCloudActive) {
                     db.ref('gameState/drawLock').remove();
-                    _autoStartFired = false;
+                    _autoStartFired = false; _countdownFired = false;
                     return;
                 }
-
                 db.ref('gameState/drawLock').onDisconnect().remove();
                 _hdeSetPattern(isJP);
 
@@ -13264,6 +13368,145 @@ function runMathBlitz(problems) {
         }, 5000);
     }
     // ===== END HEADLESS DRAW ENGINE =====
+
+    // ══════════════════════════════════════════════════════════
+    // ===== SCHEDULED DRAW ENGINE (Option 3) =================
+    // ══════════════════════════════════════════════════════════
+    function _hdeInitScheduledDraws(uid) {
+        if(_schedCheckInterval) clearInterval(_schedCheckInterval);
+        _schedCheckInterval = setInterval(() => _hdeCheckSchedule(uid), 30000); // check every 30s
+        _hdeCheckSchedule(uid); // check immediately on load
+        _hdeUpdateScheduledDrawUI(); // update banner countdown
+        setInterval(_hdeUpdateScheduledDrawUI, 60000); // refresh every minute
+    }
+
+    function _hdeCheckSchedule(uid) {
+        if(_hdeCloudActive) return;
+        const gameData = _cachedGameState || {};
+        if(gameData.status === 'playing') return;
+
+        // Get current Philippine time
+        const now = new Date();
+        const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        const h = phTime.getHours();
+        const m = phTime.getMinutes();
+        const key = h + ':' + String(m).padStart(2,'0');
+
+        // Already fired this exact minute?
+        if(_lastSchedFired === key) return;
+
+        for(const sched of _SCHED_DRAWS) {
+            if(h === sched.hour && m === sched.minute) {
+                _lastSchedFired = key;
+                console.log('[ScheduledDraw] Triggering', sched.label);
+                _hdeTriggerScheduledDraw(uid, sched);
+                return;
+            }
+        }
+    }
+
+    function _hdeTriggerScheduledDraw(uid, sched) {
+        // Cancel any player-count countdown running
+        if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
+        _countdownFired = false;
+        db.ref('gameState/countdown').set({ active: false });
+
+        // Write to Firebase so all clients know a scheduled draw is starting
+        db.ref('gameState/scheduledDrawAlert').set({
+            label: sched.label,
+            type:  sched.jackpotType,
+            at:    Date.now()
+        });
+
+        // Show 30-second pre-draw notification to all clients
+        _hdeShowSchedAlert(sched, 30, uid);
+    }
+
+    function _hdeShowSchedAlert(sched, secs, uid) {
+        const timeEl  = document.getElementById('nextDrawTime');
+        const labelEl = document.querySelector('.next-draw-label');
+        const banner  = document.getElementById('nextDrawBanner');
+        if(!banner || !timeEl) return;
+
+        const isMega    = sched.jackpotType === 'mega';
+        const modeColor = isMega ? '#f97316' : '#fbbf24';
+        const prize     = isMega ? '₱20' : '₱5';
+
+        if(labelEl) { labelEl.innerText = '📅 ' + sched.label.toUpperCase() + ' — STARTING!'; labelEl.style.color = modeColor; }
+
+        function tick(s) {
+            if(s <= 0) {
+                // Fire the actual game
+                _hdeFireScheduledGame(uid, sched);
+                return;
+            }
+            timeEl.innerHTML =
+                '<span style="font-size:22px;font-weight:900;color:' + modeColor + ';">' + s + 's</span>' +
+                '<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px;">' + sched.label + ' • Prize: <b>' + prize + '</b></div>' +
+                '<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:4px;margin-top:6px;overflow:hidden;">' +
+                '<div style="height:100%;width:' + Math.round((s / 30) * 100) + '%;background:' + modeColor + ';border-radius:4px;transition:width 1s linear;"></div></div>';
+            if(s <= 10 && typeof playSound === 'function') { try { playSound('countdown'); } catch(e) {} }
+            setTimeout(() => tick(s - 1), 1000);
+        }
+        tick(secs);
+    }
+
+    function _hdeFireScheduledGame(uid, sched) {
+        if(_hdeCloudActive) return;
+        const isMega    = sched.jackpotType === 'mega';
+        const isRegular = sched.jackpotType === 'regular';
+        const isJP      = isMega || isRegular;
+        const now       = Date.now();
+
+        db.ref('gameState/drawLock').transaction(cur => {
+            if(cur !== null) return;
+            return { by: uid, at: now, expires: now + 600000 };
+        }, (err, committed) => {
+            if(!committed || err) return;
+            db.ref('gameState/drawLock').onDisconnect().remove();
+            _hdeSetPattern(isJP);
+
+            if(isMega) {
+                db.ref('gameState/jackpot').set({ amount: 20, active: true, type: 'mega' });
+            } else if(isRegular) {
+                db.ref('gameState/jackpot').set({ amount: 5, active: true, type: 'regular' });
+            } else {
+                db.ref('gameState/jackpot').set({ amount: 1, active: false, type: 'normal' });
+            }
+
+            const modeLabel = isMega ? '🔥 MEGA JACKPOT' : '⚡ REGULAR JACKPOT';
+            db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now(), autoStartMode: modeLabel + ' (SCHEDULED)' });
+            _hdeStartDraw();
+        });
+    }
+
+    function _hdeUpdateScheduledDrawUI() {
+        // Show next scheduled draw time in the banner when waiting
+        const gameData = _cachedGameState || {};
+        if(gameData.status === 'playing') return;
+
+        const now = new Date();
+        const phNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        const h = phNow.getHours(), m = phNow.getMinutes();
+
+        let nextSched = null, minDiff = Infinity;
+        for(const sched of _SCHED_DRAWS) {
+            let diff = (sched.hour * 60 + sched.minute) - (h * 60 + m);
+            if(diff <= 0) diff += 1440; // next day
+            if(diff < minDiff) { minDiff = diff; nextSched = sched; }
+        }
+
+        const lateEl = document.getElementById('lateNextSched');
+        if(lateEl && nextSched) {
+            const hh = String(nextSched.hour).padStart(2,'0');
+            const mm = String(nextSched.minute).padStart(2,'0');
+            const hDisp = nextSched.hour > 12 ? (nextSched.hour - 12) : nextSched.hour;
+            const ampm  = nextSched.hour >= 12 ? 'PM' : 'AM';
+            lateEl.innerText = hDisp + ':' + mm + ' ' + ampm;
+        }
+    }
+    // ===== END SCHEDULED DRAW ENGINE =====
+
 
 
         function listenForForNextDraw() { db.ref('gameState/schedules').on('value', s => { updateNextDrawDisplay(); }); db.ref('gameState/nextDraw').on('value', s => { updateNextDrawDisplay(); }); }
