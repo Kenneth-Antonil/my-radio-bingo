@@ -5694,14 +5694,25 @@ function clearAllSchedules() {
 }
 
 function saveSchedulesToFirebase() {
-    if(typeof db === 'undefined') { alert('Firebase not connected.'); return; }
+    var fdb;
+    try { fdb = firebase.database(); } catch(e) { alert('Firebase not connected: ' + e.message); return; }
+    if(_adminSchedules.length === 0) {
+        if(!confirm('Walang schedules. I-clear lahat sa Firebase?')) return;
+    }
+    var toSave = {};
+    _adminSchedules.forEach(function(s) {
+        var key = String(s.hour).padStart(2,'0') + '_' + String(s.minute).padStart(2,'0');
+        toSave[key] = { hour: s.hour, minute: s.minute, label: s.label, jackpotType: s.jackpotType };
+    });
+    var status = document.getElementById('schedSaveStatus');
+    if(status) { status.textContent = '⏳ Saving...'; status.style.color = '#fbbf24'; status.style.display = 'block'; }
     // Save as object keyed by "HH:MM" for easy reading on index.html
     var toSave = {};
     _adminSchedules.forEach(function(s) {
         var key = String(s.hour).padStart(2,'0') + '_' + String(s.minute).padStart(2,'0');
         toSave[key] = { hour: s.hour, minute: s.minute, label: s.label, jackpotType: s.jackpotType };
     });
-    db.ref('gameState/drawSchedules').set(toSave, function(err) {
+    fdb.ref('gameState/drawSchedules').set(toSave, function(err) {
         var status = document.getElementById('schedSaveStatus');
         if(err) {
             if(status) { status.textContent = '❌ Error: ' + err.message; status.style.color = '#f87171'; status.style.display = 'block'; }
@@ -5714,8 +5725,8 @@ function saveSchedulesToFirebase() {
 
 // Load existing schedules from Firebase on page load
 function loadSchedulesFromFirebase() {
-    if(typeof db === 'undefined') return;
-    db.ref('gameState/drawSchedules').once('value', function(snap) {
+    var fdb; try { fdb = firebase.database(); } catch(e) { setTimeout(loadSchedulesFromFirebase, 1000); return; }
+    fdb.ref('gameState/drawSchedules').once('value', function(snap) {
         var data = snap.val();
         _adminSchedules = [];
         if(data) {
@@ -5728,10 +5739,12 @@ function loadSchedulesFromFirebase() {
 }
 
 // Auto-load when Firebase is ready
-(function waitForDb() {
-    if(typeof db !== 'undefined') { loadSchedulesFromFirebase(); }
-    else { setTimeout(waitForDb, 500); }
-})();
+// Auto-load after Firebase is ready
+if(document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(loadSchedulesFromFirebase, 1500); });
+} else {
+    setTimeout(loadSchedulesFromFirebase, 1500);
+}
 
 window.applySchedPreset   = applySchedPreset;
 window.addCustomSchedule  = addCustomSchedule;
