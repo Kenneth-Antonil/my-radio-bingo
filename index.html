@@ -9178,7 +9178,7 @@
                     <div class="artcard-new-tag">NEW</div>
                 </div>
                 <div class="artcard-title">Game starts automatically!</div>
-                <div class="artcard-subtitle">No more waiting for schedules — players trigger the round.</div>
+                <div class="artcard-subtitle">Game starts by schedule (3PM & 8PM) or when enough players join!</div>
                 <div class="artcard-tiers">
                     <div class="artcard-tier normal">
                         <div class="artcard-tier-icon">🎯</div>
@@ -11031,13 +11031,30 @@ function runMathBlitz(problems) {
     let _countdownValue    = 0;
     let _hdeSyncInterval   = null;  // tracks the Firebase-synced countdown for non-originator clients
     let _countdownFired    = false; // prevent duplicate countdowns
-    // ── Scheduled draw times (24h format, Philippine time) ──
-    const _SCHED_DRAWS = [
+    // ── Scheduled draw times — loaded live from Firebase (set via dashboard) ──
+    let _SCHED_DRAWS = [
         { hour: 15, minute: 0,  label: '3:00 PM Draw',  jackpotType: 'regular' },
         { hour: 20, minute: 0,  label: '8:00 PM Draw',  jackpotType: 'mega'    },
-    ];
+    ]; // default fallback; overwritten by Firebase gameState/drawSchedules
     let _schedCheckInterval = null;
     let _lastSchedFired     = '';  // 'HH:MM' of last fired scheduled draw
+
+    // Listen for schedule changes from admin dashboard
+    function _hdeListenSchedules() {
+        db.ref('gameState/drawSchedules').on('value', snap => {
+            const data = snap.val();
+            if(data && Object.keys(data).length > 0) {
+                _SCHED_DRAWS = Object.values(data);
+            } else {
+                // Fallback to classic if admin cleared all
+                _SCHED_DRAWS = [
+                    { hour: 15, minute: 0, label: '3:00 PM Draw', jackpotType: 'regular' },
+                    { hour: 20, minute: 0, label: '8:00 PM Draw', jackpotType: 'mega' }
+                ];
+            }
+            _hdeUpdateScheduledDrawUI(); // refresh next draw display
+        });
+    }
 
     // Multi-card support (up to 5 extra cards)
     let extraCards = []; // array of { numbers: [], marks: [] }
@@ -13495,6 +13512,7 @@ function runMathBlitz(problems) {
     // ══════════════════════════════════════════════════════════
     function _hdeInitScheduledDraws(uid) {
         if(_schedCheckInterval) clearInterval(_schedCheckInterval);
+        _hdeListenSchedules(); // sync schedules from Firebase (set via dashboard)
         _schedCheckInterval = setInterval(() => _hdeCheckSchedule(uid), 30000); // check every 30s
         _hdeCheckSchedule(uid); // check immediately on load
         _hdeUpdateScheduledDrawUI(); // update banner countdown
@@ -13846,7 +13864,7 @@ function runMathBlitz(problems) {
         timeEl.style.fontSize   = '12px';
         timeEl.style.color      = modeColor;
         timeEl.style.fontWeight = '900';
-        if(lateSched) lateSched.innerText = '--:--';
+        if(lateSched) _hdeUpdateScheduledDrawUI(); // show next scheduled draw time
     }
     function checkNotificationTime(timeInput) { if(lastNotifiedDraw == timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 10) { if(Notification.permission === "granted") new Notification("RB Live", { body: "Only 10 minutes left until the draw!" }); lastNotifiedDraw = timeInput; } } }
 

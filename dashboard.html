@@ -1192,6 +1192,66 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
     </div>
 
     <div id="bingo-tab" class="tab-content active">
+
+        <!-- ═══ DRAW SCHEDULE MANAGER ═══ -->
+        <div class="card" style="margin-bottom:24px; border-color:rgba(251,191,36,0.3);">
+            <h2 style="color:var(--gold);"><i data-lucide="calendar" width="18"></i> Draw Schedule Manager</h2>
+
+            <!-- Quick Presets Row -->
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+                <button onclick="applySchedPreset('every15')" style="padding:8px 14px; background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(245,158,11,0.1)); border:1px solid rgba(251,191,36,0.4); border-radius:10px; color:#fbbf24; font-size:11px; font-weight:800; cursor:pointer;">
+                    ⚡ Every 15 mins (Today)
+                </button>
+                <button onclick="applySchedPreset('every30')" style="padding:8px 14px; background:linear-gradient(135deg,rgba(6,182,212,0.15),rgba(6,182,212,0.08)); border:1px solid rgba(6,182,212,0.4); border-radius:10px; color:#67e8f9; font-size:11px; font-weight:800; cursor:pointer;">
+                    🕐 Every 30 mins (Today)
+                </button>
+                <button onclick="applySchedPreset('every60')" style="padding:8px 14px; background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.1)); border:1px solid rgba(139,92,246,0.4); border-radius:10px; color:#a78bfa; font-size:11px; font-weight:800; cursor:pointer;">
+                    🕐 Every Hour (Today)
+                </button>
+                <button onclick="applySchedPreset('classic')" style="padding:8px 14px; background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.08)); border:1px solid rgba(16,185,129,0.4); border-radius:10px; color:#34d399; font-size:11px; font-weight:800; cursor:pointer;">
+                    📅 Classic (3PM & 8PM)
+                </button>
+                <button onclick="clearAllSchedules()" style="padding:8px 14px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.35); border-radius:10px; color:#f87171; font-size:11px; font-weight:800; cursor:pointer; margin-left:auto;">
+                    🗑️ Clear All
+                </button>
+            </div>
+
+            <!-- Add Custom Time -->
+            <div style="background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px; margin-bottom:16px;">
+                <div style="font-size:11px; font-weight:800; color:rgba(255,255,255,0.5); letter-spacing:1px; margin-bottom:10px;">➕ ADD CUSTOM DRAW TIME</div>
+                <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+                    <div style="flex:0 0 auto;">
+                        <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px;">TIME</label>
+                        <input type="time" id="schedTimeInput" style="padding:8px 12px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:white; font-size:13px; font-weight:700; width:130px;">
+                    </div>
+                    <div style="flex:1; min-width:130px;">
+                        <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px;">JACKPOT TYPE</label>
+                        <select id="schedJackpotType" style="padding:8px 12px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:white; font-size:12px; font-weight:700; width:100%;">
+                            <option value="none">🎯 Normal Round (&#8369;1)</option>
+                            <option value="regular">⚡ Regular Jackpot (&#8369;5)</option>
+                            <option value="mega">🔥 Mega Jackpot (&#8369;20)</option>
+                        </select>
+                    </div>
+                    <button onclick="addCustomSchedule()" style="padding:9px 18px; background:linear-gradient(135deg,#fbbf24,#d97706); border:none; border-radius:10px; color:#1c1105; font-size:12px; font-weight:900; cursor:pointer; flex-shrink:0;">
+                        + ADD
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Schedules List -->
+            <div style="font-size:11px; font-weight:800; color:rgba(255,255,255,0.5); letter-spacing:1px; margin-bottom:8px;">📋 ACTIVE SCHEDULES TODAY</div>
+            <div id="scheduleListContainer" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; margin-bottom:14px;">
+                <div style="text-align:center; padding:20px; color:rgba(255,255,255,0.25); font-size:12px;" id="schedEmptyMsg">No schedules set. Use a preset or add a custom time above.</div>
+            </div>
+
+            <!-- Save Button -->
+            <button onclick="saveSchedulesToFirebase()" style="width:100%; padding:12px; background:linear-gradient(135deg,#fbbf24,#d97706); border:none; border-radius:12px; color:#1c1105; font-size:13px; font-weight:900; cursor:pointer; letter-spacing:0.5px; box-shadow:0 4px 16px rgba(251,191,36,0.35);">
+                💾 SAVE SCHEDULES TO FIREBASE
+            </button>
+            <div id="schedSaveStatus" style="text-align:center; font-size:11px; margin-top:8px; color:var(--success); display:none; font-weight:700;">&#10003; Schedules saved successfully!</div>
+        </div>
+        <!-- ═══ END DRAW SCHEDULE MANAGER ═══ -->
+
         <div style="display:grid; grid-template-columns: 1fr 2fr; gap: 24px; align-items:start;">
             <div class="card">
                 <h2><i data-lucide="settings"></i> Game Control</h2>
@@ -5157,6 +5217,168 @@ function deleteSpecialEvent(key) {
         loadSpecialEvents();
     });
 }
+
+// ═══════════════════════════════════════════════════
+// DRAW SCHEDULE MANAGER
+// ═══════════════════════════════════════════════════
+var _adminSchedules = []; // array of { hour, minute, label, jackpotType }
+
+function _phNow() {
+    return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+}
+
+function _fmt12(h, m) {
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    var hh = h % 12 || 12;
+    return hh + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+}
+
+function _jackpotLabel(type) {
+    if(type === 'mega') return '🔥 Mega (₱20)';
+    if(type === 'regular') return '⚡ Regular (₱5)';
+    return '🎯 Normal (₱1)';
+}
+
+function _jackpotColor(type) {
+    if(type === 'mega') return '#f97316';
+    if(type === 'regular') return '#fbbf24';
+    return '#10b981';
+}
+
+function renderScheduleList() {
+    var container = document.getElementById('scheduleListContainer');
+    var emptyMsg  = document.getElementById('schedEmptyMsg');
+    if(!container) return;
+    // Remove existing items (keep emptyMsg)
+    Array.from(container.children).forEach(function(c) {
+        if(c.id !== 'schedEmptyMsg') c.remove();
+    });
+    if(_adminSchedules.length === 0) {
+        if(emptyMsg) emptyMsg.style.display = 'block';
+        return;
+    }
+    if(emptyMsg) emptyMsg.style.display = 'none';
+    var now = _phNow();
+    var nowMins = now.getHours() * 60 + now.getMinutes();
+    var sorted = _adminSchedules.slice().sort(function(a,b){ return (a.hour*60+a.minute)-(b.hour*60+b.minute); });
+    sorted.forEach(function(s, idx) {
+        var mins = s.hour * 60 + s.minute;
+        var isPast = mins < nowMins;
+        var color = _jackpotColor(s.jackpotType);
+        var div = document.createElement('div');
+        div.style.cssText = 'display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,' + (isPast ? '0.06' : '0.1') + '); border-radius:10px; padding:9px 12px; opacity:' + (isPast ? '0.45' : '1') + ';';
+        div.innerHTML =
+            '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;box-shadow:0 0 6px ' + color + ';' + (isPast ? 'opacity:0.4;' : '') + '"></div>' +
+            '<span style="font-size:14px;font-weight:900;color:white;min-width:80px;">' + _fmt12(s.hour, s.minute) + '</span>' +
+            '<span style="font-size:11px;font-weight:700;color:' + color + ';flex:1;">' + _jackpotLabel(s.jackpotType) + '</span>' +
+            (isPast ? '<span style="font-size:9px;color:rgba(255,255,255,0.3);font-weight:700;">PAST</span>' : '') +
+            '<button onclick="removeSchedule(' + _adminSchedules.indexOf(s) + ')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#f87171;font-size:10px;font-weight:800;padding:3px 8px;cursor:pointer;">✕</button>';
+        container.appendChild(div);
+    });
+}
+
+function applySchedPreset(preset) {
+    _adminSchedules = [];
+    var now = _phNow();
+    var curH = now.getHours(), curM = now.getMinutes();
+
+    if(preset === 'every15') {
+        // Every 15 mins from 8AM to 11:45PM
+        for(var h = 8; h < 24; h++) {
+            for(var m = 0; m < 60; m += 15) {
+                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: 'none' });
+            }
+        }
+    } else if(preset === 'every30') {
+        for(var h = 8; h < 24; h++) {
+            for(var m = 0; m < 60; m += 30) {
+                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: (h === 15 || h === 20) ? (h === 20 ? 'mega' : 'regular') : 'none' });
+            }
+        }
+    } else if(preset === 'every60') {
+        for(var h = 8; h < 24; h++) {
+            _adminSchedules.push({ hour: h, minute: 0, label: _fmt12(h, 0) + ' Draw', jackpotType: (h === 15) ? 'regular' : (h === 20 ? 'mega' : 'none') });
+        }
+    } else if(preset === 'classic') {
+        _adminSchedules = [
+            { hour: 15, minute: 0, label: '3:00 PM Draw', jackpotType: 'regular' },
+            { hour: 20, minute: 0, label: '8:00 PM Draw', jackpotType: 'mega' }
+        ];
+    }
+    renderScheduleList();
+}
+
+function addCustomSchedule() {
+    var timeInput = document.getElementById('schedTimeInput');
+    var typeInput = document.getElementById('schedJackpotType');
+    if(!timeInput || !timeInput.value) { alert('Please select a time.'); return; }
+    var parts = timeInput.value.split(':');
+    var h = parseInt(parts[0]), m = parseInt(parts[1]);
+    // Prevent duplicates
+    var exists = _adminSchedules.some(function(s){ return s.hour === h && s.minute === m; });
+    if(exists) { alert('This time is already in the schedule!'); return; }
+    _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: typeInput.value });
+    timeInput.value = '';
+    renderScheduleList();
+}
+
+function removeSchedule(idx) {
+    _adminSchedules.splice(idx, 1);
+    renderScheduleList();
+}
+
+function clearAllSchedules() {
+    if(!confirm('Clear all schedules?')) return;
+    _adminSchedules = [];
+    renderScheduleList();
+}
+
+function saveSchedulesToFirebase() {
+    if(typeof db === 'undefined') { alert('Firebase not connected.'); return; }
+    // Save as object keyed by "HH:MM" for easy reading on index.html
+    var toSave = {};
+    _adminSchedules.forEach(function(s) {
+        var key = String(s.hour).padStart(2,'0') + '_' + String(s.minute).padStart(2,'0');
+        toSave[key] = { hour: s.hour, minute: s.minute, label: s.label, jackpotType: s.jackpotType };
+    });
+    db.ref('gameState/drawSchedules').set(toSave, function(err) {
+        var status = document.getElementById('schedSaveStatus');
+        if(err) {
+            if(status) { status.textContent = '❌ Error: ' + err.message; status.style.color = '#f87171'; status.style.display = 'block'; }
+        } else {
+            if(status) { status.textContent = '✅ Schedules saved to Firebase!'; status.style.color = 'var(--success)'; status.style.display = 'block'; }
+            setTimeout(function(){ if(status) status.style.display = 'none'; }, 3000);
+        }
+    });
+}
+
+// Load existing schedules from Firebase on page load
+function loadSchedulesFromFirebase() {
+    if(typeof db === 'undefined') return;
+    db.ref('gameState/drawSchedules').once('value', function(snap) {
+        var data = snap.val();
+        _adminSchedules = [];
+        if(data) {
+            Object.values(data).forEach(function(s) {
+                _adminSchedules.push({ hour: s.hour, minute: s.minute, label: s.label, jackpotType: s.jackpotType });
+            });
+        }
+        renderScheduleList();
+    });
+}
+
+// Auto-load when Firebase is ready
+(function waitForDb() {
+    if(typeof db !== 'undefined') { loadSchedulesFromFirebase(); }
+    else { setTimeout(waitForDb, 500); }
+})();
+
+window.applySchedPreset   = applySchedPreset;
+window.addCustomSchedule  = addCustomSchedule;
+window.removeSchedule     = removeSchedule;
+window.clearAllSchedules  = clearAllSchedules;
+window.saveSchedulesToFirebase = saveSchedulesToFirebase;
+// ═══════════════════════════════════════════════════
 
 window.loadSpecialEvents = loadSpecialEvents;
 window.createSpecialEvent = createSpecialEvent;
