@@ -13192,6 +13192,7 @@ function runMathBlitz(problems) {
                 _autoStartFired = false;
                 _countdownFired = false;
                 _countdownValue = 0;
+                _lastSchedFired = ''; // allow schedules to fire again after game ends
                 if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
                 if(_hdeSyncInterval)   { clearInterval(_hdeSyncInterval);   _hdeSyncInterval   = null; }
                 // FIX: clear stale countdown node so other clients don't re-trigger it
@@ -13513,7 +13514,7 @@ function runMathBlitz(problems) {
     function _hdeInitScheduledDraws(uid) {
         if(_schedCheckInterval) clearInterval(_schedCheckInterval);
         _hdeListenSchedules(); // sync schedules from Firebase (set via dashboard)
-        _schedCheckInterval = setInterval(() => _hdeCheckSchedule(uid), 30000); // check every 30s
+        _schedCheckInterval = setInterval(() => _hdeCheckSchedule(uid), 10000); // check every 10s
         _hdeCheckSchedule(uid); // check immediately on load
         _hdeUpdateScheduledDrawUI(); // update banner countdown
         setInterval(_hdeUpdateScheduledDrawUI, 60000); // refresh every minute
@@ -13534,10 +13535,16 @@ function runMathBlitz(problems) {
         // Already fired this exact minute?
         if(_lastSchedFired === key) return;
 
+        // Current time in total minutes
+        const nowTotalMins = h * 60 + m;
+
         for(const sched of _SCHED_DRAWS) {
-            if(h === sched.hour && m === sched.minute) {
+            const schedMins = sched.hour * 60 + sched.minute;
+            // Fire if we are within the same minute window (0 to +1 min tolerance)
+            const diff = nowTotalMins - schedMins;
+            if(diff >= 0 && diff < 2) {
                 _lastSchedFired = key;
-                console.log('[ScheduledDraw] Triggering', sched.label);
+                console.log('[ScheduledDraw] Triggering', sched.label, 'at', key);
                 _hdeTriggerScheduledDraw(uid, sched);
                 return;
             }
@@ -13594,6 +13601,7 @@ function runMathBlitz(problems) {
         if(_hdeCloudActive) return;
         const isMega    = sched.jackpotType === 'mega';
         const isRegular = sched.jackpotType === 'regular';
+        const isNormal  = !isMega && !isRegular; // 'none' or anything else = normal round
         const isJP      = isMega || isRegular;
         const now       = Date.now();
 
@@ -13613,7 +13621,7 @@ function runMathBlitz(problems) {
                 db.ref('gameState/jackpot').set({ amount: 1, active: false, type: 'normal' });
             }
 
-            const modeLabel = isMega ? '🔥 MEGA JACKPOT' : '⚡ REGULAR JACKPOT';
+            const modeLabel = isMega ? '🔥 MEGA JACKPOT' : isRegular ? '⚡ REGULAR JACKPOT' : '🎯 NORMAL ROUND';
             db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now(), autoStartMode: modeLabel + ' (SCHEDULED)' });
             _hdeStartDraw();
         });
