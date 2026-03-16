@@ -5582,6 +5582,26 @@ function deleteSpecialEvent(key) {
 // DRAW SCHEDULE MANAGER
 // ═══════════════════════════════════════════════════
 var _adminSchedules = []; // array of { hour, minute, label, jackpotType }
+var _schedUnsaved  = false; // true when local list differs from Firebase
+
+function _updateSchedSaveBtn(unsaved) {
+    var btn = document.querySelector('button[onclick="saveSchedulesToFirebase()"]');
+    if(!btn) return;
+    if(unsaved) {
+        btn.style.background = 'linear-gradient(135deg,#ef4444,#b91c1c)';
+        btn.style.boxShadow  = '0 4px 16px rgba(239,68,68,0.45)';
+        btn.textContent      = '⚠️ UNSAVED CHANGES — SAVE NOW';
+    } else {
+        btn.style.background = 'linear-gradient(135deg,#fbbf24,#d97706)';
+        btn.style.boxShadow  = '0 4px 16px rgba(251,191,36,0.35)';
+        btn.textContent      = '💾 SAVE SCHEDULES TO FIREBASE';
+    }
+}
+
+function _markSchedDirty() {
+    _schedUnsaved = true;
+    _updateSchedSaveBtn(true);
+}
 
 function _phNow() {
     return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
@@ -5621,10 +5641,12 @@ function renderScheduleList() {
     var now = _phNow();
     var nowMins = now.getHours() * 60 + now.getMinutes();
     var sorted = _adminSchedules.slice().sort(function(a,b){ return (a.hour*60+a.minute)-(b.hour*60+b.minute); });
-    sorted.forEach(function(s, idx) {
+    sorted.forEach(function(s) {
         var mins = s.hour * 60 + s.minute;
         var isPast = mins < nowMins;
         var color = _jackpotColor(s.jackpotType);
+        // Use hour+minute as the stable key for removal — avoids index mismatch on sorted copy
+        var realIdx = _adminSchedules.findIndex(function(x){ return x.hour === s.hour && x.minute === s.minute; });
         var div = document.createElement('div');
         div.style.cssText = 'display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,' + (isPast ? '0.06' : '0.1') + '); border-radius:10px; padding:9px 12px; opacity:' + (isPast ? '0.45' : '1') + ';';
         div.innerHTML =
@@ -5632,7 +5654,7 @@ function renderScheduleList() {
             '<span style="font-size:14px;font-weight:900;color:white;min-width:80px;">' + _fmt12(s.hour, s.minute) + '</span>' +
             '<span style="font-size:11px;font-weight:700;color:' + color + ';flex:1;">' + _jackpotLabel(s.jackpotType) + '</span>' +
             (isPast ? '<span style="font-size:9px;color:rgba(255,255,255,0.3);font-weight:700;">PAST</span>' : '') +
-            '<button onclick="removeSchedule(' + _adminSchedules.indexOf(s) + ')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#f87171;font-size:10px;font-weight:800;padding:3px 8px;cursor:pointer;">✕</button>';
+            '<button onclick="removeSchedule(' + realIdx + ')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#f87171;font-size:10px;font-weight:800;padding:3px 8px;cursor:pointer;">✕</button>';
         container.appendChild(div);
     });
 }
@@ -5665,6 +5687,7 @@ function applySchedPreset(preset) {
             { hour: 20, minute: 0, label: '8:00 PM Draw', jackpotType: 'mega' }
         ];
     }
+    _markSchedDirty();
     renderScheduleList();
 }
 
@@ -5679,17 +5702,20 @@ function addCustomSchedule() {
     if(exists) { alert('This time is already in the schedule!'); return; }
     _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: typeInput.value });
     timeInput.value = '';
+    _markSchedDirty();
     renderScheduleList();
 }
 
 function removeSchedule(idx) {
     _adminSchedules.splice(idx, 1);
+    _markSchedDirty();
     renderScheduleList();
 }
 
 function clearAllSchedules() {
     if(!confirm('Clear all schedules?')) return;
     _adminSchedules = [];
+    _markSchedDirty();
     renderScheduleList();
 }
 
@@ -5699,14 +5725,9 @@ function saveSchedulesToFirebase() {
     if(_adminSchedules.length === 0) {
         if(!confirm('Walang schedules. I-clear lahat sa Firebase?')) return;
     }
-    var toSave = {};
-    _adminSchedules.forEach(function(s) {
-        var key = String(s.hour).padStart(2,'0') + '_' + String(s.minute).padStart(2,'0');
-        toSave[key] = { hour: s.hour, minute: s.minute, label: s.label, jackpotType: s.jackpotType };
-    });
     var status = document.getElementById('schedSaveStatus');
     if(status) { status.textContent = '⏳ Saving...'; status.style.color = '#fbbf24'; status.style.display = 'block'; }
-    // Save as object keyed by "HH:MM" for easy reading on index.html
+    // Build object keyed by "HH_MM" for Firebase
     var toSave = {};
     _adminSchedules.forEach(function(s) {
         var key = String(s.hour).padStart(2,'0') + '_' + String(s.minute).padStart(2,'0');
@@ -5718,6 +5739,8 @@ function saveSchedulesToFirebase() {
             if(status) { status.textContent = '❌ Error: ' + err.message; status.style.color = '#f87171'; status.style.display = 'block'; }
         } else {
             if(status) { status.textContent = '✅ Schedules saved to Firebase!'; status.style.color = 'var(--success)'; status.style.display = 'block'; }
+            _schedUnsaved = false;
+            _updateSchedSaveBtn(false);
             setTimeout(function(){ if(status) status.style.display = 'none'; }, 3000);
         }
     });
