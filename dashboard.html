@@ -1608,12 +1608,12 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 <div style="font-size:11px; font-weight:800; color:rgba(255,255,255,0.5); letter-spacing:1px;">📋 ACTIVE SCHEDULES TODAY</div>
                 <div id="schedTotalCount" style="font-size:11px; font-weight:800; color:#fbbf24;"></div>
             </div>
-            <div id="scheduleListContainer" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; margin-bottom:14px;">
+            <div id="scheduleListContainer" style="display:flex; flex-direction:column; gap:6px; max-height:400px; overflow-y:auto; margin-bottom:14px;">
                 <div style="text-align:center; padding:20px; color:rgba(255,255,255,0.25); font-size:12px;" id="schedEmptyMsg">No schedules set. Use a preset or add a custom time above.</div>
             </div>
 
             <!-- Save Button -->
-            <button onclick="saveSchedulesToFirebase()" style="width:100%; padding:12px; background:linear-gradient(135deg,#fbbf24,#d97706); border:none; border-radius:12px; color:#1c1105; font-size:13px; font-weight:900; cursor:pointer; letter-spacing:0.5px; box-shadow:0 4px 16px rgba(251,191,36,0.35);">
+            <button onclick="saveSchedulesToFirebase()" style="width:100%; padding:14px; background:linear-gradient(135deg,#fbbf24,#d97706); border:none; border-radius:12px; color:#1c1105; font-size:14px; font-weight:900; cursor:pointer; letter-spacing:0.5px; box-shadow:0 4px 16px rgba(251,191,36,0.35);">
                 💾 SAVE SCHEDULES TO FIREBASE
             </button>
             <div id="schedSaveStatus" style="text-align:center; font-size:11px; margin-top:8px; color:var(--success); display:none; font-weight:700;">&#10003; Schedules saved successfully!</div>
@@ -5653,6 +5653,17 @@ function renderScheduleList() {
     if(countEl) countEl.textContent = _adminSchedules.length + ' draws/day';
 }
 
+function _applyPresetNoSave(preset) {
+    _adminSchedules = [];
+    if(preset === 'every15') {
+        for(var h = 8; h < 24; h++) {
+            for(var m = 0; m < 60; m += 15) {
+                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: 'normal' });
+            }
+        }
+    }
+}
+
 function applySchedPreset(preset) {
     _adminSchedules = [];
     var now = _phNow();
@@ -5682,8 +5693,6 @@ function applySchedPreset(preset) {
         ];
     }
     renderScheduleList();
-    // Auto-save to Firebase immediately so index.html picks it up
-    saveSchedulesToFirebase();
 }
 
 function addCustomSchedule() {
@@ -5698,13 +5707,11 @@ function addCustomSchedule() {
     _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: typeInput.value });
     timeInput.value = '';
     renderScheduleList();
-    saveSchedulesToFirebase();
 }
 
 function removeSchedule(idx) {
     _adminSchedules.splice(idx, 1);
     renderScheduleList();
-    saveSchedulesToFirebase();
 }
 
 function clearAllSchedules() {
@@ -5752,21 +5759,8 @@ function loadSchedulesFromFirebase() {
             });
             renderScheduleList();
         } else {
-            // No Firebase data — auto-apply every15 default and save it
-            applySchedPreset('every15');
-            saveSchedulesToFirebase();
-        }
-    });
-    // Live listener — update list if another admin changes it
-    fdb.ref('gameState/drawSchedules').on('value', function(snap) {
-        var data = snap.val();
-        if(data && Object.keys(data).length > 0) {
-            _adminSchedules = [];
-            Object.values(data).forEach(function(s) {
-                if(s && typeof s.hour !== 'undefined') {
-                    _adminSchedules.push({ hour: s.hour, minute: s.minute, label: s.label || _fmt12(s.hour, s.minute) + ' Draw', jackpotType: (s.jackpotType === 'none' ? 'normal' : (s.jackpotType || 'normal')) });
-                }
-            });
+            // No Firebase data — apply every15 default (manual save required)
+            _applyPresetNoSave('every15');
             renderScheduleList();
         }
     });
