@@ -1555,7 +1555,12 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
 
         <!-- ═══ DRAW SCHEDULE MANAGER ═══ -->
         <div class="card" style="margin-bottom:24px; border-color:rgba(251,191,36,0.3);">
-            <h2 style="color:var(--gold);"><i data-lucide="calendar" width="18"></i> Draw Schedule Manager</h2>
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+                <h2 style="color:var(--gold); margin:0;"><i data-lucide="calendar" width="18"></i> Draw Schedule Manager</h2>
+                <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.35); border-radius:10px; padding:8px 14px; font-size:12px; font-weight:800; color:rgba(255,255,255,0.7);">
+                    🕐 Next Draw: <span id="dashNextDrawCountdown" style="color:#fbbf24;">Loading...</span>
+                </div>
+            </div>
 
             <!-- Quick Presets Row -->
             <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
@@ -2323,6 +2328,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             }
             // Verified admin — hide the wall
             document.getElementById('adminLoginWall').style.display = 'none';
+            initScheduleManager();
         });
     });
     
@@ -5699,14 +5705,8 @@ function saveSchedulesToFirebase() {
     if(_adminSchedules.length === 0) {
         if(!confirm('Walang schedules. I-clear lahat sa Firebase?')) return;
     }
-    var toSave = {};
-    _adminSchedules.forEach(function(s) {
-        var key = String(s.hour).padStart(2,'0') + '_' + String(s.minute).padStart(2,'0');
-        toSave[key] = { hour: s.hour, minute: s.minute, label: s.label, jackpotType: s.jackpotType };
-    });
     var status = document.getElementById('schedSaveStatus');
     if(status) { status.textContent = '⏳ Saving...'; status.style.color = '#fbbf24'; status.style.display = 'block'; }
-    // Save as object keyed by "HH:MM" for easy reading on index.html
     var toSave = {};
     _adminSchedules.forEach(function(s) {
         var key = String(s.hour).padStart(2,'0') + '_' + String(s.minute).padStart(2,'0');
@@ -5725,25 +5725,78 @@ function saveSchedulesToFirebase() {
 
 // Load existing schedules from Firebase on page load
 function loadSchedulesFromFirebase() {
-    var fdb; try { fdb = firebase.database(); } catch(e) { setTimeout(loadSchedulesFromFirebase, 1000); return; }
+    var fdb;
+    try { fdb = firebase.database(); } catch(e) { setTimeout(loadSchedulesFromFirebase, 1000); return; }
     fdb.ref('gameState/drawSchedules').once('value', function(snap) {
         var data = snap.val();
         _adminSchedules = [];
-        if(data) {
+        if(data && Object.keys(data).length > 0) {
             Object.values(data).forEach(function(s) {
-                _adminSchedules.push({ hour: s.hour, minute: s.minute, label: s.label, jackpotType: s.jackpotType });
+                if(s && typeof s.hour !== 'undefined') {
+                    _adminSchedules.push({ hour: s.hour, minute: s.minute, label: s.label || _fmt12(s.hour, s.minute) + ' Draw', jackpotType: s.jackpotType || 'none' });
+                }
             });
+            renderScheduleList();
+        } else {
+            // No Firebase data — auto-apply every15 default and save it
+            applySchedPreset('every15');
+            saveSchedulesToFirebase();
         }
-        renderScheduleList();
+    });
+    // Live listener — update list if another admin changes it
+    fdb.ref('gameState/drawSchedules').on('value', function(snap) {
+        var data = snap.val();
+        if(data && Object.keys(data).length > 0) {
+            _adminSchedules = [];
+            Object.values(data).forEach(function(s) {
+                if(s && typeof s.hour !== 'undefined') {
+                    _adminSchedules.push({ hour: s.hour, minute: s.minute, label: s.label || _fmt12(s.hour, s.minute) + ' Draw', jackpotType: s.jackpotType || 'none' });
+                }
+            });
+            renderScheduleList();
+        }
     });
 }
 
-// Auto-load when Firebase is ready
-// Auto-load after Firebase is ready
-if(document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() { setTimeout(loadSchedulesFromFirebase, 1500); });
-} else {
-    setTimeout(loadSchedulesFromFirebase, 1500);
+// ── Live Next-Draw countdown ticker in dashboard ──
+function _dashStartCountdownTicker() {
+    function _tick() {
+        var el = document.getElementById('dashNextDrawCountdown');
+        if(!el) return;
+        var now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        var h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+        var nowSecs = h * 3600 + m * 60 + s;
+        var minDiff = Infinity, nextSched = null;
+        _adminSchedules.forEach(function(sched) {
+            var schedSecs = sched.hour * 3600 + sched.minute * 60;
+            var diff = schedSecs - nowSecs;
+            if(diff <= 0) diff += 86400;
+            if(diff < minDiff) { minDiff = diff; nextSched = sched; }
+        });
+        if(!nextSched) { el.textContent = '--:--'; return; }
+        var cdMins = Math.floor(minDiff / 60);
+        var cdSecs = minDiff % 60;
+        var cdStr;
+        if(cdMins >= 60) {
+            cdStr = Math.floor(cdMins/60) + 'h ' + (cdMins%60) + 'm';
+        } else {
+            cdStr = cdMins + ':' + String(cdSecs).padStart(2,'0');
+        }
+        var label = _fmt12(nextSched.hour, nextSched.minute);
+        el.innerHTML = '<span style="color:#fbbf24;font-weight:900;">' + label + '</span>'
+            + ' <span style="color:rgba(255,255,255,0.5);font-size:11px;">in ' + cdStr + '</span>';
+    }
+    _tick();
+    setInterval(_tick, 1000);
+}
+
+// Auto-load when Firebase is ready — called after admin auth verified
+window._schedLoaded = false;
+function initScheduleManager() {
+    if(window._schedLoaded) return;
+    window._schedLoaded = true;
+    loadSchedulesFromFirebase();
+    setTimeout(_dashStartCountdownTicker, 500);
 }
 
 window.applySchedPreset   = applySchedPreset;
