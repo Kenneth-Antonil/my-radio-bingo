@@ -1592,7 +1592,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                     <div style="flex:1; min-width:130px;">
                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px;">JACKPOT TYPE</label>
                         <select id="schedJackpotType" style="padding:8px 12px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:white; font-size:12px; font-weight:700; width:100%;">
-                            <option value="none">🎯 Normal Round (&#8369;1)</option>
+                            <option value="normal">🎯 Normal Round (&#8369;1)</option>
                             <option value="regular">⚡ Regular Jackpot (&#8369;5)</option>
                             <option value="mega">🔥 Mega Jackpot (&#8369;20)</option>
                         </select>
@@ -1604,7 +1604,10 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             </div>
 
             <!-- Active Schedules List -->
-            <div style="font-size:11px; font-weight:800; color:rgba(255,255,255,0.5); letter-spacing:1px; margin-bottom:8px;">📋 ACTIVE SCHEDULES TODAY</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <div style="font-size:11px; font-weight:800; color:rgba(255,255,255,0.5); letter-spacing:1px;">📋 ACTIVE SCHEDULES TODAY</div>
+                <div id="schedTotalCount" style="font-size:11px; font-weight:800; color:#fbbf24;"></div>
+            </div>
             <div id="scheduleListContainer" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; margin-bottom:14px;">
                 <div style="text-align:center; padding:20px; color:rgba(255,255,255,0.25); font-size:12px;" id="schedEmptyMsg">No schedules set. Use a preset or add a custom time above.</div>
             </div>
@@ -5615,7 +5618,6 @@ function renderScheduleList() {
     var container = document.getElementById('scheduleListContainer');
     var emptyMsg  = document.getElementById('schedEmptyMsg');
     if(!container) return;
-    // Remove existing items (keep emptyMsg)
     Array.from(container.children).forEach(function(c) {
         if(c.id !== 'schedEmptyMsg') c.remove();
     });
@@ -5626,21 +5628,29 @@ function renderScheduleList() {
     if(emptyMsg) emptyMsg.style.display = 'none';
     var now = _phNow();
     var nowMins = now.getHours() * 60 + now.getMinutes();
-    var sorted = _adminSchedules.slice().sort(function(a,b){ return (a.hour*60+a.minute)-(b.hour*60+b.minute); });
-    sorted.forEach(function(s, idx) {
+    var indexed = _adminSchedules.map(function(s, i){ return { s: s, i: i }; });
+    indexed.sort(function(a,b){ return (a.s.hour*60+a.s.minute)-(b.s.hour*60+b.s.minute); });
+    indexed.forEach(function(item) {
+        var s = item.s, origIdx = item.i;
         var mins = s.hour * 60 + s.minute;
         var isPast = mins < nowMins;
         var color = _jackpotColor(s.jackpotType);
         var div = document.createElement('div');
-        div.style.cssText = 'display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,' + (isPast ? '0.06' : '0.1') + '); border-radius:10px; padding:9px 12px; opacity:' + (isPast ? '0.45' : '1') + ';';
-        div.innerHTML =
-            '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;box-shadow:0 0 6px ' + color + ';' + (isPast ? 'opacity:0.4;' : '') + '"></div>' +
-            '<span style="font-size:14px;font-weight:900;color:white;min-width:80px;">' + _fmt12(s.hour, s.minute) + '</span>' +
-            '<span style="font-size:11px;font-weight:700;color:' + color + ';flex:1;">' + _jackpotLabel(s.jackpotType) + '</span>' +
-            (isPast ? '<span style="font-size:9px;color:rgba(255,255,255,0.3);font-weight:700;">PAST</span>' : '') +
-            '<button onclick="removeSchedule(' + _adminSchedules.indexOf(s) + ')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#f87171;font-size:10px;font-weight:800;padding:3px 8px;cursor:pointer;">✕</button>';
+        div.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,' + (isPast ? '0.06' : '0.1') + ');border-radius:10px;padding:9px 12px;opacity:' + (isPast ? '0.45' : '1') + ';';
+        var dot = '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;box-shadow:0 0 6px ' + color + ';' + (isPast ? 'opacity:0.4;' : '') + '"></div>';
+        var timeSpan = '<span style="font-size:14px;font-weight:900;color:white;min-width:80px;">' + _fmt12(s.hour, s.minute) + '</span>';
+        var typeSpan = '<span style="font-size:11px;font-weight:700;color:' + color + ';flex:1;">' + _jackpotLabel(s.jackpotType) + '</span>';
+        var pastBadge = isPast ? '<span style="font-size:9px;color:rgba(255,255,255,0.3);font-weight:700;">PAST</span>' : '';
+        div.innerHTML = dot + timeSpan + typeSpan + pastBadge;
+        var btn = document.createElement('button');
+        btn.textContent = 'X';
+        btn.style.cssText = 'background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#f87171;font-size:10px;font-weight:800;padding:3px 8px;cursor:pointer;';
+        (function(idx){ btn.addEventListener('click', function(){ removeSchedule(idx); }); })(origIdx);
+        div.appendChild(btn);
         container.appendChild(div);
     });
+    var countEl = document.getElementById('schedTotalCount');
+    if(countEl) countEl.textContent = _adminSchedules.length + ' draws/day';
 }
 
 function applySchedPreset(preset) {
@@ -5652,18 +5662,18 @@ function applySchedPreset(preset) {
         // Every 15 mins from 8AM to 11:45PM
         for(var h = 8; h < 24; h++) {
             for(var m = 0; m < 60; m += 15) {
-                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: 'none' });
+                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: 'normal' });
             }
         }
     } else if(preset === 'every30') {
         for(var h = 8; h < 24; h++) {
             for(var m = 0; m < 60; m += 30) {
-                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: (h === 15 || h === 20) ? (h === 20 ? 'mega' : 'regular') : 'none' });
+                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: (h === 15 || h === 20) ? (h === 20 ? 'mega' : 'regular') : 'normal' });
             }
         }
     } else if(preset === 'every60') {
         for(var h = 8; h < 24; h++) {
-            _adminSchedules.push({ hour: h, minute: 0, label: _fmt12(h, 0) + ' Draw', jackpotType: (h === 15) ? 'regular' : (h === 20 ? 'mega' : 'none') });
+            _adminSchedules.push({ hour: h, minute: 0, label: _fmt12(h, 0) + ' Draw', jackpotType: (h === 15) ? 'regular' : (h === 20 ? 'mega' : 'normal') });
         }
     } else if(preset === 'classic') {
         _adminSchedules = [
@@ -5672,6 +5682,8 @@ function applySchedPreset(preset) {
         ];
     }
     renderScheduleList();
+    // Auto-save to Firebase immediately so index.html picks it up
+    saveSchedulesToFirebase();
 }
 
 function addCustomSchedule() {
@@ -5686,11 +5698,13 @@ function addCustomSchedule() {
     _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: typeInput.value });
     timeInput.value = '';
     renderScheduleList();
+    saveSchedulesToFirebase();
 }
 
 function removeSchedule(idx) {
     _adminSchedules.splice(idx, 1);
     renderScheduleList();
+    saveSchedulesToFirebase();
 }
 
 function clearAllSchedules() {
@@ -5733,7 +5747,7 @@ function loadSchedulesFromFirebase() {
         if(data && Object.keys(data).length > 0) {
             Object.values(data).forEach(function(s) {
                 if(s && typeof s.hour !== 'undefined') {
-                    _adminSchedules.push({ hour: s.hour, minute: s.minute, label: s.label || _fmt12(s.hour, s.minute) + ' Draw', jackpotType: s.jackpotType || 'none' });
+                    _adminSchedules.push({ hour: s.hour, minute: s.minute, label: s.label || _fmt12(s.hour, s.minute) + ' Draw', jackpotType: (s.jackpotType === 'none' ? 'normal' : (s.jackpotType || 'normal')) });
                 }
             });
             renderScheduleList();
@@ -5750,7 +5764,7 @@ function loadSchedulesFromFirebase() {
             _adminSchedules = [];
             Object.values(data).forEach(function(s) {
                 if(s && typeof s.hour !== 'undefined') {
-                    _adminSchedules.push({ hour: s.hour, minute: s.minute, label: s.label || _fmt12(s.hour, s.minute) + ' Draw', jackpotType: s.jackpotType || 'none' });
+                    _adminSchedules.push({ hour: s.hour, minute: s.minute, label: s.label || _fmt12(s.hour, s.minute) + ' Draw', jackpotType: (s.jackpotType === 'none' ? 'normal' : (s.jackpotType || 'normal')) });
                 }
             });
             renderScheduleList();
