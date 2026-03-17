@@ -9231,11 +9231,10 @@
         <div id="nextDrawBanner" class="next-draw-container" style="margin-bottom:12px;">
             <div class="nd-icon"><i data-lucide="users"></i></div>
             <div class="nd-info" style="flex:1;min-width:0;">
-                <div class="next-draw-label">⏳ WAITING FOR PLAYERS</div>
-                <div id="nextDrawTime" class="next-draw-time">0 / 6 Players</div>
+                <div class="next-draw-label">🕐 NEXT DRAW</div>
+                <div id="nextDrawTime" class="next-draw-time">Every 15 Minutes</div>
                 <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px;">
-                    Sched: <span id="lateNextSched" style="color:var(--gold);font-weight:800;">--:--</span>
-                    &nbsp;·&nbsp; Countdown sa <b style="color:rgba(255,255,255,0.55);">6 players</b>
+                    Next: <span id="lateNextSched" style="color:var(--gold);font-weight:800;">--:--</span>
                 </div>
             </div>
         </div>
@@ -11019,18 +11018,8 @@ function runMathBlitz(problems) {
     let _hdeInterval = null;  // setInterval handle for draw ticks
     let _hdeSchedTimer = null;// setInterval handle for schedule checker (5s)
     let _hdeInitialized = false; // guard: only init once per auth session
-    // ── Player-count Auto-Start thresholds ──
-    const _AUTO_START_MIN = 6;   // normal round starts at 6 players
-    const _AUTO_START_RJ  = 10;  // Regular Jackpot at 10 players
-    const _AUTO_START_MJ  = 20;  // Mega Jackpot at 20 players
-    let _autoStartFired   = false; // prevent re-triggering mid-game
-    let _lastAutoCount    = 0;   // last known online count
-    // ── Countdown before game start ──
-    const _COUNTDOWN_SECS  = 60;  // 60-second countdown after threshold hit
-    let _countdownInterval = null;
-    let _countdownValue    = 0;
-    let _hdeSyncInterval   = null;  // tracks the Firebase-synced countdown for non-originator clients
-    let _countdownFired    = false; // prevent duplicate countdowns
+    // Player-count auto-start removed — draws are now schedule-only (every 15 min)
+    let _lastAutoCount    = 0;   // kept for online count display only
     // ── Scheduled draw times — loaded live from Firebase (set via dashboard) ──
     let _SCHED_DRAWS = [
         { hour: 8, minute: 0,  label: '8:00 AM Draw',  jackpotType: 'normal' },
@@ -12701,7 +12690,6 @@ function runMathBlitz(problems) {
         if (el) el.innerText = count;
         window.onlineUsers = onlineUsers; // keep window in sync
         updateNextDrawDisplay();
-        _hdeCheckPlayerCount(uid, count);
         // ── Write count to Firebase so Cloud Function can trigger notifs ──
         _writeOnlineCount(count);
     }
@@ -12730,7 +12718,6 @@ function runMathBlitz(problems) {
                 _lastAutoCount = count;
                 const el = document.getElementById('onlineCount');
                 if (el) el.innerText = count;
-                _hdeCheckPlayerCount(uid, count);
             }
             updateAllOnlineIndicators();
             updateOnlineTicker(onlineUsers, uid);
@@ -13246,21 +13233,11 @@ function runMathBlitz(problems) {
         if(_hdeInitialized) return;
         _hdeInitialized = true;
 
-        // 1. Listen to gameState status — reset _autoStartFired when game ends
+        // 1. Listen to gameState status — reset on game end
         db.ref('gameState/status').on('value', snap => {
             const status = snap.val();
             if(status === 'waiting') {
-                _autoStartFired = false;
-                _countdownFired = false;
-                _countdownValue = 0;
                 _lastSchedFired = ''; // allow schedules to fire again after game ends
-                if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
-                if(_hdeSyncInterval)   { clearInterval(_hdeSyncInterval);   _hdeSyncInterval   = null; }
-                // FIX: clear stale countdown node so other clients don't re-trigger it
-                db.ref('gameState/countdown').once('value', cdSnap => {
-                    const cd = cdSnap.val();
-                    if(cd && cd.active) db.ref('gameState/countdown').set({ active: false });
-                });
                 // Clear any leftover jackpot from previous round
                 db.ref('gameState/jackpot').once('value', jSnap => {
                     if(jSnap.exists() && jSnap.val() && jSnap.val().active) {
@@ -13268,12 +13245,6 @@ function runMathBlitz(problems) {
                     }
                 });
             } else if(status === 'playing') {
-                // Game has started — immediately kill ALL countdown timers & update UI
-                if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
-                if(_hdeSyncInterval)   { clearInterval(_hdeSyncInterval);   _hdeSyncInterval   = null; }
-                _countdownFired = false;
-                _countdownValue = 0;
-                db.ref('gameState/countdown').set({ active: false });
                 updateNextDrawDisplay(); // show GAME ONGOING
             }
         });
@@ -13298,188 +13269,12 @@ function runMathBlitz(problems) {
             if(!lock && _hdeIsDrawing) _hdeStopDraw();
         });
 
-        // 4b. Listen to countdown from Firebase — sync all clients to same countdown
-        db.ref('gameState/countdown').on('value', snap => {
-            const cd = snap.val();
-            // If countdown is cancelled or game already playing — stop immediately
-            if(!cd || !cd.active) {
-                if(_hdeSyncInterval) { clearInterval(_hdeSyncInterval); _hdeSyncInterval = null; }
-                _countdownFired = false;
-                return;
-            }
-            // Only non-originator clients sync — originator already has their own interval
-            if(_countdownFired) return;
-            // Don't start sync if game is already playing
-            const gs = _cachedGameState || {};
-            if(gs.status === 'playing') return;
-            // FIX: don't show countdown if player count is below threshold
-            if(_lastAutoCount < _AUTO_START_MIN) {
-                db.ref('gameState/countdown').set({ active: false });
-                return;
-            }
-            const remaining = Math.round((cd.endsAt - Date.now()) / 1000);
-            if(remaining <= 0) return;
-            _countdownFired = true; // mark so we don't double-start
-            if(_hdeSyncInterval) { clearInterval(_hdeSyncInterval); _hdeSyncInterval = null; }
-            let s = remaining;
-            _hdeSyncInterval = setInterval(() => {
-                // Stop if game became playing mid-countdown
-                const gsCurrent = _cachedGameState || {};
-                if(gsCurrent.status === 'playing') {
-                    clearInterval(_hdeSyncInterval); _hdeSyncInterval = null;
-                    _countdownFired = false;
-                    return;
-                }
-                // FIX: stop countdown if players drop below minimum
-                if(_lastAutoCount < _AUTO_START_MIN) {
-                    clearInterval(_hdeSyncInterval); _hdeSyncInterval = null;
-                    _countdownFired = false;
-                    _hdeUpdateCountdownUI(null, _lastAutoCount);
-                    db.ref('gameState/countdown').set({ active: false });
-                    return;
-                }
-                s--;
-                _hdeUpdateCountdownUI(s, _lastAutoCount);
-                if(s <= 0) { clearInterval(_hdeSyncInterval); _hdeSyncInterval = null; _countdownFired = false; }
-            }, 1000);
-            _hdeUpdateCountdownUI(s, _lastAutoCount);
-        });
+        // 4b. [Player-count countdown removed — schedule-only draws]
 
-        // 5. Scheduled draw engine — fires at 3pm & 8pm Philippine time
+        // 5. Scheduled draw engine — fires every 15 minutes
         _hdeInitScheduledDraws(uid);
     }
 
-    function _hdeCheckPlayerCount(uid, count) {
-        if(_hdeCloudActive) return;
-        if(count < _AUTO_START_MIN) {
-            // Not enough players — cancel any running countdown
-            _hdeCancelCountdown();
-            // FIX: reset banner back to "waiting for players" immediately
-            updateNextDrawDisplay();
-            return;
-        }
-        // If gameState not loaded yet, retry shortly
-        if(!_cachedGameState) {
-            setTimeout(() => _hdeCheckPlayerCount(uid, count), 1500);
-            return;
-        }
-        const gameData = _cachedGameState;
-        if(gameData.status === 'playing') return;
-        // NOTE: drawnNumbers check removed — it blocked game start when old data lingered
-        if(_autoStartFired || _countdownFired) return;
-
-        // Threshold just crossed — start countdown
-        _hdeStartCountdown(uid, count);
-    }
-
-    function _hdeStartCountdown(uid, count) {
-        if(_countdownFired || _countdownInterval) return; // already running
-        _countdownFired = true;
-        _countdownValue = _COUNTDOWN_SECS;
-
-        // Write countdown state to Firebase so ALL clients see it
-        db.ref('gameState/countdown').set({ active: true, endsAt: Date.now() + (_COUNTDOWN_SECS * 1000), startedBy: uid });
-
-        _countdownInterval = setInterval(() => {
-            _countdownValue--;
-            _hdeUpdateCountdownUI(_countdownValue, count);
-            if(_countdownValue <= 0) {
-                _hdeTriggerGameStart(uid, count);
-            }
-        }, 1000);
-
-        _hdeUpdateCountdownUI(_COUNTDOWN_SECS, count);
-    }
-
-    function _hdeCancelCountdown() {
-        if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
-        _countdownFired = false;
-        _countdownValue = 0;
-        db.ref('gameState/countdown').set({ active: false });
-        _hdeUpdateCountdownUI(null, _lastAutoCount);
-    }
-
-    function _hdeUpdateCountdownUI(secs, count) {
-        const timeEl  = document.getElementById('nextDrawTime');
-        const labelEl = document.querySelector('.next-draw-label');
-        const banner  = document.getElementById('nextDrawBanner');
-        if(!timeEl || !banner) return;
-
-        // ── Guard: never overwrite the banner while a game is ongoing ──
-        const _gs = _cachedGameState || {};
-        if(_gs.status === 'playing') { updateNextDrawDisplay(); return; }
-
-        if(secs === null) {
-            // Back to normal waiting display
-            updateNextDrawDisplay();
-            return;
-        }
-
-        const isMegaJP    = count >= _AUTO_START_MJ;
-        const isRegularJP = count >= _AUTO_START_RJ;
-        let modeColor = isMegaJP ? '#f97316' : isRegularJP ? '#fbbf24' : '#10b981';
-        let modeLabel = isMegaJP ? '🔥 MEGA JACKPOT' : isRegularJP ? '⚡ REGULAR JACKPOT' : '🎯 NORMAL ROUND';
-
-        if(labelEl) { labelEl.innerText = modeLabel + ' — STARTING SOON!'; labelEl.style.color = modeColor; }
-
-        const mins = Math.floor(secs / 60);
-        const s    = String(secs % 60).padStart(2, '0');
-        const timeStr = mins > 0 ? mins + ':' + s : secs + 's';
-
-        timeEl.innerHTML =
-            '<span style="font-size:22px;font-weight:900;color:' + modeColor + ';">' + timeStr + '</span>' +
-            '<div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px;">' + count + ' players ready — game starting!</div>' +
-            '<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:4px;margin-top:6px;overflow:hidden;">' +
-            '<div style="height:100%;width:' + Math.round((secs / _COUNTDOWN_SECS) * 100) + '%;background:' + modeColor + ';border-radius:4px;transition:width 1s linear;"></div></div>';
-
-        // Play tick sound on last 10 seconds
-        if(secs <= 10 && secs > 0 && typeof playSound === 'function') {
-            try { playSound('countdown'); } catch(e) {}
-        }
-    }
-
-    function _hdeTriggerGameStart(uid, count) {
-        clearInterval(_countdownInterval);
-        _countdownInterval = null;
-        _autoStartFired = true;
-
-        const isMegaJP    = count >= _AUTO_START_MJ;
-        const isRegularJP = count >= _AUTO_START_RJ;
-        const isJP        = isMegaJP || isRegularJP;
-        const now         = Date.now();
-
-        db.ref('gameState/countdown').set({ active: false });
-        db.ref('gameState/latestWinner').once('value', wSnap => {
-            if(wSnap.exists()) { _autoStartFired = false; _countdownFired = false; return; }
-            if(_hdeCloudActive)  { _autoStartFired = false; _countdownFired = false; return; }
-
-            db.ref('gameState/drawLock').transaction(cur => {
-                if(cur !== null) return;
-                return { by: uid, at: now, expires: now + 600000 };
-            }, (err, committed) => {
-                if(!committed || err) { _autoStartFired = false; _countdownFired = false; return; }
-                if(_hdeCloudActive) {
-                    db.ref('gameState/drawLock').remove();
-                    _autoStartFired = false; _countdownFired = false;
-                    return;
-                }
-                db.ref('gameState/drawLock').onDisconnect().remove();
-                _hdeSetPattern(isJP);
-
-                if(isMegaJP) {
-                    db.ref('gameState/jackpot').set({ amount: 20, active: true, type: 'mega' });
-                } else if(isRegularJP) {
-                    db.ref('gameState/jackpot').set({ amount: 5, active: true, type: 'regular' });
-                } else {
-                    db.ref('gameState/jackpot').set({ amount: 1, active: false, type: 'normal' });
-                }
-
-                const modeLabel = isMegaJP ? '🔥 MEGA JACKPOT' : isRegularJP ? '⚡ REGULAR JACKPOT' : '🎯 NORMAL ROUND';
-                db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now(), autoStartMode: modeLabel });
-                _hdeStartDraw();
-            });
-        });
-    }
 
     function _hdeSetPattern(forceBlackout) {
         let pattern;
@@ -13665,9 +13460,6 @@ function runMathBlitz(problems) {
     }
 
     function _hdeTriggerScheduledDraw(uid, sched) {
-        // Cancel any player-count countdown running
-        if(_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
-        _countdownFired = false;
         db.ref('gameState/countdown').set({ active: false });
 
         // Write to Firebase so all clients know a scheduled draw is starting
@@ -13972,45 +13764,22 @@ function runMathBlitz(problems) {
             return;
         }
 
-        // ── Waiting for players ──
-        const cnt = _lastAutoCount || 0;
-        let mode, modeColor, borderColor, bg, progressPct;
-        if(cnt >= _AUTO_START_MJ) {
-            mode = '🔥 MEGA JACKPOT ROUND'; modeColor = '#f97316';
-            borderColor = 'rgba(249,115,22,0.6)';
-            bg = 'linear-gradient(135deg,rgba(30,15,5,0.95),rgba(60,25,5,0.95))';
-            progressPct = 100;
-        } else if(cnt >= _AUTO_START_RJ) {
-            mode = '⚡ REGULAR JACKPOT ROUND'; modeColor = '#fbbf24';
-            borderColor = 'rgba(251,191,36,0.5)';
-            bg = 'linear-gradient(135deg,rgba(30,20,0,0.95),rgba(50,35,0,0.95))';
-            progressPct = Math.min(100, ((cnt - _AUTO_START_RJ) / (_AUTO_START_MJ - _AUTO_START_RJ)) * 100);
-        } else if(cnt >= _AUTO_START_MIN) {
-            mode = '🎯 NORMAL ROUND'; modeColor = '#10b981';
-            borderColor = 'rgba(16,185,129,0.5)';
-            bg = 'linear-gradient(135deg,rgba(5,25,15,0.95),rgba(10,40,25,0.95))';
-            progressPct = Math.min(100, ((cnt - _AUTO_START_MIN) / (_AUTO_START_RJ - _AUTO_START_MIN)) * 100);
-        } else {
-            mode = '⏳ WAITING FOR PLAYERS'; modeColor = '#93c5fd';
-            borderColor = '#3b82f6';
-            bg = 'linear-gradient(135deg,rgba(15,23,42,0.9),rgba(30,41,59,0.9))';
-            progressPct = (cnt / _AUTO_START_MIN) * 100;
-        }
+        // ── Waiting for next scheduled draw ──
+        const modeColor  = '#60a5fa';
+        const borderColor = 'rgba(59,130,246,0.35)';
+        const bg = 'linear-gradient(135deg,rgba(15,23,42,0.9),rgba(30,41,59,0.9))';
 
         banner.style.display    = 'flex';
         banner.style.background = bg;
         banner.style.borderColor= borderColor;
         banner.style.boxShadow  = '0 10px 30px rgba(0,0,0,0.5)';
         if(ndIcon) { ndIcon.style.background = ''; ndIcon.style.color = modeColor; ndIcon.style.borderColor = ''; }
-        if(labelEl) { labelEl.innerText = mode; labelEl.style.color = modeColor; }
-        const nextThreshold = cnt < _AUTO_START_MIN ? _AUTO_START_MIN : cnt < _AUTO_START_RJ ? _AUTO_START_RJ : _AUTO_START_MJ;
-        timeEl.innerHTML = '<span style="font-size:13px;font-weight:900;color:' + modeColor + ';">' + cnt + ' / ' + nextThreshold + ' Players</span>'
-            + '<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:4px;margin-top:4px;overflow:hidden;">'
-            + '<div style="height:100%;width:' + progressPct.toFixed(0) + '%;background:' + modeColor + ';border-radius:4px;transition:width 0.5s;"></div></div>';
+        if(labelEl) { labelEl.innerText = '🕐 NEXT DRAW'; labelEl.style.color = modeColor; }
+        timeEl.innerHTML = '<span style="font-size:13px;font-weight:900;color:' + modeColor + ';">Every 15 Minutes</span>';
         timeEl.style.fontSize   = '12px';
         timeEl.style.color      = modeColor;
         timeEl.style.fontWeight = '900';
-        if(lateSched) _hdeUpdateScheduledDrawUI(); // show next scheduled draw time
+        if(lateSched) _hdeUpdateScheduledDrawUI(); // show next scheduled draw time + countdown
     }
     function checkNotificationTime(timeInput) { if(lastNotifiedDraw == timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 5) { if(Notification.permission === "granted") new Notification("⏰ RB Live", { body: "5 minuto na lang bago mag-draw! Buksan na ang app!", icon: "https://i.imgur.com/4nljOtR.png", tag: "draw-notif-5" }); lastNotifiedDraw = timeInput; } } }
 
