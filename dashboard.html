@@ -119,7 +119,7 @@
             opacity: 0.5;
         }
         .sidebar { border-radius: 0; padding: var(--spacing-lg) var(--spacing-md); overflow-y: auto; display: flex; flex-direction: column; gap: var(--spacing-md); height: 100vh; border-right: 1px solid var(--glass-border); grid-column: 1; }
-        .main-section { grid-column: 2; }
+        .main-section { grid-column: 2; display: flex; flex-direction: column; overflow: hidden; height: 100vh; }
         .activity-panel { 
             position: fixed;
             top: 0; right: 0;
@@ -266,7 +266,7 @@
             transform: translateY(-2px); 
         }
         .tab-content { display: none; overflow-y: auto; padding-right: var(--spacing-xs); padding-bottom: 40px; flex: 1; min-height: 0; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; flex: 1; min-height: 0; overflow-y: auto; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .winner-marquee { 
             background: linear-gradient(135deg, #fbbf24, #f59e0b, #fbbf24); 
@@ -1524,7 +1524,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 </div>
                 <p style="font-size:11px; color:rgba(255,255,255,0.6); margin:0; line-height:1.6;">
                     Push notifications ay pinamamahalaan na ng <b style="color:white;">Firebase Cloud Functions</b> — server-side, walang kailangan na bukas na browser.<br><br>
-                    <b style="color:white;">Automatic triggers:</b> 30 min, 10 min, 5 min bago mag-draw · Game LIVE · Winner announcement · Jackpot activation<br><br>
+                    <b style="color:white;">Automatic triggers:</b> 5 min bago mag-draw · 2 min warning · Game LIVE · Winner announcement · Jackpot activation<br><br>
                     <b style="color:#34d399;">💸 Cashout Approved:</b> Kapag na-approve ang cashout ng user, automatic na may push notification kahit hindi bukas ang app (<code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;">/userPush/{uid}</code>) at may share banner na lalabas sa player app.
                 </p>
             </div>
@@ -1555,12 +1555,17 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
 
         <!-- ═══ DRAW SCHEDULE MANAGER ═══ -->
         <div class="card" style="margin-bottom:24px; border-color:rgba(251,191,36,0.3);">
-            <h2 style="color:var(--gold);"><i data-lucide="calendar" width="18"></i> Draw Schedule Manager</h2>
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+                <h2 style="color:var(--gold); margin:0;"><i data-lucide="calendar" width="18"></i> Draw Schedule Manager</h2>
+                <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.35); border-radius:10px; padding:8px 14px; font-size:12px; font-weight:800; color:rgba(255,255,255,0.7);">
+                    🕐 Next Draw: <span id="dashNextDrawCountdown" style="color:#fbbf24;">Loading...</span>
+                </div>
+            </div>
 
             <!-- Quick Presets Row -->
             <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
-                <button onclick="applySchedPreset('every15')" style="padding:8px 14px; background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(245,158,11,0.1)); border:1px solid rgba(251,191,36,0.4); border-radius:10px; color:#fbbf24; font-size:11px; font-weight:800; cursor:pointer;">
-                    ⚡ Every 15 mins (Today)
+                <button onclick="applySchedPreset('every15')" style="padding:8px 14px; background:linear-gradient(135deg,rgba(251,191,36,0.35),rgba(245,158,11,0.25)); border:2px solid rgba(251,191,36,0.8); border-radius:10px; color:#fbbf24; font-size:11px; font-weight:800; cursor:pointer; box-shadow:0 0 10px rgba(251,191,36,0.3);">
+                    ⚡ Every 15 mins ✓ DEFAULT
                 </button>
                 <button onclick="applySchedPreset('every30')" style="padding:8px 14px; background:linear-gradient(135deg,rgba(6,182,212,0.15),rgba(6,182,212,0.08)); border:1px solid rgba(6,182,212,0.4); border-radius:10px; color:#67e8f9; font-size:11px; font-weight:800; cursor:pointer;">
                     🕐 Every 30 mins (Today)
@@ -1587,7 +1592,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                     <div style="flex:1; min-width:130px;">
                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px;">JACKPOT TYPE</label>
                         <select id="schedJackpotType" style="padding:8px 12px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:10px; color:white; font-size:12px; font-weight:700; width:100%;">
-                            <option value="none">🎯 Normal Round (&#8369;1)</option>
+                            <option value="normal">🎯 Normal Round (&#8369;1)</option>
                             <option value="regular">⚡ Regular Jackpot (&#8369;5)</option>
                             <option value="mega">🔥 Mega Jackpot (&#8369;20)</option>
                         </select>
@@ -1599,13 +1604,16 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             </div>
 
             <!-- Active Schedules List -->
-            <div style="font-size:11px; font-weight:800; color:rgba(255,255,255,0.5); letter-spacing:1px; margin-bottom:8px;">📋 ACTIVE SCHEDULES TODAY</div>
-            <div id="scheduleListContainer" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <div style="font-size:11px; font-weight:800; color:rgba(255,255,255,0.5); letter-spacing:1px;">📋 ACTIVE SCHEDULES TODAY</div>
+                <div id="schedTotalCount" style="font-size:11px; font-weight:800; color:#fbbf24;"></div>
+            </div>
+            <div id="scheduleListContainer" style="display:flex; flex-direction:column; gap:6px; max-height:400px; overflow-y:auto; margin-bottom:14px;">
                 <div style="text-align:center; padding:20px; color:rgba(255,255,255,0.25); font-size:12px;" id="schedEmptyMsg">No schedules set. Use a preset or add a custom time above.</div>
             </div>
 
             <!-- Save Button -->
-            <button onclick="saveSchedulesToFirebase()" style="width:100%; padding:12px; background:linear-gradient(135deg,#fbbf24,#d97706); border:none; border-radius:12px; color:#1c1105; font-size:13px; font-weight:900; cursor:pointer; letter-spacing:0.5px; box-shadow:0 4px 16px rgba(251,191,36,0.35);">
+            <button onclick="saveSchedulesToFirebase()" style="width:100%; padding:14px; background:linear-gradient(135deg,#fbbf24,#d97706); border:none; border-radius:12px; color:#1c1105; font-size:14px; font-weight:900; cursor:pointer; letter-spacing:0.5px; box-shadow:0 4px 16px rgba(251,191,36,0.35);">
                 💾 SAVE SCHEDULES TO FIREBASE
             </button>
             <div id="schedSaveStatus" style="text-align:center; font-size:11px; margin-top:8px; color:var(--success); display:none; font-weight:700;">&#10003; Schedules saved successfully!</div>
@@ -2323,6 +2331,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             }
             // Verified admin — hide the wall
             document.getElementById('adminLoginWall').style.display = 'none';
+            initScheduleManager();
         });
     });
     
@@ -4688,7 +4697,7 @@ function _paRender() {
         : _paAll.filter(function(a) { return (a.status || 'pending') === _paFilter; });
 
     if (items.length === 0) {
-        list.innerHTML = '<div style="text-align:center;padding:60px;opacity:0.35;"><div style="font-size:36px;margin-bottom:12px;">📭</div><div style="font-size:13px;font-weight:700;">No ' + _paFilter + ' applications</div></div>';
+        list.innerHTML = '<div style="text-align:center;padding:60px;opacity:0.35;"><div style="font-size:36px;margin-bottom:12px;">📭</div><div style="font-size:13px;font-weight:700;">''No ' + _paFilter + ' applications'</div></div>';
         return;
     }
 
@@ -5182,7 +5191,7 @@ function loadPushHistory() {
             html += '<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-bottom:6px;">' + _paEsc(b.body || '') + '</div>';
             html += '<div style="font-size:10px;color:rgba(255,255,255,0.3);">📅 ' + date + ' · ' + (b.type || 'announcement') + '</div>';
             html += '</div>';
-            html += '<button onclick="deleteBroadcast(\'' + b._key + '\')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#ef4444;font-size:10px;font-weight:800;padding:5px 10px;cursor:pointer;flex-shrink:0;">DELETE</button>';
+            html += '<button onclick="deleteBroadcast('' + b._key + '')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#ef4444;font-size:10px;font-weight:800;padding:5px 10px;cursor:pointer;flex-shrink:0;">DELETE</button>';
             html += '</div>';
         });
         list.innerHTML = html;
@@ -5582,26 +5591,6 @@ function deleteSpecialEvent(key) {
 // DRAW SCHEDULE MANAGER
 // ═══════════════════════════════════════════════════
 var _adminSchedules = []; // array of { hour, minute, label, jackpotType }
-var _schedUnsaved  = false;
-
-function _updateSchedSaveBtn(unsaved) {
-    var btn = document.querySelector('button[onclick="saveSchedulesToFirebase()"]');
-    if(!btn) return;
-    if(unsaved) {
-        btn.style.background = 'linear-gradient(135deg,#ef4444,#b91c1c)';
-        btn.style.boxShadow  = '0 4px 16px rgba(239,68,68,0.45)';
-        btn.textContent      = '⚠️ UNSAVED CHANGES — SAVE NOW';
-    } else {
-        btn.style.background = 'linear-gradient(135deg,#fbbf24,#d97706)';
-        btn.style.boxShadow  = '0 4px 16px rgba(251,191,36,0.35)';
-        btn.textContent      = '💾 SAVE SCHEDULES TO FIREBASE';
-    }
-}
-
-function _markSchedDirty() {
-    _schedUnsaved = true;
-    _updateSchedSaveBtn(true);
-}
 
 function _phNow() {
     return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
@@ -5629,7 +5618,6 @@ function renderScheduleList() {
     var container = document.getElementById('scheduleListContainer');
     var emptyMsg  = document.getElementById('schedEmptyMsg');
     if(!container) return;
-    // Remove existing items (keep emptyMsg)
     Array.from(container.children).forEach(function(c) {
         if(c.id !== 'schedEmptyMsg') c.remove();
     });
@@ -5640,22 +5628,40 @@ function renderScheduleList() {
     if(emptyMsg) emptyMsg.style.display = 'none';
     var now = _phNow();
     var nowMins = now.getHours() * 60 + now.getMinutes();
-    var sorted = _adminSchedules.slice().sort(function(a,b){ return (a.hour*60+a.minute)-(b.hour*60+b.minute); });
-    sorted.forEach(function(s) {
+    var indexed = _adminSchedules.map(function(s, i){ return { s: s, i: i }; });
+    indexed.sort(function(a,b){ return (a.s.hour*60+a.s.minute)-(b.s.hour*60+b.s.minute); });
+    indexed.forEach(function(item) {
+        var s = item.s, origIdx = item.i;
         var mins = s.hour * 60 + s.minute;
         var isPast = mins < nowMins;
         var color = _jackpotColor(s.jackpotType);
-        var realIdx = _adminSchedules.findIndex(function(x){ return x.hour === s.hour && x.minute === s.minute; });
         var div = document.createElement('div');
-        div.style.cssText = 'display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,' + (isPast ? '0.06' : '0.1') + '); border-radius:10px; padding:9px 12px; opacity:' + (isPast ? '0.45' : '1') + ';';
-        div.innerHTML =
-            '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;box-shadow:0 0 6px ' + color + ';' + (isPast ? 'opacity:0.4;' : '') + '"></div>' +
-            '<span style="font-size:14px;font-weight:900;color:white;min-width:80px;">' + _fmt12(s.hour, s.minute) + '</span>' +
-            '<span style="font-size:11px;font-weight:700;color:' + color + ';flex:1;">' + _jackpotLabel(s.jackpotType) + '</span>' +
-            (isPast ? '<span style="font-size:9px;color:rgba(255,255,255,0.3);font-weight:700;">PAST</span>' : '') +
-            '<button onclick="removeSchedule(' + realIdx + ')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#f87171;font-size:10px;font-weight:800;padding:3px 8px;cursor:pointer;">✕</button>';
+        div.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,' + (isPast ? '0.06' : '0.1') + ');border-radius:10px;padding:9px 12px;opacity:' + (isPast ? '0.45' : '1') + ';';
+        var dot = '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex-shrink:0;box-shadow:0 0 6px ' + color + ';' + (isPast ? 'opacity:0.4;' : '') + '"></div>';
+        var timeSpan = '<span style="font-size:14px;font-weight:900;color:white;min-width:80px;">' + _fmt12(s.hour, s.minute) + '</span>';
+        var typeSpan = '<span style="font-size:11px;font-weight:700;color:' + color + ';flex:1;">' + _jackpotLabel(s.jackpotType) + '</span>';
+        var pastBadge = isPast ? '<span style="font-size:9px;color:rgba(255,255,255,0.3);font-weight:700;">PAST</span>' : '';
+        div.innerHTML = dot + timeSpan + typeSpan + pastBadge;
+        var btn = document.createElement('button');
+        btn.textContent = 'X';
+        btn.style.cssText = 'background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#f87171;font-size:10px;font-weight:800;padding:3px 8px;cursor:pointer;';
+        (function(idx){ btn.addEventListener('click', function(){ removeSchedule(idx); }); })(origIdx);
+        div.appendChild(btn);
         container.appendChild(div);
     });
+    var countEl = document.getElementById('schedTotalCount');
+    if(countEl) countEl.textContent = _adminSchedules.length + ' draws/day';
+}
+
+function _applyPresetNoSave(preset) {
+    _adminSchedules = [];
+    if(preset === 'every15') {
+        for(var h = 8; h < 24; h++) {
+            for(var m = 0; m < 60; m += 15) {
+                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: 'normal' });
+            }
+        }
+    }
 }
 
 function applySchedPreset(preset) {
@@ -5667,18 +5673,18 @@ function applySchedPreset(preset) {
         // Every 15 mins from 8AM to 11:45PM
         for(var h = 8; h < 24; h++) {
             for(var m = 0; m < 60; m += 15) {
-                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: 'none' });
+                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: 'normal' });
             }
         }
     } else if(preset === 'every30') {
         for(var h = 8; h < 24; h++) {
             for(var m = 0; m < 60; m += 30) {
-                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: (h === 15 || h === 20) ? (h === 20 ? 'mega' : 'regular') : 'none' });
+                _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: (h === 15 || h === 20) ? (h === 20 ? 'mega' : 'regular') : 'normal' });
             }
         }
     } else if(preset === 'every60') {
         for(var h = 8; h < 24; h++) {
-            _adminSchedules.push({ hour: h, minute: 0, label: _fmt12(h, 0) + ' Draw', jackpotType: (h === 15) ? 'regular' : (h === 20 ? 'mega' : 'none') });
+            _adminSchedules.push({ hour: h, minute: 0, label: _fmt12(h, 0) + ' Draw', jackpotType: (h === 15) ? 'regular' : (h === 20 ? 'mega' : 'normal') });
         }
     } else if(preset === 'classic') {
         _adminSchedules = [
@@ -5686,7 +5692,6 @@ function applySchedPreset(preset) {
             { hour: 20, minute: 0, label: '8:00 PM Draw', jackpotType: 'mega' }
         ];
     }
-    _markSchedDirty();
     renderScheduleList();
 }
 
@@ -5701,20 +5706,17 @@ function addCustomSchedule() {
     if(exists) { alert('This time is already in the schedule!'); return; }
     _adminSchedules.push({ hour: h, minute: m, label: _fmt12(h, m) + ' Draw', jackpotType: typeInput.value });
     timeInput.value = '';
-    _markSchedDirty();
     renderScheduleList();
 }
 
 function removeSchedule(idx) {
     _adminSchedules.splice(idx, 1);
-    _markSchedDirty();
     renderScheduleList();
 }
 
 function clearAllSchedules() {
     if(!confirm('Clear all schedules?')) return;
     _adminSchedules = [];
-    _markSchedDirty();
     renderScheduleList();
 }
 
@@ -5737,8 +5739,6 @@ function saveSchedulesToFirebase() {
             if(status) { status.textContent = '❌ Error: ' + err.message; status.style.color = '#f87171'; status.style.display = 'block'; }
         } else {
             if(status) { status.textContent = '✅ Schedules saved to Firebase!'; status.style.color = 'var(--success)'; status.style.display = 'block'; }
-            _schedUnsaved = false;
-            _updateSchedSaveBtn(false);
             setTimeout(function(){ if(status) status.style.display = 'none'; }, 3000);
         }
     });
@@ -5746,25 +5746,65 @@ function saveSchedulesToFirebase() {
 
 // Load existing schedules from Firebase on page load
 function loadSchedulesFromFirebase() {
-    var fdb; try { fdb = firebase.database(); } catch(e) { setTimeout(loadSchedulesFromFirebase, 1000); return; }
+    var fdb;
+    try { fdb = firebase.database(); } catch(e) { setTimeout(loadSchedulesFromFirebase, 1000); return; }
     fdb.ref('gameState/drawSchedules').once('value', function(snap) {
         var data = snap.val();
         _adminSchedules = [];
-        if(data) {
+        if(data && Object.keys(data).length > 0) {
             Object.values(data).forEach(function(s) {
-                _adminSchedules.push({ hour: s.hour, minute: s.minute, label: s.label, jackpotType: s.jackpotType });
+                if(s && typeof s.hour !== 'undefined') {
+                    _adminSchedules.push({ hour: s.hour, minute: s.minute, label: s.label || _fmt12(s.hour, s.minute) + ' Draw', jackpotType: (s.jackpotType === 'none' ? 'normal' : (s.jackpotType || 'normal')) });
+                }
             });
+            renderScheduleList();
+        } else {
+            // No Firebase data — apply every15 default (manual save required)
+            _applyPresetNoSave('every15');
+            renderScheduleList();
         }
-        renderScheduleList();
     });
 }
 
-// Auto-load when Firebase is ready
-// Auto-load after Firebase is ready
-if(document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() { setTimeout(loadSchedulesFromFirebase, 1500); });
-} else {
-    setTimeout(loadSchedulesFromFirebase, 1500);
+// ── Live Next-Draw countdown ticker in dashboard ──
+function _dashStartCountdownTicker() {
+    function _tick() {
+        var el = document.getElementById('dashNextDrawCountdown');
+        if(!el) return;
+        var now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        var h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+        var nowSecs = h * 3600 + m * 60 + s;
+        var minDiff = Infinity, nextSched = null;
+        _adminSchedules.forEach(function(sched) {
+            var schedSecs = sched.hour * 3600 + sched.minute * 60;
+            var diff = schedSecs - nowSecs;
+            if(diff <= 0) diff += 86400;
+            if(diff < minDiff) { minDiff = diff; nextSched = sched; }
+        });
+        if(!nextSched) { el.textContent = '--:--'; return; }
+        var cdMins = Math.floor(minDiff / 60);
+        var cdSecs = minDiff % 60;
+        var cdStr;
+        if(cdMins >= 60) {
+            cdStr = Math.floor(cdMins/60) + 'h ' + (cdMins%60) + 'm';
+        } else {
+            cdStr = cdMins + ':' + String(cdSecs).padStart(2,'0');
+        }
+        var label = _fmt12(nextSched.hour, nextSched.minute);
+        el.innerHTML = '<span style="color:#fbbf24;font-weight:900;">' + label + '</span>'
+            + ' <span style="color:rgba(255,255,255,0.5);font-size:11px;">in ' + cdStr + '</span>';
+    }
+    _tick();
+    setInterval(_tick, 1000);
+}
+
+// Auto-load when Firebase is ready — called after admin auth verified
+window._schedLoaded = false;
+function initScheduleManager() {
+    if(window._schedLoaded) return;
+    window._schedLoaded = true;
+    loadSchedulesFromFirebase();
+    setTimeout(_dashStartCountdownTicker, 500);
 }
 
 window.applySchedPreset   = applySchedPreset;
