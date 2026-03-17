@@ -13580,7 +13580,15 @@ function runMathBlitz(problems) {
 
     // Live per-second countdown ticker for next draw banner
     function _hdeStartCountdownTicker() {
-        setInterval(_hdeUpdateScheduledDrawUI, 1000);
+        setInterval(function() {
+            const gs = _cachedGameState || {};
+            if(gs.status === 'playing') {
+                // Game is ongoing — show GAME ONGOING, do not update countdown
+                updateNextDrawDisplay();
+            } else {
+                _hdeUpdateScheduledDrawUI();
+            }
+        }, 1000);
     }
     // ===== END SCHEDULED DRAW ENGINE =====
 
@@ -13760,7 +13768,7 @@ function runMathBlitz(problems) {
             timeEl.style.color    = '#ffffff';
             timeEl.style.fontWeight = '900';
             if(ndIcon) { ndIcon.style.background = 'rgba(255,255,255,0.1)'; ndIcon.style.color = 'white'; ndIcon.style.borderColor = 'rgba(255,255,255,0.2)'; }
-            if(lateSched) lateSched.innerText = '--:--';
+            if(lateSched) lateSched.innerHTML = ''; // clear countdown while game is live
             return;
         }
 
