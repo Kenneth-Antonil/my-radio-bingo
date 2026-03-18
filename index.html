@@ -8367,6 +8367,10 @@
             white-space: nowrap; padding: 0 12px;
             font-size: 12px; font-weight: 800; color: #fecaca;
         }
+        @keyframes puro-marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
 
 /* ════════════════════════════════════════════════════════════
    ✦ RB LIVE — PREMIUM DESIGN SYSTEM v2.0
@@ -14813,17 +14817,28 @@ function runMathBlitz(problems) {
             if (!data || Object.keys(data).length === 0) {
                 bar.style.display = 'none';
                 inner.innerHTML = '';
+                inner.style.animation = '';
                 return;
             }
-            const names = Object.values(data).map(p => p.name ? p.name.split(' ')[0] : 'Player');
+            const entries = Object.values(data);
+            const names = entries.map(p => p.name ? p.name.split(' ')[0] : 'Player');
+            const count = names.length;
             let text;
-            if (names.length === 1) {
+            if (count === 1) {
                 text = 'May puro na si <strong>' + names[0] + '</strong>! Isa nalang kulang!';
             } else {
-                text = 'May puro na sina <strong>' + names.join(', ') + '</strong>! Isa nalang kulang!';
+                text = '<strong>' + count + '</strong> players may puro na! Sina <strong>' + names.join('</strong>, <strong>') + '</strong> — isa nalang kulang!';
             }
-            inner.innerHTML = text;
             bar.style.display = 'flex';
+            // Add marquee scroll if text is long (many players)
+            if (count >= 2) {
+                var sep = ' &nbsp;&nbsp;&bull;&nbsp;&nbsp; ';
+                inner.innerHTML = text + sep + text + sep;
+                inner.style.animation = 'puro-marquee ' + Math.max(8, count * 3) + 's linear infinite';
+            } else {
+                inner.innerHTML = text;
+                inner.style.animation = '';
+            }
         });
         // Clean up puro data when game resets (no drawn numbers)
         db.ref('gameState/drawnNumbers').on('value', snap => {
