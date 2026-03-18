@@ -308,6 +308,7 @@ exports.scheduledDrawChecker = onSchedule(
                 db.ref('gameState/lastCalled').remove(),
                 db.ref('gameState/gameStartTime').remove(),
                 db.ref('gameState/drawLock').remove(),
+                db.ref('gameState/puro').remove(), // clear puro ticker
             ]);
 
             const usersSnap = await db.ref('users').once('value');

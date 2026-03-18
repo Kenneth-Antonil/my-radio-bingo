@@ -8312,6 +8312,53 @@
         }
 
 
+        /* ── PURO TICKER ── */
+        .puro-ticker-bar {
+            background: rgba(127, 29, 29, 0.95);
+            border-bottom: 1px solid rgba(239,68,68,0.4);
+            border-top: 1px solid rgba(239,68,68,0.2);
+            display: flex; align-items: center;
+            height: 32px; overflow: hidden;
+            position: relative;
+            box-shadow: 0 2px 12px rgba(239,68,68,0.25);
+            animation: puro-bar-pulse 2s ease infinite;
+        }
+        @keyframes puro-bar-pulse {
+            0%,100% { background: rgba(127,29,29,0.95); }
+            50% { background: rgba(153,27,27,0.98); }
+        }
+        .puro-ticker-label {
+            flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+            padding: 0 10px; background: rgba(239,68,68,0.2);
+            border-right: 1px solid rgba(239,68,68,0.3);
+            height: 100%; z-index: 2;
+        }
+        .puro-ticker-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #ef4444; flex-shrink: 0;
+            animation: puro-dot-pulse 1s ease infinite;
+            box-shadow: 0 0 6px rgba(239,68,68,0.6);
+        }
+        @keyframes puro-dot-pulse {
+            0%,100% { opacity: 1; box-shadow: 0 0 6px rgba(239,68,68,0.6); }
+            50% { opacity: 0.5; box-shadow: 0 0 2px rgba(239,68,68,0.3); }
+        }
+        .puro-ticker-label-text {
+            font-size: 10px; font-weight: 900; color: #fca5a5;
+            letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap;
+        }
+        .puro-ticker-track {
+            flex: 1; overflow: hidden; height: 100%;
+            display: flex; align-items: center;
+            -webkit-mask-image: linear-gradient(90deg,transparent 0%,black 5%,black 95%,transparent 100%);
+            mask-image: linear-gradient(90deg,transparent 0%,black 5%,black 95%,transparent 100%);
+        }
+        .puro-ticker-inner {
+            display: flex; align-items: center;
+            white-space: nowrap; padding: 0 12px;
+            font-size: 12px; font-weight: 800; color: #fecaca;
+        }
+
 /* ════════════════════════════════════════════════════════════
    ✦ RB LIVE — PREMIUM DESIGN SYSTEM v2.0
    ✦ Modern, clean, NOT cheap looking
@@ -9986,6 +10033,17 @@ body::before {
                 <div class="online-ticker-inner" id="onlineTickerInner">
                     <span class="online-ticker-empty">Loading...</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- ── PURO TICKER (hidden, shows when someone has puro) ── -->
+        <div class="puro-ticker-bar" id="puroTickerBar" style="display:none;">
+            <div class="puro-ticker-label">
+                <span class="puro-ticker-dot"></span>
+                <span class="puro-ticker-label-text">PURO!</span>
+            </div>
+            <div class="puro-ticker-track">
+                <div class="puro-ticker-inner" id="puroTickerInner"></div>
             </div>
         </div>
 
@@ -14264,6 +14322,7 @@ function runMathBlitz(problems) {
         _hdeStartCountdownTicker();  // start per-second live countdown
         setInterval(_hdeUpdateScheduledDrawUI, 30000); // backup refresh every 30s (draws are every 15 min)
         initSponsorListener(); // listen for prize sponsors
+        initPuroTicker(); // listen for puro status ticker
     }
 
     function _hdeCheckSchedule(uid) {
@@ -14715,6 +14774,58 @@ function runMathBlitz(problems) {
     // ===== END PATTERN BAR RENDERER =====
 
     // ═══════════════════════════════════════════════════════════════════
+    // PURO TICKER — show who has puro (one number away) in a red ticker
+    // ═══════════════════════════════════════════════════════════════════
+    function _writePuroToFirebase(hasPuro) {
+        const uid = auth.currentUser ? auth.currentUser.uid : null;
+        if (!uid) return;
+        if (hasPuro && !_myPuroWritten) {
+            _myPuroWritten = true;
+            db.ref('gameState/puro/' + uid).set({
+                name: userData.name || 'Player',
+                photo: userData.photo || ''
+            });
+        } else if (!hasPuro && _myPuroWritten) {
+            _myPuroWritten = false;
+            db.ref('gameState/puro/' + uid).remove();
+        }
+    }
+    function initPuroTicker() {
+        db.ref('gameState/puro').on('value', snap => {
+            const bar = document.getElementById('puroTickerBar');
+            const inner = document.getElementById('puroTickerInner');
+            if (!bar || !inner) return;
+            const data = snap.val();
+            if (!data || Object.keys(data).length === 0) {
+                bar.style.display = 'none';
+                inner.innerHTML = '';
+                return;
+            }
+            const names = Object.values(data).map(p => p.name ? p.name.split(' ')[0] : 'Player');
+            let text;
+            if (names.length === 1) {
+                text = 'May puro na si <strong>' + names[0] + '</strong>! Isa nalang kulang!';
+            } else {
+                text = 'May puro na sina <strong>' + names.join(', ') + '</strong>! Isa nalang kulang!';
+            }
+            inner.innerHTML = text;
+            bar.style.display = 'flex';
+        });
+        // Clean up puro data when game resets (no drawn numbers)
+        db.ref('gameState/drawnNumbers').on('value', snap => {
+            if (!snap.exists() || Object.keys(snap.val() || {}).length === 0) {
+                _myPuroWritten = false;
+                // Server will clear gameState/puro on game reset
+            }
+        });
+    }
+    function clearMyPuro() {
+        _myPuroWritten = false;
+        const uid = auth.currentUser ? auth.currentUser.uid : null;
+        if (uid) db.ref('gameState/puro/' + uid).remove();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
     // SPONSOR SYSTEM — users can boost the prize pool for the next draw
     // ═══════════════════════════════════════════════════════════════════
     function initSponsorListener() {
@@ -15011,10 +15122,14 @@ function runMathBlitz(problems) {
             });
         });
     }
+    // ── Track whether this client has puro written to Firebase ──
+    let _myPuroWritten = false;
+
     function checkPuroStatus() {
         if(userData.hasWonCurrent || gameDrawn.length === 0) return;
         document.getElementById('bingoCardContainer').classList.remove('card-puro');
         document.querySelectorAll('#bingoGrid .cell').forEach(c => c.classList.remove('cell-waiting'));
+        let hasPuro = false;
         const winningWays = getWinningWays(currentPattern);
         if (currentPattern === "Double Bingo") {
             const allLines = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24],[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],[0,6,12,18,24],[4,8,12,16,20]];
@@ -15025,18 +15140,32 @@ function runMathBlitz(problems) {
                 const missingIdx = almost[0].find(idx => !marks.includes(idx));
                 const cells = document.querySelectorAll('#bingoGrid .cell');
                 if(cells[missingIdx]) cells[missingIdx].classList.add('cell-waiting');
+                hasPuro = true;
             }
-            return;
-        }
-        for (let i = 0; i < winningWays.length; i++) {
-            let w = winningWays[i]; let missing = w.filter(idx => !marks.includes(idx));
-            if (missing.length === 1) {
-                document.getElementById('bingoCardContainer').classList.add('card-puro');
-                const cells = document.querySelectorAll('#bingoGrid .cell');
-                if(cells[missing[0]]) cells[missing[0]].classList.add('cell-waiting');
-                break;
+        } else {
+            for (let i = 0; i < winningWays.length; i++) {
+                let w = winningWays[i]; let missing = w.filter(idx => !marks.includes(idx));
+                if (missing.length === 1) {
+                    document.getElementById('bingoCardContainer').classList.add('card-puro');
+                    const cells = document.querySelectorAll('#bingoGrid .cell');
+                    if(cells[missing[0]]) cells[missing[0]].classList.add('cell-waiting');
+                    hasPuro = true;
+                    break;
+                }
             }
         }
+        // Also check extra cards for puro
+        if (!hasPuro) {
+            extraCards.forEach((ec) => {
+                if (ec.won) return;
+                const ways = getWinningWays(currentPattern);
+                for (let i = 0; i < ways.length; i++) {
+                    if (ways[i].filter(idx => !ec.marks.includes(idx)).length === 1) { hasPuro = true; return; }
+                }
+            });
+        }
+        // Write puro status to Firebase for the ticker
+        _writePuroToFirebase(hasPuro);
     }
     // ── Puro detection for EXTRA cards ──
     function checkPuroStatusExtra() {
@@ -15123,6 +15252,7 @@ function runMathBlitz(problems) {
         if(typeof trackRecruitActivity === 'function') trackRecruitActivity(uid, 'game');
         db.ref('users/' + uid).update({ hasWonCurrent: true });
         userData.hasWonCurrent = true;
+        clearMyPuro(); // remove from puro ticker
         if (isJackpotActive) {
             const jpModal = document.getElementById('grandJackpotModal');
             // ✅ Show exact same amount as animation & banner (toPeso format)
