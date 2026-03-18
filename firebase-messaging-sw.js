@@ -101,6 +101,18 @@ function getProfile(tag, title, body, url) {
         };
     }
 
+    if (tag === 'rbl-2min') {
+        return {
+            ...base,
+            requireInteraction: true,
+            vibrate: [400, 100, 400, 100, 400],
+            actions: [
+                { action: 'open',    title: 'Play Now!' },
+                { action: 'dismiss', title: 'Dismiss'   }
+            ]
+        };
+    }
+
     if (tag === 'rbl-no-winner') {
         return {
             ...base,
