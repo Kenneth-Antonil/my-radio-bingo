@@ -207,6 +207,7 @@ function formatTime(ts) {
 // 1. SCHEDULED DRAW CHECKER — runs every 1 minute
 //    • Sends push 10 mins before a draw
 //    • Sends push 5 mins before a draw
+//    • Sends push 2 mins before a draw
 //    • Starts the game when draw time is reached
 // ─────────────────────────────────────────────────────────────────────────────
 exports.scheduledDrawChecker = onSchedule(
@@ -263,12 +264,31 @@ exports.scheduledDrawChecker = onSchedule(
                 }
             }
 
+            // ── 2-MINUTE WARNING ───────────────────────────────────────────
+            else if (minsUntil > 1.5 && minsUntil <= 2.5) {
+                const flagRef  = db.ref(`gameState/notifSent/${key}_2min`);
+                const flagSnap = await flagRef.once('value');
+                if (!flagSnap.exists()) {
+                    await flagRef.set(true);
+                    const drawLabel = isJP
+                        ? `Jackpot · ₱${(jpAmt || 0).toLocaleString()}`
+                        : 'Regular Draw';
+                    await sendPushToAll(
+                        '2 Minutes to Draw!',
+                        `${drawLabel} magsisimula na sa ${formatTime(schedTime)}. Buksan na ang iyong bingo card!`,
+                        { tag: 'rbl-2min', url: '/?tab=bingo', requireInteraction: 'true' }
+                    );
+                    console.log(`[schedChecker] 2-min push sent for key=${key}`);
+                }
+            }
+
             // ── DRAW TIME — start the game ─────────────────────────────────
             if (now < schedTime || now >= schedTime + 65000) continue;
 
             await db.ref('gameState/schedules/' + key).remove();
             await db.ref(`gameState/notifSent/${key}_10min`).remove();
             await db.ref(`gameState/notifSent/${key}_5min`).remove();
+            await db.ref(`gameState/notifSent/${key}_2min`).remove();
 
             const winnerSnap = await db.ref('gameState/latestWinner').once('value');
             if (winnerSnap.exists()) {
