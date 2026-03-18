@@ -3338,6 +3338,14 @@
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 6000; display: none; align-items: center; justify-content: center; padding: var(--spacing-md); backdrop-filter: blur(15px); }
         .modal-content { background: rgba(30, 41, 59, 0.95); border-radius: 30px; width: 100%; max-width: 450px; padding: 25px; border: 1px solid rgba(255,255,255,0.2); max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.8); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); overscroll-behavior: contain; }
         
+        /* === SPONSOR QUICK BUTTONS === */
+        .sponsor-quick-btn { padding:6px 14px; border-radius:6px; background:rgba(251,191,36,0.1); color:#fbbf24; border:1px solid rgba(251,191,36,0.25); font-size:12px; font-weight:800; cursor:pointer; transition:0.15s; font-family:inherit; }
+        .sponsor-quick-btn:hover { background:rgba(251,191,36,0.2); border-color:rgba(251,191,36,0.4); }
+        .sponsor-item { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .sponsor-item img { width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,0.15); }
+        .sponsor-item .s-name { font-size:12px; font-weight:700; color:rgba(255,255,255,0.8); flex:1; }
+        .sponsor-item .s-amt { font-size:12px; font-weight:900; color:#fbbf24; }
+
         /* === FULL SCREEN STORE MODAL === */
         #storeModal {
             padding: 0;
@@ -10068,9 +10076,55 @@ body::before {
                 <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px;">
                     Next: <span id="lateNextSched" style="color:var(--gold);font-weight:800;">--:--</span>
                 </div>
+                <!-- Sponsor row -->
+                <div id="sponsorRow" style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+                    <div id="sponsorInfo" style="font-size:10px;color:#fbbf24;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+                    <button onclick="openSponsorModal()" style="background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);border-radius:6px;padding:3px 10px;font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap;font-family:inherit;">🎁 SPONSOR</button>
+                </div>
             </div>
         </div>
-        
+
+        <!-- ═══ SPONSOR MODAL ═══ -->
+        <div id="sponsorModal" class="modal" onclick="this.style.display='none'">
+            <div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;">
+                <h3 style="margin:0 0 4px;color:white;font-size:18px;text-align:center;">🎁 Sponsor Game Prize</h3>
+                <p style="color:rgba(255,255,255,0.5);font-size:12px;text-align:center;margin:0 0 16px;">I-boost ang prize pool para sa susunod na draw! Ang iyong coins ay mababawas sa balance mo.</p>
+
+                <div style="text-align:center;margin-bottom:12px;">
+                    <span style="font-size:11px;color:rgba(255,255,255,0.4);">YOUR BALANCE</span><br>
+                    <span id="sponsorBalance" style="font-size:20px;font-weight:900;color:var(--accent-glow);">₱0.00</span>
+                </div>
+
+                <div style="display:flex;gap:6px;margin-bottom:10px;justify-content:center;flex-wrap:wrap;" id="sponsorQuickBtns">
+                    <button class="sponsor-quick-btn" onclick="setSponsorAmount(1)">₱1</button>
+                    <button class="sponsor-quick-btn" onclick="setSponsorAmount(2)">₱2</button>
+                    <button class="sponsor-quick-btn" onclick="setSponsorAmount(5)">₱5</button>
+                    <button class="sponsor-quick-btn" onclick="setSponsorAmount(10)">₱10</button>
+                    <button class="sponsor-quick-btn" onclick="setSponsorAmount(20)">₱20</button>
+                </div>
+
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
+                    <div style="flex:1;position:relative;">
+                        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.4);font-weight:800;font-size:14px;">₱</span>
+                        <input id="sponsorAmountInput" type="number" min="1" step="1" placeholder="0" style="width:100%;padding:10px 10px 10px 28px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;font-size:16px;font-weight:800;font-family:inherit;outline:none;">
+                    </div>
+                    <button id="sponsorSubmitBtn" onclick="submitSponsor()" style="padding:10px 18px;border-radius:8px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#1c1105;font-size:13px;font-weight:900;border:none;cursor:pointer;white-space:nowrap;font-family:inherit;">SPONSOR</button>
+                </div>
+
+                <!-- Current sponsors -->
+                <div id="sponsorListSection" style="display:none;">
+                    <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Current Sponsors</div>
+                    <div id="sponsorList" style="max-height:120px;overflow-y:auto;"></div>
+                    <div style="text-align:center;margin-top:8px;">
+                        <span style="font-size:12px;color:rgba(255,255,255,0.4);">Total Sponsored: </span>
+                        <span id="sponsorTotalDisplay" style="font-size:14px;font-weight:900;color:#fbbf24;">₱0</span>
+                    </div>
+                </div>
+
+                <button onclick="document.getElementById('sponsorModal').style.display='none'" style="width:100%;margin-top:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.08);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">CLOSE</button>
+            </div>
+        </div>
+
         <div id="winnerBanner" style="margin-bottom:12px;">
             <span><i data-lucide="party-popper" style="width:24px; height:24px;"></i> BINGO WINNER!</span>
             <span class="winner-line" id="winnerPatternLine">Pattern: Normal Bingo</span>
@@ -11942,6 +11996,8 @@ function runMathBlitz(problems) {
     let extraCards = []; // array of { numbers: [], marks: [] }
     const MAX_EXTRA_CARDS = 4; // 1 main + 4 extra = 5 total
     let currentJackpotAmount = 12500; let isJackpotActive = false;
+    let currentSponsoredAmount = 0; // coins sponsored by users for next draw
+    let currentSponsors = []; // array of { name, amount, photo }
     const PESO_RATE = 2500; // 2500 coins = ₱1
     function toPeso(coins){ return "₱" + (coins/PESO_RATE).toFixed(2); }
     function pesoCoins(pesos){ return pesos * PESO_RATE; }
@@ -14207,6 +14263,7 @@ function runMathBlitz(problems) {
         _hdeUpdateScheduledDrawUI(); // update banner countdown
         _hdeStartCountdownTicker();  // start per-second live countdown
         setInterval(_hdeUpdateScheduledDrawUI, 30000); // backup refresh every 30s (draws are every 15 min)
+        initSponsorListener(); // listen for prize sponsors
     }
 
     function _hdeCheckSchedule(uid) {
@@ -14657,6 +14714,101 @@ function runMathBlitz(problems) {
     }
     // ===== END PATTERN BAR RENDERER =====
 
+    // ═══════════════════════════════════════════════════════════════════
+    // SPONSOR SYSTEM — users can boost the prize pool for the next draw
+    // ═══════════════════════════════════════════════════════════════════
+    function initSponsorListener() {
+        db.ref('gameState/sponsor').on('value', snap => {
+            const data = snap.val() || {};
+            currentSponsoredAmount = data.totalAmount || 0;
+            currentSponsors = [];
+            if (data.sponsors) {
+                Object.values(data.sponsors).forEach(s => currentSponsors.push(s));
+                currentSponsors.sort((a, b) => (b.amount || 0) - (a.amount || 0));
+            }
+            updateSponsorDisplay();
+        });
+    }
+    function updateSponsorDisplay() {
+        const infoEl = document.getElementById('sponsorInfo');
+        if (infoEl) {
+            if (currentSponsoredAmount > 0) {
+                const pesoAmt = (currentSponsoredAmount / PESO_RATE).toFixed(0);
+                const names = currentSponsors.slice(0, 2).map(s => s.name.split(' ')[0]).join(', ');
+                const extra = currentSponsors.length > 2 ? ' +' + (currentSponsors.length - 2) : '';
+                infoEl.innerHTML = '🎁 Prize +₱' + pesoAmt + ' <span style="color:rgba(255,255,255,0.35);font-size:9px;">by ' + names + extra + '</span>';
+            } else {
+                infoEl.innerHTML = '';
+            }
+        }
+        // Update modal list if open
+        renderSponsorList();
+    }
+    function openSponsorModal() {
+        const modal = document.getElementById('sponsorModal');
+        if (!modal) return;
+        const balEl = document.getElementById('sponsorBalance');
+        if (balEl) balEl.textContent = toPeso(userData.points || 0);
+        document.getElementById('sponsorAmountInput').value = '';
+        renderSponsorList();
+        modal.style.display = 'flex';
+    }
+    function setSponsorAmount(pesos) {
+        document.getElementById('sponsorAmountInput').value = pesos;
+    }
+    function renderSponsorList() {
+        const listEl = document.getElementById('sponsorList');
+        const secEl = document.getElementById('sponsorListSection');
+        const totalEl = document.getElementById('sponsorTotalDisplay');
+        if (!listEl || !secEl) return;
+        if (currentSponsors.length === 0) { secEl.style.display = 'none'; return; }
+        secEl.style.display = 'block';
+        if (totalEl) totalEl.textContent = '₱' + (currentSponsoredAmount / PESO_RATE).toFixed(0);
+        listEl.innerHTML = currentSponsors.map(s =>
+            '<div class="sponsor-item">' +
+                (s.photo ? '<img src="' + s.photo + '" onerror="this.style.display=\'none\'">' : '') +
+                '<span class="s-name">' + (s.name || 'Anonymous') + '</span>' +
+                '<span class="s-amt">₱' + ((s.amount || 0) / PESO_RATE).toFixed(0) + '</span>' +
+            '</div>'
+        ).join('');
+    }
+    function submitSponsor() {
+        if (!auth.currentUser) { showToast('Sign in muna!'); return; }
+        const input = document.getElementById('sponsorAmountInput');
+        const pesos = parseFloat(input.value);
+        if (!pesos || pesos < 1) { showToast('Minimum ₱1 ang sponsor.'); return; }
+        const coins = Math.round(pesos * PESO_RATE);
+        if ((userData.points || 0) < coins) { showToast('Hindi sapat ang balance mo.'); return; }
+
+        const uid = auth.currentUser.uid;
+        const btn = document.getElementById('sponsorSubmitBtn');
+        if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+        // Deduct from user balance
+        db.ref('users/' + uid + '/points').transaction(p => (p || 0) - coins);
+
+        // Add to sponsor pool (merge if user already sponsored)
+        db.ref('gameState/sponsor/sponsors/' + uid).once('value', snap => {
+            const existing = snap.val();
+            const prevAmount = existing ? (existing.amount || 0) : 0;
+            const newAmount = prevAmount + coins;
+            db.ref('gameState/sponsor/sponsors/' + uid).set({
+                name: userData.name || 'Anonymous',
+                amount: newAmount,
+                photo: userData.photo || ''
+            });
+            // Update total
+            db.ref('gameState/sponsor/totalAmount').transaction(t => (t || 0) + coins);
+
+            input.value = '';
+            if (btn) { btn.disabled = false; btn.textContent = 'SPONSOR'; }
+            const balEl = document.getElementById('sponsorBalance');
+            if (balEl) balEl.textContent = toPeso((userData.points || 0) - coins);
+            showToast('🎁 Salamat sa pag-sponsor ng ₱' + pesos + '!');
+        });
+    }
+    // ═══════════════════════════════════════════════════════════════════
+
     function initBingo() {
         // ── Real-time listener for latestWinner → push notification ──
         var _latestWinnerSeen = null;
@@ -14961,6 +15113,7 @@ function runMathBlitz(problems) {
 
         let winPrize = 5000; // ₱2 default for normal rounds
         if (isJackpotActive) winPrize = currentJackpotAmount; // ✅ exact same amount as animation & banner
+        winPrize += currentSponsoredAmount; // add sponsored coins to prize
         // cardId: 'main' or 'extra-0', 'extra-1', etc.
         const winnerData = { name: userData.name, uid: uid, photo: userData.photo || '', prize: winPrize, winCard: cardId || 'main', wonAt: Date.now() };
         db.ref('gameState/latestWinner').set(winnerData);

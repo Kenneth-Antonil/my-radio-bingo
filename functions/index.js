@@ -327,6 +327,15 @@ exports.scheduledDrawChecker = onSchedule(
             }
             await db.ref('gameState/currentPattern').set(pattern);
 
+            // ── Read sponsor pool before starting ──
+            const sponsorSnap = await db.ref('gameState/sponsor').once('value');
+            const sponsorData = sponsorSnap.val() || {};
+            const sponsoredCoins = sponsorData.totalAmount || 0;
+            const sponsoredPeso = sponsoredCoins > 0 ? Math.round(sponsoredCoins / 2500) : 0;
+            const sponsorNames = sponsorData.sponsors
+                ? Object.values(sponsorData.sponsors).map(s => s.name ? s.name.split(' ')[0] : '').filter(Boolean).slice(0, 3).join(', ')
+                : '';
+
             await db.ref('gameState').update({ status: 'playing', gameStartTime: now });
             await db.ref('gameState/drawConfig').update({
                 cloudEnabled:          true,
@@ -336,16 +345,28 @@ exports.scheduledDrawChecker = onSchedule(
                 triggeredBySchedule:   key,
             });
 
-            const patternLabel = pattern === 'Blackout'
+            // ── Clear sponsor pool after game starts (next sponsors are for next game) ──
+            await db.ref('gameState/sponsor').remove();
+
+            let patternLabel = pattern === 'Blackout'
                 ? `Blackout — Jackpot ₱${(jpAmt || 0).toLocaleString()}`
                 : pattern;
+            const prizeInfo = isJP
+                ? `₱${(jpAmt || 0).toLocaleString()}`
+                : '₱2';
+            const totalPrize = isJP
+                ? `₱${((jpAmt || 0) + sponsoredPeso).toLocaleString()}`
+                : `₱${(2 + sponsoredPeso).toLocaleString()}`;
+            const sponsorTag = sponsoredPeso > 0
+                ? ` (+₱${sponsoredPeso} sponsored by ${sponsorNames})`
+                : '';
             await sendPushToAll(
                 'Draw is Starting',
-                `Pattern: ${patternLabel}. Open the app and check your card.`,
+                `Pattern: ${patternLabel}. Prize: ${totalPrize}${sponsorTag}. Open the app now!`,
                 { tag: 'rbl-draw-start', url: '/?tab=bingo', requireInteraction: 'true' }
             );
 
-            console.log(`[schedChecker] Started draw: key=${key}, pattern=${pattern}, isJP=${isJP}`);
+            console.log(`[schedChecker] Started draw: key=${key}, pattern=${pattern}, isJP=${isJP}, sponsored=₱${sponsoredPeso}`);
         }
 
         return null;
