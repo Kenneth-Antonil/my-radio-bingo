@@ -15747,12 +15747,23 @@ function runMathBlitz(problems) {
         }
     }
     function initPuroTicker() {
+        let _roundEnded = false;
+        // Track winner state so puro bar stays hidden for the entire post-round period
+        db.ref('gameState/winners').on('value', wSnap => {
+            _roundEnded = wSnap.exists() && wSnap.val() !== null;
+            if (_roundEnded) {
+                const bar = document.getElementById('puroTickerBar');
+                const inner = document.getElementById('puroTickerInner');
+                if (bar) { bar.style.display = 'none'; }
+                if (inner) { inner.innerHTML = ''; inner.style.animation = ''; }
+            }
+        });
         db.ref('gameState/puro').on('value', snap => {
             const bar = document.getElementById('puroTickerBar');
             const inner = document.getElementById('puroTickerInner');
             if (!bar || !inner) return;
             const data = snap.val();
-            if (!data || Object.keys(data).length === 0) {
+            if (!data || Object.keys(data).length === 0 || _roundEnded) {
                 bar.style.display = 'none';
                 inner.innerHTML = '';
                 inner.style.animation = '';
