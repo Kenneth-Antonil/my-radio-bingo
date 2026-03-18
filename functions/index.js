@@ -236,7 +236,7 @@ exports.scheduledDrawChecker = onSchedule(
                     await flagRef.set(true);
                     const drawLabel = isJP
                         ? `Jackpot · ₱${(jpAmt || 0).toLocaleString()}`
-                        : 'Regular Draw';
+                        : 'Regular Draw · ₱2';
                     await sendPushToAll(
                         'Draw in 10 Minutes',
                         `${drawLabel} starts at ${formatTime(schedTime)}. Open your bingo card now.`,
@@ -254,7 +254,7 @@ exports.scheduledDrawChecker = onSchedule(
                     await flagRef.set(true);
                     const drawLabel = isJP
                         ? `Jackpot · ₱${(jpAmt || 0).toLocaleString()}`
-                        : 'Regular Draw';
+                        : 'Regular Draw · ₱2';
                     await sendPushToAll(
                         'Draw in 5 Minutes',
                         `${drawLabel} magsisimula na sa ${formatTime(schedTime)}. Get your bingo card ready.`,
@@ -272,7 +272,7 @@ exports.scheduledDrawChecker = onSchedule(
                     await flagRef.set(true);
                     const drawLabel = isJP
                         ? `Jackpot · ₱${(jpAmt || 0).toLocaleString()}`
-                        : 'Regular Draw';
+                        : 'Regular Draw · ₱2';
                     await sendPushToAll(
                         '2 Minutes to Draw!',
                         `${drawLabel} magsisimula na sa ${formatTime(schedTime)}. Buksan na ang iyong bingo card!`,
