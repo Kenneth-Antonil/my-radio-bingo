@@ -331,11 +331,9 @@ exports.scheduledDrawChecker = onSchedule(
             // ── Read sponsor pool before starting ──
             const sponsorSnap = await db.ref('gameState/sponsor').once('value');
             const sponsorData = sponsorSnap.val() || {};
-            const sponsoredCoins = sponsorData.totalAmount || 0;
+            const sponsoredCoins = sponsorData.amount || 0;
             const sponsoredPeso = sponsoredCoins > 0 ? Math.round(sponsoredCoins / 2500) : 0;
-            const sponsorNames = sponsorData.sponsors
-                ? Object.values(sponsorData.sponsors).map(s => s.name ? s.name.split(' ')[0] : '').filter(Boolean).slice(0, 3).join(', ')
-                : '';
+            const sponsorNames = sponsorData.name ? sponsorData.name.split(' ')[0] : '';
 
             await db.ref('gameState').update({ status: 'playing', gameStartTime: now });
             await db.ref('gameState/drawConfig').update({
@@ -636,6 +634,7 @@ async function performReset() {
         db.ref('gameState/winners').remove(),
         db.ref('gameState/gameStartTime').remove(),
         db.ref('gameState/lastCalled').remove(),
+        db.ref('gameState/puro').remove(),
     ]);
 
     await db.ref('gameState').update({ status: 'waiting' });
