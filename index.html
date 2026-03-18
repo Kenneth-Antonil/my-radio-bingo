@@ -3352,6 +3352,8 @@
         .sponsor-item img { width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,0.15); }
         .sponsor-item .s-name { font-size:12px; font-weight:700; color:rgba(255,255,255,0.8); flex:1; }
         .sponsor-item .s-amt { font-size:12px; font-weight:900; color:#fbbf24; }
+        .sponsor-cancel-btn { display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); color:#f87171; cursor:pointer; flex-shrink:0; margin-left:4px; transition:all 0.15s ease; }
+        .sponsor-cancel-btn:hover { background:rgba(239,68,68,0.2); border-color:rgba(239,68,68,0.4); }
 
         /* === FULL SCREEN STORE MODAL === */
         #storeModal {
@@ -14846,7 +14848,7 @@ function runMathBlitz(problems) {
             currentSponsoredAmount = data.totalAmount || 0;
             currentSponsors = [];
             if (data.sponsors) {
-                Object.values(data.sponsors).forEach(s => currentSponsors.push(s));
+                Object.entries(data.sponsors).forEach(([key, s]) => { s.uid = key; currentSponsors.push(s); });
                 currentSponsors.sort((a, b) => (b.amount || 0) - (a.amount || 0));
             }
             updateSponsorDisplay();
@@ -14888,13 +14890,17 @@ function runMathBlitz(problems) {
         if (currentSponsors.length === 0) { secEl.style.display = 'none'; return; }
         secEl.style.display = 'block';
         if (totalEl) totalEl.textContent = '₱' + (currentSponsoredAmount / PESO_RATE).toFixed(0);
-        listEl.innerHTML = currentSponsors.map(s =>
-            '<div class="sponsor-item">' +
+        const myUid = auth.currentUser ? auth.currentUser.uid : '';
+        listEl.innerHTML = currentSponsors.map(s => {
+            const isMe = myUid && s.uid === myUid;
+            return '<div class="sponsor-item">' +
                 (s.photo ? '<img src="' + s.photo + '" onerror="this.style.display=\'none\'">' : '') +
-                '<span class="s-name">' + (s.name || 'Anonymous') + '</span>' +
+                '<span class="s-name">' + (s.name || 'Anonymous') + (isMe ? ' <span style="color:var(--accent-glow);font-size:9px;">(You)</span>' : '') + '</span>' +
                 '<span class="s-amt">₱' + ((s.amount || 0) / PESO_RATE).toFixed(0) + '</span>' +
-            '</div>'
-        ).join('');
+                (isMe ? '<button onclick="cancelSponsor()" class="sponsor-cancel-btn"><i data-lucide="x" style="width:12px;height:12px;"></i></button>' : '') +
+            '</div>';
+        }).join('');
+        try { lucide.createIcons({nodes: [listEl]}); } catch(e) {}
     }
     function submitSponsor() {
         if (!auth.currentUser) { showToast('Sign in muna!'); return; }
@@ -14919,7 +14925,8 @@ function runMathBlitz(problems) {
             db.ref('gameState/sponsor/sponsors/' + uid).set({
                 name: userData.name || 'Anonymous',
                 amount: newAmount,
-                photo: userData.photo || ''
+                photo: userData.photo || '',
+                uid: uid
             });
             // Update total
             db.ref('gameState/sponsor/totalAmount').transaction(t => (t || 0) + coins);
@@ -14929,6 +14936,28 @@ function runMathBlitz(problems) {
             const balEl = document.getElementById('sponsorBalance');
             if (balEl) balEl.textContent = toPeso((userData.points || 0) - coins);
             showToast('Salamat sa pag-sponsor ng ₱' + pesos + '!');
+        });
+    }
+    function cancelSponsor() {
+        if (!auth.currentUser) return;
+        const uid = auth.currentUser.uid;
+        db.ref('gameState/sponsor/sponsors/' + uid).once('value', snap => {
+            const entry = snap.val();
+            if (!entry || !entry.amount) { showToast('Wala kang sponsor na i-cancel.'); return; }
+            const refundCoins = entry.amount;
+            const refundPesos = (refundCoins / PESO_RATE).toFixed(0);
+
+            // Refund coins to user
+            db.ref('users/' + uid + '/points').transaction(p => (p || 0) + refundCoins);
+            // Remove sponsor entry
+            db.ref('gameState/sponsor/sponsors/' + uid).remove();
+            // Subtract from total
+            db.ref('gameState/sponsor/totalAmount').transaction(t => Math.max(0, (t || 0) - refundCoins));
+
+            // Update local balance display
+            const balEl = document.getElementById('sponsorBalance');
+            if (balEl) balEl.textContent = toPeso((userData.points || 0) + refundCoins);
+            showToast('Na-cancel ang sponsor mo. ₱' + refundPesos + ' na-refund!');
         });
     }
     // ═══════════════════════════════════════════════════════════════════
