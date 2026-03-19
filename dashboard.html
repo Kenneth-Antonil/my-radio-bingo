@@ -1239,13 +1239,16 @@
         <div style="font-size:22px;font-weight:900;color:white;letter-spacing:-0.5px;margin-bottom:6px;">Admin Dashboard</div>
         <div style="font-size:13px;color:rgba(255,255,255,0.35);margin-bottom:32px;">Radio Bingo</div>
         <button id="adminGoogleBtn" onclick="adminSignIn()" style="
-            width:100%;padding:15px;
+            width:100%;padding:16px;
             background:white;color:#1e293b;
             border:none;border-radius:14px;
-            font-size:14px;font-weight:800;
+            font-size:15px;font-weight:800;
             cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
             box-shadow:0 4px 20px rgba(0,0,0,0.4);
             transition:opacity 0.2s;
+            min-height:54px;
+            touch-action:manipulation;
+            -webkit-tap-highlight-color:transparent;
         ">
             <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
             Sign in with Google
@@ -1255,15 +1258,17 @@
     </div>
 </div>
 
-<div id="lockScreen" style="position:fixed; inset:0; background:#0f0f14; z-index:999999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white;">
+<div id="lockScreen" style="position:fixed; inset:0; background:#0f0f14; z-index:999999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding:20px;">
     <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);">
         <i data-lucide="lock" style="width: 40px; height: 40px; color: var(--accent);"></i>
     </div>
     <div style="font-size:24px; font-weight:900; margin-bottom:10px; letter-spacing: -1px;">ADMIN <span style="color:var(--accent);">LOCKED</span></div>
-    <p style="opacity: 0.6; font-size: 12px; margin-bottom: 30px;">Enter security PIN to access control panel.</p>
-    <div style="display:flex; gap:10px;">
-        <input type="password" id="adminPassInput" placeholder="Enter PIN" style="width:180px; padding:12px; text-align:center; border-radius:12px; border:1px solid #334155; background:#1e293b; color:white; font-weight:900; letter-spacing: 2px; outline: none;" onkeydown="if(event.key==='Enter') checkAdminLock()">
-        <button onclick="checkAdminLock()" class="btn btn-primary" style="width:auto; padding:12px 20px; margin:0; cursor:pointer;">→</button>
+    <p style="opacity: 0.6; font-size: 12px; margin-bottom: 30px; text-align:center;">Enter security PIN to access control panel.</p>
+    <div style="display:flex; gap:10px; width:100%; max-width:300px;">
+        <input type="password" id="adminPassInput" placeholder="Enter PIN" inputmode="numeric"
+            style="flex:1; min-width:0; padding:14px 16px; font-size:18px; text-align:center; border-radius:12px; border:1px solid #334155; background:#1e293b; color:white; font-weight:900; letter-spacing:4px; outline:none;"
+            onkeydown="if(event.key==='Enter') checkAdminLock()">
+        <button onclick="checkAdminLock()" class="btn btn-primary" style="width:auto; min-width:52px; padding:14px 18px; margin:0; cursor:pointer; font-size:20px; flex-shrink:0;">→</button>
     </div>
 </div>
 
@@ -2310,17 +2315,37 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
     const auth = firebase.auth();
 
     // ===== ADMIN AUTH GATE =====
+    var _googleSvg = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg> Sign in with Google';
+
+    // Handle redirect result on page load (mobile sign-in completes here)
+    auth.getRedirectResult().catch(function(err) {
+        var errEl = document.getElementById('adminLoginError');
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Sign-in error: ' + (err.message || 'Try again.'); }
+    });
+
     function adminSignIn() {
-        const btn = document.getElementById('adminGoogleBtn');
+        var btn = document.getElementById('adminGoogleBtn');
         btn.style.opacity = '0.6';
         btn.textContent = 'Signing in...';
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch(function(err) {
-            btn.style.opacity = '1';
-            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg> Sign in with Google';
-            document.getElementById('adminLoginError').style.display = 'block';
-            document.getElementById('adminLoginError').textContent = 'Sign-in failed. Try again.';
-        });
+        var provider = new firebase.auth.GoogleAuthProvider();
+        // Mobile browsers block popups — use redirect for reliable sign-in
+        var isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+        if (isMobile) {
+            auth.signInWithRedirect(provider).catch(function(err) {
+                btn.style.opacity = '1'; btn.innerHTML = _googleSvg;
+                var errEl = document.getElementById('adminLoginError');
+                if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Sign-in failed. Try again.'; }
+            });
+        } else {
+            auth.signInWithPopup(provider).catch(function(err) {
+                if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-cancelled-by-user') {
+                    auth.signInWithRedirect(provider); return;
+                }
+                btn.style.opacity = '1'; btn.innerHTML = _googleSvg;
+                var errEl = document.getElementById('adminLoginError');
+                if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Sign-in failed. Try again.'; }
+            });
+        }
     }
 
     auth.onAuthStateChanged(function(user) {
@@ -5843,20 +5868,31 @@ function closeMobDrawer() {
     document.body.style.touchAction = '';
 }
 function openTabMob(tabId, btnId) {
-    // Use existing openTab but also update mobile nav state
-    var tabBtns = document.querySelectorAll('.tab-btn');
-    tabBtns.forEach(function(b) {
-        if(b.getAttribute('onclick') && b.getAttribute('onclick').includes(tabId)) {
-            openTab(tabId, b);
+    // 1. Switch tab content directly (no DOM search needed)
+    document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+    var target = document.getElementById(tabId);
+    if (target) target.classList.add('active');
+
+    // 2. Trigger the window.openTab override chain (loads tab data, inits managers)
+    //    Use a stub btn so classList.add('active') inside openTab doesn't throw
+    var stubBtn = { classList: { add: function(){}, remove: function(){} } };
+    try {
+        if (typeof window.openTab === 'function') window.openTab(tabId, stubBtn);
+    } catch(e) { /* ignore */ }
+
+    // 3. Sync desktop tab-btn active state (for when switching to desktop)
+    document.querySelectorAll('.tab-btn').forEach(function(b) {
+        b.classList.remove('active');
+        if (b.getAttribute('onclick') && b.getAttribute('onclick').includes("'" + tabId + "'")) {
+            b.classList.add('active');
         }
     });
-    // Update mob nav active state
-    document.querySelectorAll('.mob-nav-btn').forEach(function(b){ b.classList.remove('active'); });
-    if(btnId) {
-        var el = document.getElementById(btnId);
-        if(el) el.classList.add('active');
-    }
-    // Scroll to top
+
+    // 4. Update mobile bottom nav active state
+    document.querySelectorAll('.mob-nav-btn').forEach(function(b) { b.classList.remove('active'); });
+    if (btnId) { var el = document.getElementById(btnId); if (el) el.classList.add('active'); }
+
+    // 5. Scroll to top
     window.scrollTo(0, 0);
 }
 function openMobMore() {
