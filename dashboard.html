@@ -119,7 +119,7 @@
             opacity: 0.5;
         }
         .sidebar { border-radius: 0; padding: var(--spacing-lg) var(--spacing-md); overflow-y: auto; display: flex; flex-direction: column; gap: var(--spacing-md); height: 100vh; border-right: 1px solid var(--glass-border); grid-column: 1; }
-        .main-section { grid-column: 2; display: flex; flex-direction: column; overflow: hidden; height: 100vh; }
+        .main-section { grid-column: 2; display: flex; flex-direction: column; overflow: hidden; height: 100vh; min-width: 0; padding: var(--spacing-lg); }
         .activity-panel { 
             position: fixed;
             top: 0; right: 0;
@@ -889,14 +889,16 @@
         .mob-sidebar-drawer {
             position: fixed;
             top: 0; left: 0;
-            width: 300px;
-            height: 100vh;
+            width: min(300px, 88vw);
+            height: 100dvh;
             background: rgba(10,10,20,0.99);
             border-right: 1px solid rgba(139,92,246,0.2);
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
             z-index: 1100;
             overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
             padding: 16px;
             transform: translateX(-100%);
             transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
@@ -925,13 +927,15 @@
             display: none;
             position: fixed;
             bottom: 0; left: 0; right: 0;
-            height: 60px;
+            height: calc(60px + env(safe-area-inset-bottom, 0px));
+            padding-bottom: env(safe-area-inset-bottom, 0px);
             background: rgba(10,10,20,0.98);
             border-top: 1px solid rgba(139,92,246,0.2);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             z-index: 999;
-            padding: 0 4px;
+            padding-left: 4px;
+            padding-right: 4px;
             align-items: stretch;
             justify-content: space-around;
         }
@@ -980,22 +984,23 @@
 
         @media (max-width: 800px) {
             body {
-                grid-template-columns: 1fr;
-                grid-template-rows: auto;
-                height: auto;
-                overflow-y: auto;
-                overflow-x: hidden;
-                padding-top: 56px;
-                padding-bottom: 68px;
+                grid-template-columns: 1fr !important;
+                grid-template-rows: auto !important;
+                height: auto !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                padding-top: 56px !important;
+                padding-bottom: calc(60px + env(safe-area-inset-bottom, 8px)) !important;
             }
             .sidebar { display: none !important; }
             .main-section {
-                grid-column: 1;
-                height: auto;
-                overflow-y: visible;
-                padding: 12px 12px 0;
-                display: flex;
-                flex-direction: column;
+                grid-column: 1 !important;
+                height: auto !important;
+                overflow: visible !important;
+                padding: 10px 10px 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                min-width: 0 !important;
             }
             .mobile-header { display: flex; }
             .mobile-bottom-nav { display: flex; }
@@ -1008,50 +1013,46 @@
 
             /* Cards full width */
             .card {
-                border-radius: 16px !important;
-                margin-bottom: 12px;
+                border-radius: 14px !important;
+                margin-bottom: 10px;
             }
 
-            /* Bingo tab grid → single column */
-            #bingo-tab > div[style*="grid-template-columns: 1fr 2fr"] {
+            /* All tab inner grids → single column */
+            #bingo-tab > div[style*="grid-template-columns"],
+            #users-tab > div[style*="grid-template-columns"],
+            #creators-tab > div[style*="grid-template-columns"],
+            #settings-tab > div[style*="grid-template-columns"],
+            #tournament-tab > div[style*="grid-template-columns"],
+            #myshop-tab > div[style*="grid-template-columns"],
+            #push-tab > div[style*="grid-template-columns"],
+            #special-event-tab > div[style*="grid-template-columns"] {
                 display: flex !important;
                 flex-direction: column !important;
-                gap: 12px !important;
-            }
-
-            /* Users tab grid */
-            #users-tab > div[style*="grid-template-columns"] {
-                display: flex !important;
-                flex-direction: column !important;
-                gap: 12px !important;
-            }
-
-            /* Creators tab */
-            #creators-tab > div[style*="grid-template-columns"] {
-                display: flex !important;
-                flex-direction: column !important;
-                gap: 12px !important;
+                gap: 10px !important;
             }
 
             /* Winner marquee */
             .winner-marquee { font-size: 12px; }
 
-            /* Ball grid smaller on mobile */
-            .ball-grid { gap: 4px !important; }
-            .ball-btn { width: 32px !important; height: 32px !important; font-size: 11px !important; }
+            /* Ball grid */
+            .ball-grid { gap: 3px !important; }
+            .ball-btn { width: 34px !important; height: 34px !important; font-size: 11px !important; border-radius: 8px !important; }
 
             /* Cards monitoring grid */
             .cards-grid {
-                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+                grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important;
             }
 
-            /* Schedule manager presets wrap nicely */
-            #bingo-tab .card[style*="border-color:rgba(251,191,36"] > div:first-of-type {
-                gap: 8px !important;
+            /* Tab content — proper overflow and padding */
+            .tab-content {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                padding-bottom: 16px !important;
             }
-
-            /* Tab content padding */
-            .tab-content { padding-bottom: 12px; }
+            .tab-content.active {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
 
             /* Stat grid in drawer */
             .mob-sidebar-drawer .stat-grid {
@@ -1061,10 +1062,25 @@
             /* h2 sizes */
             .card h2 { font-size: 14px; }
 
-            /* Jackpot banner */
-            #lastBall { font-size: 50px !important; }
+            /* Last drawn ball */
+            #lastBall { font-size: 52px !important; }
 
-            /* Activity panel */
+            /* All buttons — min touch target */
+            .btn, .t-btn, button { min-height: 40px; touch-action: manipulation; }
+
+            /* Prevent iOS input zoom */
+            input, select, textarea { font-size: 16px !important; }
+
+            /* Schedule manager presets */
+            #bingo-tab .card[style*="border-color:rgba(251,191,36"] > div:first-of-type {
+                gap: 8px !important;
+                flex-wrap: wrap !important;
+            }
+
+            /* Tournament actions wrap on small screens */
+            .tourn-action-btns { flex-wrap: wrap !important; }
+
+            /* Activity panel bottom sheet on mobile */
             .activity-panel {
                 width: 100% !important;
                 height: 60vh !important;
@@ -1079,15 +1095,7 @@
         @media (max-width: 400px) {
             .mob-nav-btn { font-size: 8px; min-width: 36px; padding: 0 3px; }
             .mob-nav-btn svg { width: 18px; height: 18px; }
-        }
-
-        .main-section {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            height: 100vh;
-            min-width: 0;
-            padding: var(--spacing-lg);
+            input, select, textarea { font-size: 16px !important; }
         }
 
         /* ===== TOURNAMENT MANAGER STYLES ===== */
@@ -1365,7 +1373,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
 </div>
 
 <!-- ═══ MOBILE MORE MENU ═══ -->
-<div id="mobMoreMenu" style="display:none;position:fixed;bottom:68px;right:0;left:0;background:rgba(10,10,20,0.98);border-top:1px solid rgba(139,92,246,0.2);backdrop-filter:blur(20px);z-index:998;padding:8px 12px;display:none;flex-wrap:wrap;gap:6px;">
+<div id="mobMoreMenu" style="display:none;position:fixed;bottom:60px;right:0;left:0;background:rgba(10,10,20,0.98);border-top:1px solid rgba(139,92,246,0.2);backdrop-filter:blur(20px);z-index:998;padding:10px 12px;flex-wrap:wrap;gap:6px;">
     <button onclick="openTabMob('creators-tab','');closeMobMore();" style="padding:8px 12px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);border-radius:10px;color:#a78bfa;font-size:11px;font-weight:800;cursor:pointer;">⭐ CREATORS</button>
     <button onclick="openTabMob('verification-tab','');closeMobMore();" style="padding:8px 12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:10px;color:#34d399;font-size:11px;font-weight:800;cursor:pointer;">🛡️ VERIFY</button>
     <button onclick="openTabMob('support-tab','');closeMobMore();" style="padding:8px 12px;background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2);border-radius:10px;color:#67e8f9;font-size:11px;font-weight:800;cursor:pointer;">💬 SUPPORT</button>
@@ -5822,11 +5830,17 @@ function openMobDrawer() {
     document.getElementById('mobSidebarDrawer').classList.add('open');
     document.getElementById('mobDrawerOverlay').classList.add('open');
     document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
 }
+
 function closeMobDrawer() {
     document.getElementById('mobSidebarDrawer').classList.remove('open');
     document.getElementById('mobDrawerOverlay').classList.remove('open');
+    // Restore body scroll (mobile: auto, desktop: hidden via CSS)
     document.body.style.overflow = '';
+    document.body.style.overflowY = '';
+    document.body.style.overflowX = '';
+    document.body.style.touchAction = '';
 }
 function openTabMob(tabId, btnId) {
     // Use existing openTab but also update mobile nav state
