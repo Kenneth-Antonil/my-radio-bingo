@@ -15276,7 +15276,14 @@ function runMathBlitz(problems) {
                     db.ref('gameState/gameStartTime').remove();
                     db.ref('gameState/lastCalled').remove();
                     db.ref('gameState/jackpot').set({ amount: 0, active: false, type: 'none' });
+                    // Clear sponsor after game ends so next game starts fresh
+                    if(currentSponsor && currentSponsor.scheduleKey) {
+                        db.ref('gameState/schedules/' + currentSponsor.scheduleKey).remove();
+                    }
+                    db.ref('gameState/sponsor').remove();
+                    db.ref('gameState/countdown').set({ active: false });
                     db.ref('gameState').update({ status: 'waiting' });
+                    _hdeCountdownActive = false;
                     _hdeStopDraw(true);
                 });
             });
@@ -15302,7 +15309,7 @@ function runMathBlitz(problems) {
     function _hdeCheckSchedule(uid) {
         if(_hdeCloudActive) return;
         const gameData = _cachedGameState || {};
-        if(gameData.status === 'playing') return;
+        if(gameData.status === 'playing' || _hdeCountdownActive || _hdeIsDrawing) return;
 
         // Get current Philippine time
         const now = new Date();
@@ -15316,6 +15323,25 @@ function runMathBlitz(problems) {
             // Still check upcoming notifications even if this minute was already fired
             _hdeCheckUpcomingNotifs(h, m);
             return;
+        }
+
+        // ── Check sponsored schedules first (they take priority) ──
+        if(currentSponsor && currentSponsor.scheduledTime) {
+            const schedMs = currentSponsor.scheduledTime;
+            const diff = Date.now() - schedMs;
+            // Fire if within 0 to +2 min window
+            if(diff >= 0 && diff < 120000) {
+                _lastSchedFired = key;
+                var sponsorSched = {
+                    label: 'SPONSORED GAME',
+                    jackpotType: 'none',
+                    hour: h,
+                    minute: m
+                };
+                console.log('[ScheduledDraw] Triggering SPONSORED game at', key);
+                _hdeTriggerScheduledDraw(uid, sponsorSched);
+                return;
+            }
         }
 
         // Current time in total minutes
@@ -15381,8 +15407,14 @@ function runMathBlitz(problems) {
         }
     }
 
+    let _hdeCountdownActive = false; // true while pre-draw countdown is ticking
+
     function _hdeTriggerScheduledDraw(uid, sched) {
-        db.ref('gameState/countdown').set({ active: false });
+        // Don't start countdown if game already playing
+        const gs = _cachedGameState || {};
+        if(gs.status === 'playing' || _hdeIsDrawing || _hdeCountdownActive) return;
+
+        db.ref('gameState/countdown').set({ active: true, label: sched.label, type: sched.jackpotType, startedAt: Date.now() });
 
         // Write to Firebase so all clients know a scheduled draw is starting
         db.ref('gameState/scheduledDrawAlert').set({
@@ -15401,6 +15433,12 @@ function runMathBlitz(problems) {
         const banner  = document.getElementById('nextDrawBanner');
         if(!banner || !timeEl) return;
 
+        // Don't show countdown if game already playing
+        const gs = _cachedGameState || {};
+        if(gs.status === 'playing' || _hdeIsDrawing) return;
+
+        _hdeCountdownActive = true;
+
         const isMega    = sched.jackpotType === 'mega';
         const modeColor = isMega ? '#f97316' : '#fbbf24';
         const prize     = isMega ? '₱20' : '₱5';
@@ -15408,7 +15446,17 @@ function runMathBlitz(problems) {
         if(labelEl) { labelEl.innerText = sched.label.toUpperCase() + ' — STARTING!'; labelEl.style.color = modeColor; }
 
         function tick(s) {
+            // Cancel if game started during countdown
+            if(!_hdeCountdownActive) return;
+            var gsNow = _cachedGameState || {};
+            if(gsNow.status === 'playing' || _hdeIsDrawing) {
+                _hdeCountdownActive = false;
+                db.ref('gameState/countdown').set({ active: false });
+                return;
+            }
             if(s <= 0) {
+                _hdeCountdownActive = false;
+                db.ref('gameState/countdown').set({ active: false });
                 // Fire the actual game
                 _hdeFireScheduledGame(uid, sched);
                 return;
@@ -15419,7 +15467,7 @@ function runMathBlitz(problems) {
                 '<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:4px;margin-top:6px;overflow:hidden;">' +
                 '<div style="height:100%;width:' + Math.round((s / 30) * 100) + '%;background:' + modeColor + ';border-radius:4px;transition:width 1s linear;"></div></div>';
             if(s <= 10 && typeof playSound === 'function') { try { playSound('countdown'); } catch(e) {} }
-            setTimeout(() => tick(s - 1), 1000);
+            setTimeout(function(){ tick(s - 1); }, 1000);
         }
         tick(secs);
     }
@@ -15457,7 +15505,7 @@ function runMathBlitz(problems) {
     function _hdeUpdateScheduledDrawUI() {
         // Show next scheduled draw time + live countdown in the banner when waiting
         const gameData = _cachedGameState || {};
-        if(gameData.status === 'playing') return;
+        if(gameData.status === 'playing' || _hdeCountdownActive) return;
 
         const now = new Date();
         const phNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
@@ -15503,6 +15551,8 @@ function runMathBlitz(problems) {
     // Live per-second countdown ticker for next draw banner
     function _hdeStartCountdownTicker() {
         setInterval(function() {
+            // Skip updates during active countdown — let _hdeShowSchedAlert control the banner
+            if(_hdeCountdownActive) return;
             const gs = _cachedGameState || {};
             if(gs.status === 'playing') {
                 // Game is ongoing — show GAME ONGOING, do not update countdown
@@ -15537,6 +15587,10 @@ function runMathBlitz(problems) {
     function listenForNextDraw() {
         db.ref('gameState').on('value', s => {
             _cachedGameState = s.val() || {};
+            // Cancel any active countdown if game just started playing
+            if(_cachedGameState.status === 'playing' && _hdeCountdownActive) {
+                _hdeCountdownActive = false;
+            }
             updateNextDrawDisplay();
             // Drive jackpot UI from the same snapshot — no extra listener
             if (typeof _handleJackpotState === 'function') {
@@ -15678,41 +15732,63 @@ function runMathBlitz(problems) {
         const lateSched= document.getElementById('lateNextSched');
         if(!banner || !timeEl) return;
 
+        // Don't overwrite while pre-draw countdown is active
+        if(_hdeCountdownActive) return;
+
         // ── Game ongoing ──
         if(gameData.status === 'playing' || (gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0)) {
             banner.style.display    = '';
             banner.style.background = '';
-            banner.style.borderColor= '#94a3b8';
-            banner.style.boxShadow  = '';
-            if(labelEl) { labelEl.innerText = 'GAME STATUS'; labelEl.style.color = '#e2e8f0'; }
+            banner.style.borderColor= 'rgba(16,185,129,0.3)';
+            banner.style.boxShadow  = '0 0 16px rgba(16,185,129,0.08)';
+            if(labelEl) { labelEl.innerText = 'LIVE NOW'; labelEl.style.color = '#10b981'; }
             // Update header icon to activity
-            const hdrIcon = banner.querySelector('.nd-header-icon');
+            var hdrIcon = banner.querySelector('.nd-header-icon');
             if(hdrIcon) { hdrIcon.setAttribute('data-lucide', 'activity'); lucide.createIcons({nodes: [hdrIcon]}); }
-            timeEl.innerText      = 'GAME ONGOING';
-            timeEl.style.fontSize = '20px';
-            timeEl.style.color    = '#ffffff';
-            timeEl.style.fontWeight = '900';
-            if(lateSched) lateSched.innerHTML = ''; // clear countdown while game is live
+            // Build game ongoing display with ball count and sponsor info
+            var ballCount = gameData.drawnNumbers ? Object.keys(gameData.drawnNumbers).length : 0;
+            var ongoingHtml = '<div style="display:flex;align-items:center;gap:10px;">'
+                + '<span style="font-size:16px;font-weight:900;color:white;">GAME ONGOING</span>'
+                + '<span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.06);padding:3px 8px;border-radius:50px;">'
+                + ballCount + '/75 balls</span></div>';
+            // Show sponsor prize boost if active
+            if(currentSponsor && currentSponsoredAmount > 0) {
+                var sponsorPeso = (currentSponsoredAmount / PESO_RATE).toFixed(0);
+                ongoingHtml += '<div style="font-size:11px;color:#fbbf24;margin-top:4px;font-weight:700;">'
+                    + '<i data-lucide="gift" style="width:11px;height:11px;display:inline;vertical-align:-2px;margin-right:3px;"></i>'
+                    + 'Prize Boost: +₱' + sponsorPeso + ' by ' + (currentSponsor.name ? currentSponsor.name.split(' ')[0] : 'Sponsor')
+                    + '</div>';
+            }
+            timeEl.innerHTML = ongoingHtml;
+            try { lucide.createIcons({nodes: [timeEl]}); } catch(e) {}
+            if(lateSched) lateSched.innerHTML = '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;animation:pulse 1.5s infinite;"></span><span style="color:#10b981;font-size:11px;font-weight:800;">LIVE</span></span>';
             return;
         }
 
         // ── Waiting for next scheduled draw ──
-        const modeColor  = '#60a5fa';
-        const borderColor = 'rgba(59,130,246,0.35)';
-        const bg = 'linear-gradient(135deg,rgba(15,23,42,0.9),rgba(30,41,59,0.9))';
+        var modeColor  = '#60a5fa';
+        var borderColor = 'rgba(59,130,246,0.35)';
 
         banner.style.display    = '';
         banner.style.background = '';
         banner.style.borderColor= borderColor;
         banner.style.boxShadow  = '';
         // Restore clock icon
-        const hdrIcon2 = banner.querySelector('.nd-header-icon');
+        var hdrIcon2 = banner.querySelector('.nd-header-icon');
         if(hdrIcon2) { hdrIcon2.setAttribute('data-lucide', 'clock'); lucide.createIcons({nodes: [hdrIcon2]}); }
         if(labelEl) { labelEl.innerText = 'NEXT DRAW'; labelEl.style.color = modeColor; }
-        timeEl.innerHTML = '<span style="font-size:13px;font-weight:900;color:' + modeColor + ';">Every 15 Minutes</span>';
-        timeEl.style.fontSize   = '12px';
-        timeEl.style.color      = modeColor;
-        timeEl.style.fontWeight = '900';
+        // Show sponsor info in waiting state too
+        var waitHtml = '<span style="font-size:13px;font-weight:900;color:' + modeColor + ';">Every 15 Minutes</span>';
+        if(currentSponsor && currentSponsoredAmount > 0 && currentSponsor.scheduledTime) {
+            var sPeso = (currentSponsoredAmount / PESO_RATE).toFixed(0);
+            waitHtml += '<div style="font-size:11px;color:#fbbf24;margin-top:4px;font-weight:700;">'
+                + '<i data-lucide="gift" style="width:11px;height:11px;display:inline;vertical-align:-2px;margin-right:3px;"></i>'
+                + 'Sponsored +₱' + sPeso + ' by ' + (currentSponsor.name ? currentSponsor.name.split(' ')[0] : 'Sponsor')
+                + ' · ' + _fmtSchedShort(currentSponsor.scheduledTime)
+                + '</div>';
+        }
+        timeEl.innerHTML = waitHtml;
+        try { lucide.createIcons({nodes: [timeEl]}); } catch(e) {}
         if(lateSched) _hdeUpdateScheduledDrawUI(); // show next scheduled draw time + countdown
     }
     function checkNotificationTime(timeInput) { if(lastNotifiedDraw == timeInput) return; let drawTime = isNaN(timeInput) ? 0 : parseInt(timeInput); if(drawTime > 0) { const diff = drawTime - Date.now(); const mins = Math.floor(diff / 60000); if(mins === 5) { if(Notification.permission === "granted") new Notification("⏰ RB Live", { body: "5 minuto na lang bago mag-draw! Buksan na ang app!", icon: "https://i.imgur.com/4nljOtR.png", tag: "draw-notif-5" }); lastNotifiedDraw = timeInput; } } }
