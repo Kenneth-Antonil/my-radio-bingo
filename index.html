@@ -13959,7 +13959,7 @@ function runMathBlitz(problems) {
                     }
                 } 
             });
-            initBingo(); _renderPatternBar('Normal Bingo'); setupChat(); listenForNextDraw(); listenForLastWinner(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate(); if(typeof setupCallListener === 'function') setupCallListener();
+            initBingo(); _renderPatternBar('Normal Bingo'); setupChat(); listenForNextDraw(); listenForLastWinner(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate(); initSponsorListener(); if(typeof setupCallListener === 'function') setupCallListener();
             try { if(localStorage.getItem('artcardDismissed') === '1') { var ac = document.getElementById('autostartArtcard'); if(ac) ac.style.display='none'; } } catch(e){}
             // Show chat bubble since bingo tab is active by default
             var _chatBubble = document.getElementById('chatBubbleBtn');
@@ -15803,12 +15803,16 @@ function runMathBlitz(problems) {
     // ═══════════════════════════════════════════════════════════════════
     // SPONSOR SYSTEM — one sponsor per draw, picks date/time for their game
     // ═══════════════════════════════════════════════════════════════════
+    var _sponsorListenerInit = false;
     function initSponsorListener() {
+        if (_sponsorListenerInit) return;
+        _sponsorListenerInit = true;
         db.ref('gameState/sponsor').on('value', snap => {
             const data = snap.val();
             currentSponsor = (data && data.uid) ? data : null;
             currentSponsoredAmount = currentSponsor ? (currentSponsor.amount || 0) : 0;
             updateSponsorDisplay();
+            try { lucide.createIcons(); } catch(e) {}
         });
     }
     function _fmtSchedShort(ts) {
@@ -15899,15 +15903,20 @@ function runMathBlitz(problems) {
             db.ref('users/' + uid + '/points').transaction(p => (p || 0) + Math.abs(additionalCoins));
         }
 
-        // Save sponsor data (flat single-sponsor structure)
+        // Save sponsor data
         db.ref('gameState/sponsor').set({
             uid: uid,
             name: userData.name || 'Anonymous',
             photo: userData.photo || '',
             amount: coins
         });
+        // Update local state immediately so banner shows right away
+        currentSponsor = { uid: uid, name: userData.name || 'Anonymous', photo: userData.photo || '', amount: coins };
+        currentSponsoredAmount = coins;
+        updateSponsorDisplay();
+        try { lucide.createIcons(); } catch(e) {}
 
-        if (btn) { btn.disabled = false; btn.textContent = isEdit ? 'SAVE CHANGES' : 'SPONSOR'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'SAVE CHANGES'; }
         var balEl = document.getElementById('sponsorPanelBalance');
         if (balEl) balEl.textContent = toPeso((userData.points || 0) - additionalCoins);
         showToast(isEdit
@@ -15926,6 +15935,10 @@ function runMathBlitz(problems) {
         db.ref('users/' + uid + '/points').transaction(p => (p || 0) + refundCoins);
         // Remove sponsor entry
         db.ref('gameState/sponsor').remove();
+        // Clear local state immediately so banner hides right away
+        currentSponsor = null;
+        currentSponsoredAmount = 0;
+        updateSponsorDisplay();
         var balEl = document.getElementById('sponsorPanelBalance');
         if (balEl) balEl.textContent = toPeso((userData.points || 0) + refundCoins);
         showToast('Na-cancel ang sponsor mo. ₱' + refundPesos + ' na-refund!');
