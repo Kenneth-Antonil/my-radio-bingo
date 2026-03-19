@@ -26167,20 +26167,37 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
 </script>
 
 <script>
-/* Keep view-bingo padding-top in sync with fixed wrapper height */
+/* Keep .container padding-top & bingoFixedWrap top in sync with actual .nav height */
 (function() {
-    function sync() {
-        var wrap  = document.getElementById('bingoFixedWrap');
-        var vb    = document.getElementById('view-bingo');
+    var navEl = document.querySelector('.nav');
+    var container = document.querySelector('.container');
+    var bfw = document.getElementById('bingoFixedWrap');
+
+    function syncNav() {
+        if (!navEl) return;
+        var h = navEl.getBoundingClientRect().height;
+        if (container) container.style.paddingTop = h + 'px';
+        if (bfw) bfw.style.top = h + 'px';
+    }
+
+    function syncBingo() {
+        var wrap = document.getElementById('bingoFixedWrap');
+        var vb   = document.getElementById('view-bingo');
         if (!wrap || !vb) return;
         vb.style.paddingTop = wrap.getBoundingClientRect().height + 'px';
     }
-    sync();
-    window.addEventListener('load', sync);
+
+    function syncAll() { syncNav(); syncBingo(); }
+
+    syncAll();
+    window.addEventListener('load', syncAll);
+
     if (window.ResizeObserver) {
-        new ResizeObserver(sync).observe(document.getElementById('bingoFixedWrap') || document.body);
+        if (navEl) new ResizeObserver(syncAll).observe(navEl);
+        var bfwEl = document.getElementById('bingoFixedWrap');
+        if (bfwEl) new ResizeObserver(syncBingo).observe(bfwEl);
     } else {
-        setInterval(sync, 400);
+        setInterval(syncAll, 400);
     }
 })();
 </script>
