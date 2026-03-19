@@ -13887,7 +13887,7 @@ function runMathBlitz(problems) {
                     }
                 } 
             });
-            initBingo(); _renderPatternBar('Normal Bingo'); setupChat(); listenForNextDraw(); listenForLastWinner(); initSponsorListener(); initSponsorListener(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate(); if(typeof setupCallListener === 'function') setupCallListener();
+            initBingo(); _renderPatternBar('Normal Bingo'); setupChat(); listenForNextDraw(); listenForLastWinner(); initSponsorListener(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate(); if(typeof setupCallListener === 'function') setupCallListener();
             try { if(localStorage.getItem('artcardDismissed') === '1') { var ac = document.getElementById('autostartArtcard'); if(ac) ac.style.display='none'; } } catch(e){}
             // Show chat bubble since bingo tab is active by default
             var _chatBubble = document.getElementById('chatBubbleBtn');
@@ -15801,7 +15801,7 @@ function runMathBlitz(problems) {
     }
     function setSponsorAmount(p) { document.getElementById('sponsorAmountInput').value = p; }
     function openSponsorModal() { toggleSponsorPanel(); }
-    function renderSponsorList() { updateSponsorDisplay(); }
+    function renderSponsorList() { /* no-op, legacy stub */ }
     function submitSponsor() {
         if (!auth.currentUser) { showToast('Sign in muna!'); return; }
         const uid = auth.currentUser.uid;
@@ -15824,31 +15824,58 @@ function runMathBlitz(problems) {
         if (btn) { btn.disabled = true; btn.textContent = '...'; }
         const isEdit = !!currentSponsor;
 
-        // Adjust coins
-        if (additionalCoins > 0) {
-            db.ref('users/' + uid + '/points').transaction(p => (p || 0) - additionalCoins);
-        } else if (additionalCoins < 0) {
-            db.ref('users/' + uid + '/points').transaction(p => (p || 0) + Math.abs(additionalCoins));
-        }
-
-        // Save sponsor data (flat single-sponsor structure)
-        db.ref('gameState/sponsor').set({
+        const sponsorData = {
             uid: uid,
             name: userData.name || 'Anonymous',
             photo: userData.photo || '',
             amount: coins
-        });
-        currentSponsor = { uid: uid, name: userData.name || 'Anonymous', photo: userData.photo || '', amount: coins };
-        currentSponsoredAmount = coins;
-        updateSponsorDisplay();
-        try { lucide.createIcons(); } catch(e) {}
+        };
 
-        if (btn) { btn.disabled = false; btn.textContent = 'SAVE CHANGES'; }
-        var balEl = document.getElementById('sponsorPanelBalance');
-        if (balEl) balEl.textContent = toPeso((userData.points || 0) - additionalCoins);
-        showToast(isEdit
-            ? 'Na-update ang iyong sponsor!'
-            : 'Salamat sa pag-sponsor ng ₱' + pesos.toFixed(0) + '! Mapupunta sa prize ng susunod na laro.');
+        function _finalizeSponsor() {
+            // Save sponsor data AFTER points are adjusted
+            db.ref('gameState/sponsor').set(sponsorData).then(function() {
+                if (btn) { btn.disabled = false; btn.textContent = 'SAVE CHANGES'; }
+                var balEl = document.getElementById('sponsorPanelBalance');
+                if (balEl) balEl.textContent = toPeso((userData.points || 0) - additionalCoins);
+                showToast(isEdit
+                    ? 'Na-update ang iyong sponsor!'
+                    : 'Salamat sa pag-sponsor ng ₱' + pesos.toFixed(0) + '! Mapupunta sa prize ng susunod na laro.');
+            }).catch(function(err) {
+                console.error('Sponsor save failed:', err);
+                // Refund if points were already deducted
+                if (additionalCoins > 0) {
+                    db.ref('users/' + uid + '/points').transaction(function(p) { return (p || 0) + additionalCoins; });
+                }
+                if (btn) { btn.disabled = false; btn.textContent = isEdit ? 'SAVE CHANGES' : 'SPONSOR'; }
+                showToast('Error sa pag-sponsor. Try again.');
+            });
+        }
+
+        // Adjust coins first, then save sponsor
+        if (additionalCoins > 0) {
+            db.ref('users/' + uid + '/points').transaction(function(p) { return (p || 0) - additionalCoins; })
+                .then(function(result) {
+                    if (result.committed) { _finalizeSponsor(); }
+                    else {
+                        if (btn) { btn.disabled = false; btn.textContent = isEdit ? 'SAVE CHANGES' : 'SPONSOR'; }
+                        showToast('Hindi na-deduct ang coins. Try again.');
+                    }
+                }).catch(function(err) {
+                    console.error('Points transaction failed:', err);
+                    if (btn) { btn.disabled = false; btn.textContent = isEdit ? 'SAVE CHANGES' : 'SPONSOR'; }
+                    showToast('Error. Try again.');
+                });
+        } else if (additionalCoins < 0) {
+            db.ref('users/' + uid + '/points').transaction(function(p) { return (p || 0) + Math.abs(additionalCoins); })
+                .then(function() { _finalizeSponsor(); })
+                .catch(function(err) {
+                    console.error('Points refund failed:', err);
+                    if (btn) { btn.disabled = false; btn.textContent = isEdit ? 'SAVE CHANGES' : 'SPONSOR'; }
+                    showToast('Error. Try again.');
+                });
+        } else {
+            _finalizeSponsor();
+        }
     }
     function cancelSponsor() {
         if (!auth.currentUser) return;
