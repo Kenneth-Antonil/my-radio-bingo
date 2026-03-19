@@ -15629,14 +15629,19 @@ function runMathBlitz(problems) {
     function _writePuroToFirebase(hasPuro) {
         const uid = auth.currentUser ? auth.currentUser.uid : null;
         if (!uid) return;
-        if (hasPuro && !_myPuroWritten) {
-            _myPuroWritten = true;
-            db.ref('gameState/puro/' + uid).set({
-                name: userData.name || 'Player',
-                photo: userData.photo || ''
-            });
-        } else if (!hasPuro && _myPuroWritten) {
+        if (hasPuro) {
+            _myPuroCleaned = false;
+            if (!_myPuroWritten) {
+                _myPuroWritten = true;
+                db.ref('gameState/puro/' + uid).set({
+                    name: userData.name || 'Player',
+                    photo: userData.photo || ''
+                });
+            }
+        } else if (!_myPuroCleaned) {
+            // Remove once, then stop spamming Firebase
             _myPuroWritten = false;
+            _myPuroCleaned = true;
             db.ref('gameState/puro/' + uid).remove();
         }
     }
@@ -15688,6 +15693,7 @@ function runMathBlitz(problems) {
         db.ref('gameState/drawnNumbers').on('value', snap => {
             if (!snap.exists() || Object.keys(snap.val() || {}).length === 0) {
                 _myPuroWritten = false;
+                _myPuroCleaned = false;
                 _roundEnded = false; // reset for next round
                 db.ref('gameState/puro').remove(); // wipe ALL puro data, not just local
                 const bar = document.getElementById('puroTickerBar');
@@ -15699,6 +15705,7 @@ function runMathBlitz(problems) {
     }
     function clearMyPuro() {
         _myPuroWritten = false;
+        _myPuroCleaned = false;
         const uid = auth.currentUser ? auth.currentUser.uid : null;
         if (uid) db.ref('gameState/puro/' + uid).remove();
     }
@@ -16077,6 +16084,7 @@ function runMathBlitz(problems) {
     }
     // ── Track whether this client has puro written to Firebase ──
     let _myPuroWritten = false;
+    let _myPuroCleaned = false;
 
     function checkPuroStatus() {
         if(userData.hasWonCurrent || gameDrawn.length === 0) return;
