@@ -1,582 +1,471 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>RBL News | Radio Bingo Live</title>
-    <meta name="description" content="Latest news, updates, and stories from Radio Bingo Live community.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <style>
-        :root {
-            --bg: #080e1a; --bg2: #0f172a; --card: #111827;
-            --border: rgba(255,255,255,0.07);
-            --accent: #0ea5e9; --accent-glow: #38bdf8;
-            --accent-dim: rgba(14,165,233,0.12);
-            --text: #f1f5f9; --muted: #94a3b8; --dim: #475569;
-            --gold: #fbbf24; --danger: #ef4444; --success: #10b981;
-            --nav-h: calc(64px + env(safe-area-inset-bottom));
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>RB Live — Discover</title>
+<link rel="icon" href="https://i.imgur.com/4nljOtR.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+    --bg:#0a0c14;--surface:#0f1219;--surface-2:#151921;--surface-3:#1a1f2e;
+    --border:rgba(255,255,255,0.06);--border-hover:rgba(255,255,255,0.12);
+    --text-1:#f1f5f9;--text-2:rgba(255,255,255,0.65);--text-3:rgba(255,255,255,0.35);
+    --accent:#3b82f6;--accent-glow:#60a5fa;--gold:#f59e0b;
+    --radius:16px;
+}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text-1);font-family:'DM Sans',system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;padding-bottom:100px;}
 
-        /* HEADER */
-        .site-header { position: sticky; top: 0; z-index: 300; background: rgba(8,14,26,0.97); backdrop-filter: blur(24px); border-bottom: 1px solid var(--border); }
-        .header-main { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; gap: 12px; }
-        .back-btn { display: flex; align-items: center; gap: 5px; background: none; border: none; color: var(--accent-glow); font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; padding: 7px 10px; border-radius: 8px; transition: background 0.2s; white-space: nowrap; }
-        .back-btn:hover { background: var(--accent-dim); }
-        .back-btn i { width: 14px; height: 14px; }
-        .masthead { display: flex; flex-direction: column; align-items: center; flex: 1; }
-        .masthead-name { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 900; letter-spacing: 0.5px; line-height: 1; }
-        .masthead-name .rbl { color: var(--accent-glow); }
-        .masthead-sub { font-size: 9px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--dim); margin-top: 2px; }
-        .header-btns { display: flex; gap: 6px; }
-        .hbtn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-        .hbtn i { width: 16px; height: 16px; }
-        .hbtn:hover { color: var(--accent-glow); border-color: var(--accent); background: var(--accent-dim); }
+/* ── NAV ── */
+.top-bar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,12,20,0.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--border);padding:0 16px;height:56px;display:flex;align-items:center;gap:12px;}
+.top-bar-back{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-2);cursor:pointer;transition:all 0.15s;text-decoration:none;flex-shrink:0;}
+.top-bar-back:hover{background:rgba(255,255,255,0.1);color:white;}
+.top-bar-title{font-size:16px;font-weight:800;color:white;display:flex;align-items:center;gap:8px;}
+.top-bar-title img{width:26px;height:26px;border-radius:8px;}
 
-        /* CATEGORY BAR */
-        .cat-bar { display: flex; overflow-x: auto; scrollbar-width: none; border-top: 1px solid var(--border); padding: 0 8px; }
-        .cat-bar::-webkit-scrollbar { display: none; }
-        .cat-btn { flex-shrink: 0; padding: 9px 14px; font-family: 'Sora', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--dim); background: none; border: none; cursor: pointer; position: relative; transition: color 0.2s; white-space: nowrap; }
-        .cat-btn.active { color: var(--accent-glow); }
-        .cat-btn.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 20px; height: 2px; background: var(--accent-glow); border-radius: 2px 2px 0 0; }
+/* ── HERO ── */
+.hero{padding:80px 20px 32px;text-align:center;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 50% 80%,rgba(59,130,246,0.08) 0%,transparent 50%);pointer-events:none;}
+.hero-logo{width:72px;height:72px;border-radius:20px;box-shadow:0 0 40px rgba(59,130,246,0.2);margin:0 auto 16px;display:block;}
+.hero h1{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:white;margin-bottom:6px;letter-spacing:-0.5px;}
+.hero p{font-size:13px;color:var(--text-2);max-width:340px;margin:0 auto;}
 
-        /* BREAKING TICKER */
-        .breaking-bar { display: flex; align-items: center; background: var(--danger); height: 30px; overflow: hidden; }
-        .brk-label { flex-shrink: 0; background: rgba(0,0,0,0.25); padding: 0 12px; height: 100%; display: flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap; }
-        .brk-label i { width: 11px; height: 11px; }
-        .ticker-outer { flex: 1; overflow: hidden; }
-        .ticker-inner { display: inline-flex; white-space: nowrap; animation: tick 35s linear infinite; }
-        .ticker-inner:hover { animation-play-state: paused; }
-        .tick-item { font-size: 11px; font-weight: 600; padding: 0 40px 0 0; }
-        @keyframes tick { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+/* ── CATEGORY TABS ── */
+.cat-tabs{display:flex;gap:8px;padding:8px 20px 16px;overflow-x:auto;scrollbar-width:none;}
+.cat-tabs::-webkit-scrollbar{display:none;}
+.cat-tab{padding:7px 16px;border-radius:50px;border:1px solid var(--border);background:transparent;color:var(--text-2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-family:inherit;flex-shrink:0;}
+.cat-tab.active{background:var(--accent);color:white;border-color:var(--accent);}
+.cat-tab:hover:not(.active){border-color:var(--border-hover);color:var(--text-1);}
 
-        /* WRAP */
-        .wrap { max-width: 640px; margin: 0 auto; padding-bottom: calc(var(--nav-h) + 20px); }
+/* ── SECTION ── */
+.section{padding:0 16px;margin-bottom:28px;}
+.section-label{font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.section-label i{width:14px;height:14px;}
 
-        /* HERO */
-        .hero-wrap { padding: 16px 16px 0; }
-        .hero-card { border-radius: 18px; overflow: hidden; position: relative; cursor: pointer; background: var(--card); border: 1px solid var(--border); transition: transform 0.2s; }
-        .hero-card:active { transform: scale(0.99); }
-        .hero-img-box { width: 100%; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; font-size: 72px; overflow: hidden; }
-        .hero-img-box img { width:100%; height:100%; object-fit:cover; }
-        .hero-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 60px 16px 16px; background: linear-gradient(0deg, rgba(8,14,26,0.98) 0%, rgba(8,14,26,0.6) 50%, transparent 100%); }
-        .cat-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 4px; font-size: 9px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px; }
-        .cat-pill.bingo { background: rgba(14,165,233,0.25); color: var(--accent-glow); border: 1px solid rgba(14,165,233,0.3); }
-        .cat-pill.entertainment { background: rgba(244,114,182,0.2); color: #f472b6; border: 1px solid rgba(244,114,182,0.3); }
-        .cat-pill.sports { background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
-        .cat-pill.tech { background: rgba(167,139,250,0.2); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
-        .cat-pill.lifestyle { background: rgba(251,146,60,0.2); color: #fb923c; border: 1px solid rgba(251,146,60,0.3); }
-        .cat-pill.opinion { background: rgba(251,191,36,0.2); color: var(--gold); border: 1px solid rgba(251,191,36,0.3); }
-        .cat-pill.community { background: rgba(52,211,153,0.2); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
-        .hero-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; line-height: 1.3; color: #fff; margin-bottom: 10px; }
-        .hero-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: rgba(255,255,255,0.45); flex-wrap: wrap; }
-        .meta-dot { width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,0.25); }
-        .live-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--danger); color: white; font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; padding: 3px 7px; border-radius: 4px; margin-bottom: 8px; }
-        .live-dot { width: 5px; height: 5px; border-radius: 50%; background: white; animation: blink 1.2s ease infinite; }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+/* ── FEATURED CARD ── */
+.featured-card{border-radius:var(--radius);overflow:hidden;background:var(--surface-2);border:1px solid var(--border);margin-bottom:16px;cursor:pointer;transition:all 0.2s;}
+.featured-card:hover{border-color:var(--border-hover);}
+.featured-img{width:100%;height:180px;object-fit:cover;display:block;}
+.featured-body{padding:16px;}
+.featured-tag{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent-glow);margin-bottom:8px;}
+.featured-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:800;color:white;margin-bottom:6px;line-height:1.3;}
+.featured-excerpt{font-size:13px;color:var(--text-2);line-height:1.5;}
 
-        /* SECTION */
-        .sec-hdr { display: flex; align-items: center; justify-content: space-between; padding: 20px 16px 10px; }
-        .sec-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
-        .sec-title::before { content: ''; width: 3px; height: 14px; background: var(--accent-glow); border-radius: 2px; display: inline-block; }
+/* ── ARTICLE CARD ── */
+.article-card{display:flex;gap:14px;padding:14px;border-radius:14px;border:1px solid var(--border);background:var(--surface);margin-bottom:10px;cursor:pointer;transition:all 0.2s;align-items:center;}
+.article-card:hover{border-color:var(--border-hover);background:var(--surface-2);}
+.article-thumb{width:64px;height:64px;border-radius:12px;object-fit:cover;flex-shrink:0;background:var(--surface-3);}
+.article-info{flex:1;min-width:0;}
+.article-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);margin-bottom:3px;}
+.article-tag.legal{color:#a78bfa;}
+.article-tag.guide{color:#34d399;}
+.article-title{font-size:14px;font-weight:800;color:white;margin-bottom:2px;line-height:1.3;}
+.article-date{font-size:11px;color:var(--text-3);}
 
-        /* FEATURED SCROLL */
-        .feat-scroll { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding: 0 16px 4px; }
-        .feat-scroll::-webkit-scrollbar { display: none; }
-        .feat-card { flex-shrink: 0; width: 195px; border-radius: 14px; overflow: hidden; background: var(--card); border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s; }
-        .feat-card:active { transform: scale(0.97); }
-        .feat-img { width: 100%; height: 108px; display: flex; align-items: center; justify-content: center; font-size: 36px; overflow: hidden; }
-        .feat-img img { width:100%;height:100%;object-fit:cover; }
-        .feat-body { padding: 10px; }
-        .feat-cat { font-size: 8px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
-        .feat-title { font-size: 12px; font-weight: 700; line-height: 1.4; color: #e2e8f0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .feat-time { font-size: 9px; color: var(--dim); margin-top: 6px; display: flex; align-items: center; gap: 3px; }
-        .feat-time i { width:9px; height:9px; }
+/* ── FULL ARTICLE VIEW ── */
+.article-view{display:none;position:fixed;inset:0;z-index:200;background:var(--bg);overflow-y:auto;animation:slideUp 0.3s ease;}
+.article-view.open{display:block;}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.av-header{position:sticky;top:0;z-index:10;background:rgba(10,12,20,0.92);backdrop-filter:blur(20px);padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+.av-close{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-2);cursor:pointer;}
+.av-close:hover{background:rgba(255,255,255,0.1);color:white;}
+.av-header-title{font-size:13px;font-weight:700;color:var(--text-2);}
+.av-body{padding:24px 20px 80px;max-width:600px;margin:0 auto;}
+.av-body h1{font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:white;margin-bottom:8px;line-height:1.25;}
+.av-body .av-meta{font-size:11px;color:var(--text-3);margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+.av-body .av-cover{width:100%;border-radius:14px;margin-bottom:20px;max-height:220px;object-fit:cover;}
+.av-body p{font-size:14px;color:var(--text-2);margin-bottom:14px;line-height:1.7;}
+.av-body h2{font-size:18px;font-weight:800;color:white;margin:24px 0 10px;}
+.av-body h3{font-size:15px;font-weight:800;color:var(--accent-glow);margin:18px 0 8px;}
+.av-body ul{margin:0 0 14px 20px;color:var(--text-2);font-size:14px;}
+.av-body li{margin-bottom:6px;line-height:1.6;}
+.av-body strong{color:white;}
 
-        /* ARTICLE LIST */
-        .art-list { display: flex; flex-direction: column; }
-        .art-card { display: flex; gap: 12px; padding: 14px 16px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border); }
-        .art-card:hover, .art-card:active { background: rgba(255,255,255,0.02); }
-        .art-thumb { flex-shrink: 0; width: 84px; height: 70px; border-radius: 10px; overflow: hidden; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 28px; }
-        .art-thumb img { width:100%;height:100%;object-fit:cover; }
-        .art-body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
-        .art-cat { font-size: 8px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
-        .art-title { font-size: 13px; font-weight: 700; line-height: 1.4; color: #e2e8f0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .art-meta { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--dim); margin-top: 5px; }
-        .art-meta i { width: 9px; height: 9px; }
+/* ── FOOTER ── */
+.page-footer{text-align:center;padding:32px 20px;border-top:1px solid var(--border);margin-top:20px;}
+.page-footer img{width:40px;height:40px;border-radius:12px;margin-bottom:8px;}
+.page-footer p{font-size:11px;color:var(--text-3);}
 
-        /* CATEGORY COLORS */
-        .c-bingo { color: var(--accent-glow); } .c-entertainment { color: #f472b6; }
-        .c-sports { color: #10b981; } .c-tech { color: #a78bfa; }
-        .c-lifestyle { color: #fb923c; } .c-opinion { color: var(--gold); } .c-community { color: #34d399; }
-
-        /* DIVIDER */
-        .sec-divider { height: 5px; background: rgba(0,0,0,0.4); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 8px 0; }
-
-        /* EMPTY & LOADING */
-        .empty-state { text-align: center; padding: 60px 24px; }
-        .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
-        .empty-state p { color: var(--muted); font-size: 14px; line-height: 1.6; }
-        .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
-        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-
-        /* MODAL */
-        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(10px); z-index: 800; display: none; align-items: flex-end; }
-        .modal-bg.open { display: flex; }
-        .article-modal { background: #0c1220; border-radius: 22px 22px 0 0; border: 1px solid var(--border); width: 100%; max-width: 640px; margin: 0 auto; max-height: 92vh; overflow-y: auto; animation: slideUp 0.32s cubic-bezier(0.34,1.56,0.64,1); }
-        @keyframes slideUp { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
-        .modal-handle { width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12); margin: 12px auto 0; }
-        .modal-hdr { padding: 12px 16px; display: flex; justify-content: flex-end; }
-        .modal-close { background: rgba(255,255,255,0.07); border: none; color: var(--muted); border-radius: 8px; padding: 8px; cursor: pointer; }
-        .modal-close i { width: 18px; height: 18px; display: block; }
-        .modal-body-wrap { padding: 0 16px 28px; }
-        .modal-cat { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
-        .modal-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; line-height: 1.35; color: #f1f5f9; margin-bottom: 14px; }
-        .modal-meta-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--dim); padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 16px; flex-wrap: wrap; }
-        .modal-meta-row i { width: 12px; height: 12px; }
-        .modal-hero-img { width: 100%; aspect-ratio: 16/9; border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 72px; margin-bottom: 16px; }
-        .modal-hero-img img { width:100%;height:100%;object-fit:cover; }
-        .modal-content { font-size: 15px; line-height: 1.85; color: #cbd5e1; }
-        .modal-content p { margin-bottom: 16px; }
-        .modal-content p:last-child { margin-bottom: 0; }
-        .modal-content strong { color: #e2e8f0; }
-        .modal-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
-        .m-tag { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--muted); }
-
-        /* SHARE */
-        .share-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
-        .share-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin-bottom: 10px; }
-        .share-row { display: flex; gap: 8px; flex-wrap: wrap; }
-        .share-btn { flex: 1; min-width: 100px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 10px; border-radius: 10px; font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; white-space: nowrap; }
-        .share-btn i { width: 14px; height: 14px; }
-        .share-btn.feed { background: linear-gradient(135deg, var(--accent), #0284c7); color: white; }
-        .share-btn.feed:hover { filter: brightness(1.1); }
-        .share-btn.wa { background: rgba(37,211,102,0.12); border: 1px solid rgba(37,211,102,0.25); color: #4ade80; }
-        .share-btn.fb { background: rgba(24,119,242,0.15); border: 1px solid rgba(24,119,242,0.3); color: #6aa3f5; }
-        .share-btn.tw { background: rgba(29,161,242,0.12); border: 1px solid rgba(29,161,242,0.25); color: #5eb6f5; }
-        .share-btn.copy { background: rgba(255,255,255,0.07); border: 1px solid var(--border); color: var(--muted); }
-        .share-btn.copy:hover { color: var(--text); background: rgba(255,255,255,0.1); }
-        .share-btn.native { background: rgba(255,255,255,0.07); border: 1px solid var(--border); color: var(--muted); }
-
-        /* BOTTOM NAV */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(8,14,26,0.97); backdrop-filter: blur(20px); border-top: 1px solid var(--border); height: var(--nav-h); display: flex; justify-content: space-around; align-items: stretch; z-index: 5000; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--dim); flex: 1; border: none; background: none; cursor: pointer; transition: color 0.2s; position: relative; padding: 10px 4px 8px; text-decoration: none; font-family: 'Sora', sans-serif; }
-        .nav-item:hover { color: #94a3b8; }
-        .nav-item.active { color: var(--accent-glow); }
-        .nav-item.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 32px; height: 2px; background: var(--accent-glow); border-radius: 2px 2px 0 0; }
-        .nav-item.active .nav-icon { transform: translateY(-2px); filter: drop-shadow(0 0 6px var(--accent-glow)); }
-        .nav-icon { width: 22px; height: 22px; flex-shrink: 0; transition: transform 0.2s, filter 0.2s; }
-        .nav-label { font-size: 9px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; white-space: nowrap; }
-
-        /* SEARCH */
-        .search-layer { position: fixed; inset: 0; background: rgba(8,14,26,0.98); z-index: 900; display: none; flex-direction: column; padding: 56px 16px 0; }
-        .search-layer.open { display: flex; }
-        .search-box { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
-        .search-box i { color: var(--dim); width: 18px; height: 18px; flex-shrink: 0; }
-        .search-inp { flex: 1; background: none; border: none; outline: none; font-size: 16px; font-family: 'Sora', sans-serif; color: var(--text); }
-        .search-inp::placeholder { color: var(--dim); }
-        .search-cancel { background: none; border: none; color: var(--accent-glow); font-size: 13px; font-weight: 700; cursor: pointer; padding: 4px 0 4px 8px; flex-shrink: 0; font-family: 'Sora', sans-serif; }
-        .search-results { flex: 1; overflow-y: auto; margin-top: 16px; }
-        .search-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin-bottom: 12px; }
-
-        /* TOAST */
-        .toast { position: fixed; bottom: calc(var(--nav-h) + 12px); left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(17,24,39,0.97); border: 1px solid var(--border); color: var(--text); font-size: 13px; font-weight: 600; padding: 10px 18px; border-radius: 22px; backdrop-filter: blur(12px); z-index: 9999; opacity: 0; pointer-events: none; transition: all 0.3s; white-space: nowrap; font-family: 'Sora', sans-serif; }
-        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    </style>
+/* ── ANIM ── */
+.fade-in{opacity:0;transform:translateY(12px);animation:fadeIn 0.4s ease forwards;}
+@keyframes fadeIn{to{opacity:1;transform:translateY(0);}}
+.fade-in:nth-child(2){animation-delay:0.05s;}
+.fade-in:nth-child(3){animation-delay:0.1s;}
+.fade-in:nth-child(4){animation-delay:0.15s;}
+.fade-in:nth-child(5){animation-delay:0.2s;}
+.fade-in:nth-child(6){animation-delay:0.25s;}
+</style>
 </head>
 <body>
 
-<header class="site-header">
-    <div class="header-main">
-        <button class="back-btn" onclick="goBack()"><i data-lucide="chevron-left"></i> RBL</button>
-        <div class="masthead">
-            <div class="masthead-name"><span class="rbl">RBL</span> NEWS</div>
-            <div class="masthead-sub" id="hdrDate"></div>
-        </div>
-        <div class="header-btns">
-            <button class="hbtn" onclick="openSearch()"><i data-lucide="search"></i></button>
-            <button class="hbtn" onclick="showToast('🔔 Notifications on!')"><i data-lucide="bell"></i></button>
-        </div>
-    </div>
-    <div class="cat-bar">
-        <button class="cat-btn active" data-cat="all" onclick="filterCat('all',this)">All</button>
-        <button class="cat-btn" data-cat="bingo" onclick="filterCat('bingo',this)">Bingo</button>
-        <button class="cat-btn" data-cat="entertainment" onclick="filterCat('entertainment',this)">Entertainment</button>
-        <button class="cat-btn" data-cat="sports" onclick="filterCat('sports',this)">Sports</button>
-        <button class="cat-btn" data-cat="tech" onclick="filterCat('tech',this)">Tech</button>
-        <button class="cat-btn" data-cat="lifestyle" onclick="filterCat('lifestyle',this)">Lifestyle</button>
-        <button class="cat-btn" data-cat="opinion" onclick="filterCat('opinion',this)">Opinion</button>
-        <button class="cat-btn" data-cat="community" onclick="filterCat('community',this)">Community</button>
-    </div>
-</header>
-
-<div class="breaking-bar">
-    <div class="brk-label"><i data-lucide="zap"></i> BREAKING</div>
-    <div class="ticker-outer"><div class="ticker-inner" id="tickerInner"><span class="tick-item">Loading latest news from RBL...</span><span class="tick-item"> </span></div></div>
+<!-- TOP BAR -->
+<div class="top-bar">
+    <a href="index.html" class="top-bar-back"><i data-lucide="arrow-left" style="width:18px;height:18px;"></i></a>
+    <div class="top-bar-title"><img src="https://i.imgur.com/4nljOtR.png" alt="RB Live"> Discover</div>
 </div>
 
-<div class="wrap">
-    <div id="loadingState" style="padding:16px;">
-        <div class="skeleton" style="height:220px;border-radius:18px;margin-bottom:16px;"></div>
-        <div class="skeleton" style="height:11px;width:40%;margin-bottom:14px;"></div>
-        <div style="display:flex;gap:12px;margin-bottom:10px;"><div class="skeleton" style="width:84px;height:70px;border-radius:10px;flex-shrink:0;"></div><div style="flex:1;display:flex;flex-direction:column;gap:7px;"><div class="skeleton" style="height:10px;"></div><div class="skeleton" style="height:10px;"></div><div class="skeleton" style="height:10px;width:60%;"></div></div></div>
-        <div style="display:flex;gap:12px;margin-bottom:10px;"><div class="skeleton" style="width:84px;height:70px;border-radius:10px;flex-shrink:0;"></div><div style="flex:1;display:flex;flex-direction:column;gap:7px;"><div class="skeleton" style="height:10px;"></div><div class="skeleton" style="height:10px;"></div><div class="skeleton" style="height:10px;width:60%;"></div></div></div>
-    </div>
-    <div id="newsContent" style="display:none;"></div>
+<!-- HERO -->
+<div class="hero">
+    <img src="https://i.imgur.com/4nljOtR.png" alt="RB Live" class="hero-logo">
+    <h1>RB Live</h1>
+    <p>Ang pinaka-exciting na Filipino social bingo platform. Maglaro, manalo, at makipag-connect.</p>
 </div>
 
-<nav class="bottom-nav">
-    <button class="nav-item" onclick="goToMain('home')"><i data-lucide="home" class="nav-icon"></i><span class="nav-label">Home</span></button>
-    <button class="nav-item" onclick="goToMain('bingo')"><i data-lucide="play-circle" class="nav-icon"></i><span class="nav-label">Bingo</span></button>
-    <button class="nav-item" onclick="goToMain('store')"><i data-lucide="shopping-bag" class="nav-icon"></i><span class="nav-label">Store</span></button>
-    <button class="nav-item" onclick="goToMain('beats')"><i data-lucide="clapperboard" class="nav-icon"></i><span class="nav-label">Beats</span></button>
-    <button class="nav-item" onclick="goToMain('games')"><i data-lucide="gamepad-2" class="nav-icon"></i><span class="nav-label">Games</span></button>
-    <button class="nav-item active"><i data-lucide="newspaper" class="nav-icon"></i><span class="nav-label">News</span></button>
-    <button class="nav-item" onclick="goToMain('me')"><i data-lucide="user" class="nav-icon"></i><span class="nav-label">Me</span></button>
-</nav>
+<!-- CATEGORY TABS -->
+<div class="cat-tabs">
+    <button class="cat-tab active" onclick="filterCat('all')">All</button>
+    <button class="cat-tab" onclick="filterCat('featured')">Featured</button>
+    <button class="cat-tab" onclick="filterCat('guide')">Guides</button>
+    <button class="cat-tab" onclick="filterCat('about')">About</button>
+    <button class="cat-tab" onclick="filterCat('legal')">Legal</button>
+</div>
 
-<!-- ARTICLE MODAL -->
-<div class="modal-bg" id="articleModal" onclick="onModalBgClick(event)">
-    <div class="article-modal">
-        <div class="modal-handle"></div>
-        <div class="modal-hdr"><button class="modal-close" onclick="closeModal()"><i data-lucide="x"></i></button></div>
-        <div class="modal-body-wrap">
-            <div class="modal-cat" id="mCat"></div>
-            <div class="modal-title" id="mTitle"></div>
-            <div class="modal-meta-row" id="mMeta"></div>
-            <div class="modal-hero-img" id="mImg"></div>
-            <div class="modal-content" id="mBody"></div>
-            <div class="modal-tags" id="mTags"></div>
-            <div class="share-section">
-                <div class="share-label">Share this article</div>
-                <div class="share-row" id="shareRow"></div>
-            </div>
+<!-- FEATURED -->
+<div class="section" data-cat="featured">
+    <div class="section-label"><i data-lucide="sparkles"></i> FEATURED</div>
+    <div class="featured-card fade-in" onclick="openArticle('about-rb')">
+        <img class="featured-img" src="https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&h=300&fit=crop" alt="RB Live">
+        <div class="featured-body">
+            <div class="featured-tag"><i data-lucide="star" style="width:10px;height:10px;"></i> ABOUT RB LIVE</div>
+            <div class="featured-title">Ano ang RB Live? Ang Bagong Social Bingo ng Pinoy</div>
+            <div class="featured-excerpt">Alamin kung paano nagsimula ang RB Live at bakit ito ang pinaka-exciting na online bingo platform sa Pilipinas.</div>
         </div>
     </div>
 </div>
 
-<!-- SEARCH OVERLAY -->
-<div class="search-layer" id="searchLayer">
-    <div class="search-box">
-        <i data-lucide="search"></i>
-        <input class="search-inp" placeholder="Search news, topics..." id="searchInp" oninput="handleSearch(this.value)">
-        <button class="search-cancel" onclick="closeSearch()">Cancel</button>
+<!-- GUIDES -->
+<div class="section" data-cat="guide">
+    <div class="section-label"><i data-lucide="book-open"></i> GUIDES</div>
+    <div class="article-card fade-in" onclick="openArticle('how-to-play')">
+        <img class="article-thumb" src="https://images.unsplash.com/photo-1606167668584-78701c57f13d?w=128&h=128&fit=crop" alt="">
+        <div class="article-info">
+            <div class="article-tag guide">GUIDE</div>
+            <div class="article-title">Paano Maglaro ng Bingo sa RB Live</div>
+            <div class="article-date">Step-by-step guide para sa beginners</div>
+        </div>
     </div>
-    <div class="search-results" id="searchResults">
-        <div class="search-lbl">Trending Topics</div>
-        <div id="trendingTags"></div>
+    <div class="article-card fade-in" onclick="openArticle('bingo-history')">
+        <img class="article-thumb" src="https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=128&h=128&fit=crop" alt="">
+        <div class="article-info">
+            <div class="article-tag guide">HISTORY</div>
+            <div class="article-title">Kasaysayan ng Bingo: Mula Italy Hanggang Pilipinas</div>
+            <div class="article-date">500 years of bingo history</div>
+        </div>
+    </div>
+    <div class="article-card fade-in" onclick="openArticle('bingo-tips')">
+        <img class="article-thumb" src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=128&h=128&fit=crop" alt="">
+        <div class="article-info">
+            <div class="article-tag guide">TIPS</div>
+            <div class="article-title">5 Tips Para Tumataas ang Chance Manalo sa Bingo</div>
+            <div class="article-date">Strategy guide para sa mga manlalaro</div>
+        </div>
+    </div>
+    <div class="article-card fade-in" onclick="openArticle('bingo-patterns')">
+        <img class="article-thumb" src="https://images.unsplash.com/photo-1553481187-be93c21490a9?w=128&h=128&fit=crop" alt="">
+        <div class="article-info">
+            <div class="article-tag guide">PATTERNS</div>
+            <div class="article-title">Mga Bingo Pattern: X, Blackout, Four Corners at Iba Pa</div>
+            <div class="article-date">Complete guide sa lahat ng winning patterns</div>
+        </div>
+    </div>
+    <div class="article-card fade-in" onclick="openArticle('sponsor-guide')">
+        <img class="article-thumb" src="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=128&h=128&fit=crop" alt="">
+        <div class="article-info">
+            <div class="article-tag guide">FEATURE</div>
+            <div class="article-title">Paano Mag-Sponsor ng Game sa RB Live</div>
+            <div class="article-date">Dagdagan ang prize pool at maging game sponsor</div>
+        </div>
     </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- ABOUT -->
+<div class="section" data-cat="about">
+    <div class="section-label"><i data-lucide="info"></i> ABOUT</div>
+    <div class="article-card fade-in" onclick="openArticle('about-us')">
+        <img class="article-thumb" src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=128&h=128&fit=crop" alt="">
+        <div class="article-info">
+            <div class="article-tag">COMPANY</div>
+            <div class="article-title">About Us — Ang Team sa Likod ng RB Live</div>
+            <div class="article-date">Our mission and story</div>
+        </div>
+    </div>
+    <div class="article-card fade-in" onclick="openArticle('community')">
+        <img class="article-thumb" src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=128&h=128&fit=crop" alt="">
+        <div class="article-info">
+            <div class="article-tag">COMMUNITY</div>
+            <div class="article-title">RB Live Community: Sama-Sama Tayo</div>
+            <div class="article-date">Join the growing Filipino bingo community</div>
+        </div>
+    </div>
+</div>
+
+<!-- LEGAL -->
+<div class="section" data-cat="legal">
+    <div class="section-label"><i data-lucide="shield"></i> LEGAL</div>
+    <div class="article-card fade-in" onclick="openArticle('privacy')">
+        <img class="article-thumb" src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=128&h=128&fit=crop" alt="">
+        <div class="article-info">
+            <div class="article-tag legal">LEGAL</div>
+            <div class="article-title">Privacy Policy</div>
+            <div class="article-date">Paano namin pinoprotektahan ang inyong data</div>
+        </div>
+    </div>
+    <div class="article-card fade-in" onclick="openArticle('terms')">
+        <img class="article-thumb" src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=128&h=128&fit=crop" alt="">
+        <div class="article-info">
+            <div class="article-tag legal">LEGAL</div>
+            <div class="article-title">Terms of Service</div>
+            <div class="article-date">Mga patakaran sa paggamit ng RB Live</div>
+        </div>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<div class="page-footer">
+    <img src="https://i.imgur.com/4nljOtR.png" alt="RB Live">
+    <p>RB Live &copy; 2025. Powered by K.R.A Stories.<br>Made with love for the Filipino community.</p>
+</div>
+
+<!-- ARTICLE VIEWER -->
+<div class="article-view" id="articleView">
+    <div class="av-header">
+        <button class="av-close" onclick="closeArticle()"><i data-lucide="arrow-left" style="width:18px;height:18px;"></i></button>
+        <span class="av-header-title" id="avHeaderTitle">Article</span>
+    </div>
+    <div class="av-body" id="avBody"></div>
+</div>
 
 <script>
-const firebaseConfig = {
-    apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
-    authDomain: "radiobingo-9ac29.firebaseapp.com",
-    databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "radiobingo-9ac29",
-    storageBucket: "radiobingo-9ac29.firebasestorage.app",
-    messagingSenderId: "965903993397",
-    appId: "1:965903993397:web:f6646fa05225f147eebf7c"
+// ── ARTICLES DATA ──
+var ARTICLES = {
+    'about-rb': {
+        title: 'Ano ang RB Live? Ang Bagong Social Bingo ng Pinoy',
+        category: 'ABOUT RB LIVE',
+        date: 'March 2025',
+        cover: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800&h=400&fit=crop',
+        body: '<p>Ang <strong>RB Live</strong> ay isang Filipino social gaming platform na pinagsasama ang classic na bingo game sa modernong social media experience. Hindi ito basta-basta online bingo — ito ay isang buong ecosystem kung saan maaari kang maglaro, makipag-chat, mag-post ng stories, at manalo ng mga cash prizes.</p>' +
+        '<h2>Paano Nagsimula</h2>' +
+        '<p>Nagsimula ang RB Live bilang isang simpleng bingo app para sa mga Pilipino na naghahanap ng masayang paraan para kumita habang naglalaro. Mula sa maliit na community, lumago ito bilang isang vibrant social platform na may libo-libong active players araw-araw.</p>' +
+        '<h2>Mga Features</h2>' +
+        '<p><strong>Live Bingo Draws</strong> — Automatic draws every 15 minutes mula 8:00 AM hanggang 11:45 PM. Real-time ang lahat, walang bot, walang fake winners.</p>' +
+        '<p><strong>Social Feed</strong> — Mag-post ng updates, photos, at stories. Like, comment, at makipag-interact sa ibang players.</p>' +
+        '<p><strong>Beats</strong> — Short-form video content na parang TikTok, built directly into the app.</p>' +
+        '<p><strong>Game Sponsor</strong> — Maaari kang mag-sponsor ng game para dagdagan ang prize pool. Ang iyong pangalan at contribution ay makikita ng lahat ng players.</p>' +
+        '<p><strong>Tournaments</strong> — Special events na may mas malalaking prizes at unique patterns.</p>' +
+        '<h2>Bakit RB Live?</h2>' +
+        '<p>Hindi lang ito tungkol sa paglalaro — tungkol ito sa community. Ang bawat game ay isang chance na makipag-connect sa kapwa Pilipino, sumali sa exciting draws, at maging bahagi ng isang lumalaking digital family.</p>'
+    },
+    'how-to-play': {
+        title: 'Paano Maglaro ng Bingo sa RB Live',
+        category: 'GUIDE',
+        date: 'March 2025',
+        cover: 'https://images.unsplash.com/photo-1606167668584-78701c57f13d?w=800&h=400&fit=crop',
+        body: '<p>Bago ka pa magsimula, alam mo bang super dali lang maglaro ng bingo sa RB Live? Narito ang complete step-by-step guide.</p>' +
+        '<h2>Step 1: Mag-Sign In</h2>' +
+        '<p>Gamitin ang iyong Google account para mag-log in. One tap lang at pasok ka na agad sa app.</p>' +
+        '<h2>Step 2: Kunin ang Iyong Bingo Card</h2>' +
+        '<p>Pagka-login mo, automatic na may bingo card ka na. Ang bawat card ay may 24 na random numbers at isang FREE space sa gitna. Pwede mo ring i-change ang card mo bago magsimula ang game.</p>' +
+        '<h2>Step 3: Hintayin ang Draw</h2>' +
+        '<p>Automatic ang mga draws every 15 minutes. Makikita mo sa Next Draw banner kung kailan ang susunod na laro. May countdown timer din para malaman mo kung gaano pa katagal.</p>' +
+        '<h2>Step 4: I-Watch ang Balls</h2>' +
+        '<p>Kapag nagsimula na ang draw, isa-isang lalabas ang mga bingo balls. Automatic na mami-mark sa iyong card ang mga numbers na lumabas.</p>' +
+        '<h2>Step 5: Manalo!</h2>' +
+        '<p>Kapag nakumpleto mo ang winning pattern (depende sa current game — Normal Bingo, Four Corners, Blackout, etc.), automatic kang mananalo! Mapupunta ang prize sa iyong account balance.</p>' +
+        '<h3>Pro Tips</h3>' +
+        '<ul><li>Bumili ng extra cards para mas maraming chance manalo</li><li>Mag-login streak para sa daily rewards</li><li>Watch ads para kumita ng extra coins</li><li>Mag-refer ng friends para sa bonus rewards</li></ul>'
+    },
+    'bingo-history': {
+        title: 'Kasaysayan ng Bingo: Mula Italy Hanggang Pilipinas',
+        category: 'HISTORY',
+        date: 'March 2025',
+        cover: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=800&h=400&fit=crop',
+        body: '<p>Ang bingo ay isa sa pinakalumang at pinakapopular na laro sa buong mundo. Pero alam mo ba kung saan ito nagsimula?</p>' +
+        '<h2>Italy, 1530</h2>' +
+        '<p>Ang pinaka-unang version ng bingo ay ang <strong>"Lo Giuoco del Lotto D\'Italia"</strong>, isang Italian lottery game na nagsimula noong 1530. Hanggang ngayon, nilalaro pa rin ito tuwing Sabado sa Italy.</p>' +
+        '<h2>France, 1778</h2>' +
+        '<p>Ang laro ay lumaganap sa France bilang <strong>"Le Lotto"</strong>. Dito nag-evolve ang format — may cards na may 9 columns at 3 rows, na hawig sa modern bingo na kilala natin ngayon.</p>' +
+        '<h2>America, 1929</h2>' +
+        '<p>Isang toy salesman na si <strong>Edwin S. Lowe</strong> ang nakarinig ng isang carnival game na tinatawag na "Beano" sa Atlanta, Georgia. Dinala niya ito sa New York at binago ang pangalan sa "Bingo" nang aksidenteng sumigaw ng "BINGO!" ang isang manlalaro imbes na "BEANO!"</p>' +
+        '<h2>Pilipinas</h2>' +
+        '<p>Sa Pilipinas, ang bingo ay naging bahagi ng kultura — mula sa mga fiesta, community events, hanggang sa mga church fundraisers. Ang <strong>RB Live</strong> ang nagdala ng tradisyong ito sa digital age, para makapaglaro ang mga Pilipino kahit saan sila naroroon.</p>' +
+        '<h2>Digital Era</h2>' +
+        '<p>Ngayon, milyon-milyon ang naglalaro ng online bingo worldwide. Ang RB Live ang isa sa mga pinaka-innovative na platform na pinagsasama ang classic bingo gameplay sa social media features, live draws, at real-time community interaction.</p>'
+    },
+    'bingo-tips': {
+        title: '5 Tips Para Tumataas ang Chance Manalo sa Bingo',
+        category: 'TIPS',
+        date: 'March 2025',
+        cover: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=400&fit=crop',
+        body: '<p>Kahit largely luck-based ang bingo, may mga strategies pa rin na maaari mong gamitin para mas mataas ang chance mong manalo.</p>' +
+        '<h2>1. Gumamit ng Maraming Cards</h2>' +
+        '<p>Mas maraming cards, mas maraming chance. Sa RB Live, maaari kang bumili ng extra cards para dagdagan ang iyong winning probability. Kung may 5 cards ka at 1 lang ang sa kalaban mo, 5x ang advantage mo.</p>' +
+        '<h2>2. Maglaro Kapag Konti ang Players</h2>' +
+        '<p>Kapag mas konti ang kasali sa isang game, mas mataas ang chance mo na ikaw ang maunang makumpleto ang pattern. Subukang maglaro sa off-peak hours.</p>' +
+        '<h2>3. Alamin ang Patterns</h2>' +
+        '<p>Bawat game ay may ibang winning pattern. Alamin kung anong pattern ang aktibo — Normal Bingo, Four Corners, Letter X, Blackout — para alam mo kung saan ka mag-focus.</p>' +
+        '<h2>4. Mag-Stay Online</h2>' +
+        '<p>Huwag umalis habang may game. Sa RB Live, automatic ang marking ng numbers pero kailangan mo pa ring i-claim ang win. Kapag nag-disconnect ka, baka ma-miss mo ang pagkakataon.</p>' +
+        '<h2>5. Mag-Login Streak</h2>' +
+        '<p>Ang daily login rewards ay nagbibigay ng extra coins na magagamit mo para bumili ng additional cards. Mas maraming araw kang naka-streak, mas malaki ang rewards.</p>'
+    },
+    'bingo-patterns': {
+        title: 'Mga Bingo Pattern: Complete Guide',
+        category: 'PATTERNS',
+        date: 'March 2025',
+        cover: 'https://images.unsplash.com/photo-1553481187-be93c21490a9?w=800&h=400&fit=crop',
+        body: '<p>Sa RB Live, hindi lang isang pattern ang ginagamit. Narito ang lahat ng winning patterns na maaari mong makita sa mga games.</p>' +
+        '<h2>Normal Bingo</h2>' +
+        '<p>Ang classic — isang complete horizontal, vertical, o diagonal line. Ito ang pinakakaraniwang pattern at pinakamalaki ang chance manalo dahil maraming posibleng linya.</p>' +
+        '<h2>Four Corners</h2>' +
+        '<p>Kailangan lang kumpletuhin ang apat na sulok ng card — B1, O1, B5, at O5 (o ang equivalent numbers sa iyong card). Mas mahirap kumpara sa normal bingo dahil specific numbers lang ang kailangan.</p>' +
+        '<h2>Letter X</h2>' +
+        '<p>Dalawang diagonal lines na bumubuo ng letrang X. Kailangan ang parehong diagonal — mula upper-left to lower-right AT upper-right to lower-left.</p>' +
+        '<h2>Letter T</h2>' +
+        '<p>Ang buong top row plus ang middle column pababa — bumubuo ng letrang T.</p>' +
+        '<h2>Letter L</h2>' +
+        '<p>Ang buong left column plus ang bottom row — bumubuo ng letrang L.</p>' +
+        '<h2>Blackout (Full House)</h2>' +
+        '<p>Ang pinakamahirap — kailangan ma-mark ang lahat ng 24 numbers plus FREE space. Ito ang pinaka-exciting at karaniwang may mas malaking prize.</p>' +
+        '<h2>Plus Sign</h2>' +
+        '<p>Ang middle row (horizontal) at middle column (vertical) na bumubuo ng plus sign (+).</p>' +
+        '<h2>Diamond</h2>' +
+        '<p>Apat na cells na bumubuo ng diamond shape sa gitna ng card.</p>'
+    },
+    'sponsor-guide': {
+        title: 'Paano Mag-Sponsor ng Game sa RB Live',
+        category: 'FEATURE GUIDE',
+        date: 'March 2025',
+        cover: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=800&h=400&fit=crop',
+        body: '<p>Ang Game Sponsor feature ng RB Live ay nagbibigay-daan sa iyo na dagdagan ang prize pool ng susunod na laro. Ito ang paraan para maging bahagi ka ng excitement at ma-recognize ng buong community.</p>' +
+        '<h2>Paano Mag-Sponsor</h2>' +
+        '<p>1. Pumunta sa <strong>Bingo tab</strong> at pindutin ang <strong>Sponsor</strong> pill button.</p>' +
+        '<p>2. Lalabas ang sponsor panel. Piliin ang halaga mula sa quick pills (1, 2, 5, 10, 20 pesos) o mag-type ng custom amount.</p>' +
+        '<p>3. Pindutin ang <strong>SPONSOR</strong> button. Maba-bawas sa iyong balance ang halaga at mapupunta ito sa prize pool.</p>' +
+        '<h2>Ano ang Nangyayari Pagkatapos</h2>' +
+        '<p>Kapag nag-sponsor ka, makikita ng lahat ng players ang isang magandang <strong>Sponsor Banner</strong> na may iyong picture, pangalan, at kung magkano ang in-sponsor mo. Ang halaga ay idadagdag sa prize ng susunod na laro.</p>' +
+        '<h2>Pag-Edit at Pag-Cancel</h2>' +
+        '<p>Maaari mong i-edit ang amount ng iyong sponsor bago magsimula ang game. Maaari mo ring i-cancel at mare-refund ang buong halaga sa iyong balance.</p>' +
+        '<h2>Tandaan</h2>' +
+        '<ul><li>Isa lang ang pwedeng mag-sponsor bawat game</li><li>Ang sponsor amount ay automatic na nire-reset pagkatapos ng bawat game</li><li>Minimum na ₱1 ang sponsor amount</li></ul>'
+    },
+    'about-us': {
+        title: 'About Us — Ang Team sa Likod ng RB Live',
+        category: 'ABOUT',
+        date: 'March 2025',
+        cover: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=400&fit=crop',
+        body: '<p>Ang <strong>RB Live</strong> ay developed at operated ng <strong>K.R.A Stories</strong>, isang independent Filipino tech team na nakatuon sa paglikha ng masaya at makabuluhang digital experiences para sa mga Pilipino.</p>' +
+        '<h2>Ang Aming Misyon</h2>' +
+        '<p>Ang misyon namin ay simple: gawing accessible at enjoyable ang online gaming para sa lahat ng Pilipino. Naniniwala kami na ang teknolohiya ay dapat nagsisilbi sa community — hindi ang community ang nagsisilbi sa teknolohiya.</p>' +
+        '<h2>Bakit Bingo?</h2>' +
+        '<p>Ang bingo ay bahagi ng Filipino culture. Mula sa mga fiesta hanggang sa mga community gatherings, ang bingo ay nagbubuklod ng mga tao. Dinala namin ito sa digital world para kahit saan ka man naroroon — sa bahay, sa trabaho, o sa byahe — maaari kang maglaro at makipag-connect.</p>' +
+        '<h2>Ang Aming Pangako</h2>' +
+        '<p>Walang fake winners. Walang bots. Lahat ng draws ay real-time at transparent. Ang bawat centavo na napanalunan ay tunay, at ang bawat player ay may patas na pagkakataon.</p>' +
+        '<h2>Contact Us</h2>' +
+        '<p>May tanong o suggestion? Nandito kami para makinig. I-message kami sa loob ng app o mag-email sa aming team.</p>'
+    },
+    'community': {
+        title: 'RB Live Community: Sama-Sama Tayo',
+        category: 'COMMUNITY',
+        date: 'March 2025',
+        cover: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&h=400&fit=crop',
+        body: '<p>Ang RB Live ay hindi lang isang game — ito ay isang community. Araw-araw, libo-libong Pilipino ang nag-coconnect sa platform na ito para maglaro, mag-chat, at mag-share ng mga karanasan.</p>' +
+        '<h2>Social Feed</h2>' +
+        '<p>Mag-post ng mga updates, photos, at thoughts. Like at comment sa posts ng ibang players. Ang social feed ay parang Facebook o Instagram — pero exclusive para sa RB Live community.</p>' +
+        '<h2>Live Chat</h2>' +
+        '<p>Habang naglalaro ng bingo, maaari kang makipag-chat sa ibang players in real-time. Mag-celebrate ng wins, mag-share ng excitement kapag malapit ka nang manalo (PURO!), at makipag-kaibigan sa mga bagong tao.</p>' +
+        '<h2>Beats</h2>' +
+        '<p>Short-form video content na gawa ng community. Mag-share ng iyong gaming moments, celebrations, o kahit anong gusto mong i-post.</p>' +
+        '<h2>Join Us</h2>' +
+        '<p>Ang RB Live community ay bukas sa lahat. Download the app, sign in, at maging bahagi ka na ng growing Filipino bingo family.</p>'
+    },
+    'privacy': {
+        title: 'Privacy Policy',
+        category: 'LEGAL',
+        date: 'Effective March 2025',
+        cover: '',
+        body: '<p>Ang Privacy Policy na ito ay naglalarawan kung paano kinokolekta, ginagamit, at pinoprotektahan ng <strong>RB Live</strong> (operated ng K.R.A Stories) ang iyong personal na impormasyon.</p>' +
+        '<h2>Impormasyong Kinokolekta Namin</h2>' +
+        '<p><strong>Account Information</strong> — Kapag nag-sign in ka gamit ang Google, kinokolekta namin ang iyong pangalan, email address, at profile photo mula sa iyong Google account.</p>' +
+        '<p><strong>Game Data</strong> — Ini-store namin ang iyong game history, scores, wins, coins balance, at card data para makapagbigay ng seamless gaming experience.</p>' +
+        '<p><strong>User Content</strong> — Ang mga posts, photos, videos, at messages na ini-share mo sa platform ay stored sa aming servers.</p>' +
+        '<p><strong>Device Information</strong> — Maaari naming kolektahin ang basic device info para sa app optimization at push notifications.</p>' +
+        '<h2>Paano Namin Ginagamit ang Iyong Data</h2>' +
+        '<ul><li>Para i-provide at i-maintain ang RB Live services</li><li>Para i-process ang mga transactions at prizes</li><li>Para mag-send ng notifications tungkol sa games at updates</li><li>Para ma-improve ang user experience at app performance</li><li>Para mag-enforce ng community guidelines at terms of service</li></ul>' +
+        '<h2>Data Security</h2>' +
+        '<p>Ginagamit namin ang Firebase (Google Cloud) para sa data storage, na may enterprise-grade security. Ang lahat ng data transfers ay encrypted gamit ang SSL/TLS.</p>' +
+        '<h2>Third-Party Services</h2>' +
+        '<p>Gumagamit kami ng mga third-party services tulad ng Google Firebase (authentication at database), Cloudinary (image storage), at advertising networks. Ang bawat isa ay may sariling privacy policies.</p>' +
+        '<h2>Iyong Mga Karapatan</h2>' +
+        '<p>Maaari mong i-request ang deletion ng iyong account at lahat ng associated data sa pamamagitan ng pag-contact sa amin sa loob ng app. I-process namin ang request sa loob ng 30 days.</p>' +
+        '<h2>Mga Pagbabago</h2>' +
+        '<p>Maaari naming i-update ang policy na ito. Aabisuhan namin ang mga users sa pamamagitan ng in-app notification para sa mga significant changes.</p>'
+    },
+    'terms': {
+        title: 'Terms of Service',
+        category: 'LEGAL',
+        date: 'Effective March 2025',
+        cover: '',
+        body: '<p>Sa paggamit ng <strong>RB Live</strong>, sumasang-ayon ka sa mga sumusunod na terms at conditions.</p>' +
+        '<h2>Pagtanggap ng Terms</h2>' +
+        '<p>Sa pag-access o paggamit ng RB Live, kinikilala at sinasang-ayunan mo ang Terms of Service na ito. Kung hindi ka sumasang-ayon, mangyaring huwag gamitin ang platform.</p>' +
+        '<h2>Pagiging Eligible</h2>' +
+        '<p>Dapat ay 18 taong gulang ka pataas para gumamit ng RB Live. Sa pag-register, kinoconfirm mo na natutugunan mo ang age requirement na ito.</p>' +
+        '<h2>Account Responsibilities</h2>' +
+        '<ul><li>Ikaw ang responsable sa security ng iyong account</li><li>Huwag ibahagi ang iyong login credentials sa iba</li><li>Isang account lang bawat tao</li><li>Bawal ang paggamit ng multiple accounts para mag-cheat</li></ul>' +
+        '<h2>Mga Patakaran sa Laro</h2>' +
+        '<ul><li>Lahat ng game results ay final at based sa random draws</li><li>Bawal ang anumang form ng cheating o exploitation ng bugs</li><li>Ang prizes ay maaaring i-cash out ayon sa minimum withdrawal requirements</li><li>Ang RB Live ay may karapatang mag-suspend ng accounts na lumabag sa rules</li></ul>' +
+        '<h2>Virtual Currency</h2>' +
+        '<p>Ang coins sa RB Live ay virtual currency na may monetary value na maaaring i-withdraw. Ang lahat ng purchases ay final. Ang coins na nakuha sa pamamagitan ng legitimate gameplay ay maaaring i-cash out gamit ang GCash.</p>' +
+        '<h2>User Content</h2>' +
+        '<p>Ikaw ang may-ari ng content na ini-post mo, pero sa pag-post nito sa RB Live, binibigyan mo kami ng license na i-display ito sa platform. Bawal ang content na: violent, sexually explicit, discriminatory, o lumalabag sa batas ng Pilipinas.</p>' +
+        '<h2>Limitation of Liability</h2>' +
+        '<p>Ang RB Live ay provided "as is." Hindi kami mananagot sa mga technical issues, downtime, o data loss na hindi namin kontrolado. Gagawin namin ang aming makakaya para maging stable at secure ang platform.</p>' +
+        '<h2>Mga Pagbabago</h2>' +
+        '<p>Maaari naming baguhin ang terms na ito anumang oras. Aabisuhan namin ang mga users para sa mga major changes.</p>' +
+        '<h2>Contact</h2>' +
+        '<p>Para sa mga tanong tungkol sa Terms of Service na ito, mangyaring makipag-ugnayan sa amin sa loob ng app.</p>'
+    }
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
 
-let allArticles = [];
-let currentCat = 'all';
-
-document.addEventListener('DOMContentLoaded', () => {
-    lucide.createIcons();
-    const d = new Date();
-    document.getElementById('hdrDate').textContent = d.toLocaleDateString('en-PH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-    loadNews();
-});
-
-// ── Load from Firebase ──
-function loadNews() {
-    db.ref('news').orderByChild('publishedAt').on('value', snap => {
-        allArticles = [];
-        if (snap.exists()) {
-            snap.forEach(child => {
-                const a = child.val();
-                if (a.status === 'published') allArticles.unshift({ key: child.key, ...a });
-            });
-        }
-        document.getElementById('loadingState').style.display = 'none';
-        document.getElementById('newsContent').style.display = 'block';
-        renderNews(allArticles);
-        buildTicker(allArticles);
-        buildTrending(allArticles);
-        lucide.createIcons();
-        checkDeepLink();
+// ── FILTER ──
+function filterCat(cat) {
+    document.querySelectorAll('.cat-tab').forEach(function(t) { t.classList.remove('active'); });
+    event.target.classList.add('active');
+    document.querySelectorAll('.section').forEach(function(s) {
+        if (cat === 'all') { s.style.display = ''; }
+        else { s.style.display = s.dataset.cat === cat ? '' : 'none'; }
     });
 }
 
-function renderNews(articles) {
-    const filtered = currentCat === 'all' ? articles : articles.filter(a => a.category === currentCat);
-    const wrap = document.getElementById('newsContent');
-
-    if (filtered.length === 0) {
-        wrap.innerHTML = `<div class="empty-state"><div class="emoji">📰</div><p>No articles yet in this category.<br>Check back soon!</p></div>`;
-        lucide.createIcons(); return;
-    }
-
-    const hero = filtered[0];
-    const featured = filtered.slice(1, 5);
-    const rest = filtered.slice(5);
-    let html = '';
-
-    // Hero
-    html += `<div class="hero-wrap"><div class="hero-card" onclick="openArticle('${hero.key}')">
-        <div class="hero-img-box" style="background:${hero.coverGradient || gradientFor(hero.category)}">
-            ${hero.coverImage ? `<img src="${esc(hero.coverImage)}" alt="">` : `<span>${hero.coverEmoji || emojiFor(hero.category)}</span>`}
-        </div>
-        <div class="hero-overlay">
-            ${hero.isBreaking ? '<div class="live-badge"><span class="live-dot"></span>BREAKING</div><br>' : ''}
-            <div class="cat-pill ${hero.category || 'bingo'}">${esc(hero.category || 'News')}</div>
-            <div class="hero-title">${esc(hero.title)}</div>
-            <div class="hero-meta">
-                <span>${esc(hero.author || 'RBL Staff')}</span>
-                <span class="meta-dot"></span>
-                <span>${timeAgo(hero.publishedAt)}</span>
-                <span class="meta-dot"></span>
-                <span>${readTime(hero.body)} min read</span>
-                <span class="meta-dot"></span>
-                <span>👁 ${hero.views || 0}</span>
-            </div>
-        </div>
-    </div></div>`;
-
-    // Featured
-    if (featured.length > 0) {
-        html += `<div class="sec-hdr"><div class="sec-title">Trending</div></div><div class="feat-scroll">`;
-        featured.forEach(a => {
-            html += `<div class="feat-card" onclick="openArticle('${a.key}')">
-                <div class="feat-img" style="background:${a.coverGradient || gradientFor(a.category)}">
-                    ${a.coverImage ? `<img src="${esc(a.coverImage)}" alt="">` : `<span>${a.coverEmoji || emojiFor(a.category)}</span>`}
-                </div>
-                <div class="feat-body">
-                    <div class="feat-cat c-${a.category || 'bingo'}">${esc(a.category || 'News')}</div>
-                    <div class="feat-title">${esc(a.title)}</div>
-                    <div class="feat-time"><i data-lucide="clock"></i> ${timeAgo(a.publishedAt)}</div>
-                </div>
-            </div>`;
-        });
-        html += `</div>`;
-    }
-
-    // Rest
-    if (rest.length > 0) {
-        html += `<div class="sec-divider"></div><div class="sec-hdr"><div class="sec-title">Latest</div></div><div class="art-list">`;
-        rest.forEach(a => {
-            html += `<div class="art-card" onclick="openArticle('${a.key}')">
-                <div class="art-thumb" style="background:${a.coverGradient || gradientFor(a.category)}">
-                    ${a.coverImage ? `<img src="${esc(a.coverImage)}" alt="">` : `<span>${a.coverEmoji || emojiFor(a.category)}</span>`}
-                </div>
-                <div class="art-body">
-                    <div class="art-cat c-${a.category || 'bingo'}">${esc(a.category || 'News')}</div>
-                    <div class="art-title">${esc(a.title)}</div>
-                    <div class="art-meta"><i data-lucide="clock"></i> ${timeAgo(a.publishedAt)} · ${readTime(a.body)} min read · 👁 ${a.views || 0}</div>
-                </div>
-            </div>`;
-        });
-        html += `</div>`;
-    }
-
-    html += `<div style="padding:20px 16px;text-align:center;">
-        <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">© ${new Date().getFullYear()} Radio Bingo Live · All rights reserved</div>
-        <div style="display:flex;justify-content:center;gap:16px;">
-            <a href="privacy.html" style="font-size:11px;color:var(--dim);text-decoration:none;">Privacy</a>
-            <a href="terms.html" style="font-size:11px;color:var(--dim);text-decoration:none;">Terms</a>
-            <a href="about.html" style="font-size:11px;color:var(--dim);text-decoration:none;">About</a>
-        </div>
-    </div>`;
-
-    wrap.innerHTML = html;
-    lucide.createIcons();
-}
-
-function buildTicker(articles) {
-    if (articles.length === 0) return;
-    const items = [...articles.slice(0, 8), ...articles.slice(0, 8)];
-    document.getElementById('tickerInner').innerHTML = items.map(a =>
-        `<span class="tick-item">${emojiFor(a.category)} ${esc(a.title)}</span><span style="padding:0 20px;opacity:0.4;">·</span>`
-    ).join('');
-}
-
-function buildTrending(articles) {
-    const tags = new Set();
-    articles.forEach(a => { if (a.tags) a.tags.forEach(t => tags.add(t)); });
-    const el = document.getElementById('trendingTags');
-    const tagArr = [...tags].slice(0, 10);
-    el.innerHTML = tagArr.map(t =>
-        `<span onclick="doSearch('${esc(t)}')" style="display:inline-flex;align-items:center;gap:4px;padding:7px 12px;border-radius:20px;background:rgba(255,255,255,0.05);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted);margin:0 6px 8px 0;cursor:pointer;">#${esc(t)}</span>`
-    ).join('') + ['bingo','entertainment','sports','tech','lifestyle'].map(c =>
-        `<span onclick="filterCat('${c}',document.querySelector('[data-cat=${c}]'));closeSearch();" style="display:inline-flex;align-items:center;padding:7px 12px;border-radius:20px;background:rgba(255,255,255,0.05);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted);margin:0 6px 8px 0;cursor:pointer;">${c.charAt(0).toUpperCase()+c.slice(1)}</span>`
-    ).join('');
-}
-
+// ── ARTICLE VIEWER ──
 function openArticle(key) {
-    const a = allArticles.find(x => x.key === key);
+    var a = ARTICLES[key];
     if (!a) return;
-
-    db.ref(`news/${key}/views`).transaction(v => (v || 0) + 1);
-
-    document.getElementById('mCat').textContent = (a.category || 'News').toUpperCase();
-    document.getElementById('mCat').className = `modal-cat c-${a.category || 'bingo'}`;
-    document.getElementById('mTitle').textContent = a.title;
-    document.getElementById('mMeta').innerHTML = `
-        <i data-lucide="user"></i> ${esc(a.author || 'RBL Staff')}
-        <span class="meta-dot"></span>
-        <i data-lucide="clock"></i> ${timeAgo(a.publishedAt)}
-        <span class="meta-dot"></span>
-        ${readTime(a.body)} min read
-    `;
-
-    const imgEl = document.getElementById('mImg');
-    imgEl.style.background = a.coverGradient || gradientFor(a.category);
-    imgEl.innerHTML = a.coverImage ? `<img src="${esc(a.coverImage)}" alt="">` : `<span>${a.coverEmoji || emojiFor(a.category)}</span>`;
-
-    // Render body with paragraph breaks
-    const bodyHtml = (a.body || '').split('\n\n').filter(p => p.trim()).map(p => `<p>${esc(p).replace(/\n/g,'<br>')}</p>`).join('');
-    document.getElementById('mBody').innerHTML = bodyHtml || '<p>No content.</p>';
-    document.getElementById('mTags').innerHTML = (a.tags || []).map(t => `<span class="m-tag">#${esc(t)}</span>`).join('');
-
-    const url = `${location.origin}${location.pathname}?article=${key}`;
-    document.getElementById('shareRow').innerHTML = `
-        <button class="share-btn feed" onclick="shareToFeed('${key}')"><i data-lucide="rss"></i> Share to Feed</button>
-        <button class="share-btn wa" onclick="shareWhatsApp('${key}')"><i data-lucide="message-circle"></i> WhatsApp</button>
-        <button class="share-btn fb" onclick="shareFacebook('${key}')"><i data-lucide="share-2"></i> Facebook</button>
-        <button class="share-btn copy" onclick="copyLink('${key}')"><i data-lucide="link"></i> Copy Link</button>
-    `;
-
-    document.getElementById('articleModal').classList.add('open');
+    var view = document.getElementById('articleView');
+    var body = document.getElementById('avBody');
+    document.getElementById('avHeaderTitle').textContent = a.category;
+    var html = '<h1>' + a.title + '</h1>';
+    html += '<div class="av-meta"><span>' + a.date + '</span></div>';
+    if (a.cover) html += '<img class="av-cover" src="' + a.cover + '" alt="">';
+    html += a.body;
+    body.innerHTML = html;
+    view.classList.add('open');
+    view.scrollTop = 0;
     document.body.style.overflow = 'hidden';
+}
+
+function closeArticle() {
+    document.getElementById('articleView').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', function() {
     lucide.createIcons();
-}
-
-function closeModal() { document.getElementById('articleModal').classList.remove('open'); document.body.style.overflow = ''; }
-function onModalBgClick(e) { if (e.target === document.getElementById('articleModal')) closeModal(); }
-
-// ── SHARE FUNCTIONS ──
-function shareToFeed(key) {
-    const a = allArticles.find(x => x.key === key);
-    if (!a) return;
-    auth.onAuthStateChanged(user => {
-        if (!user) {
-            showToast('🔐 Please log in to share to Feed');
-            setTimeout(() => window.location.href = `index.html?shareNews=${key}`, 1200);
-            return;
-        }
-        const url = `${location.origin}${location.pathname}?article=${key}`;
-        const snippet = (a.summary || (a.body || '').substring(0, 150)).trim();
-        db.ref('socialPosts').push({
-            uid: user.uid,
-            content: `📰 *${a.title}*\n\n${snippet}...\n\n🔗 ${url}`,
-            timestamp: Date.now(),
-            likes: 0,
-            visibility: 'public',
-            isNewsShare: true,
-            newsKey: key,
-            newsTitle: a.title,
-            newsCategory: a.category,
-            newsCoverEmoji: a.coverEmoji || emojiFor(a.category),
-            hashtags: ['news', 'rbllive', ...(a.tags || []).slice(0, 3)]
-        }).then(() => showToast('✅ Shared to your RBL Feed!'))
-          .catch(() => showToast('❌ Share failed. Try again.'));
-    });
-}
-function shareWhatsApp(key) {
-    const a = allArticles.find(x => x.key === key); if (!a) return;
-    const url = `${location.origin}${location.pathname}?article=${key}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(`📰 ${a.title}\n\nRead on RBL News: ${url}`)}`, '_blank');
-}
-function shareFacebook(key) {
-    const url = encodeURIComponent(`${location.origin}${location.pathname}?article=${key}`);
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
-}
-function copyLink(key) {
-    const url = `${location.origin}${location.pathname}?article=${key}`;
-    navigator.clipboard.writeText(url).then(() => showToast('🔗 Link copied!')).catch(() => showToast('URL: ' + url));
-}
-
-function filterCat(cat, el) {
-    currentCat = cat;
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-    if (el) el.classList.add('active');
-    renderNews(allArticles);
-    lucide.createIcons();
-}
-
-function openSearch() { document.getElementById('searchLayer').classList.add('open'); setTimeout(() => document.getElementById('searchInp').focus(), 100); lucide.createIcons(); }
-function closeSearch() {
-    document.getElementById('searchLayer').classList.remove('open');
-    document.getElementById('searchInp').value = '';
-    document.getElementById('searchResults').innerHTML = '<div class="search-lbl">Trending Topics</div><div id="trendingTags"></div>';
-    buildTrending(allArticles);
-}
-function doSearch(term) { document.getElementById('searchInp').value = term; handleSearch(term); }
-function handleSearch(val) {
-    const q = val.trim().toLowerCase();
-    if (!q) return;
-    const results = allArticles.filter(a =>
-        a.title.toLowerCase().includes(q) ||
-        (a.category || '').includes(q) ||
-        (a.author || '').toLowerCase().includes(q) ||
-        (a.tags || []).some(t => t.toLowerCase().includes(q))
-    );
-    const el = document.getElementById('searchResults');
-    if (!results.length) { el.innerHTML = `<div class="search-lbl">No results for "${esc(val)}"</div>`; return; }
-    el.innerHTML = `<div class="search-lbl">${results.length} result${results.length > 1 ? 's' : ''} for "${esc(val)}"</div>` +
-        `<div class="art-list">` +
-        results.map(a => `<div class="art-card" onclick="closeSearch();openArticle('${a.key}')">
-            <div class="art-thumb" style="background:${a.coverGradient || gradientFor(a.category)}"><span>${a.coverEmoji || emojiFor(a.category)}</span></div>
-            <div class="art-body">
-                <div class="art-cat c-${a.category || 'bingo'}">${esc(a.category || '')}</div>
-                <div class="art-title">${esc(a.title)}</div>
-                <div class="art-meta"><i data-lucide="clock"></i> ${timeAgo(a.publishedAt)}</div>
-            </div>
-        </div>`).join('') + `</div>`;
-    lucide.createIcons();
-}
-
-function checkDeepLink() {
-    const key = new URLSearchParams(location.search).get('article');
-    if (!key) return;
-    setTimeout(() => {
-        if (allArticles.find(x => x.key === key)) openArticle(key);
-        else db.ref(`news/${key}`).once('value', s => {
-            if (s.exists() && s.val().status === 'published') { allArticles.unshift({ key, ...s.val() }); openArticle(key); }
-        });
-    }, 600);
-}
-
-function goBack() { if (document.referrer && document.referrer.includes(location.hostname)) history.back(); else window.location.href = 'index.html'; }
-function goToMain(tab) { window.location.href = `index.html?tab=${tab}`; }
-function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
-function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function timeAgo(ts) {
-    if (!ts) return '';
-    const s = Math.floor((Date.now() - ts) / 1000);
-    if (s < 60) return 'Just now';
-    if (s < 3600) return Math.floor(s/60) + 'm ago';
-    if (s < 86400) return Math.floor(s/3600) + 'h ago';
-    if (s < 604800) return Math.floor(s/86400) + 'd ago';
-    return new Date(ts).toLocaleDateString('en-PH', { month:'short', day:'numeric' });
-}
-function readTime(b) { if (!b) return '1'; return Math.max(1, Math.ceil(b.split(/\s+/).length / 200)); }
-function emojiFor(c) { return {bingo:'🎲',entertainment:'🎵',sports:'🏆',tech:'💻',lifestyle:'🌅',opinion:'✍️',community:'❤️'}[c] || '📰'; }
-function gradientFor(c) {
-    return {bingo:'linear-gradient(135deg,#0c1445,#0ea5e9)',entertainment:'linear-gradient(135deg,#1a1a2e,#f472b6)',sports:'linear-gradient(135deg,#0d1117,#10b981)',tech:'linear-gradient(135deg,#1e1b4b,#a78bfa)',lifestyle:'linear-gradient(135deg,#1a0a2e,#fb923c)',opinion:'linear-gradient(135deg,#1c1612,#fbbf24)',community:'linear-gradient(135deg,#0a1a0a,#34d399)'}[c] || 'linear-gradient(135deg,#111827,#1e293b)';
-}
+});
 </script>
 </body>
 </html>
