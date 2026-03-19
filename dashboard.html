@@ -1688,6 +1688,8 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             </div>
         </div>
 
+    </div><!-- /push-tab -->
+
     <!-- ===== SPECIAL EVENT TAB ===== -->
     <div id="special-event-tab" class="tab-content">
 
@@ -5331,13 +5333,23 @@ function closeMobDrawer() {
     document.body.style.overflow = '';
 }
 function openTabMob(tabId, btnId) {
-    // Use existing openTab but also update mobile nav state
+    // Directly switch tab content
+    document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    var targetTab = document.getElementById(tabId);
+    if(targetTab) targetTab.classList.add('active');
+    // Also mark the matching desktop tab-btn as active (for sync)
     var tabBtns = document.querySelectorAll('.tab-btn');
     tabBtns.forEach(function(b) {
-        if(b.getAttribute('onclick') && b.getAttribute('onclick').includes(tabId)) {
-            openTab(tabId, b);
+        if(b.getAttribute('onclick') && b.getAttribute('onclick').indexOf(tabId) !== -1) {
+            b.classList.add('active');
         }
     });
+    // Fire the openTab overrides (tournament init, partner load, etc.)
+    if(typeof window.openTab === 'function') {
+        var matchBtn = document.querySelector('.tab-btn.active');
+        if(matchBtn) window.openTab(tabId, matchBtn);
+    }
     // Update mob nav active state
     document.querySelectorAll('.mob-nav-btn').forEach(function(b){ b.classList.remove('active'); });
     if(btnId) {
