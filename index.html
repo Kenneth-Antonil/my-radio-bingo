@@ -8309,38 +8309,40 @@
 
         /* ── PURO TICKER ── */
         .puro-ticker-bar {
-            background: rgba(127, 29, 29, 0.95);
-            border-bottom: 1px solid rgba(239,68,68,0.4);
-            border-top: 1px solid rgba(239,68,68,0.2);
+            background: linear-gradient(135deg, #ff6b00 0%, #ff2d55 50%, #ff6b00 100%);
+            background-size: 200% 100%;
+            animation: puro-gradient-shift 3s ease infinite;
             display: flex; align-items: center;
-            height: 32px; overflow: hidden;
+            height: 36px; overflow: hidden;
             position: relative;
-            box-shadow: 0 2px 12px rgba(239,68,68,0.25);
-            animation: puro-bar-pulse 2s ease infinite;
+            box-shadow: 0 2px 16px rgba(255,45,85,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+            border-radius: 0;
         }
-        @keyframes puro-bar-pulse {
-            0%,100% { background: rgba(127,29,29,0.95); }
-            50% { background: rgba(153,27,27,0.98); }
+        @keyframes puro-gradient-shift {
+            0%,100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
         .puro-ticker-label {
-            flex-shrink: 0; display: flex; align-items: center; gap: 5px;
-            padding: 0 10px; background: rgba(239,68,68,0.2);
-            border-right: 1px solid rgba(239,68,68,0.3);
+            flex-shrink: 0; display: flex; align-items: center; gap: 6px;
+            padding: 0 12px; 
+            background: rgba(0,0,0,0.2);
+            border-right: 1px solid rgba(255,255,255,0.15);
             height: 100%; z-index: 2;
         }
         .puro-ticker-dot {
-            width: 7px; height: 7px; border-radius: 50%;
-            background: #ef4444; flex-shrink: 0;
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #fff; flex-shrink: 0;
             animation: puro-dot-pulse 1s ease infinite;
-            box-shadow: 0 0 6px rgba(239,68,68,0.6);
+            box-shadow: 0 0 8px rgba(255,255,255,0.8);
         }
         @keyframes puro-dot-pulse {
-            0%,100% { opacity: 1; box-shadow: 0 0 6px rgba(239,68,68,0.6); }
-            50% { opacity: 0.5; box-shadow: 0 0 2px rgba(239,68,68,0.3); }
+            0%,100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px rgba(255,255,255,0.8); }
+            50% { opacity: 0.6; transform: scale(0.7); box-shadow: 0 0 3px rgba(255,255,255,0.4); }
         }
         .puro-ticker-label-text {
-            font-size: 10px; font-weight: 900; color: #fca5a5;
-            letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap;
+            font-size: 10px; font-weight: 900; color: #fff;
+            letter-spacing: 2px; text-transform: uppercase; white-space: nowrap;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
         .puro-ticker-track {
             flex: 1; overflow: hidden; height: 100%;
@@ -8351,7 +8353,13 @@
         .puro-ticker-inner {
             display: flex; align-items: center;
             white-space: nowrap; padding: 0 12px;
-            font-size: 12px; font-weight: 800; color: #fecaca;
+            font-size: 12px; font-weight: 700; color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+        }
+        .puro-ticker-inner strong {
+            color: #fff; font-weight: 900;
+            background: rgba(255,255,255,0.2); padding: 1px 6px; border-radius: 4px;
+            margin: 0 2px;
         }
         @keyframes puro-marquee {
             0% { transform: translateX(0); }
@@ -10957,7 +10965,7 @@ body::before {
         <div class="puro-ticker-bar" id="puroTickerBar" style="display:none;">
             <div class="puro-ticker-label">
                 <span class="puro-ticker-dot"></span>
-                <span class="puro-ticker-label-text">PURO!</span>
+                <span class="puro-ticker-label-text"><i data-lucide="flame" style="width:12px;height:12px;display:inline;vertical-align:-2px;margin-right:2px;stroke-width:2.5;"></i> PURO</span>
             </div>
             <div class="puro-ticker-track">
                 <div class="puro-ticker-inner" id="puroTickerInner"></div>
@@ -15011,6 +15019,8 @@ function runMathBlitz(problems) {
             const status = snap.val();
             if(status === 'waiting') {
                 _lastSchedFired = ''; // allow schedules to fire again after game ends
+                // Clear puro data from previous round
+                db.ref('gameState/puro').remove();
                 // Clear any leftover jackpot from previous round
                 db.ref('gameState/jackpot').once('value', jSnap => {
                     if(jSnap.exists() && jSnap.val() && jSnap.val().active) {
@@ -15130,6 +15140,7 @@ function runMathBlitz(problems) {
                     db.ref('gameState/lastCalled').remove();
                     db.ref('gameState/jackpot').set({ amount: 0, active: false, type: 'none' });
                     db.ref('gameState/sponsor').remove();
+                    db.ref('gameState/puro').remove();
                     db.ref('gameState').update({ status: 'waiting' });
                     _hdeCountdownActive = false;
                     _hdeStopDraw(true);
@@ -15657,9 +15668,9 @@ function runMathBlitz(problems) {
             const count = names.length;
             let text;
             if (count === 1) {
-                text = 'May puro na si <strong>' + names[0] + '</strong>! Isa nalang kulang!';
+                text = '<i data-lucide="flame" style="width:13px;height:13px;display:inline;vertical-align:-2px;stroke-width:2.5;"></i> Puro na si <strong>' + names[0] + '</strong>! Isa nalang kulang! <i data-lucide="crosshair" style="width:13px;height:13px;display:inline;vertical-align:-2px;stroke-width:2.5;"></i>';
             } else {
-                text = '<strong>' + count + '</strong> players may puro na! Sina <strong>' + names.join('</strong>, <strong>') + '</strong> — isa nalang kulang!';
+                text = '<i data-lucide="flame" style="width:13px;height:13px;display:inline;vertical-align:-2px;stroke-width:2.5;"></i> <strong>' + count + '</strong> players may puro na! Sina <strong>' + names.join('</strong>, <strong>') + '</strong> — isa nalang! <i data-lucide="crosshair" style="width:13px;height:13px;display:inline;vertical-align:-2px;stroke-width:2.5;"></i>';
             }
             bar.style.display = 'flex';
             // Add marquee scroll if text is long (many players)
@@ -15671,12 +15682,14 @@ function runMathBlitz(problems) {
                 inner.innerHTML = text;
                 inner.style.animation = '';
             }
+            lucide.createIcons({ nameAttr: 'data-lucide', attrs: {}, icons: {} });
         });
         // Hide puro bar when game resets (drawnNumbers cleared = round over)
         db.ref('gameState/drawnNumbers').on('value', snap => {
             if (!snap.exists() || Object.keys(snap.val() || {}).length === 0) {
                 _myPuroWritten = false;
                 _roundEnded = false; // reset for next round
+                db.ref('gameState/puro').remove(); // wipe ALL puro data, not just local
                 const bar = document.getElementById('puroTickerBar');
                 const inner = document.getElementById('puroTickerInner');
                 if (bar) { bar.style.display = 'none'; }
