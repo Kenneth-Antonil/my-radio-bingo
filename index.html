@@ -12452,6 +12452,10 @@ function runMathBlitz(problems) {
         <div class="ref-container">
             <span style="font-size:10px; font-weight:800; color:var(--success); text-transform:uppercase; margin-bottom: var(--spacing-sm); display:flex; align-items:center; gap:5px;"><i data-lucide="share-2" style="width:12px"></i> Invite & Earn</span>
             <input type="text" id="refLink" readonly class="styled-input" style="background:rgba(0,0,0,0.2); text-align:center; cursor:pointer; margin-bottom: var(--spacing-sm);" onclick="this.select(); document.execCommand('copy'); showToast('Copied Link!'); playSound('click');">
+            <div id="referralStats" style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:10px; background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.15); margin-bottom:var(--spacing-sm);">
+                <span style="font-size:11px; color:rgba(255,255,255,0.5); font-weight:600;">Successful Invites</span>
+                <span id="referralCountDisplay" style="font-size:14px; font-weight:900; color:#10b981;">0</span>
+            </div>
             <div id="referralInputSection">
                 <span style="font-size:10px; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom: var(--spacing-sm); display:flex; align-items:center; gap:5px; margin-top:15px;"><i data-lucide="ticket" style="width:12px"></i> Claim Referral Code</span>
                 <div style="display:flex; gap: var(--spacing-sm);">
@@ -13813,7 +13817,7 @@ function runMathBlitz(problems) {
                     const pendingInfCode = window._pendingInfluencerCode || null;
                     const finalReferredBy = pendingInfCode || referredBy || null;
                     userRef.set({ name: u.displayName, photo: u.photoURL, points: 200, refCode: newRefCode, referredBy: finalReferredBy, last_seen: Date.now(), cardTimestamp: Date.now(), lastLoginDate: new Date().toDateString(), hasWonBringMeThisRound: false, ownedSkins: ['default'], equippedSkin: 'default' }); 
-                    if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 300); } }); }
+                    if (referredBy) { db.ref('users').orderByChild('refCode').equalTo(referredBy).once('value', refSnap => { if (refSnap.exists()) { const referrerUid = Object.keys(refSnap.val())[0]; if (referrerUid !== u.uid) { db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 25000); db.ref('users/' + referrerUid + '/referralCount').transaction(c => (c || 0) + 1); db.ref('notifications/' + referrerUid).push({ type:'referral', message: (u.displayName || 'Someone') + ' joined using your invite link! You earned ₱10!', timestamp: Date.now(), read: false }); } } }); }
                     if (pendingInfCode) { setTimeout(() => { if(typeof trackInfluencerRecruit === 'function') trackInfluencerRecruit(pendingInfCode, u.uid, u.displayName, u.photoURL); }, 1000); } 
                 } else { 
                     // Existing User
@@ -13840,6 +13844,7 @@ function runMathBlitz(problems) {
                     document.getElementById('storePoints').innerText = '₱' + ((userData.points || 0)/PESO_RATE).toFixed(2); 
                     document.getElementById('refLink').value = window.location.origin + window.location.pathname + "?ref=" + (userData.refCode || ""); 
                     if(userData.referredBy) document.getElementById('referralInputSection').style.display = 'none'; 
+                    var rcEl = document.getElementById('referralCountDisplay'); if(rcEl) rcEl.textContent = userData.referralCount || 0;
                     if(userData.gcash) document.getElementById('gcashInput').value = userData.gcash; 
                     if (userData.currentCard) { cardNumbers = userData.currentCard; renderCard(); } else { generateNewCard(); }
                     // Restore skip-round preference (reset if no active game)
@@ -15021,6 +15026,15 @@ function runMathBlitz(problems) {
                 _lastSchedFired = ''; // allow schedules to fire again after game ends
                 // Clear puro data from previous round
                 db.ref('gameState/puro').remove();
+                // Clear sponsor from previous round
+                db.ref('gameState/sponsor').once('value', sSnap => {
+                    if(sSnap.exists() && sSnap.val()) {
+                        db.ref('gameState/sponsor').remove();
+                    }
+                });
+                currentSponsor = null;
+                currentSponsoredAmount = 0;
+                updateSponsorDisplay();
                 // Clear any leftover jackpot from previous round
                 db.ref('gameState/jackpot').once('value', jSnap => {
                     if(jSnap.exists() && jSnap.val() && jSnap.val().active) {
@@ -17201,6 +17215,40 @@ function runMathBlitz(problems) {
         );
     }
     function saveGcash() { /* deprecated - use submitCashout() */ }
+    function claimReferral() {
+        if (!auth.currentUser) { showToast('Sign in muna!'); return; }
+        const uid = auth.currentUser.uid;
+        const input = document.getElementById('referralInput');
+        const code = (input.value || '').trim().toUpperCase();
+        if (!code) { showToast('Maglagay ng referral code.'); return; }
+        // Check if user already has a referrer
+        if (userData && userData.referredBy) { showToast('Na-claim mo na ang referral code mo.'); return; }
+        // Check if user is entering their own code
+        if (userData && userData.refCode && userData.refCode === code) { showToast('Hindi mo magagamit ang sarili mong code.'); return; }
+        // Find referrer by code
+        db.ref('users').orderByChild('refCode').equalTo(code).once('value', refSnap => {
+            if (!refSnap.exists()) { showToast('Hindi valid ang code. Try ulit.'); return; }
+            const referrerUid = Object.keys(refSnap.val())[0];
+            if (referrerUid === uid) { showToast('Hindi mo magagamit ang sarili mong code.'); return; }
+            // Set referredBy on current user
+            db.ref('users/' + uid).update({ referredBy: code });
+            // Give referrer ₱10 bonus (25000 coins)
+            db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 25000);
+            db.ref('users/' + referrerUid + '/referralCount').transaction(c => (c || 0) + 1);
+            // Notify referrer
+            db.ref('notifications/' + referrerUid).push({
+                type: 'referral',
+                message: (userData.name || 'Someone') + ' claimed your referral code! You earned ₱10!',
+                timestamp: Date.now(),
+                read: false
+            });
+            // Hide the claim section
+            document.getElementById('referralInputSection').style.display = 'none';
+            input.value = '';
+            showToast('✅ Referral claimed! ' + refSnap.val()[referrerUid].name + ' got ₱10 bonus!');
+            playSound('success');
+        });
+    }
     function redeemItem(n, c) { /* deprecated - use submitCashout() */ }
     function loadHistory() { const list = document.getElementById('historyList'); db.ref('redemptions').orderByChild('uid').equalTo(auth.currentUser.uid).once('value', s => { list.innerHTML = ""; s.forEach(r => { const d = r.val(); let color = '#fbbf24'; if(d.status === 'sent') color = '#10b981'; if(d.status === 'denied') color = '#ef4444'; list.innerHTML += `<div class="history-item"><div><div style="font-weight:700; font-size:12px;">${d.item}</div><div style="font-size:10px; opacity:0.6;">${fixDate(d.timestamp)}</div></div><div style="font-size:10px; font-weight:800; color:${color}; text-transform:uppercase; border:1px solid ${color}; padding:2px 6px; border-radius:4px;">${d.status}</div></div>`; }); }); }
 
