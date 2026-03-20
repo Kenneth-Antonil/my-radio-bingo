@@ -1369,7 +1369,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 document.getElementById('adminLoginError').textContent = '⛔ Access denied. Not an admin.';
                 return;
             }
-            // Verified admin — hide the wall
+            // Verified admin - hide the wall
             document.getElementById('adminLoginWall').style.display = 'none';
             initScheduleManager();
         });
@@ -1534,11 +1534,11 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
     db.ref('gameState/jackpot').once('value', s => { if(s.exists()){ const d = s.val(); document.getElementById('jackpotAmount').value = d.amount || ""; if(d.active) { jackpotVisible = true; document.getElementById('jackpotKnob').style.left = "23px"; document.getElementById('jackpotKnobBg').style.background = "var(--success)"; document.getElementById('jackpotStatusText').innerText = "VISIBLE"; } } });
     document.getElementById('jackpotAmount').addEventListener('input', (e) => { if(jackpotVisible) { db.ref('gameState/jackpot').update({ amount: e.target.value }); } });
 
-    // ═══════════════════════════════════════════════════════════════
-    // FIREBASE CLOUD DRAW ENGINE — dashboard controls
+    // ---------------------------------------------------------------
+    // FIREBASE CLOUD DRAW ENGINE - dashboard controls
     // Drawing is now handled SERVER-SIDE by Cloud Functions.
     // This removes all setInterval dependency from the browser.
-    // ═══════════════════════════════════════════════════════════════
+    // ---------------------------------------------------------------
 
     // Listen to cloud draw state so UI stays in sync even if another
     // tab or the Cloud Function itself changed the state.
@@ -1590,7 +1590,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
         const speed = (document.getElementById('drawSpeed').value || 8) * 1000;
         const now = Date.now();
 
-        // Write game state to Firebase — Cloud Function will pick this up
+        // Write game state to Firebase - Cloud Function will pick this up
         // and start drawing balls on its next tick (within 1 minute).
         // It also draws the first ball immediately via the onWrite trigger.
         db.ref('gameState').update({ status: 'playing', gameStartTime: now });
@@ -1619,7 +1619,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             addActivityItem('⏹️ Cloud Draw stopped by admin.');
     }
 
-    // Legacy local draw fallback — only used when admin manually
+    // Legacy local draw fallback - only used when admin manually
     // wants to draw right now without waiting for the CF tick.
     // Normal auto-draw is handled by Cloud Functions.
     function autoDrawLogic() {
@@ -1960,7 +1960,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
         }); 
     }
 
-    // ── sendPushToAll: writes to /adminPush — Cloud Function handles actual delivery ──
+    // -- sendPushToAll: writes to /adminPush - Cloud Function handles actual delivery --
     async function sendPushToAll(title, body) {
         const statusEl = document.getElementById('sendStatus');
         if(statusEl) statusEl.innerText = '⏳ Sending via Cloud Function...';
@@ -2082,7 +2082,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
         }
     }
 
-    // AUTO RESET — called automatically when a winner is found OR all numbers are drawn
+    // AUTO RESET - called automatically when a winner is found OR all numbers are drawn
     let autoResetTimer = null;
     function autoResetGame(reason) {
         // Prevent duplicate timers
@@ -2185,13 +2185,13 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 : '\u274c Ang iyong cashout na ' + (data.item || 'request') + ' ay na-deny. Makipag-ugnayan sa support.';
             db.ref('notifications/' + data.uid).push({ msg: statusMsg, time: Date.now() });
 
-            // ── CASHOUT APPROVED: Push notification + share banner trigger ──
+            // -- CASHOUT APPROVED: Push notification + share banner trigger --
             if (status === 'sent') {
                 var amtLabel = data.amount ? '\u20B1' + parseFloat(data.amount).toFixed(2) : (data.cost ? '\u20B1' + (data.cost / (window.COIN_TO_PHP_RATE || 1000)).toFixed(2) : '');
                 var pushTitle = '\uD83C\uDF89 Cashout Approved!';
                 var pushBody  = 'Na-approve ang iyong cashout' + (amtLabel ? ' na ' + amtLabel : '') + '. Darating na sa iyong account!';
 
-                // 1. Write push job — Cloud Function will deliver via FCM even if app is closed
+                // 1. Write push job - Cloud Function will deliver via FCM even if app is closed
                 db.ref('userPush').push({
                     uid:       data.uid,
                     title:     pushTitle,
@@ -3350,12 +3350,12 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
 </script>
 <script>
 
-// ── Utility: HTML escaping (used by influencer, push, ads) ──
+// Utility: HTML escaping (used by influencer, push, ads)
 function _paEsc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// Hook openTab — load data when tabs are opened
+// Hook openTab - load data when tabs are opened
 (function() {
     var _origOT = window.openTab;
     window.openTab = function(tabId, btn) {
@@ -3409,7 +3409,7 @@ function sendBroadcastPush() {
     status.textContent = '⏳ Sending...';
     status.style.color = '#fbbf24';
 
-    // Write to adminBroadcast — Cloud Function picks this up and fans out to all FCM tokens
+    // Write to adminBroadcast - Cloud Function picks this up and fans out to all FCM tokens
     db.ref('adminBroadcast').push({
         title: title,
         body: body,
@@ -3485,7 +3485,7 @@ function deleteBroadcast(key) {
 
 
 // ============================================================
-// ===        ADVERTISE WITH US — AD MANAGEMENT            ===
+// ===        ADVERTISE WITH US - AD MANAGEMENT            ===
 // ============================================================
 
 var _adsAll = [];
@@ -3599,7 +3599,7 @@ function deleteAdReq(key) {
     });
 }
 
-// ── Ad Banner Management ──
+// -- Ad Banner Management --
 function addAdBanner() {
     var title = (document.getElementById('abTitle').value || '').trim();
     var image = (document.getElementById('abImage').value || '').trim();
@@ -3765,7 +3765,7 @@ function _iaRender() {
         var k      = _paEsc(app._key);
         var nm     = _paEsc(app.name || '—');
 
-        // Channel — clickable if it looks like a URL
+        // Channel - clickable if it looks like a URL
         var channelHtml = _paEsc(app.channel || '—');
         if (app.channel && (app.channel.indexOf('http') === 0 || app.channel.indexOf('.') !== -1)) {
             var href = app.channel.indexOf('http') === 0 ? app.channel : 'https://' + app.channel;
@@ -3790,7 +3790,7 @@ function _iaRender() {
                 + '<span style="font-size:15px;font-weight:900;color:white;">' + nm + '</span>'
                 + '<span style="background:' + sBg + ';border:1px solid ' + sBdr + ';color:' + sColor + ';font-size:9px;font-weight:900;padding:2px 9px;border-radius:20px;letter-spacing:1px;">' + sLabel + '</span>'
               + '</div>'
-              // Social media — most important field
+              // Social media - most important field
               + '<div style="background:rgba(14,165,233,0.06);border:1px solid rgba(14,165,233,0.15);border-radius:8px;padding:8px 12px;margin-bottom:8px;">'
                 + '<div style="font-size:9px;font-weight:800;color:rgba(14,165,233,0.6);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Social Media</div>'
                 + '<div style="font-size:12px;font-weight:600;word-break:break-all;">' + channelHtml + '</div>'
@@ -3815,7 +3815,7 @@ function approveInfluencer(key) {
 
     var code = 'INF-' + app.uid.substring(0,6).toUpperCase();
 
-    // Create the influencers record — this is what unlocks the portal on the app
+    // Create the influencers record - this is what unlocks the portal on the app
     db.ref('influencers/' + app.uid).set({
         uid:              app.uid,
         name:             app.name  || 'Unknown',
@@ -3848,7 +3848,7 @@ function approveInfluencer(key) {
 function openIARejectModal(key) {
     _iaPendingRejectKey = key;
     var app = _iaAll.find(function(a) { return a._key === key; });
-    // Build reject modal on the fly — no static HTML needed
+    // Build reject modal on the fly - no static HTML needed
     var existing = document.getElementById('iaRejectModal');
     if (existing) existing.remove();
 
@@ -3921,7 +3921,7 @@ function deleteIA(key, name) {
     });
 }
 
-// Live badge — watch pending count in real-time
+// Live badge - watch pending count in real-time
 db.ref('influencerApplications').orderByChild('status').equalTo('pending').on('value', function(snap) {
     var count = snap.exists() ? Object.keys(snap.val()).length : 0;
     var badge = document.getElementById('influencersBadge');
@@ -3929,7 +3929,7 @@ db.ref('influencerApplications').orderByChild('status').equalTo('pending').on('v
 });
 
 // =====================================================
-// 🎟️ SPECIAL BINGO EVENT SYSTEM
+// -- SPECIAL BINGO EVENT SYSTEM
 // =====================================================
 
 function _seEsc(s) {
@@ -4080,9 +4080,9 @@ function deleteSpecialEvent(key) {
     });
 }
 
-// ═══════════════════════════════════════════════════
+// ---------------------------------------------------
 // DRAW SCHEDULE MANAGER
-// ═══════════════════════════════════════════════════
+// ---------------------------------------------------
 var _adminSchedules = []; // array of { hour, minute, label, jackpotType }
 
 function _phNow() {
@@ -4252,14 +4252,14 @@ function loadSchedulesFromFirebase() {
             });
             renderScheduleList();
         } else {
-            // No Firebase data — apply every15 default (manual save required)
+            // No Firebase data - apply every15 default (manual save required)
             _applyPresetNoSave('every15');
             renderScheduleList();
         }
     });
 }
 
-// ── Live Next-Draw countdown ticker in dashboard ──
+// -- Live Next-Draw countdown ticker in dashboard --
 function _dashStartCountdownTicker() {
     function _tick() {
         var el = document.getElementById('dashNextDrawCountdown');
@@ -4291,7 +4291,7 @@ function _dashStartCountdownTicker() {
     setInterval(_tick, 1000);
 }
 
-// Auto-load when Firebase is ready — called after admin auth verified
+// Auto-load when Firebase is ready - called after admin auth verified
 window._schedLoaded = false;
 function initScheduleManager() {
     if(window._schedLoaded) return;
@@ -4305,7 +4305,7 @@ window.addCustomSchedule  = addCustomSchedule;
 window.removeSchedule     = removeSchedule;
 window.clearAllSchedules  = clearAllSchedules;
 window.saveSchedulesToFirebase = saveSchedulesToFirebase;
-// ═══════════════════════════════════════════════════
+// ---------------------------------------------------
 
 
 window.loadSpecialEvents = loadSpecialEvents;
