@@ -3349,6 +3349,51 @@
         .ad-carousel-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.3); transition:all 0.2s; cursor:pointer; }
         .ad-carousel-dot.active { background:white; width:16px; border-radius:3px; }
         .ad-carousel-badge { position:absolute; top:8px; left:8px; font-size:8px; font-weight:800; color:rgba(255,255,255,0.4); background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; letter-spacing:1px; text-transform:uppercase; z-index:2; backdrop-filter:blur(4px); }
+
+        /* ═══ GLOBAL FLOATING ADVERTISE STRIP ═══ */
+        .global-ad-strip {
+            position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
+            z-index:9990; width:calc(100% - 24px); max-width:420px;
+            background:linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.97) 100%);
+            border:1px solid rgba(59,130,246,0.25);
+            border-radius:14px; padding:10px 14px;
+            display:flex; align-items:center; gap:10px;
+            backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+            box-shadow:0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(59,130,246,0.1);
+            cursor:pointer; animation: adStripSlideUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .global-ad-strip:active { transform:translateX(-50%) scale(0.97); }
+        .global-ad-strip.hidden { opacity:0; pointer-events:none; transform:translateX(-50%) translateY(20px); }
+        .global-ad-strip-icon {
+            flex-shrink:0; width:36px; height:36px; border-radius:10px;
+            background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.2);
+            display:flex; align-items:center; justify-content:center;
+        }
+        .global-ad-strip-text { flex:1; min-width:0; }
+        .global-ad-strip-title { font-size:12px; font-weight:800; color:white; letter-spacing:0.2px; }
+        .global-ad-strip-sub { font-size:10px; color:rgba(255,255,255,0.4); font-weight:600; margin-top:1px; }
+        .global-ad-strip-close {
+            flex-shrink:0; width:24px; height:24px; border-radius:50%;
+            background:rgba(255,255,255,0.06); border:none;
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; color:rgba(255,255,255,0.3); font-size:14px; line-height:1;
+            transition: background 0.2s, color 0.2s;
+        }
+        .global-ad-strip-close:hover { background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.6); }
+        .global-ad-strip-pulse {
+            position:absolute; top:8px; right:42px; width:6px; height:6px;
+            border-radius:50%; background:#3b82f6;
+            animation: adPulse 2s ease-in-out infinite;
+        }
+        @keyframes adStripSlideUp {
+            from { opacity:0; transform:translateX(-50%) translateY(30px); }
+            to { opacity:1; transform:translateX(-50%) translateY(0); }
+        }
+        @keyframes adPulse {
+            0%, 100% { opacity:1; transform:scale(1); }
+            50% { opacity:0.4; transform:scale(1.4); }
+        }
         .sponsor-taken-card { background:rgba(251,191,36,0.07); border:1px solid rgba(251,191,36,0.2); border-radius:10px; padding:14px; margin-bottom:4px; }
 
         /* === FULL SCREEN STORE MODAL === */
@@ -10138,6 +10183,17 @@ body::before {
     </div>
 </div>
 
+<!-- ═══ GLOBAL FLOATING ADVERTISE STRIP ═══ -->
+<div class="global-ad-strip" id="globalAdStrip" onclick="openAdvertiseModal()" style="display:none;">
+    <div class="global-ad-strip-icon"><i data-lucide="megaphone" style="width:18px;height:18px;color:#3b82f6;"></i></div>
+    <div class="global-ad-strip-text">
+        <div class="global-ad-strip-title">Advertise with RB Live</div>
+        <div class="global-ad-strip-sub">Promote your business to all active players!</div>
+    </div>
+    <div class="global-ad-strip-pulse"></div>
+    <button class="global-ad-strip-close" onclick="event.stopPropagation(); dismissAdStrip();" aria-label="Close">✕</button>
+</div>
+
 <!-- ===== OLD BOTTOM NAV (hidden, kept for JS compatibility) ===== -->
 <div class="bottom-nav">
     <button class="nav-item" onclick="switchTab('home')" id="nav-home">
@@ -13937,7 +13993,7 @@ function runMathBlitz(problems) {
                     }
                 } 
             });
-            initBingo(); _renderPatternBar('Normal Bingo'); setupChat(); listenForNextDraw(); listenForLastWinner(); initSponsorListener(); initAdCarousel(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate(); if(typeof setupCallListener === 'function') setupCallListener();
+            initBingo(); _renderPatternBar('Normal Bingo'); setupChat(); listenForNextDraw(); listenForLastWinner(); initSponsorListener(); initAdCarousel(); initGlobalAdStrip(); setupPresence(u.uid); listenJackpot(); listenNotifications(u.uid); listenPrivateMessages(u.uid); listenVideoUpdate(); if(typeof setupCallListener === 'function') setupCallListener();
             try { if(localStorage.getItem('artcardDismissed') === '1') { var ac = document.getElementById('autostartArtcard'); if(ac) ac.style.display='none'; } } catch(e){}
             // Show chat bubble since bingo tab is active by default
             var _chatBubble = document.getElementById('chatBubbleBtn');
@@ -16098,6 +16154,31 @@ function runMathBlitz(problems) {
             showToast('Submission error. Please try again.');
         });
     }
+    // ═══ GLOBAL FLOATING AD STRIP (visible across all sections) ═══
+    function initGlobalAdStrip() {
+        var strip = document.getElementById('globalAdStrip');
+        if (!strip) return;
+        // Check if dismissed recently (24 hours)
+        var dismissedAt = parseInt(localStorage.getItem('adStripDismissed') || '0');
+        if (dismissedAt && Date.now() - dismissedAt < 24 * 60 * 60 * 1000) return;
+        // Show after 2.5s delay
+        setTimeout(function() {
+            strip.style.display = 'flex';
+            try { lucide.createIcons(); } catch(e) {}
+        }, 2500);
+    }
+    window.initGlobalAdStrip = initGlobalAdStrip;
+
+    function dismissAdStrip() {
+        var strip = document.getElementById('globalAdStrip');
+        if (strip) {
+            strip.classList.add('hidden');
+            setTimeout(function() { strip.style.display = 'none'; }, 300);
+        }
+        localStorage.setItem('adStripDismissed', Date.now().toString());
+    }
+    window.dismissAdStrip = dismissAdStrip;
+
     // ===== END AD CAROUSEL ==========================================
     // ═══════════════════════════════════════════════════════════════════
 
