@@ -8340,6 +8340,89 @@
             font-size: 12px; color: rgba(100,130,180,0.55); font-weight: 500; padding: 0 16px;
         }
 
+        /* ── CASHOUT TICKER ── */
+        .cashout-ticker-bar {
+            background: linear-gradient(90deg, rgba(5,15,8,0.97), rgba(8,12,20,0.97));
+            border-bottom: 1px solid rgba(16,185,129,0.2);
+            display: flex; align-items: center;
+            height: 38px; overflow: hidden; position: relative;
+            margin: 0; box-shadow: 0 2px 12px rgba(0,0,0,0.35);
+        }
+        .cashout-ticker-label {
+            flex-shrink: 0; display: flex; align-items: center; gap: 6px;
+            padding: 0 12px;
+            background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(251,191,36,0.1));
+            border-right: 1px solid rgba(16,185,129,0.25);
+            height: 100%; z-index: 2;
+        }
+        .cashout-ticker-icon {
+            font-size: 14px; animation: cashout-icon-bounce 2s ease infinite;
+        }
+        @keyframes cashout-icon-bounce {
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(-2px); }
+        }
+        .cashout-ticker-label-text {
+            font-size: 9px; font-weight: 900; letter-spacing: 1.2px;
+            text-transform: uppercase; white-space: nowrap;
+            background: linear-gradient(135deg, #34d399, #fbbf24);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .cashout-ticker-track {
+            flex: 1; overflow: hidden; height: 100%;
+            display: flex; align-items: center;
+            -webkit-mask-image: linear-gradient(90deg,transparent 0%,black 5%,black 95%,transparent 100%);
+            mask-image: linear-gradient(90deg,transparent 0%,black 5%,black 95%,transparent 100%);
+        }
+        .cashout-ticker-inner {
+            display: flex; align-items: center;
+            white-space: nowrap;
+            animation: cashout-ticker-scroll 30s linear infinite;
+        }
+        @keyframes cashout-ticker-scroll {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .cashout-ticker-item {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 0 16px;
+        }
+        .cashout-ticker-avatar {
+            width: 22px; height: 22px; border-radius: 50%;
+            border: 1.5px solid rgba(16,185,129,0.5);
+            overflow: hidden; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 900; background: rgba(16,185,129,0.15);
+            color: #34d399;
+        }
+        .cashout-ticker-avatar img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .cashout-ticker-name {
+            font-size: 11px; font-weight: 700; color: rgba(220,240,230,0.9);
+            max-width: 90px; overflow: hidden; text-overflow: ellipsis;
+        }
+        .cashout-ticker-amt {
+            font-size: 11px; font-weight: 900;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .cashout-ticker-method {
+            font-size: 9px; font-weight: 700; color: rgba(251,191,36,0.7);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .cashout-ticker-sep {
+            width: 3px; height: 3px; border-radius: 50%;
+            background: rgba(16,185,129,0.4); display: inline-block; flex-shrink: 0;
+        }
+        .cashout-ticker-empty {
+            font-size: 11px; color: rgba(100,180,140,0.45); font-weight: 500; padding: 0 16px;
+        }
+        .cashout-ticker-time {
+            font-size: 9px; color: rgba(255,255,255,0.25); font-weight: 500;
+        }
 
         /* ── PURO TICKER ── */
         .puro-ticker-bar {
@@ -10737,6 +10820,19 @@ body::before {
 <div class="container">
     <div id="view-home" style="display:none;">
         <div id="friendRequestsSection"></div>
+
+        <!-- ── CASHOUT TICKER ── -->
+        <div class="cashout-ticker-bar" id="cashoutTickerBar" style="display:none;">
+            <div class="cashout-ticker-label">
+                <span class="cashout-ticker-icon">💸</span>
+                <span class="cashout-ticker-label-text">Cashouts</span>
+            </div>
+            <div class="cashout-ticker-track">
+                <div class="cashout-ticker-inner" id="cashoutTickerInner">
+                    <span class="cashout-ticker-empty">Loading...</span>
+                </div>
+            </div>
+        </div>
 
         
         <div class="post-creator-modern" id="mainPostCreator">
@@ -26804,6 +26900,153 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
         document.addEventListener('DOMContentLoaded', waitForAuth);
     } else {
         waitForAuth();
+    }
+})();
+</script>
+
+<!-- ===== CASHOUT TICKER — PUBLIC FEED ===== -->
+<script>
+(function(){
+    'use strict';
+
+    var _cashoutTickerLoaded = false;
+
+    function initCashoutTicker() {
+        if (_cashoutTickerLoaded) return;
+        if (typeof firebase === 'undefined' || !firebase.database) {
+            setTimeout(initCashoutTicker, 500); return;
+        }
+        _cashoutTickerLoaded = true;
+
+        var ref = firebase.database().ref('redemptions')
+            .orderByChild('status').equalTo('sent');
+
+        ref.limitToLast(30).on('value', function(snap) {
+            var items = [];
+            snap.forEach(function(child) {
+                var d = child.val();
+                if (d && d.status === 'sent' && d.amount) {
+                    items.push({
+                        name:   d.name || 'Player',
+                        amount: d.amount,
+                        method: d.method || 'gcash',
+                        uid:    d.uid || '',
+                        ts:     d.approvedAt || d.timestamp || 0,
+                        photo:  d.photo || ''
+                    });
+                }
+            });
+
+            // Sort newest first
+            items.sort(function(a, b) { return b.ts - a.ts; });
+
+            var bar = document.getElementById('cashoutTickerBar');
+            var inner = document.getElementById('cashoutTickerInner');
+            if (!bar || !inner) return;
+
+            if (items.length === 0) {
+                bar.style.display = 'none';
+                return;
+            }
+
+            bar.style.display = 'flex';
+
+            // Build ticker HTML — duplicate for seamless loop
+            var html = '';
+            function buildItems(arr) {
+                var h = '';
+                for (var i = 0; i < arr.length; i++) {
+                    var it = arr[i];
+                    var initial = (it.name || 'P').charAt(0).toUpperCase();
+                    var masked = maskName(it.name);
+                    var methodTag = (it.method || 'gcash').toUpperCase();
+                    var timeAgo = relativeTime(it.ts);
+
+                    h += '<span class="cashout-ticker-item">';
+                    h += '<span class="cashout-ticker-avatar">';
+                    if (it.photo) {
+                        h += '<img src="' + it.photo + '" alt="" onerror="this.parentElement.textContent=\'' + initial + '\'">';
+                    } else {
+                        h += initial;
+                    }
+                    h += '</span>';
+                    h += '<span class="cashout-ticker-name">' + masked + '</span>';
+                    h += '<span class="cashout-ticker-amt">\u20B1' + Number(it.amount).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</span>';
+                    h += '<span class="cashout-ticker-method">' + methodTag + '</span>';
+                    if (timeAgo) h += '<span class="cashout-ticker-time">' + timeAgo + '</span>';
+                    h += '</span>';
+
+                    if (i < arr.length - 1) {
+                        h += '<span class="cashout-ticker-sep"></span>';
+                    }
+                }
+                return h;
+            }
+
+            html = buildItems(items) + '<span class="cashout-ticker-sep" style="margin:0 12px;"></span>' + buildItems(items);
+            inner.innerHTML = html;
+
+            // Adjust scroll speed based on item count
+            var duration = Math.max(20, items.length * 4);
+            inner.style.animationDuration = duration + 's';
+
+            // Try to load photos from users/ if not present
+            loadCashoutPhotos(items);
+        });
+    }
+
+    function maskName(name) {
+        if (!name) return 'Player';
+        var parts = name.trim().split(/\s+/);
+        if (parts.length === 1) {
+            var n = parts[0];
+            if (n.length <= 2) return n;
+            return n.charAt(0) + new Array(n.length - 1).join('\u2022') + n.charAt(n.length - 1);
+        }
+        // Show first name, mask last name
+        var first = parts[0];
+        var last = parts[parts.length - 1];
+        var maskedLast = last.charAt(0) + new Array(Math.max(2, last.length)).join('\u2022');
+        return first + ' ' + maskedLast;
+    }
+
+    function relativeTime(ts) {
+        if (!ts) return '';
+        var diff = Date.now() - ts;
+        var mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return mins + 'm ago';
+        var hrs = Math.floor(mins / 60);
+        if (hrs < 24) return hrs + 'h ago';
+        var days = Math.floor(hrs / 24);
+        if (days < 7) return days + 'd ago';
+        return '';
+    }
+
+    function loadCashoutPhotos(items) {
+        var uidsDone = {};
+        for (var i = 0; i < items.length; i++) {
+            var uid = items[i].uid;
+            if (!uid || uidsDone[uid] || items[i].photo) continue;
+            uidsDone[uid] = true;
+            (function(u) {
+                firebase.database().ref('users/' + u + '/photoURL').once('value', function(snap) {
+                    var url = snap.val();
+                    if (!url) return;
+                    var avatars = document.querySelectorAll('#cashoutTickerInner .cashout-ticker-avatar:not(:has(img))');
+                    avatars.forEach(function(avEl) {
+                        avEl.innerHTML = '<img src="' + url + '" alt="" onerror="this.parentElement.textContent=\'' + (u.charAt(0) || 'P').toUpperCase() + '\'">';
+                    });
+                });
+            })(uid);
+        }
+    }
+
+    // Start on ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCashoutTicker);
+    } else {
+        initCashoutTicker();
     }
 })();
 </script>
