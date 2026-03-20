@@ -3360,6 +3360,16 @@
         .ad-carousel-dot.active { background:white; width:16px; border-radius:3px; }
         .ad-carousel-badge { position:absolute; top:8px; left:8px; font-size:8px; font-weight:800; color:rgba(255,255,255,0.4); background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; letter-spacing:1px; text-transform:uppercase; z-index:2; backdrop-filter:blur(4px); }
 
+        /* Global Ad Slot - slim banner across all tabs */
+        .global-ad-slot { border-radius:12px; overflow:hidden; margin-bottom:10px; position:relative; min-height:52px; cursor:pointer; transition:opacity 0.3s; }
+        .global-ad-slot img { width:100%; height:auto; display:block; border-radius:12px; min-height:50px; max-height:100px; object-fit:cover; }
+        .global-ad-slot .gas-badge { position:absolute; top:6px; left:6px; font-size:7px; font-weight:800; color:rgba(255,255,255,0.35); background:rgba(0,0,0,0.5); padding:2px 5px; border-radius:3px; letter-spacing:0.8px; text-transform:uppercase; backdrop-filter:blur(4px); }
+        .global-ad-slot .gas-cta { display:flex; align-items:center; gap:10px; padding:12px 14px; background:linear-gradient(135deg,rgba(15,23,42,0.7),rgba(30,41,59,0.6)); border:1px solid rgba(59,130,246,0.12); border-radius:12px; }
+        .global-ad-slot .gas-cta-icon { flex-shrink:0; width:32px; height:32px; border-radius:8px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.15); display:flex; align-items:center; justify-content:center; }
+        .global-ad-slot .gas-cta-text { flex:1; }
+        .global-ad-slot .gas-cta-title { font-size:11px; font-weight:800; color:rgba(255,255,255,0.75); }
+        .global-ad-slot .gas-cta-sub { font-size:9px; color:rgba(255,255,255,0.3); font-weight:600; margin-top:1px; }
+
 
 
         .sponsor-taken-card { background:rgba(251,191,36,0.07); border:1px solid rgba(251,191,36,0.2); border-radius:10px; padding:14px; margin-bottom:4px; }
@@ -10863,17 +10873,8 @@ body::before {
 
 
 
-        <!-- ═══ INLINE ADVERTISE CTA (Home Feed) ═══ -->
-        <div id="homeAdCta" onclick="openAdvertiseModal()" style="display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;background:linear-gradient(135deg,rgba(15,23,42,0.7),rgba(30,41,59,0.6));border:1px solid rgba(59,130,246,0.15);border-radius:14px;cursor:pointer;transition:opacity 0.2s;">
-            <div style="flex-shrink:0;width:38px;height:38px;border-radius:10px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);display:flex;align-items:center;justify-content:center;">
-                <i data-lucide="megaphone" style="width:17px;height:17px;color:#3b82f6;"></i>
-            </div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:12px;font-weight:800;color:white;">Advertise with RB Live</div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.35);font-weight:600;">Reach all active players. Tap to inquire!</div>
-            </div>
-            <i data-lucide="chevron-right" style="width:14px;height:14px;color:rgba(255,255,255,0.2);flex-shrink:0;"></i>
-        </div>
+        <!-- Dynamic Ad Slot (Home) -->
+        <div class="global-ad-slot" id="gasHome"></div>
 
         <div id="socialFeed" class="social-feed-container">
             <div style="text-align:center; padding: var(--spacing-lg); opacity:0.5;">Loading Feed...</div>
@@ -11256,6 +11257,8 @@ body::before {
         </div>
 
         <div id="beatsContainer">
+            <!-- Dynamic Ad Slot (Beats) -->
+            <div class="global-ad-slot" id="gasBeats" style="margin:0 12px 10px;"></div>
             <div class="beats-placeholder">
                 <i data-lucide="video" style="width:60px; height:60px; color:rgba(255,255,255,0.3);"></i>
                 <h3 style="font-size:18px; margin:10px 0;">Loading Beats...</h3>
@@ -11282,6 +11285,9 @@ body::before {
     </div>
 
     <div style="padding:0 12px;">
+
+        <!-- Dynamic Ad Slot (Games) -->
+        <div class="global-ad-slot" id="gasGames" style="margin-bottom:10px;"></div>
 
 
         <!-- Row 1: AI Trivia + Memory -->
@@ -16132,6 +16138,7 @@ function runMathBlitz(problems) {
             });
             _adBanners.sort(function(a, b) { return (a.priority || 99) - (b.priority || 99); });
             renderAdCarousel();
+            renderGlobalAdSlots();
         });
     }
 
@@ -16253,6 +16260,52 @@ function runMathBlitz(problems) {
         });
     }
     // ===== END AD CAROUSEL ==========================================
+
+    // Global Ad Slots (Home, Beats, Games)
+    var _gasRotateIdx = 0;
+    var _gasRotateTimer = null;
+
+    function _gasRenderSlots() {
+        var slots = ['gasHome', 'gasBeats', 'gasGames'];
+        slots.forEach(function(slotId) {
+            var el = document.getElementById(slotId);
+            if (!el) return;
+
+            if (_adBanners.length === 0) {
+                el.innerHTML =
+                    '<div class="gas-cta" onclick="openAdvertiseModal()">' +
+                        '<div class="gas-cta-icon"><i data-lucide="megaphone" style="width:15px;height:15px;color:#3b82f6;"></i></div>' +
+                        '<div class="gas-cta-text">' +
+                            '<div class="gas-cta-title">Advertise with RB Live</div>' +
+                            '<div class="gas-cta-sub">Reach all active players. Tap to inquire!</div>' +
+                        '</div>' +
+                        '<i data-lucide="chevron-right" style="width:13px;height:13px;color:rgba(255,255,255,0.15);flex-shrink:0;"></i>' +
+                    '</div>';
+            } else {
+                var b = _adBanners[_gasRotateIdx % _adBanners.length];
+                var linkOpen = b.link ? '<a href="' + b.link + '" target="_blank" rel="noopener noreferrer" onclick="trackAdClick(\'' + b._key + '\')" style="display:block;">' : '';
+                var linkClose = b.link ? '</a>' : '';
+                el.innerHTML =
+                    '<span class="gas-badge">Ad</span>' +
+                    linkOpen +
+                    '<img src="' + (b.imageUrl || '') + '" alt="' + (b.title || 'Ad') + '" style="border-radius:12px;" loading="lazy">' +
+                    linkClose;
+            }
+        });
+        try { lucide.createIcons(); } catch(e) {}
+    }
+
+    function renderGlobalAdSlots() {
+        _gasRotateIdx = 0;
+        _gasRenderSlots();
+        if (_gasRotateTimer) clearInterval(_gasRotateTimer);
+        if (_adBanners.length > 1) {
+            _gasRotateTimer = setInterval(function() {
+                _gasRotateIdx++;
+                _gasRenderSlots();
+            }, 6000);
+        }
+    }
     // ═══════════════════════════════════════════════════════════════════
 
     function initBingo() {
