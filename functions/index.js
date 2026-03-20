@@ -460,7 +460,10 @@ exports.onWinnerFound = onValueCreated(
 
         const winnerName    = winner.name    || 'A player';
         const winnerPattern = winner.pattern || 'Bingo';
-        const prizeAmt      = winner.prize   ? ` · ₱${Number(winner.prize).toLocaleString()}` : '';
+        const PESO_RATE     = 2500; // 2500 coins = ₱1
+        const prizeCoins    = Number(winner.prize) || 0;
+        const prizePeso     = prizeCoins / PESO_RATE;
+        const prizeAmt      = prizeCoins > 0 ? ` · ₱${prizePeso.toFixed(2)}` : '';
         const isJackpot     = winner.isJackpot || (winnerPattern === 'Blackout');
 
         await sendPushToAll(
