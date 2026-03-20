@@ -1050,11 +1050,11 @@
 
         /* Filter pills */
         .notif-filter-tab {
-            padding: 7px 15px;
+            padding: 7px 14px;
             border: none;
             background: rgba(255,255,255,0.08);
             color: rgba(255,255,255,0.55);
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             border-radius: 20px;
             cursor: pointer;
@@ -1062,6 +1062,9 @@
             white-space: nowrap;
             flex-shrink: 0;
             letter-spacing: 0.1px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
         .notif-filter-tab.active {
             background: rgba(14,165,233,0.18);
@@ -1137,7 +1140,7 @@
         .notif-type-badge.follow  { background: linear-gradient(135deg,#10b981,#059669); }
         .notif-type-badge.share   { background: linear-gradient(135deg,#f59e0b,#d97706); }
         .notif-type-badge.gift    { background: linear-gradient(135deg,#ec4899,#be185d); }
-        .notif-type-badge.system  { background: linear-gradient(135deg,#64748b,#475569); }
+        .notif-type-badge.system  { background: linear-gradient(135deg,#3b82f6,#1d4ed8); }
 
         /* Text content */
         .notif-body { flex: 1; min-width: 0; }
@@ -2244,7 +2247,7 @@
         .user-stats { display: flex; align-items: center; gap: var(--spacing-xs); }
         .icon-btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.15); width: 38px; height: 38px; border-radius: var(--radius-md); cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         .icon-btn:active { transform: scale(0.95); }
-        .notif-badge { position: absolute; top: 8px; right: 8px; background: var(--danger); width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--surface); display: none; z-index: 10; box-shadow: 0 0 10px var(--danger); }
+        .notif-badge { position: absolute; top: 4px; right: 4px; background: var(--danger); min-width: 16px; height: 16px; border-radius: 10px; border: 2px solid var(--surface); display: none; z-index: 10; box-shadow: 0 0 8px var(--danger); font-size: 9px; font-weight: 900; color: white; text-align: center; line-height: 16px; padding: 0 4px; box-sizing: border-box; }
         .points-badge { background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.4)); color: #fff; padding: 0 12px; height: 38px; border-radius: var(--radius-md); font-weight: 800; border: 1px solid rgba(251, 191, 36, 0.6); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
         #userImg { width: 45px; height: 45px; border-radius: 50%; cursor: pointer; border: 2px solid var(--accent); object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         
@@ -9088,6 +9091,9 @@ body::before {
 .notif-badge {
     background: #f0555a !important;
     box-shadow: 0 0 6px rgba(240,85,90,0.5) !important;
+    display: none;
+    align-items: center;
+    justify-content: center;
 }
 .chat-bubble-badge {
     background: #f0555a !important;
@@ -12119,11 +12125,11 @@ function runMathBlitz(problems) {
     <!-- Filter Pills -->
     <div style="display:flex; gap:7px; padding:12px 16px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; flex-shrink:0;">
         <button class="notif-filter-tab active" id="nftab-all"     onclick="switchNotifTab('all')">All</button>
-        <button class="notif-filter-tab" id="nftab-unread"  onclick="switchNotifTab('unread')">Unread</button>
-        <button class="notif-filter-tab" id="nftab-like"    onclick="switchNotifTab('like')">❤️ Reactions</button>
-        <button class="notif-filter-tab" id="nftab-comment" onclick="switchNotifTab('comment')">💬 Comments</button>
-        <button class="notif-filter-tab" id="nftab-mention" onclick="switchNotifTab('mention')">@ Mentions</button>
-        <button class="notif-filter-tab" id="nftab-follow"  onclick="switchNotifTab('follow')">👥 Follows</button>
+        <button class="notif-filter-tab" id="nftab-unread"  onclick="switchNotifTab('unread')"><i data-lucide="circle-dot" style="width:12px;height:12px;"></i> Unread</button>
+        <button class="notif-filter-tab" id="nftab-like"    onclick="switchNotifTab('like')"><i data-lucide="heart" style="width:12px;height:12px;"></i> Reactions</button>
+        <button class="notif-filter-tab" id="nftab-comment" onclick="switchNotifTab('comment')"><i data-lucide="message-circle" style="width:12px;height:12px;"></i> Comments</button>
+        <button class="notif-filter-tab" id="nftab-system"  onclick="switchNotifTab('system')"><i data-lucide="radio" style="width:12px;height:12px;"></i> System</button>
+        <button class="notif-filter-tab" id="nftab-follow"  onclick="switchNotifTab('follow')"><i data-lucide="user-plus" style="width:12px;height:12px;"></i> Follows</button>
     </div>
 
     <div style="height:1px; background:rgba(255,255,255,0.05); flex-shrink:0;"></div>
@@ -14586,53 +14592,95 @@ function runMathBlitz(problems) {
     function renderOnlineBubbles(onlineUsersMap, myUid) { return; }
     
     // === UPDATED NOTIFICATION LOGIC (With Delete & Nav) ===
-    function listenNotifications(uid) { 
-        db.ref('notifications/' + uid).on('value', s => { 
-            let unreadPMs = 0;
-            let count = 0;
-            s.forEach(child => {
-                const val = child.val();
-                if(val.type === 'pm') unreadPMs++;
-                else count++;
+    // ═══════════════════════════════════════════════════════════════
+    // NOTIFICATION SYSTEM (read-state based)
+    // ═══════════════════════════════════════════════════════════════
+    var _notifUnreadCount = 0;
+
+    function listenNotifications(uid) {
+        db.ref('notifications/' + uid).on('value', function(s) {
+            var unreadPMs = 0;
+            var unreadNotifs = 0;
+            s.forEach(function(child) {
+                var val = child.val();
+                if (val.type === 'pm') { if (!val.read) unreadPMs++; }
+                else { if (!val.read) unreadNotifs++; }
             });
-            const dot = document.getElementById('notifDot'); 
-            const pmBadge = document.getElementById('pmBadge');
-            if(count > 0) { dot.style.display = 'block'; } else { dot.style.display = 'none'; }
-            if(unreadPMs > 0) { pmBadge.style.display = 'flex'; pmBadge.innerText = unreadPMs > 9 ? '9+' : unreadPMs; } else { pmBadge.style.display = 'none'; }
-        }); 
+            _notifUnreadCount = unreadNotifs;
+
+            var dot = document.getElementById('notifDot');
+            var pmBadge = document.getElementById('pmBadge');
+
+            if (dot) {
+                if (unreadNotifs > 0) {
+                    dot.style.display = 'flex';
+                    dot.textContent = unreadNotifs > 99 ? '99+' : unreadNotifs;
+                } else {
+                    dot.style.display = 'none';
+                    dot.textContent = '';
+                }
+            }
+            if (pmBadge) {
+                if (unreadPMs > 0) {
+                    pmBadge.style.display = 'flex';
+                    pmBadge.textContent = unreadPMs > 9 ? '9+' : unreadPMs;
+                } else {
+                    pmBadge.style.display = 'none';
+                }
+            }
+        });
     }
-    
-    let currentNotifFilter = 'all';
+
+    var currentNotifFilter = 'all';
 
     function openNotifs() {
-        const sheet = document.getElementById('notifSheet');
-        if(!sheet) return;
+        var sheet = document.getElementById('notifSheet');
+        if (!sheet) return;
         sheet.style.display = 'flex';
         sheet.style.opacity = '0';
         sheet.style.transform = 'translateY(12px)';
         lockScroll();
-        requestAnimationFrame(() => {
+        requestAnimationFrame(function() {
             sheet.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
             sheet.style.opacity = '1';
             sheet.style.transform = 'translateY(0)';
         });
         currentNotifFilter = 'all';
-        document.querySelectorAll('.notif-filter-tab').forEach(t => t.classList.remove('active'));
-        const allTab = document.getElementById('nftab-all');
-        if(allTab) allTab.classList.add('active');
-        lucide.createIcons();
+        document.querySelectorAll('.notif-filter-tab').forEach(function(t) { t.classList.remove('active'); });
+        var allTab = document.getElementById('nftab-all');
+        if (allTab) allTab.classList.add('active');
+        try { lucide.createIcons(); } catch(e) {}
         playSound('click');
+        // Mark all unread as read on open
+        _markNotifsAsRead();
         renderNotifs();
     }
 
+    function _markNotifsAsRead() {
+        var uid = auth.currentUser ? auth.currentUser.uid : null;
+        if (!uid) return;
+        db.ref('notifications/' + uid).once('value', function(snap) {
+            var updates = {};
+            snap.forEach(function(child) {
+                var v = child.val();
+                if (!v.read && v.type !== 'pm') {
+                    updates[child.key + '/read'] = true;
+                }
+            });
+            if (Object.keys(updates).length > 0) {
+                db.ref('notifications/' + uid).update(updates);
+            }
+        });
+    }
+
     function closeNotifSheet() {
-        const sheet = document.getElementById('notifSheet');
-        if(!sheet) return;
+        var sheet = document.getElementById('notifSheet');
+        if (!sheet) return;
         sheet.style.transition = 'opacity 0.18s ease, transform 0.18s ease';
         sheet.style.opacity = '0';
         sheet.style.transform = 'translateY(10px)';
         unlockScroll();
-        setTimeout(() => {
+        setTimeout(function() {
             sheet.style.display = 'none';
             sheet.style.opacity = '';
             sheet.style.transform = '';
@@ -14641,174 +14689,250 @@ function runMathBlitz(problems) {
 
     function switchNotifTab(tab) {
         currentNotifFilter = tab;
-        document.querySelectorAll('.notif-filter-tab').forEach(t => t.classList.remove('active'));
-        const btn = document.getElementById('nftab-' + tab);
-        if(btn) btn.classList.add('active');
+        document.querySelectorAll('.notif-filter-tab').forEach(function(t) { t.classList.remove('active'); });
+        var btn = document.getElementById('nftab-' + tab);
+        if (btn) btn.classList.add('active');
         renderNotifs();
         playSound('click');
     }
 
     function clearAllNotifs() {
-        if(!confirm('Clear all notifications?')) return;
-        db.ref('notifications/' + auth.currentUser.uid).once('value', s => {
-            const updates = {};
-            s.forEach(n => { if(n.val().type !== 'pm') updates[n.key] = null; });
-            db.ref('notifications/' + auth.currentUser.uid).update(updates).then(() => {
+        if (!confirm('Clear all notifications?')) return;
+        db.ref('notifications/' + auth.currentUser.uid).once('value', function(s) {
+            var updates = {};
+            s.forEach(function(n) { if (n.val().type !== 'pm') updates[n.key] = null; });
+            db.ref('notifications/' + auth.currentUser.uid).update(updates).then(function() {
                 renderNotifs(); showToast('All notifications cleared');
             });
         });
     }
 
     function getNotifTimeLabel(ts) {
-        const diff = Date.now() - ts;
-        const m = Math.floor(diff / 60000);
-        const h = Math.floor(diff / 3600000);
-        const d = Math.floor(diff / 86400000);
-        if(m < 1)  return 'Just now';
-        if(m < 60) return m + 'm';
-        if(h < 24) return h + 'h';
-        if(d < 7)  return d + 'd';
-        const dt = new Date(ts);
-        return dt.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+        var diff = Date.now() - ts;
+        var m = Math.floor(diff / 60000);
+        var h = Math.floor(diff / 3600000);
+        var d = Math.floor(diff / 86400000);
+        if (m < 1)  return 'Just now';
+        if (m < 60) return m + 'm ago';
+        if (h < 24) return h + 'h ago';
+        if (d < 7)  return d + 'd ago';
+        return new Date(ts).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
     }
 
     function extractAction(msg) {
-        if(!msg) return 'interacted with your content';
-        const match = msg.match(/^.+?\s+(reacted .+ to your .+|commented on your .+|mentioned you .+|started following you|liked your .+|replied to your .+|sent you .+|gifted you .+)/);
+        if (!msg) return 'interacted with your content';
+        var match = msg.match(/^.+?\s+(reacted .+ to your .+|commented on your .+|mentioned you .+|started following you|liked your .+|replied to your .+|sent you .+|gifted you .+)/);
         return match ? match[1] : msg;
     }
 
     function extractActorName(msg) {
-        if(!msg) return 'Someone';
-        const match = msg.match(/^(.+?)\s+(reacted|commented|mentioned|started|liked|replied|sent|gifted)/);
-        return match ? match[1] : 'Someone';
+        if (!msg) return null;
+        var match = msg.match(/^(.+?)\s+(reacted|commented|mentioned|started|liked|replied|sent|gifted)/);
+        return match ? match[1] : null;
     }
 
-    function getTypeEmoji(type) {
-        const iconMap={like:'<i data-lucide="heart" style="width:11px;height:11px;color:#ef4444;"></i>',comment:'<i data-lucide="message-circle" style="width:11px;height:11px;color:#38bdf8;"></i>',mention:'<i data-lucide="at-sign" style="width:11px;height:11px;color:#a78bfa;"></i>',follow:'<i data-lucide="user-plus" style="width:11px;height:11px;color:#10b981;"></i>',share:'<i data-lucide="share-2" style="width:11px;height:11px;color:#f59e0b;"></i>',gift:'<i data-lucide="gift" style="width:11px;height:11px;color:#ec4899;"></i>'}; return iconMap[type]||'<i data-lucide="bell" style="width:11px;height:11px;"></i>';
+    function _isSystemNotif(type) {
+        var social = { like:1, comment:1, mention:1, follow:1, share:1, gift:1 };
+        return !social[type];
     }
+
+    var _notifTypeIcon = {
+        like:               '<i data-lucide="heart" style="width:13px;height:13px;color:white;"></i>',
+        comment:            '<i data-lucide="message-circle" style="width:13px;height:13px;color:white;"></i>',
+        mention:            '<i data-lucide="at-sign" style="width:13px;height:13px;color:white;"></i>',
+        follow:             '<i data-lucide="user-plus" style="width:13px;height:13px;color:white;"></i>',
+        share:              '<i data-lucide="share-2" style="width:13px;height:13px;color:white;"></i>',
+        gift:               '<i data-lucide="gift" style="width:13px;height:13px;color:white;"></i>',
+        system:             '<i data-lucide="radio" style="width:13px;height:13px;color:white;"></i>',
+        influencer_approved:'<i data-lucide="star" style="width:13px;height:13px;color:white;"></i>',
+        influencer_rejected:'<i data-lucide="star-off" style="width:13px;height:13px;color:white;"></i>',
+        tournament_win:     '<i data-lucide="trophy" style="width:13px;height:13px;color:white;"></i>',
+        tournament_alert:   '<i data-lucide="trophy" style="width:13px;height:13px;color:white;"></i>',
+        referral:           '<i data-lucide="users" style="width:13px;height:13px;color:white;"></i>',
+        coins:              '<i data-lucide="coins" style="width:13px;height:13px;color:white;"></i>',
+        bonus:              '<i data-lucide="sparkles" style="width:13px;height:13px;color:white;"></i>',
+        win:                '<i data-lucide="party-popper" style="width:13px;height:13px;color:white;"></i>',
+        ad_approved:        '<i data-lucide="megaphone" style="width:13px;height:13px;color:white;"></i>'
+    };
+
+    var _notifTypeBg = {
+        like:               'linear-gradient(135deg,#ef4444,#f97316)',
+        comment:            'linear-gradient(135deg,#0ea5e9,#2563eb)',
+        mention:            'linear-gradient(135deg,#a78bfa,#7c3aed)',
+        follow:             'linear-gradient(135deg,#10b981,#059669)',
+        share:              'linear-gradient(135deg,#f59e0b,#d97706)',
+        gift:               'linear-gradient(135deg,#ec4899,#be185d)',
+        system:             'linear-gradient(135deg,#3b82f6,#1d4ed8)',
+        influencer_approved:'linear-gradient(135deg,#f59e0b,#d97706)',
+        influencer_rejected:'linear-gradient(135deg,#64748b,#475569)',
+        tournament_win:     'linear-gradient(135deg,#fbbf24,#f59e0b)',
+        tournament_alert:   'linear-gradient(135deg,#f59e0b,#d97706)',
+        referral:           'linear-gradient(135deg,#10b981,#059669)',
+        coins:              'linear-gradient(135deg,#fbbf24,#f59e0b)',
+        bonus:              'linear-gradient(135deg,#ec4899,#be185d)',
+        win:                'linear-gradient(135deg,#fbbf24,#d97706)',
+        ad_approved:        'linear-gradient(135deg,#3b82f6,#2563eb)'
+    };
+
+    var _systemAvatar = 'https://i.imgur.com/4nljOtR.png'; // RB Live logo
 
     function renderNotifs() {
-        const list = document.getElementById('notifList');
-        if(!list) return;
+        var list = document.getElementById('notifList');
+        if (!list) return;
         list.innerHTML = '<div style="text-align:center;padding:48px;font-size:13px;color:rgba(255,255,255,0.3);">Loading...</div>';
 
-        db.ref('notifications/' + auth.currentUser.uid).once('value', snap => {
+        db.ref('notifications/' + auth.currentUser.uid).once('value', function(snap) {
             list.innerHTML = '';
-            const allNotifs = [];
-            snap.forEach(n => {
-                const v = n.val();
-                if(v.type !== 'pm') allNotifs.push({ key: n.key, ...v });
+            var allNotifs = [];
+            snap.forEach(function(n) {
+                var v = n.val();
+                if (v.type !== 'pm') {
+                    v.key = n.key;
+                    allNotifs.push(v);
+                }
             });
-            allNotifs.sort((a, b) => b.time - a.time);
+            allNotifs.sort(function(a, b) { return (b.time||b.timestamp||0) - (a.time||a.timestamp||0); });
 
-            // "Unread" tab = notifications within 24h
-            const isUnreadTab = currentNotifFilter === 'unread';
-            const notifs = currentNotifFilter === 'all'
-                ? allNotifs
-                : isUnreadTab
-                    ? allNotifs.filter(n => (Date.now() - n.time) < 86400000)
-                    : allNotifs.filter(n => n.type === currentNotifFilter);
-
-            const subtitle = document.getElementById('notifSubtitle');
-            const clearBtn = document.getElementById('clearAllBtn');
-            const markBtn = document.getElementById('markAllReadBtn');
-            const unreadCount = allNotifs.filter(n => (Date.now() - n.time) < 86400000).length;
-
-            if(subtitle) subtitle.textContent = unreadCount > 0
-                ? unreadCount + ' new notification' + (unreadCount !== 1 ? 's' : '')
-                : "You're all caught up";
-            if(clearBtn) clearBtn.style.display = allNotifs.length > 0 ? 'block' : 'none';
-            if(markBtn) markBtn.style.display = unreadCount > 0 ? 'block' : 'none';
-
-            if(notifs.length === 0) {
-                const icons = { all:'<i data-lucide="bell" style="width:52px;height:52px;color:rgba(255,255,255,0.3);"></i>', unread:'<i data-lucide="check-circle" style="width:52px;height:52px;color:rgba(56,189,248,0.4);"></i>', like:'<i data-lucide="heart" style="width:52px;height:52px;color:rgba(248,113,113,0.4);"></i>', comment:'<i data-lucide="message-circle" style="width:52px;height:52px;color:rgba(56,189,248,0.4);"></i>', mention:'<i data-lucide="at-sign" style="width:52px;height:52px;color:rgba(167,139,250,0.4);"></i>', follow:'<i data-lucide="user-plus" style="width:52px;height:52px;color:rgba(163,230,53,0.4);"></i>' };
-                const labels = { all:'', unread:'unread', like:'reaction', comment:'comment', mention:'mention', follow:'follow' };
-                list.innerHTML = `
-                    <div class="notif-empty">
-                        <div class="notif-empty-icon" style="display:flex;justify-content:center;align-items:center;">${icons[currentNotifFilter]||'<i data-lucide="bell" style="width:52px;height:52px;color:rgba(255,255,255,0.3);"></i>'}</div>
-                        <div class="notif-empty-title">${currentNotifFilter==='unread' ? "All caught up!" : 'No '+(labels[currentNotifFilter]||'')+' notifications'}</div>
-                        <div class="notif-empty-sub">${currentNotifFilter==='all'||currentNotifFilter==='unread' ? "When people interact with your posts,<br>you'll see it here." : 'No '+(labels[currentNotifFilter]||'')+' notifications yet.'}</div>
-                    </div>`;
-                lucide.createIcons(); return;
+            var filtered;
+            if (currentNotifFilter === 'all') {
+                filtered = allNotifs;
+            } else if (currentNotifFilter === 'unread') {
+                filtered = allNotifs.filter(function(n) { return !n.read; });
+            } else if (currentNotifFilter === 'system') {
+                filtered = allNotifs.filter(function(n) { return _isSystemNotif(n.type); });
+            } else {
+                filtered = allNotifs.filter(function(n) { return n.type === currentNotifFilter; });
             }
 
-            // Group by type + postId
-            const groupMap = {};
-            const groupOrder = [];
-            notifs.forEach(n => {
-                const gk = (n.type || 'system') + '||' + (n.postId || 'noid_' + n.type);
-                if(!groupMap[gk]) {
+            var subtitle = document.getElementById('notifSubtitle');
+            var clearBtn = document.getElementById('clearAllBtn');
+            var markBtn  = document.getElementById('markAllReadBtn');
+            var unreadCount = allNotifs.filter(function(n) { return !n.read; }).length;
+
+            if (subtitle) subtitle.textContent = unreadCount > 0
+                ? unreadCount + ' unread'
+                : "You're all caught up";
+            if (clearBtn) clearBtn.style.display = allNotifs.length > 0 ? 'block' : 'none';
+            if (markBtn)  markBtn.style.display  = unreadCount > 0 ? 'block' : 'none';
+
+            if (filtered.length === 0) {
+                var emptyIcons = {
+                    all:     '<i data-lucide="bell" style="width:48px;height:48px;color:rgba(255,255,255,0.15);"></i>',
+                    unread:  '<i data-lucide="check-circle" style="width:48px;height:48px;color:rgba(56,189,248,0.25);"></i>',
+                    like:    '<i data-lucide="heart" style="width:48px;height:48px;color:rgba(248,113,113,0.25);"></i>',
+                    comment: '<i data-lucide="message-circle" style="width:48px;height:48px;color:rgba(56,189,248,0.25);"></i>',
+                    system:  '<i data-lucide="radio" style="width:48px;height:48px;color:rgba(59,130,246,0.25);"></i>',
+                    follow:  '<i data-lucide="user-plus" style="width:48px;height:48px;color:rgba(163,230,53,0.25);"></i>'
+                };
+                list.innerHTML =
+                    '<div class="notif-empty">' +
+                        '<div class="notif-empty-icon" style="display:flex;justify-content:center;align-items:center;">' + (emptyIcons[currentNotifFilter] || emptyIcons.all) + '</div>' +
+                        '<div class="notif-empty-title">' + (currentNotifFilter === 'unread' ? 'All caught up!' : 'No notifications') + '</div>' +
+                        '<div class="notif-empty-sub">When something happens, you\'ll see it here.</div>' +
+                    '</div>';
+                try { lucide.createIcons(); } catch(e) {}
+                return;
+            }
+
+            // Group social notifications by type+postId; system notifs stay ungrouped
+            var groupMap = {};
+            var groupOrder = [];
+            filtered.forEach(function(n) {
+                var ts = n.time || n.timestamp || 0;
+                var isSys = _isSystemNotif(n.type);
+                var gk = isSys ? ('sys_' + n.key) : ((n.type || 'system') + '||' + (n.postId || 'noid_' + n.type));
+                if (!groupMap[gk]) {
                     groupMap[gk] = {
-                        keys: [n.key], type: n.type, postId: n.postId, time: n.time,
-                        latestImage: n.image, latestMsg: n.msg, postThumb: n.postThumb || null,
-                        actors: [{ image: n.image, from: n.from, name: extractActorName(n.msg) }]
+                        keys: [n.key], type: n.type, postId: n.postId, time: ts,
+                        latestImage: n.image, latestMsg: n.msg || n.message || '', postThumb: n.postThumb || null,
+                        read: n.read || false, isSystem: isSys,
+                        actors: [{ image: n.image, from: n.from, name: extractActorName(n.msg || n.message) }]
                     };
                     groupOrder.push(gk);
                 } else {
-                    const g = groupMap[gk];
+                    var g = groupMap[gk];
                     g.keys.push(n.key);
-                    if(n.time > g.time) { g.time = n.time; g.latestImage = n.image; g.latestMsg = n.msg; if(n.postThumb) g.postThumb = n.postThumb; }
-                    if(!n.from || !g.actors.find(a => a.from === n.from)) {
-                        g.actors.push({ image: n.image, from: n.from, name: extractActorName(n.msg) });
+                    if (ts > g.time) { g.time = ts; g.latestImage = n.image; g.latestMsg = n.msg || n.message || ''; if (n.postThumb) g.postThumb = n.postThumb; }
+                    if (!n.read) g.read = false;
+                    if (!n.from || !g.actors.find(function(a) { return a.from === n.from; })) {
+                        g.actors.push({ image: n.image, from: n.from, name: extractActorName(n.msg || n.message) });
                     }
                 }
             });
 
             // Render with "New" / "Earlier" section labels
-            const NOW = Date.now();
-            const NEW_THRESHOLD = 86400000; // 24h
-            let lastSection = null;
+            var lastSection = null;
+            var ONE_DAY = 86400000;
 
-            groupOrder.forEach(gk => {
-                const g = groupMap[gk];
-                const count = g.keys.length;
-                const firstName = g.actors[0].name || 'Someone';
-                const othersCount = count - 1;
-                const action = extractAction(g.latestMsg);
-                const isUnread = (NOW - g.time) < NEW_THRESHOLD;
-                const section = isUnread ? 'new' : 'earlier';
+            groupOrder.forEach(function(gk) {
+                var g = groupMap[gk];
+                var count = g.keys.length;
+                var isUnread = !g.read;
+                var isRecent = (Date.now() - g.time) < ONE_DAY;
+                var section = isRecent ? 'recent' : 'earlier';
 
-                // Inject section label
-                if(section !== lastSection) {
+                if (section !== lastSection) {
                     lastSection = section;
-                    const label = document.createElement('div');
+                    var label = document.createElement('div');
                     label.className = 'notif-section-label';
-                    label.textContent = section === 'new' ? 'New' : 'Earlier';
+                    label.textContent = section === 'recent' ? 'Recent' : 'Earlier';
                     list.appendChild(label);
                 }
 
-                let msgHTML;
-                if(count === 1) {
-                    msgHTML = '<strong>' + escapeHtml(firstName) + '</strong> ' + escapeHtml(action);
+                // Build avatar area
+                var avatarHTML;
+                var typeBadgeIcon = _notifTypeIcon[g.type] || _notifTypeIcon.system;
+                var typeBadgeBg   = _notifTypeBg[g.type]   || _notifTypeBg.system;
+
+                if (g.isSystem) {
+                    // System notifications: RB Live logo + type badge
+                    avatarHTML =
+                        '<div class="notif-av-wrap">' +
+                            '<img src="' + _systemAvatar + '" class="notif-av-main" style="border:2px solid rgba(59,130,246,0.3);" onerror="this.style.display=\'none\'">' +
+                            '<div class="notif-type-badge" style="background:' + typeBadgeBg + ';">' + typeBadgeIcon + '</div>' +
+                        '</div>';
                 } else {
-                    msgHTML = '<strong>' + escapeHtml(firstName) + '</strong> and <strong>' + othersCount + ' other' + (othersCount > 1 ? 's' : '') + '</strong> ' + escapeHtml(action);
+                    // Social notifications: user avatar + type badge
+                    var mainSrc = g.latestImage || _systemAvatar;
+                    var extraHTML;
+                    if (count > 1 && g.actors[1] && g.actors[1].image) {
+                        extraHTML = '<img src="' + escapeHtml(g.actors[1].image) + '" class="notif-av-extra" onerror="this.style.display=\'none\'">';
+                    } else if (count > 1) {
+                        extraHTML = '<div class="notif-av-count">+' + (count - 1) + '</div>';
+                    } else {
+                        extraHTML = '<div class="notif-type-badge" style="background:' + typeBadgeBg + ';">' + typeBadgeIcon + '</div>';
+                    }
+                    avatarHTML =
+                        '<div class="notif-av-wrap">' +
+                            '<img src="' + escapeHtml(mainSrc) + '" class="notif-av-main" onerror="this.src=\'' + _systemAvatar + '\'">' +
+                            extraHTML +
+                        '</div>';
                 }
 
-                const mainSrc = g.latestImage || 'https://via.placeholder.com/50';
-                const secondActor = g.actors[1];
-                let avatarExtra = '';
-                if(count > 1 && secondActor && secondActor.image) {
-                    avatarExtra = '<img src="' + escapeHtml(secondActor.image) + '" class="notif-av-extra" onerror="this.style.display=\'none\'">';
-                } else if(count > 1) {
-                    avatarExtra = '<div class="notif-av-count">+' + othersCount + '</div>';
+                // Build message
+                var msgHTML;
+                if (g.isSystem) {
+                    msgHTML = '<span style="color:rgba(255,255,255,0.8);">' + escapeHtml(g.latestMsg) + '</span>';
                 } else {
-                    avatarExtra = '<div class="notif-type-badge ' + (g.type||'system') + '">' + getTypeEmoji(g.type) + '</div>';
+                    var firstName = g.actors[0].name || 'Someone';
+                    var action = extractAction(g.latestMsg);
+                    if (count === 1) {
+                        msgHTML = '<strong>' + escapeHtml(firstName) + '</strong> ' + escapeHtml(action);
+                    } else {
+                        msgHTML = '<strong>' + escapeHtml(firstName) + '</strong> and <strong>' + (count - 1) + ' other' + (count > 2 ? 's' : '') + '</strong> ' + escapeHtml(action);
+                    }
                 }
 
-                // Thumbnail (post image if available)
-                let thumbHTML = '';
-                if(g.postThumb) {
+                // Post thumbnail
+                var thumbHTML = '';
+                if (g.postThumb) {
                     thumbHTML = '<img src="' + escapeHtml(g.postThumb) + '" class="notif-thumb" onerror="this.style.display=\'none\'">';
                 }
 
-                const div = document.createElement('div');
+                var div = document.createElement('div');
                 div.className = 'notif-item' + (isUnread ? ' unread' : '');
                 div.innerHTML =
-                    '<div class="notif-av-wrap">' +
-                        '<img src="' + escapeHtml(mainSrc) + '" class="notif-av-main" onerror="this.src=\'https://via.placeholder.com/50\'">' +
-                        avatarExtra +
-                    '</div>' +
+                    avatarHTML +
                     '<div class="notif-body">' +
                         '<div class="notif-msg">' + msgHTML + '</div>' +
                         '<div class="notif-time">' + getNotifTimeLabel(g.time) + '</div>' +
@@ -14817,26 +14941,26 @@ function runMathBlitz(problems) {
                     (isUnread ? '<div class="notif-unread-dot"></div>' : '') +
                     '<button class="notif-dismiss-btn" aria-label="Dismiss"><i data-lucide="x" style="width:14px;height:14px;pointer-events:none;"></i></button>';
 
-                div.querySelector('.notif-dismiss-btn').addEventListener('click', e => {
+                div.querySelector('.notif-dismiss-btn').addEventListener('click', function(e) {
                     e.stopPropagation();
-                    const updates = {};
-                    g.keys.forEach(k => { updates[k] = null; });
-                    db.ref('notifications/' + auth.currentUser.uid).update(updates).then(() => {
+                    var updates = {};
+                    g.keys.forEach(function(k) { updates[k] = null; });
+                    db.ref('notifications/' + auth.currentUser.uid).update(updates).then(function() {
                         div.style.transition = 'opacity 0.2s, transform 0.2s';
                         div.style.opacity = '0';
                         div.style.transform = 'translateX(30px)';
-                        setTimeout(() => { div.remove(); renderNotifs(); }, 200);
+                        setTimeout(function() { div.remove(); renderNotifs(); }, 200);
                     });
                 });
 
-                div.addEventListener('click', e => {
-                    if(e.target.closest('.notif-dismiss-btn')) return;
+                div.addEventListener('click', function(e) {
+                    if (e.target.closest('.notif-dismiss-btn')) return;
                     closeNotifSheet();
-                    if(g.postId) {
-                        setTimeout(() => {
+                    if (g.postId) {
+                        setTimeout(function() {
                             switchTab('home');
-                            const el = document.getElementById('post-' + g.postId);
-                            if(el) el.scrollIntoView({ behavior: 'smooth' });
+                            var el = document.getElementById('post-' + g.postId);
+                            if (el) el.scrollIntoView({ behavior: 'smooth' });
                             else openComments(g.postId);
                         }, 300);
                     }
@@ -14845,31 +14969,34 @@ function runMathBlitz(problems) {
                 list.appendChild(div);
             });
 
-            lucide.createIcons();
+            try { lucide.createIcons(); } catch(e) {}
         });
     }
 
     function markAllNotifsRead() {
-        // We can't truly "mark as read" without schema changes, but we can dismiss all unread (new) notifs
-        db.ref('notifications/' + auth.currentUser.uid).once('value', s => {
-            const updates = {};
-            const now = Date.now();
-            s.forEach(n => {
-                const v = n.val();
-                if(v.type !== 'pm' && (now - v.time) < 86400000) {
-                    // mark as older so they move to "Earlier"
-                    updates[n.key + '/time'] = now - 86400001;
+        var uid = auth.currentUser ? auth.currentUser.uid : null;
+        if (!uid) return;
+        db.ref('notifications/' + uid).once('value', function(s) {
+            var updates = {};
+            s.forEach(function(n) {
+                var v = n.val();
+                if (v.type !== 'pm' && !v.read) {
+                    updates[n.key + '/read'] = true;
                 }
             });
-            db.ref('notifications/' + auth.currentUser.uid).update(updates).then(() => {
-                showToast('All notifications marked as read');
-                renderNotifs();
-            });
+            if (Object.keys(updates).length > 0) {
+                db.ref('notifications/' + uid).update(updates).then(function() {
+                    showToast('All notifications marked as read');
+                    renderNotifs();
+                });
+            } else {
+                showToast('No unread notifications');
+            }
         });
     }
 
     function deleteNotif(key, event) {
-        if(event) event.stopPropagation();
+        if (event) event.stopPropagation();
         db.ref('notifications/' + auth.currentUser.uid + '/' + key).remove();
         renderNotifs();
         showToast('Notification removed');
