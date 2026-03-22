@@ -13119,6 +13119,32 @@ function runMathBlitz(problems) {
     function pesoCoins(pesos){ return pesos * PESO_RATE; }
     let onlineUsers = {};
     window.onlineUsers = onlineUsers;
+
+    // ── User profile cache — avoids re-downloading entire /users node every feed load/search ──
+    const _userProfileCache = {};
+    const _userCacheExpiry = 5 * 60 * 1000; // 5 min TTL
+    function _getCachedUser(uid) {
+        const c = _userProfileCache[uid];
+        if (c && (Date.now() - c._ts < _userCacheExpiry)) return Promise.resolve(c);
+        return new Promise(r => {
+            db.ref('users/' + uid).once('value', s => {
+                const val = s.val() || {};
+                val._ts = Date.now();
+                _userProfileCache[uid] = val;
+                r(val);
+            });
+        });
+    }
+    function _getCachedUsers(uids) {
+        // Fetch multiple users, using cache where possible
+        const unique = [...new Set(uids)];
+        return Promise.all(unique.map(uid => _getCachedUser(uid).then(d => [uid, d])))
+            .then(pairs => {
+                const map = {};
+                pairs.forEach(([uid, data]) => { map[uid] = data; });
+                return map;
+            });
+    }
     
     // Skin Shop Data Structure
     const skinShop = {
@@ -13210,8 +13236,8 @@ function runMathBlitz(problems) {
         `;
         _refreshIcons();
         
-        // Fetch ALL posts from Firebase and filter for videos
-        db.ref('socialPosts').once('value', snapshot => {
+        // Fetch recent posts from Firebase and filter for videos (OPTIMIZED: limited instead of ALL)
+        db.ref('socialPosts').limitToLast(100).once('value', snapshot => {
             beatsVideoPosts = [];
             
             if(!snapshot.exists()) {
@@ -14648,7 +14674,7 @@ function runMathBlitz(problems) {
         // ── Poll full user objects every 60s for friend indicators & ticker ──
         _refreshOnlineUsers(uid);
         if (window._onlineRefreshInterval) clearInterval(window._onlineRefreshInterval);
-        window._onlineRefreshInterval = setInterval(() => _refreshOnlineUsers(uid), 20000);
+        window._onlineRefreshInterval = setInterval(() => _refreshOnlineUsers(uid), 60000);
     }
 
     function _updateOnlineCountUI(count, uid) {
@@ -15722,13 +15748,23 @@ function runMathBlitz(problems) {
         }, 500);
     };
     // FIX #2: Cache gameState so updateNextDrawDisplay never opens its own listener
-    let _cachedGameState = null;
+    let _cachedGameState = {};
     function listenForNextDraw() {
-        db.ref('gameState').on('value', s => {
-            _cachedGameState = s.val() || {};
+        // OPTIMIZED: Listen to specific children instead of entire gameState root.
+        // The old root listener re-downloaded ALL gameState data (~drawnNumbers, winners,
+        // puro, sponsor, config, etc.) on EVERY single child change. During a 75-ball
+        // game with 50 players, that meant tens of thousands of excess reads.
+        db.ref('gameState/status').on('value', s => {
+            _cachedGameState.status = s.val();
             if(_cachedGameState.status === 'playing' && _hdeCountdownActive) { _hdeCountdownActive = false; }
             updateNextDrawDisplay();
-            // Drive jackpot UI from the same snapshot — no extra listener
+        });
+        db.ref('gameState/drawnNumbers').on('value', s => {
+            _cachedGameState.drawnNumbers = s.val();
+            updateNextDrawDisplay();
+        });
+        db.ref('gameState/jackpot').on('value', s => {
+            _cachedGameState.jackpot = s.val();
             if (typeof _handleJackpotState === 'function') {
                 _handleJackpotState(_cachedGameState.jackpot || null);
             }
@@ -15965,6 +16001,7 @@ function runMathBlitz(problems) {
     function initPuroTicker() {
         let _roundEnded = false;
         // Track winner state so puro bar stays hidden for the entire post-round period
+        // OPTIMIZED: Use the single winners listener at initBingoListeners instead of a duplicate here
         db.ref('gameState/winners').on('value', wSnap => {
             _roundEnded = wSnap.exists() && wSnap.val() !== null;
             if (_roundEnded) {
@@ -19153,16 +19190,27 @@ Please explain why you want a verification badge:`;
 
         if (_searchTab === 'posts') { _searchPosts(q, ql, resDiv); return; }
 
-        // Fetch all users and filter client-side — fixes case-sensitivity bug
-        db.ref('users').once('value', function(s) {
-            var users = [];
-            s.forEach(function(uSnap) {
-                var u = uSnap.val();
-                if (!u || !u.name) return;
-                if (u.name.toLowerCase().includes(ql)) {
-                    users.push({ uid: uSnap.key, ...u });
-                }
+        // OPTIMIZED: Cache all-users snapshot for search (2 min TTL) to avoid re-downloading on every keystroke
+        var now = Date.now();
+        if (window._searchUsersCache && (now - window._searchUsersCacheTs < 120000)) {
+            _filterAndRenderSearchUsers(window._searchUsersCache, ql, q, resDiv);
+        } else {
+            db.ref('users').once('value', function(s) {
+                var allUsers = [];
+                s.forEach(function(uSnap) {
+                    var u = uSnap.val();
+                    if (!u || !u.name) return;
+                    allUsers.push({ uid: uSnap.key, ...u });
+                });
+                window._searchUsersCache = allUsers;
+                window._searchUsersCacheTs = now;
+                _filterAndRenderSearchUsers(allUsers, ql, q, resDiv);
             });
+        }
+    }
+
+    function _filterAndRenderSearchUsers(allUsers, ql, q, resDiv) {
+            var users = allUsers.filter(function(u) { return u.name.toLowerCase().includes(ql); });
 
             if (_searchTab === 'all') {
                 _renderUserResults(users, ql, resDiv);
@@ -19176,7 +19224,6 @@ Please explain why you want a verification badge:`;
             } else {
                 _renderUserResults(users, ql, resDiv);
             }
-        });
     }
 
     function _renderUserResults(users, ql, resDiv) {
@@ -19230,7 +19277,7 @@ Please explain why you want a verification badge:`;
     }
 
     function _searchPosts(q, ql, resDiv) {
-        db.ref('socialPosts').limitToLast(200).once('value', function(s) {
+        db.ref('socialPosts').limitToLast(100).once('value', function(s) {
             var posts = [];
             s.forEach(function(pSnap) {
                 var p = pSnap.val();
@@ -19838,6 +19885,7 @@ Please explain why you want a verification badge:`;
 
 
     let postListener = null;
+    let _pollListenerRefs = []; // OPTIMIZED: Track poll .on() refs so they can be cleaned up on feed reload
     let feedSortMethod = 'hype';
 
     function toggleFeedSort(method) {
@@ -19851,6 +19899,9 @@ Please explain why you want a verification badge:`;
     function loadSocialFeed() {
         const feedContainer = document.getElementById('socialFeed');
         if(postListener) db.ref('socialPosts').off(); // Clear old listener
+        // OPTIMIZED: Detach per-post poll listeners from previous feed load
+        _pollListenerRefs.forEach(function(ref) { ref.off(); });
+        _pollListenerRefs = [];
 
         feedContainer.innerHTML = "<div style='text-align:center; padding: var(--spacing-lg); opacity:0.5;'>Loading Feed...</div>";
         
@@ -19858,16 +19909,13 @@ Please explain why you want a verification badge:`;
         db.ref('friends/' + auth.currentUser.uid).once('value', fSnap => {
             const myFriends = fSnap.exists() ? Object.keys(fSnap.val()) : [];
             
-            // Get all users to check content creator status
-            db.ref('users').once('value', usersSnap => {
-                const allUsersData = {};
-                usersSnap.forEach(uSnap => {
-                    allUsersData[uSnap.key] = uSnap.val();
-                });
-                
-                // ── OPTIMIZED: .once() instead of real-time .on() — saves massive reads ──
+            // OPTIMIZED: Load posts first, then fetch only post-author profiles (cached)
                 postListener = db.ref('socialPosts').limitToLast(50);
                 postListener.once('value', pSnap => {
+                    // Collect unique author UIDs
+                    const authorUids = [];
+                    pSnap.forEach(child => { const v = child.val(); if(v && v.uid) authorUids.push(v.uid); });
+                    _getCachedUsers(authorUids).then(allUsersData => {
                     const allPosts = [];
                     pSnap.forEach(child => { 
                         const val = child.val();
@@ -20126,7 +20174,9 @@ Please explain why you want a verification badge:`;
 
             // Real-time poll updates
             if (post.poll) {
-                db.ref(`socialPosts/${post.key}/poll/votes`).on('value', () => {
+                const _pollRef = db.ref(`socialPosts/${post.key}/poll/votes`);
+                _pollListenerRefs.push(_pollRef); // track for cleanup on feed reload
+                _pollRef.on('value', () => {
                     db.ref(`socialPosts/${post.key}`).once('value', freshSnap => {
                         const fresh = freshSnap.val();
                         if (!fresh || !fresh.poll) return;
@@ -21711,7 +21761,7 @@ Please explain why you want a verification badge:`;
         container.innerHTML = `<div style="text-align:center;padding:40px;opacity:0.4;">Searching for #${tag}...</div>`;
         document.getElementById('explorerSubtitle').textContent = `Posts with #${tag}`;
 
-        db.ref('socialPosts').limitToLast(200).once('value', snap => {
+        db.ref('socialPosts').limitToLast(100).once('value', snap => {
             const posts = [];
             snap.forEach(c => {
                 const p = c.val();
