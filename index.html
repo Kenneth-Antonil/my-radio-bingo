@@ -15524,6 +15524,8 @@ function runMathBlitz(problems) {
                     db.ref('gameState/sponsor').remove();
                     db.ref('gameState/puro').remove();
                     db.ref('gameState').update({ status: 'waiting' });
+                    db.ref('gameState/scheduledDrawAlert').remove(); // FIX: clear stale alert
+                    db.ref('gameState/countdown').remove();          // FIX: clear countdown flag
                     _hdeCountdownActive = false;
                     _hdeStopDraw(true);
                 });
@@ -15700,32 +15702,66 @@ function runMathBlitz(problems) {
     }
 
     function _hdeFireScheduledGame(uid, sched) {
-        if(_hdeCloudActive) return;
+        // ✅ FIX: If cloudEnabled is true but no CF has started the game within
+        // 5s after countdown ends, HDE takes over — prevents silent draw failure.
+        if(_hdeCloudActive) {
+            console.log('[HDE] cloudEnabled=true — waiting 5s for Cloud Function...');
+            setTimeout(() => {
+                const gs = _cachedGameState || {};
+                if(gs.status !== 'playing' && !_hdeIsDrawing) {
+                    console.warn('[HDE] Cloud Function did not fire — HDE taking over.');
+                    _hdeCloudActive = false;
+                    _hdeFireScheduledGame(uid, sched);
+                }
+            }, 5000);
+            return;
+        }
+
         const isMega    = sched.jackpotType === 'mega';
         const isRegular = sched.jackpotType === 'regular';
-        const isNormal  = !isMega && !isRegular; // 'none' or anything else = normal round
+        const isNormal  = !isMega && !isRegular;
         const isJP      = isMega || isRegular;
         const now       = Date.now();
 
-        db.ref('gameState/drawLock').transaction(cur => {
-            if(cur !== null) return;
-            return { by: uid, at: now, expires: now + 600000 };
-        }, (err, committed) => {
-            if(!committed || err) return;
-            db.ref('gameState/drawLock').onDisconnect().remove();
-            _hdeSetPattern(isJP);
+        // ✅ FIX: Before acquiring lock, clear stale/expired locks first.
+        db.ref('gameState/drawLock').once('value', lockSnap => {
+            const existingLock = lockSnap.val();
+            const isStale = existingLock && existingLock.expires && Date.now() > existingLock.expires;
 
-            if(isMega) {
-                db.ref('gameState/jackpot').set({ amount: 20, active: true, type: 'mega' });
-            } else if(isRegular) {
-                db.ref('gameState/jackpot').set({ amount: 5, active: true, type: 'regular' });
+            const proceed = () => {
+                db.ref('gameState/drawLock').transaction(cur => {
+                    if(cur !== null) return; // another client just grabbed it — abort
+                    return { by: uid, at: now, expires: now + 600000 };
+                }, (err, committed) => {
+                    if(!committed || err) {
+                        // ✅ FIX: Log failure instead of silently doing nothing
+                        console.warn('[HDE] drawLock transaction failed — another client may have the lock.', err);
+                        return;
+                    }
+                    db.ref('gameState/drawLock').onDisconnect().remove();
+                    _hdeSetPattern(isJP);
+
+                    if(isMega) {
+                        db.ref('gameState/jackpot').set({ amount: 20, active: true, type: 'mega' });
+                    } else if(isRegular) {
+                        db.ref('gameState/jackpot').set({ amount: 5, active: true, type: 'regular' });
+                    } else {
+                        db.ref('gameState/jackpot').set({ amount: 1, active: false, type: 'normal' });
+                    }
+
+                    const modeLabel = isMega ? 'MEGA JACKPOT' : isRegular ? 'REGULAR JACKPOT' : 'NORMAL ROUND';
+                    db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now(), autoStartMode: modeLabel + ' (SCHEDULED)' });
+                    _hdeStartDraw();
+                });
+            };
+
+            if(isStale) {
+                // ✅ FIX: Remove expired lock then proceed normally
+                console.warn('[HDE] Removing stale drawLock (expired ' + Math.round((Date.now() - existingLock.expires) / 1000) + 's ago)');
+                db.ref('gameState/drawLock').remove().then(proceed);
             } else {
-                db.ref('gameState/jackpot').set({ amount: 1, active: false, type: 'normal' });
+                proceed();
             }
-
-            const modeLabel = isMega ? 'MEGA JACKPOT' : isRegular ? 'REGULAR JACKPOT' : 'NORMAL ROUND';
-            db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now(), autoStartMode: modeLabel + ' (SCHEDULED)' });
-            _hdeStartDraw();
         });
     }
 
