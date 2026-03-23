@@ -11335,7 +11335,7 @@ body::before {
                     <button class="bento-buy-slot buy-extra-card-btn" id="buyExtraCardBtn" onclick="buyExtraCard()">
                         <div class="buy-icon">&#10133;</div>
                         <div class="buy-label">DAGDAG CARD</div>
-                        <div class="buy-cost">₱0.04 &bull; Max 5</div>
+                        <div class="buy-cost">₱0.50 &bull; Max 5</div>
                         <div id="extraCardCount" style="font-size:10px; margin-top:1px; opacity:0.6;">0 extra cards</div>
                     </button>
                 </div>
@@ -15632,19 +15632,22 @@ function runMathBlitz(problems) {
         if(gs.status === 'playing' || _hdeIsDrawing || _hdeCountdownActive) return;
         db.ref('gameState/countdown').set({ active: true });
 
-        // ✅ FIX: Store server-side countdownTarget so all clients sync from the same time
         const countdownTarget = Date.now() + (window._fbServerTimeOffset || 0) + 30000;
 
-        // Write to Firebase so all clients know a scheduled draw is starting
+        // ✅ FIX: Start host countdown FIRST before writing to Firebase —
+        // This ensures _hdeCountdownActive = true BEFORE the scheduledDrawAlert
+        // listener fires on this same client, preventing a uid=null countdown
+        // from overriding the host's uid countdown and blocking game start.
+        _hdeShowSchedAlert(sched, 30, uid);
+
+        // THEN notify other clients (by now _hdeCountdownActive=true so the
+        // listener guard will safely block re-entry on the host)
         db.ref('gameState/scheduledDrawAlert').set({
             label: sched.label,
             type:  sched.jackpotType,
             at:    Date.now(),
             countdownTarget: countdownTarget
         });
-
-        // Show 30-second pre-draw notification to all clients
-        _hdeShowSchedAlert(sched, 30, uid);
     }
 
     function _hdeShowSchedAlert(sched, secs, uid) {
@@ -16972,6 +16975,16 @@ function runMathBlitz(problems) {
         db.ref('gameState/winners/' + uid).set(winnerData); // multi-winner support
         db.ref('users/' + uid + '/points').transaction(p => (p || 0) + winPrize);
         db.ref('users/' + uid + '/bingoWins').transaction(w => (w || 0) + 1);
+        // ✅ Log transaction history
+        db.ref('rbCoinHistory/' + uid).push({
+            type: 'earn',
+            amount: winPrize,
+            label: isJackpotActive
+                ? (currentJackpotAmount >= 50000 ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:4px;"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/></svg>Mega Jackpot Win' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Regular Jackpot Win')
+                : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:4px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>Bingo Win',
+            source: 'bingo_win',
+            timestamp: Date.now()
+        });
         if(typeof trackRecruitActivity === 'function') trackRecruitActivity(uid, 'game');
         db.ref('users/' + uid).update({ hasWonCurrent: true });
         userData.hasWonCurrent = true;
@@ -17191,13 +17204,21 @@ function runMathBlitz(problems) {
         if (gameDrawn.length > 0 && !document.getElementById('winnerBanner').style.display.includes('block')) {
             return showToast("Cannot buy extra card while a game is in progress!");
         }
-        const cost = 100;
+        const cost = 1250; // ₱0.50
         const uid = auth.currentUser.uid;
         db.ref('users/' + uid + '/points').once('value', s => {
             const pts = s.val() || 0;
-            if (pts < cost) return showToast("Not enough Pesos! Required: 100 coins.");
+            if (pts < cost) return showToast("Not enough balance! Extra card costs ₱0.50.");
             db.ref('users/' + uid + '/points').transaction(p => (p || 0) - cost);
             db.ref('pointLogs/' + uid).push({ type: 'extra_card', amount: -cost, timestamp: Date.now(), note: 'Bought Extra Bingo Card' });
+            // ✅ Log to transaction history
+            db.ref('rbCoinHistory/' + uid).push({
+                type: 'spend',
+                amount: cost,
+                label: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:4px;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Bought Extra Card',
+                source: 'extra_card',
+                timestamp: Date.now()
+            });
             const newCard = generateExtraCardNumbers();
             const cardIdx = extraCards.length;
             extraCards.push({ numbers: newCard, marks: [12], won: false });
@@ -17255,7 +17276,7 @@ function runMathBlitz(problems) {
         if(total >= MAX_EXTRA_CARDS) {
             if(btn) { btn.disabled = true; btn.innerHTML = '<div class="buy-icon">&#10003;</div><div class="buy-label">MAX CARDS NA!<br>5/5 cards</div>'; }
         } else {
-            if(btn) { btn.disabled = false; btn.innerHTML = '<div class="buy-icon">&#10133;</div><div class="buy-label">DAGDAG CARD</div><div class="buy-cost">₱0.04 &bull; Max 5</div><div id="extraCardCount" style="font-size:10px; margin-top:1px; opacity:0.6;">' + total + ' extra card' + (total !== 1 ? 's' : '') + ' (' + (total + 1) + '/5 total)</div>'; }
+            if(btn) { btn.disabled = false; btn.innerHTML = '<div class="buy-icon">&#10133;</div><div class="buy-label">DAGDAG CARD</div><div class="buy-cost">₱0.50 &bull; Max 5</div><div id="extraCardCount" style="font-size:10px; margin-top:1px; opacity:0.6;">' + total + ' extra card' + (total !== 1 ? 's' : '') + ' (' + (total + 1) + '/5 total)</div>'; }
         }
     }
     function regenExtraCard(cardIdx) {
@@ -17281,7 +17302,7 @@ function runMathBlitz(problems) {
         const btn = document.getElementById('buyExtraCardBtn');
         if(btn) {
             btn.disabled = false;
-            btn.innerHTML = '<div class="buy-icon">&#10133;</div><div class="buy-label">DAGDAG CARD</div><div class="buy-cost">₱0.04 &bull; Max 5</div><div id="extraCardCount" style="font-size:10px; margin-top:1px; opacity:0.6;">0 extra cards</div>';
+            btn.innerHTML = '<div class="buy-icon">&#10133;</div><div class="buy-label">DAGDAG CARD</div><div class="buy-cost">₱0.50 &bull; Max 5</div><div id="extraCardCount" style="font-size:10px; margin-top:1px; opacity:0.6;">0 extra cards</div>';
         }
         // Clear from Firebase
         if(auth && auth.currentUser) {
@@ -17959,6 +17980,14 @@ function runMathBlitz(problems) {
             });
             document.getElementById('referralInputSection').style.display = 'none';
             input.value = '';
+            // ✅ Log referral bonus for inviter
+            db.ref('rbCoinHistory/' + referrerUid).push({
+                type: 'earn',
+                amount: 25000,
+                label: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:4px;"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Referral Bonus — ' + (userData.name || 'Someone') + ' used your code!',
+                source: 'referral',
+                timestamp: Date.now()
+            });
             showToast('✅ Referral claimed! ' + refSnap.val()[referrerUid].name + ' got ₱10 bonus!');
             playSound('success');
         });
@@ -21105,6 +21134,14 @@ Please explain why you want a verification badge:`;
             points: (userData.points || 0) + reward,
             longestStreak: Math.max(userData.longestStreak || 0, newStreak)
         });
+        // ✅ Log to transaction history
+        db.ref('rbCoinHistory/' + uid).push({
+            type: 'earn',
+            amount: reward,
+            label: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:4px;"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/></svg>Day ' + newStreak + ' Login Streak Reward',
+            source: 'streak',
+            timestamp: Date.now()
+        });
 
         showStreakModal(newStreak, reward);
         // Track recruit login activity for influencer system
@@ -22471,16 +22508,29 @@ Please explain why you want a verification badge:`;
 
         <!-- === HISTORY === -->
         <div id="rs-section-vouchers" class="rbstore-section">
-            <div class="rbs-ht-tabs">
-                <div class="rbs-ht on">All</div>
-                <div class="rbs-ht">Cash Out</div>
-                <div class="rbs-ht">Skins</div>
+            <!-- Balance summary -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+                <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:12px;padding:12px;text-align:center;">
+                    <div style="font-size:10px;font-weight:800;color:rgba(16,185,129,0.7);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>Napasok</div>
+                    <div style="font-size:18px;font-weight:900;color:#10b981;" id="histTotalIn">₱0.00</div>
+                </div>
+                <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:12px;text-align:center;">
+                    <div style="font-size:10px;font-weight:800;color:rgba(239,68,68,0.7);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:4px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>Nagastos</div>
+                    <div style="font-size:18px;font-weight:900;color:#ef4444;" id="histTotalOut">₱0.00</div>
+                </div>
             </div>
-            <div id="rbVouchersList">
+            <!-- Filter tabs -->
+            <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;">
+                <button onclick="filterHistory('all')" id="hfilt-all" style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:800;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.12);color:white;cursor:pointer;display:inline-flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Lahat</button>
+                <button onclick="filterHistory('earn')" id="hfilt-earn" style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:800;border:1px solid rgba(16,185,129,0.3);background:rgba(16,185,129,0.08);color:#10b981;cursor:pointer;display:inline-flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>Kita</button>
+                <button onclick="filterHistory('out')" id="hfilt-out" style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:800;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.08);color:#ef4444;cursor:pointer;display:inline-flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>Gastos</button>
+                <button onclick="filterHistory('cashout')" id="hfilt-cashout" style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:800;border:1px solid rgba(251,191,36,0.3);background:rgba(251,191,36,0.08);color:#fbbf24;cursor:pointer;display:inline-flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Cash Out</button>
+            </div>
+            <div id="rbCoinHistoryList">
                 <div style="text-align:center;padding:50px 20px;opacity:0.35;">
                     <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <div style="font-size:13px;font-weight:700;">No history yet</div>
-                    <div style="font-size:11px;margin-top:6px;opacity:0.7;">Your transactions will appear here.</div>
+                    <div style="font-size:13px;font-weight:700;">Wala pang history</div>
+                    <div style="font-size:11px;margin-top:6px;opacity:0.7;">Makikita dito ang lahat ng transaksyon mo.</div>
                 </div>
             </div>
         </div>
@@ -22724,7 +22774,15 @@ function rbSubmitCashout() {
         return Math.max(0, (p || 0) - coinsToDeduct);
     }, function(err, committed) {
         if (committed) {
-            showToast('✅ Cash out request sent! Processing in 24–48 hrs.');
+            // ✅ Log to transaction history
+            window.db.ref('rbCoinHistory/' + uid).push({
+                type: 'out',
+                amount: coinsToDeduct,
+                label: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:4px;"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Cash Out via ' + methodLabel + ' (' + acct + ')',
+                source: 'cashout',
+                timestamp: Date.now()
+            });
+            showToast('Cash out request sent! Processing in 24-48 hrs.');
             playSound('win');
             document.getElementById('rbcoAccountNumber').value = '';
             document.getElementById('rbcoAccountName').value   = '';
@@ -22904,6 +22962,7 @@ function switchStoreSection(section) {
         track.style.width = br.width + 'px';
     }
     if (section === 'wallet') { try { loadWalletTab(); } catch(e) {} }
+    if (section === 'vouchers') { try { loadCoinHistory(); } catch(e) {} }
     if (section === 'partners') { try { loadApprovedPartnerStores(); } catch(e) {} }
     if (section === 'myshop') { try { loadMyShopProducts(); } catch(e) {} }
     if (section === 'skins') { try { refreshRbStoreSkinButtons(); } catch(e) {} }
@@ -23237,37 +23296,109 @@ function reopenVoucher(key) {
     });
 }
 
+// ✅ Store all history items globally so filter can reuse without re-fetching
+window._allHistoryItems = [];
+window._historyFilter = 'all';
+
+function filterHistory(type) {
+    window._historyFilter = type;
+    // Update button styles
+    ['all','earn','out','cashout'].forEach(function(t) {
+        var btn = document.getElementById('hfilt-' + t);
+        if (!btn) return;
+        btn.style.opacity = (t === type) ? '1' : '0.5';
+        btn.style.fontWeight = (t === type) ? '900' : '700';
+    });
+    renderHistoryItems(window._allHistoryItems);
+}
+
+function renderHistoryItems(items) {
+    var PESO_RATE = 2500;
+    var list = document.getElementById('rbCoinHistoryList');
+    if (!list) return;
+    var filter = window._historyFilter || 'all';
+
+    var filtered = items.filter(function(item) {
+        if (filter === 'all') return true;
+        if (filter === 'earn') return item.type === 'earn';
+        if (filter === 'out') return item.type === 'spend' || item.type === 'out';
+        if (filter === 'cashout') return item.source === 'cashout';
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:50px 20px;opacity:0.35;"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div style="font-size:13px;font-weight:700;">Wala pang history</div><div style="font-size:11px;margin-top:6px;opacity:0.7;">Makikita dito ang lahat ng transaksyon mo.</div></div>';
+        return;
+    }
+
+    var sourceLabels = {
+        'bingo_win':  '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:3px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>Bingo',
+        'streak':     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:3px;"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/></svg>Streak',
+        'referral':   '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:3px;"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Referral',
+        'extra_card': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:3px;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Extra Card',
+        'cashout':    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:3px;"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Cash Out',
+        'voucher':    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:3px;"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>Voucher',
+        'sponsor':    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:3px;"><path d="M20.42 4.58a5.4 5.4 0 00-7.65 0l-.77.78-.77-.78a5.4 5.4 0 00-7.65 7.65l1.06 1.06L12 21.23l7.36-7.36 1.06-1.06a5.4 5.4 0 000-7.65z"/></svg>Sponsor'
+    };
+
+    list.innerHTML = filtered.map(function(item) {
+        var isEarn = item.type === 'earn';
+        var isOut  = item.type === 'spend' || item.type === 'out';
+        var color  = isEarn ? '#10b981' : '#ef4444';
+        var bgColor = isEarn ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
+        var borderColor = isEarn ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)';
+        var prefix = isEarn ? '+' : '-';
+        var peso = (item.amount / PESO_RATE).toFixed(2);
+        var d = new Date(item.timestamp);
+        var dateStr = d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+        var srcLabel = sourceLabels[item.source] || '';
+        var arrow = isEarn
+            ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>'
+            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:' + bgColor + ';border:1px solid ' + borderColor + ';margin-bottom:8px;">' +
+            '<div style="width:36px;height:36px;border-radius:50%;background:' + bgColor + ';border:1px solid ' + borderColor + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + arrow + '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+                '<div style="font-size:12px;font-weight:800;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (item.label || 'Transaction') + '</div>' +
+                '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px;">' + dateStr + (srcLabel ? ' · ' + srcLabel : '') + '</div>' +
+            '</div>' +
+            '<div style="text-align:right;flex-shrink:0;">' +
+                '<div style="font-size:14px;font-weight:900;color:' + color + ';">' + prefix + '₱' + peso + '</div>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
 function loadCoinHistory() {
     if (!_auth() || !_auth().currentUser) return;
     var uid = _auth().currentUser.uid;
     var list = document.getElementById('rbCoinHistoryList');
     if (!list) return;
+    var PESO_RATE = 2500;
     list.innerHTML = '<div style="text-align:center;padding:30px;opacity:0.4;font-size:13px;">Loading...</div>';
-    _db().ref('rbCoinHistory/' + uid).orderByChild('timestamp').limitToLast(30).once('value', function(snap) {
+    _db().ref('rbCoinHistory/' + uid).orderByChild('timestamp').limitToLast(50).once('value', function(snap) {
         if (!snap.exists()) {
-            list.innerHTML = '<div style="text-align:center;padding:50px 20px;opacity:0.4;"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div style="font-size:14px;font-weight:700;">No history yet</div><div style="font-size:12px;margin-top:6px;opacity:0.7;">Earn and spend coins to see your history here</div></div>';
+            window._allHistoryItems = [];
+            list.innerHTML = '<div style="text-align:center;padding:50px 20px;opacity:0.35;"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div style="font-size:13px;font-weight:700;">Wala pang history</div><div style="font-size:11px;margin-top:6px;opacity:0.7;">Makikita dito ang lahat ng transaksyon mo.</div></div>';
             return;
         }
         var items = [];
         snap.forEach(function(c) { items.unshift(c.val()); });
-        var earnIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
-        var spendIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 6v2" stroke-width="3" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="#ef4444"/></svg>';
-        list.innerHTML = items.map(function(item) {
-            var isEarn = item.type === 'earn' || (item.amount > 0 && item.type !== 'spend');
-            var svgIcon = isEarn ? earnIcon : spendIcon;
-            var color = isEarn ? '#10b981' : '#ef4444';
-            var prefix = isEarn ? '+' : '-';
-            var d = new Date(item.timestamp);
-            var dateStr = d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            return '<div class="coins-history-item">' +
-                '<div class="coins-hist-icon" style="background:' + (isEarn ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)') + ';">' + svgIcon + '</div>' +
-                '<div class="coins-hist-info">' +
-                '<div class="coins-hist-label">' + (item.label || 'Transaction') + '</div>' +
-                '<div class="coins-hist-date">' + dateStr + '</div>' +
-                '</div>' +
-                '<div class="coins-hist-amount ' + (isEarn ? 'earn' : 'spend') + '">' + prefix + Number(item.amount).toLocaleString() + '</div>' +
-                '</div>';
-        }).join('');
+        window._allHistoryItems = items;
+
+        // Compute totals
+        var totalIn = 0, totalOut = 0;
+        items.forEach(function(item) {
+            if (item.type === 'earn') totalIn += (item.amount || 0);
+            else totalOut += (item.amount || 0);
+        });
+        var inEl = document.getElementById('histTotalIn');
+        var outEl = document.getElementById('histTotalOut');
+        if (inEl) inEl.textContent = '₱' + (totalIn / PESO_RATE).toFixed(2);
+        if (outEl) outEl.textContent = '₱' + (totalOut / PESO_RATE).toFixed(2);
+
+        // Reset filter to all
+        window._historyFilter = 'all';
+        filterHistory('all');
     });
 }
 
