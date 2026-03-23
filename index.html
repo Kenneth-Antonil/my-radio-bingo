@@ -12829,9 +12829,23 @@ function runMathBlitz(problems) {
         <input type="text" id="adReqName" class="edit-input" placeholder="Your business name">
         <label class="edit-label">Contact (Facebook, Email, or Phone)</label>
         <input type="text" id="adReqContact" class="edit-input" placeholder="How can we reach you">
+        <label class="edit-label">Landing Page URL <span style="font-size:10px;color:rgba(255,255,255,0.35);font-weight:600;">(where users go when they click your ad)</span></label>
+        <input type="url" id="adReqLink" class="edit-input" placeholder="https://www.yourwebsite.com or Facebook page link">
+        <label class="edit-label" style="margin-top:4px;">
+            Banner Image Link
+            <span style="font-size:10px;color:rgba(255,255,255,0.35);font-weight:600;"> (upload to Imgur first)</span>
+        </label>
+        <div style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:11px;color:rgba(255,255,255,0.55);line-height:1.7;">
+            <b style="color:#fbbf24;">📌 Paano mag-upload ng banner sa Imgur:</b><br>
+            1. Pumunta sa <a href="https://imgur.com/upload" target="_blank" style="color:#60a5fa;text-decoration:underline;">imgur.com/upload</a><br>
+            2. I-upload ang iyong banner image (recommended: <b style="color:rgba(255,255,255,0.7);">728×200px</b>)<br>
+            3. I-right-click ang uploaded image → <b style="color:rgba(255,255,255,0.7);">Copy Image Address</b><br>
+            4. I-paste ang link dito 👇
+        </div>
+        <input type="url" id="adReqBanner" class="edit-input" placeholder="https://i.imgur.com/xxxxxxx.jpg">
         <label class="edit-label">Message / Ad Details</label>
-        <textarea id="adReqMessage" class="edit-input" rows="4" placeholder="What would you like to advertise? Duration? Budget?" style="resize:vertical;"></textarea>
-        <button onclick="submitAdRequest()" style="width:100%; padding:14px; background:var(--accent); border:none; border-radius:12px; font-weight:900; color:white; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; font-size:13px;">
+        <textarea id="adReqMessage" class="edit-input" rows="3" placeholder="What would you like to advertise? Duration? Budget?" style="resize:vertical;"></textarea>
+        <button id="adReqSubmitBtn" onclick="submitAdRequest()" style="width:100%; padding:14px; background:var(--accent); border:none; border-radius:12px; font-weight:900; color:white; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; font-size:13px;">
             <i data-lucide="send" style="width:15px;"></i> SUBMIT REQUEST
         </button>
     </div>
@@ -16487,27 +16501,51 @@ function runMathBlitz(problems) {
 
     function submitAdRequest() {
         if (!auth.currentUser) { showToast('Please sign in first!'); return; }
-        var name = (document.getElementById('adReqName').value || '').trim();
+        var name    = (document.getElementById('adReqName').value    || '').trim();
         var contact = (document.getElementById('adReqContact').value || '').trim();
+        var link    = (document.getElementById('adReqLink').value    || '').trim();
+        var banner  = (document.getElementById('adReqBanner').value  || '').trim();
         var message = (document.getElementById('adReqMessage').value || '').trim();
-        if (!name || !contact || !message) { showToast('Please fill in all fields.'); return; }
+
+        if (!name || !contact || !message) { showToast('Please fill in all required fields.'); return; }
+
+        // Validate banner URL must be from imgur
+        if (banner && !/^https?:\/\/(i\.)?imgur\.com\//i.test(banner)) {
+            showToast('\u26a0\ufe0f Banner link must be from Imgur (i.imgur.com). Please re-upload.');
+            return;
+        }
+        // Validate landing page URL
+        if (link && !/^https?:\/\//i.test(link)) {
+            showToast('\u26a0\ufe0f Landing page link must start with https://');
+            return;
+        }
+
+        var submitBtn = document.getElementById('adReqSubmitBtn');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
+
         db.ref('adRequests').push({
-            uid: auth.currentUser.uid,
-            userName: userData.name || 'Unknown',
+            uid:          auth.currentUser.uid,
+            userName:     userData.name || 'Unknown',
             businessName: name,
-            contact: contact,
-            message: message,
-            status: 'pending',
-            submittedAt: Date.now()
+            contact:      contact,
+            landingPage:  link    || '',
+            bannerUrl:    banner  || '',
+            message:      message,
+            status:       'pending',
+            submittedAt:  Date.now()
         }).then(function() {
-            showToast('✅ Your ad request has been submitted! We\'ll contact you soon.');
-            document.getElementById('adReqName').value = '';
+            showToast('\u2705 Ad request submitted! We\'ll contact you soon.');
+            document.getElementById('adReqName').value    = '';
             document.getElementById('adReqContact').value = '';
+            document.getElementById('adReqLink').value    = '';
+            document.getElementById('adReqBanner').value  = '';
             document.getElementById('adReqMessage').value = '';
             document.getElementById('advertiseModal').style.display = 'none';
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i data-lucide=\"send\" style=\"width:15px;\"></i> SUBMIT REQUEST'; }
             unlockScroll();
         }).catch(function() {
             showToast('Submission error. Please try again.');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i data-lucide=\"send\" style=\"width:15px;\"></i> SUBMIT REQUEST'; }
         });
     }
     // ===== END AD CAROUSEL ==========================================
