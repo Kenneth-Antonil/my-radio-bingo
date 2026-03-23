@@ -11311,9 +11311,22 @@ body::before {
                             </div>
                         </div>
                         <div id="gameOverOverlay" class="game-over-overlay">
-                            <i data-lucide="trophy" style="color:var(--gold); width:50px; height:50px; margin-bottom: var(--spacing-md); filter: drop-shadow(0 0 15px var(--gold));"></i>
-                            <div class="late-text">Game Finished</div>
-                            <div class="late-subtext" id="gameOverMsg">Better luck next time!</div>
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;">
+                                <!-- Trophy icon -->
+                                <i data-lucide="trophy" style="color:var(--gold);width:48px;height:48px;filter:drop-shadow(0 0 14px rgba(251,191,36,0.6));margin-bottom:4px;"></i>
+                                <!-- Title -->
+                                <div style="font-size:22px;font-weight:900;color:white;letter-spacing:1px;">GAME FINISHED</div>
+                                <!-- Winner message -->
+                                <div style="font-size:12px;color:#cbd5e1;text-align:center;line-height:1.5;" id="gameOverMsg">Better luck next time!</div>
+                                <!-- Divider -->
+                                <div style="width:60%;height:1px;background:rgba(255,255,255,0.12);margin:8px 0;"></div>
+                                <!-- Next draw label -->
+                                <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;">Next Draw In</div>
+                                <!-- Big countdown timer -->
+                                <div id="gameOverNextTimer" style="font-size:36px;font-weight:900;color:#fbbf24;font-family:'JetBrains Mono',monospace;text-shadow:0 0 20px rgba(251,191,36,0.5);letter-spacing:2px;">--:--</div>
+                                <!-- Next draw time label -->
+                                <div id="gameOverNextLabel" style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.45);">Calculating...</div>
+                            </div>
                         </div>
                         <!-- ═══ SKIP ROUND OVERLAY ═══ -->
                         <div id="skipOverlay" class="skip-overlay">
@@ -15381,7 +15394,6 @@ function runMathBlitz(problems) {
     // In normal operation, Cloud Functions handle everything server-side.
     // ===================================================================
     let _hdeCloudActive = false; // true when CF is drawing
-    let _hdeForceLocal  = false; // true when HDE must draw even if cloudEnabled=true
     let _hdeCountdownActive = false;
 
     function initHeadlessDrawEngine(uid) {
@@ -15392,7 +15404,6 @@ function runMathBlitz(problems) {
         db.ref('gameState/status').on('value', snap => {
             const status = snap.val();
             if(status === 'waiting') {
-                _hdeForceLocal = false; // reset for next round
                 _lastSchedFired = ''; // allow schedules to fire again after game ends
                 // Clear puro data from previous round
                 db.ref('gameState/puro').remove();
@@ -15456,7 +15467,7 @@ function runMathBlitz(problems) {
     }
 
     function _hdeStartDraw() {
-        if(_hdeIsDrawing || (_hdeCloudActive && !_hdeForceLocal)) return;
+        if(_hdeIsDrawing || _hdeCloudActive) return;
         _hdeIsDrawing = true;
         _hdeDrawTick();
         _hdeInterval = setInterval(_hdeDrawTick, _hdeDrawSpeed);
@@ -15473,8 +15484,8 @@ function runMathBlitz(problems) {
     }
 
     function _hdeDrawTick() {
-        // Yield to Cloud Function if it became active mid-draw (but not if we forced local)
-        if(_hdeCloudActive && !_hdeForceLocal) { _hdeStopDraw(true); return; }
+        // Yield to Cloud Function if it became active mid-draw
+        if(_hdeCloudActive) { _hdeStopDraw(true); return; }
 
         const drawnInts = gameDrawn.map(n => parseInt(n)).filter(n => !isNaN(n));
 
@@ -15526,10 +15537,7 @@ function runMathBlitz(problems) {
                     db.ref('gameState/sponsor').remove();
                     db.ref('gameState/puro').remove();
                     db.ref('gameState').update({ status: 'waiting' });
-                    db.ref('gameState/scheduledDrawAlert').remove(); // FIX: clear stale alert
-                    db.ref('gameState/countdown').remove();          // FIX: clear countdown flag
                     _hdeCountdownActive = false;
-                    _hdeForceLocal = false; // reset force-local flag for next round
                     _hdeStopDraw(true);
                 });
             });
@@ -15553,7 +15561,7 @@ function runMathBlitz(problems) {
     }
 
     function _hdeCheckSchedule(uid) {
-        if(_hdeCloudActive && !_hdeForceLocal) return;
+        if(_hdeCloudActive) return;
         const gameData = _cachedGameState || {};
         if(gameData.status === 'playing') return;
 
@@ -15639,13 +15647,13 @@ function runMathBlitz(problems) {
         if(gs.status === 'playing' || _hdeIsDrawing || _hdeCountdownActive) return;
         db.ref('gameState/countdown').set({ active: true });
 
-        const countdownTarget = Date.now() + (window._fbServerTimeOffset || 0) + 30000;
+        const countdownTarget = Date.now() + (window._fbServerTimeOffset || 0) + 5000;
 
         // ✅ FIX: Start host countdown FIRST before writing to Firebase —
         // This ensures _hdeCountdownActive = true BEFORE the scheduledDrawAlert
         // listener fires on this same client, preventing a uid=null countdown
         // from overriding the host's uid countdown and blocking game start.
-        _hdeShowSchedAlert(sched, 30, uid);
+        _hdeShowSchedAlert(sched, 5, uid);
 
         // THEN notify other clients (by now _hdeCountdownActive=true so the
         // listener guard will safely block re-entry on the host)
@@ -15682,13 +15690,12 @@ function runMathBlitz(problems) {
             }
             if(s <= 0) {
                 _hdeCountdownActive = false;
+                // ✅ FIX: Set flag to block ticker from showing next countdown for a few seconds
+                // But DO NOT manually set display — let Firebase status update drive the UI.
+                // If we force "GAME ONGOING" here and _hdeFireScheduledGame fails silently,
+                // the user sees "GAME ONGOING" forever with no actual draw happening.
                 window._hdeJustFinishedCountdown = true;
-                // ✅ Show GAME ONGOING immediately — don't wait for Firebase to confirm
-                if(timeEl) timeEl.innerHTML = '<span style="font-size:16px;font-weight:900;color:white;">GAME ONGOING</span>';
-                if(labelEl) { labelEl.innerText = 'LIVE NOW'; labelEl.style.color = '#10b981'; }
-                if(banner) { banner.style.borderColor = 'rgba(16,185,129,0.3)'; }
-                // ✅ Clear the flag after 10s so ticker can resume normal operation
-                setTimeout(function() { window._hdeJustFinishedCountdown = false; }, 10000);
+                setTimeout(function() { window._hdeJustFinishedCountdown = false; }, 15000);
                 // ✅ Only the host client (uid != null) fires the game — others just watch
                 if (uid) _hdeFireScheduledGame(uid, sched);
                 return;
@@ -15705,63 +15712,44 @@ function runMathBlitz(problems) {
     }
 
     function _hdeFireScheduledGame(uid, sched) {
-        // ✅ FIX: If cloudEnabled=true but no CF is running, wait 5s then force local draw.
-        // We use _hdeForceLocal so the Firebase listener can't reset our override.
-        if(_hdeCloudActive && !_hdeForceLocal) {
-            console.log('[HDE] cloudEnabled=true — waiting 5s for Cloud Function...');
-            setTimeout(() => {
-                const gs = _cachedGameState || {};
-                if(gs.status !== 'playing' && !_hdeIsDrawing) {
-                    console.warn('[HDE] Cloud Function did not fire — HDE forcing local draw.');
-                    _hdeForceLocal = true; // persists even after Firebase listener resets _hdeCloudActive
-                    _hdeFireScheduledGame(uid, sched);
-                }
-            }, 5000);
-            return;
-        }
-
+        if(_hdeCloudActive) return;
         const isMega    = sched.jackpotType === 'mega';
         const isRegular = sched.jackpotType === 'regular';
+        const isNormal  = !isMega && !isRegular; // 'none' or anything else = normal round
         const isJP      = isMega || isRegular;
         const now       = Date.now();
 
-        // ✅ FIX: Check for stale/expired drawLock before acquiring
-        db.ref('gameState/drawLock').once('value', lockSnap => {
+        // ✅ FIX: Check if existing drawLock is expired before trying transaction
+        db.ref('gameState/drawLock').once('value', function(lockSnap) {
             const existingLock = lockSnap.val();
-            const isStale = existingLock && existingLock.expires && Date.now() > existingLock.expires;
-
-            const proceed = () => {
-                db.ref('gameState/drawLock').transaction(cur => {
-                    if(cur !== null) return; // another client holds a fresh lock — abort
-                    return { by: uid, at: now, expires: now + 600000 };
-                }, (err, committed) => {
-                    if(!committed || err) {
-                        console.warn('[HDE] drawLock transaction failed — another client may be drawing.', err);
-                        return;
-                    }
-                    db.ref('gameState/drawLock').onDisconnect().remove();
-                    _hdeSetPattern(isJP);
-
-                    if(isMega) {
-                        db.ref('gameState/jackpot').set({ amount: 20, active: true, type: 'mega' });
-                    } else if(isRegular) {
-                        db.ref('gameState/jackpot').set({ amount: 5, active: true, type: 'regular' });
-                    } else {
-                        db.ref('gameState/jackpot').set({ amount: 1, active: false, type: 'normal' });
-                    }
-
-                    const modeLabel = isMega ? 'MEGA JACKPOT' : isRegular ? 'REGULAR JACKPOT' : 'NORMAL ROUND';
-                    db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now(), autoStartMode: modeLabel + ' (SCHEDULED)' });
-                    _hdeStartDraw();
-                });
-            };
-
-            if(isStale) {
-                console.warn('[HDE] Removing stale drawLock (expired ' + Math.round((Date.now() - existingLock.expires)/1000) + 's ago)');
-                db.ref('gameState/drawLock').remove().then(proceed);
-            } else {
-                proceed();
+            // If lock exists but is expired (older than 10 min), force-clear it first
+            if (existingLock && existingLock.expires && existingLock.expires < Date.now()) {
+                db.ref('gameState/drawLock').remove();
             }
+
+            db.ref('gameState/drawLock').transaction(cur => {
+                if(cur !== null) return; // lock held by someone else — abort
+                return { by: uid, at: now, expires: now + 600000 };
+            }, (err, committed) => {
+                if(!committed || err) {
+                    console.warn('[HDE] drawLock transaction failed — another client may be hosting.', err);
+                    return;
+                }
+                db.ref('gameState/drawLock').onDisconnect().remove();
+                _hdeSetPattern(isJP);
+
+                if(isMega) {
+                    db.ref('gameState/jackpot').set({ amount: 20, active: true, type: 'mega' });
+                } else if(isRegular) {
+                    db.ref('gameState/jackpot').set({ amount: 5, active: true, type: 'regular' });
+                } else {
+                    db.ref('gameState/jackpot').set({ amount: 1, active: false, type: 'normal' });
+                }
+
+                const modeLabel = isMega ? 'MEGA JACKPOT' : isRegular ? 'REGULAR JACKPOT' : 'NORMAL ROUND';
+                db.ref('gameState').update({ status: 'playing', gameStartTime: Date.now(), autoStartMode: modeLabel + ' (SCHEDULED)' });
+                _hdeStartDraw();
+            });
         });
     }
 
@@ -15816,7 +15804,6 @@ function runMathBlitz(problems) {
     function _hdeStartCountdownTicker() {
         setInterval(function() {
             if(_hdeCountdownActive) return;
-            // ✅ FIX: Don't overwrite the display right after countdown ends — wait for Firebase to confirm 'playing'
             if(window._hdeJustFinishedCountdown) return;
             var gs = _cachedGameState || {};
             if(gs.status === 'playing') {
@@ -15824,7 +15811,47 @@ function runMathBlitz(problems) {
             } else {
                 _hdeUpdateScheduledDrawUI();
             }
+            // ✅ Also update the in-card Game Finished timer if visible
+            _updateGameOverTimer();
         }, 1000);
+    }
+
+    // ✅ Updates the big countdown inside the Game Finished overlay
+    function _updateGameOverTimer() {
+        var timerEl = document.getElementById('gameOverNextTimer');
+        var labelEl = document.getElementById('gameOverNextLabel');
+        if (!timerEl || timerEl.closest('#gameOverOverlay').style.display === 'none') return;
+
+        var serverNow = Date.now() + (window._fbServerTimeOffset || 0);
+        var phNow = new Date(new Date(serverNow).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        var h = phNow.getHours(), m = phNow.getMinutes(), s = phNow.getSeconds();
+        var nowSecs = h * 3600 + m * 60 + s;
+
+        var minDiff = Infinity, nextSched = null;
+        for (var i = 0; i < _SCHED_DRAWS.length; i++) {
+            var sched = _SCHED_DRAWS[i];
+            var schedSecs = sched.hour * 3600 + sched.minute * 60;
+            var diff = schedSecs - nowSecs;
+            if (diff <= 0) diff += 86400;
+            if (diff < minDiff) { minDiff = diff; nextSched = sched; }
+        }
+
+        if (!nextSched) return;
+
+        var mm = Math.floor(minDiff / 60);
+        var ss = minDiff % 60;
+        var mmStr = String(mm).padStart(2, '0');
+        var ssStr = String(ss).padStart(2, '0');
+        timerEl.textContent = mmStr + ':' + ssStr;
+
+        // Color urgency
+        timerEl.style.color = mm < 1 ? '#10b981' : mm < 3 ? '#f97316' : '#fbbf24';
+
+        // Label — show next draw time
+        var hDisp = nextSched.hour > 12 ? (nextSched.hour - 12) : (nextSched.hour === 0 ? 12 : nextSched.hour);
+        var mDisp = String(nextSched.minute).padStart(2, '0');
+        var ampm  = nextSched.hour >= 12 ? 'PM' : 'AM';
+        if (labelEl) labelEl.textContent = 'Next draw at ' + hDisp + ':' + mDisp + ' ' + ampm;
     }
     // ===== END SCHEDULED DRAW ENGINE =====
 
