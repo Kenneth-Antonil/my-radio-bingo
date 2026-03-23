@@ -11177,7 +11177,7 @@ body::before {
                         <div class="artcard-tier-icon"><i data-lucide="target" style="width:18px;height:18px;color:#10b981;"></i></div>
                         <div class="artcard-tier-info">
                             <div class="artcard-tier-name" style="color:#10b981;">NORMAL ROUND</div>
-                            <div class="artcard-tier-desc">6+ players online — ₱1 prize</div>
+                            <div class="artcard-tier-desc">6+ players online — ₱2 prize</div>
                         </div>
                     </div>
                     <div class="artcard-tier regular">
@@ -14041,7 +14041,30 @@ function runMathBlitz(problems) {
                     } 
                     if (!data.refCode) updates.refCode = Math.random().toString(36).substring(2, 8).toUpperCase(); 
                     if(!data.ownedSkins) updates.ownedSkins = ['default']; 
-                    if(!data.equippedSkin) updates.equippedSkin = 'default'; 
+                    if(!data.equippedSkin) updates.equippedSkin = 'default';
+
+                    // ✅ FIX: Process referral for existing users who click an invite link
+                    const urlParamsEx = new URLSearchParams(window.location.search);
+                    const refCodeEx = urlParamsEx.get('ref');
+                    if (!data.referredBy && refCodeEx && !refCodeEx.startsWith('INF-')) {
+                        updates.referredBy = refCodeEx;
+                        db.ref('users').orderByChild('refCode').equalTo(refCodeEx).once('value', refSnap => {
+                            if (refSnap.exists()) {
+                                const referrerUid = Object.keys(refSnap.val())[0];
+                                if (referrerUid !== u.uid) {
+                                    db.ref('users/' + referrerUid + '/points').transaction(p => (p || 0) + 25000);
+                                    db.ref('users/' + referrerUid + '/referralCount').transaction(c => (c || 0) + 1);
+                                    db.ref('notifications/' + referrerUid).push({
+                                        type: 'referral',
+                                        message: (u.displayName || 'Someone') + ' joined using your invite link! You earned ₱10!',
+                                        timestamp: Date.now(),
+                                        read: false
+                                    });
+                                }
+                            }
+                        });
+                    }
+
                     userRef.update(updates); 
                 } 
             });
@@ -15513,9 +15536,9 @@ function runMathBlitz(problems) {
         const gameData = _cachedGameState || {};
         if(gameData.status === 'playing') return;
 
-        // Get current Philippine time
-        const now = new Date();
-        const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        // ✅ FIX: Use Firebase server time for consistent schedule triggering
+        const serverNow = Date.now() + (window._fbServerTimeOffset || 0);
+        const phTime = new Date(new Date(serverNow).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
         const h = phTime.getHours();
         const m = phTime.getMinutes();
         const key = h + ':' + String(m).padStart(2,'0');
@@ -15595,11 +15618,15 @@ function runMathBlitz(problems) {
         if(gs.status === 'playing' || _hdeIsDrawing || _hdeCountdownActive) return;
         db.ref('gameState/countdown').set({ active: true });
 
+        // ✅ FIX: Store server-side countdownTarget so all clients sync from the same time
+        const countdownTarget = Date.now() + (window._fbServerTimeOffset || 0) + 30000;
+
         // Write to Firebase so all clients know a scheduled draw is starting
         db.ref('gameState/scheduledDrawAlert').set({
             label: sched.label,
             type:  sched.jackpotType,
-            at:    Date.now()
+            at:    Date.now(),
+            countdownTarget: countdownTarget
         });
 
         // Show 30-second pre-draw notification to all clients
@@ -15613,8 +15640,9 @@ function runMathBlitz(problems) {
         if(!banner || !timeEl) return;
 
         const isMega    = sched.jackpotType === 'mega';
+        const isRegular = sched.jackpotType === 'regular';
         const modeColor = isMega ? '#f97316' : '#fbbf24';
-        const prize     = isMega ? '₱20' : '₱5';
+        const prize     = isMega ? '₱20' : isRegular ? '₱5' : '₱2';
 
         if(labelEl) { labelEl.innerText = sched.label.toUpperCase() + ' — STARTING!'; labelEl.style.color = modeColor; }
 
@@ -15625,7 +15653,8 @@ function runMathBlitz(problems) {
             if(gsNow.status === 'playing' || _hdeIsDrawing) { _hdeCountdownActive = false; return; }
             if(s <= 0) {
                 _hdeCountdownActive = false;
-                _hdeFireScheduledGame(uid, sched);
+                // ✅ Only the host client (uid != null) fires the game — others just watch
+                if (uid) _hdeFireScheduledGame(uid, sched);
                 return;
             }
             timeEl.innerHTML =
@@ -15674,8 +15703,9 @@ function runMathBlitz(problems) {
         const gameData = _cachedGameState || {};
         if(gameData.status === 'playing') return;
 
-        const now = new Date();
-        const phNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        // ✅ FIX: Use Firebase server time so all clients have identical countdown
+        const serverNow = Date.now() + (window._fbServerTimeOffset || 0);
+        const phNow = new Date(new Date(serverNow).toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
         const h = phNow.getHours(), m = phNow.getMinutes(), s = phNow.getSeconds();
         const nowTotalSecs = (h * 3600) + (m * 60) + s;
 
@@ -15747,6 +15777,12 @@ function runMathBlitz(problems) {
             if(btn) { btn.style.opacity = '1'; btn.innerText = '↻ Refresh'; }
         }, 500);
     };
+    // ✅ FIX: Sync countdown using Firebase server time — all clients show identical countdown
+    window._fbServerTimeOffset = 0;
+    db.ref('.info/serverTimeOffset').on('value', snap => {
+        window._fbServerTimeOffset = snap.val() || 0;
+    });
+
     // FIX #2: Cache gameState so updateNextDrawDisplay never opens its own listener
     let _cachedGameState = {};
     function listenForNextDraw() {
@@ -15768,6 +15804,27 @@ function runMathBlitz(problems) {
             if (typeof _handleJackpotState === 'function') {
                 _handleJackpotState(_cachedGameState.jackpot || null);
             }
+        });
+
+        // ✅ FIX: All clients listen to scheduledDrawAlert and start countdown from the same countdownTarget
+        var _lastAlertAt = null;
+        db.ref('gameState/scheduledDrawAlert').on('value', alertSnap => {
+            if (!alertSnap.exists()) return;
+            const alert = alertSnap.val();
+            if (!alert || !alert.at || alert.at === _lastAlertAt) return;
+            _lastAlertAt = alert.at;
+            var gs = _cachedGameState || {};
+            if (gs.status === 'playing' || _hdeIsDrawing) return;
+            if (_hdeCountdownActive) return; // already counting down
+
+            // Calculate remaining seconds from server-synced countdownTarget
+            var target = alert.countdownTarget || (alert.at + 30000);
+            var serverNow = Date.now() + (window._fbServerTimeOffset || 0);
+            var remainSecs = Math.round((target - serverNow) / 1000);
+            if (remainSecs <= 0 || remainSecs > 60) return; // stale or invalid
+
+            var fakeSched = { label: alert.label || 'Draw', jackpotType: alert.type || 'normal' };
+            _hdeShowSchedAlert(fakeSched, remainSecs, null);
         });
     }
 
@@ -16095,9 +16152,15 @@ function runMathBlitz(problems) {
         var panel = document.getElementById('sponsorPanel');
         if (!panel) return;
         if (panel.classList.contains('open')) { closeSponsorPanel(); return; }
+        // ✅ FIX: Check game status — warn user if game is already playing
+        const gsStatus = (_cachedGameState || {}).status;
         panel.classList.add('open');
+        // Always refresh balance from latest userData
         var balEl = document.getElementById('sponsorPanelBalance');
-        if (balEl) balEl.textContent = toPeso(userData.points || 0);
+        if (balEl) balEl.textContent = toPeso((window.userData || userData || {}).points || 0);
+        if (gsStatus === 'playing') {
+            showToast('⚠️ Game is ongoing. Sponsorship will apply to the NEXT round.');
+        }
         updateSponsorDisplay();
         try { lucide.createIcons({nodes: [panel]}); } catch(e) {}
     }
@@ -16159,13 +16222,30 @@ function runMathBlitz(problems) {
     function submitSponsor() {
         if (!auth.currentUser) { showToast('Please sign in first!'); return; }
         const uid = auth.currentUser.uid;
+
+        // ✅ FIX: Block sponsoring while game is currently playing
+        const gsStatus = (_cachedGameState || {}).status;
+        if (gsStatus === 'playing') {
+            showToast('⛔ Hindi pwede mag-sponsor habang may laro. Hintayin matapos ang round!');
+            return;
+        }
+
+        // ✅ FIX: Validate userData is loaded before proceeding
+        if (!userData || !userData.name) {
+            showToast('Loading your profile... please try again.');
+            return;
+        }
+
         // Block if someone else already sponsored
         if (currentSponsor && currentSponsor.uid !== uid) {
             showToast('Someone already sponsored this round!');
             return;
         }
-        const input   = document.getElementById('sponsorAmountInput');
-        const pesos   = parseFloat(input.value);
+
+        // ✅ FIX: Null-safe input read
+        const input = document.getElementById('sponsorAmountInput');
+        if (!input) { showToast('Error: panel not ready. Please try again.'); return; }
+        const pesos = parseFloat(input.value);
         if (!pesos || pesos < 1) { showToast('Minimum sponsor is ₱1.'); return; }
 
         const coins = Math.round(pesos * PESO_RATE);
