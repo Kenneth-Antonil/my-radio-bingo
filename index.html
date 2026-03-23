@@ -15381,6 +15381,7 @@ function runMathBlitz(problems) {
     // In normal operation, Cloud Functions handle everything server-side.
     // ===================================================================
     let _hdeCloudActive = false; // true when CF is drawing
+    let _hdeForceLocal  = false; // true when HDE must draw even if cloudEnabled=true
     let _hdeCountdownActive = false;
 
     function initHeadlessDrawEngine(uid) {
@@ -15391,6 +15392,7 @@ function runMathBlitz(problems) {
         db.ref('gameState/status').on('value', snap => {
             const status = snap.val();
             if(status === 'waiting') {
+                _hdeForceLocal = false; // reset for next round
                 _lastSchedFired = ''; // allow schedules to fire again after game ends
                 // Clear puro data from previous round
                 db.ref('gameState/puro').remove();
@@ -15454,7 +15456,7 @@ function runMathBlitz(problems) {
     }
 
     function _hdeStartDraw() {
-        if(_hdeIsDrawing || _hdeCloudActive) return;
+        if(_hdeIsDrawing || (_hdeCloudActive && !_hdeForceLocal)) return;
         _hdeIsDrawing = true;
         _hdeDrawTick();
         _hdeInterval = setInterval(_hdeDrawTick, _hdeDrawSpeed);
@@ -15471,8 +15473,8 @@ function runMathBlitz(problems) {
     }
 
     function _hdeDrawTick() {
-        // Yield to Cloud Function if it became active mid-draw
-        if(_hdeCloudActive) { _hdeStopDraw(true); return; }
+        // Yield to Cloud Function if it became active mid-draw (but not if we forced local)
+        if(_hdeCloudActive && !_hdeForceLocal) { _hdeStopDraw(true); return; }
 
         const drawnInts = gameDrawn.map(n => parseInt(n)).filter(n => !isNaN(n));
 
@@ -15527,6 +15529,7 @@ function runMathBlitz(problems) {
                     db.ref('gameState/scheduledDrawAlert').remove(); // FIX: clear stale alert
                     db.ref('gameState/countdown').remove();          // FIX: clear countdown flag
                     _hdeCountdownActive = false;
+                    _hdeForceLocal = false; // reset force-local flag for next round
                     _hdeStopDraw(true);
                 });
             });
@@ -15550,7 +15553,7 @@ function runMathBlitz(problems) {
     }
 
     function _hdeCheckSchedule(uid) {
-        if(_hdeCloudActive) return;
+        if(_hdeCloudActive && !_hdeForceLocal) return;
         const gameData = _cachedGameState || {};
         if(gameData.status === 'playing') return;
 
@@ -15702,15 +15705,15 @@ function runMathBlitz(problems) {
     }
 
     function _hdeFireScheduledGame(uid, sched) {
-        // ✅ FIX: If cloudEnabled is true but no CF has started the game within
-        // 5s after countdown ends, HDE takes over — prevents silent draw failure.
-        if(_hdeCloudActive) {
+        // ✅ FIX: If cloudEnabled=true but no CF is running, wait 5s then force local draw.
+        // We use _hdeForceLocal so the Firebase listener can't reset our override.
+        if(_hdeCloudActive && !_hdeForceLocal) {
             console.log('[HDE] cloudEnabled=true — waiting 5s for Cloud Function...');
             setTimeout(() => {
                 const gs = _cachedGameState || {};
                 if(gs.status !== 'playing' && !_hdeIsDrawing) {
-                    console.warn('[HDE] Cloud Function did not fire — HDE taking over.');
-                    _hdeCloudActive = false;
+                    console.warn('[HDE] Cloud Function did not fire — HDE forcing local draw.');
+                    _hdeForceLocal = true; // persists even after Firebase listener resets _hdeCloudActive
                     _hdeFireScheduledGame(uid, sched);
                 }
             }, 5000);
@@ -15719,23 +15722,21 @@ function runMathBlitz(problems) {
 
         const isMega    = sched.jackpotType === 'mega';
         const isRegular = sched.jackpotType === 'regular';
-        const isNormal  = !isMega && !isRegular;
         const isJP      = isMega || isRegular;
         const now       = Date.now();
 
-        // ✅ FIX: Before acquiring lock, clear stale/expired locks first.
+        // ✅ FIX: Check for stale/expired drawLock before acquiring
         db.ref('gameState/drawLock').once('value', lockSnap => {
             const existingLock = lockSnap.val();
             const isStale = existingLock && existingLock.expires && Date.now() > existingLock.expires;
 
             const proceed = () => {
                 db.ref('gameState/drawLock').transaction(cur => {
-                    if(cur !== null) return; // another client just grabbed it — abort
+                    if(cur !== null) return; // another client holds a fresh lock — abort
                     return { by: uid, at: now, expires: now + 600000 };
                 }, (err, committed) => {
                     if(!committed || err) {
-                        // ✅ FIX: Log failure instead of silently doing nothing
-                        console.warn('[HDE] drawLock transaction failed — another client may have the lock.', err);
+                        console.warn('[HDE] drawLock transaction failed — another client may be drawing.', err);
                         return;
                     }
                     db.ref('gameState/drawLock').onDisconnect().remove();
@@ -15756,8 +15757,7 @@ function runMathBlitz(problems) {
             };
 
             if(isStale) {
-                // ✅ FIX: Remove expired lock then proceed normally
-                console.warn('[HDE] Removing stale drawLock (expired ' + Math.round((Date.now() - existingLock.expires) / 1000) + 's ago)');
+                console.warn('[HDE] Removing stale drawLock (expired ' + Math.round((Date.now() - existingLock.expires)/1000) + 's ago)');
                 db.ref('gameState/drawLock').remove().then(proceed);
             } else {
                 proceed();
