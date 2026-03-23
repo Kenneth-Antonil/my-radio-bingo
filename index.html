@@ -15661,12 +15661,24 @@ function runMathBlitz(problems) {
         if(labelEl) { labelEl.innerText = sched.label.toUpperCase() + ' — STARTING!'; labelEl.style.color = modeColor; }
 
         _hdeCountdownActive = true;
+        window._hdeJustFinishedCountdown = false; // ✅ FIX: track when countdown just ended
         function tick(s) {
             if(!_hdeCountdownActive) return;
             var gsNow = _cachedGameState || {};
-            if(gsNow.status === 'playing' || _hdeIsDrawing) { _hdeCountdownActive = false; return; }
+            if(gsNow.status === 'playing' || _hdeIsDrawing) {
+                _hdeCountdownActive = false;
+                updateNextDrawDisplay(); // immediately show GAME ONGOING
+                return;
+            }
             if(s <= 0) {
                 _hdeCountdownActive = false;
+                window._hdeJustFinishedCountdown = true;
+                // ✅ Show GAME ONGOING immediately — don't wait for Firebase to confirm
+                if(timeEl) timeEl.innerHTML = '<span style="font-size:16px;font-weight:900;color:white;">GAME ONGOING</span>';
+                if(labelEl) { labelEl.innerText = 'LIVE NOW'; labelEl.style.color = '#10b981'; }
+                if(banner) { banner.style.borderColor = 'rgba(16,185,129,0.3)'; }
+                // ✅ Clear the flag after 10s so ticker can resume normal operation
+                setTimeout(function() { window._hdeJustFinishedCountdown = false; }, 10000);
                 // ✅ Only the host client (uid != null) fires the game — others just watch
                 if (uid) _hdeFireScheduledGame(uid, sched);
                 return;
@@ -15763,6 +15775,8 @@ function runMathBlitz(problems) {
     function _hdeStartCountdownTicker() {
         setInterval(function() {
             if(_hdeCountdownActive) return;
+            // ✅ FIX: Don't overwrite the display right after countdown ends — wait for Firebase to confirm 'playing'
+            if(window._hdeJustFinishedCountdown) return;
             var gs = _cachedGameState || {};
             if(gs.status === 'playing') {
                 updateNextDrawDisplay();
@@ -15806,7 +15820,12 @@ function runMathBlitz(problems) {
         // game with 50 players, that meant tens of thousands of excess reads.
         db.ref('gameState/status').on('value', s => {
             _cachedGameState.status = s.val();
-            if(_cachedGameState.status === 'playing' && _hdeCountdownActive) { _hdeCountdownActive = false; }
+            if(_cachedGameState.status === 'playing') {
+                if(_hdeCountdownActive) { _hdeCountdownActive = false; }
+                window._hdeJustFinishedCountdown = false; // ✅ FIX: clear flag — Firebase confirmed 'playing'
+                // ✅ FIX: Clear stale scheduledDrawAlert so it can't retrigger on reconnect
+                db.ref('gameState/scheduledDrawAlert').remove();
+            }
             updateNextDrawDisplay();
         });
         db.ref('gameState/drawnNumbers').on('value', s => {
