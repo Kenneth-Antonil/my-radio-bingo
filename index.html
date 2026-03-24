@@ -11756,27 +11756,24 @@ target:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta
 
 };
 
-var _blobUrl=null;
 window.openPhaserGame=function(id){
   var titles={flappy:'🐤 Flappy Wing',bricks:'🧱 Brick Blast',space:'🚀 Space Blaster',dash:'🏃 Dash Rush',stars:'⭐ Star Catcher',target:'🎯 Target Tap'};
   var modal=document.getElementById('phaserModal');
   var iframe=document.getElementById('phaserIframe');
   var loading=document.getElementById('phaserLoading');
   document.getElementById('phaserModalTitle').textContent=titles[id]||'Game';
-  modal.style.display='flex';loading.style.display='flex';iframe.style.display='none';iframe.src='about:blank';
-  if(_blobUrl){URL.revokeObjectURL(_blobUrl);_blobUrl=null;}
+  modal.style.display='flex';loading.style.display='flex';iframe.style.display='none';
+  iframe.removeAttribute('src');
   try{
     var html=games[id]();
-    var blob=new Blob([html],{type:'text/html'});
-    _blobUrl=URL.createObjectURL(blob);
     iframe.onload=function(){loading.style.display='none';iframe.style.display='block';};
-    iframe.src=_blobUrl;
+    iframe.srcdoc=html;
   }catch(e){loading.innerHTML='<div style="color:#ef4444;padding:20px;font-size:14px;">Error loading game.</div>';}
 };
 window.closePhaserGame=function(){
   var modal=document.getElementById('phaserModal');
   var iframe=document.getElementById('phaserIframe');
-  iframe.src='about:blank';if(_blobUrl){URL.revokeObjectURL(_blobUrl);_blobUrl=null;}
+  iframe.srcdoc='';iframe.removeAttribute('srcdoc');
   modal.style.display='none';
 };
 window.addEventListener('popstate',function(){var m=document.getElementById('phaserModal');if(m&&m.style.display!=='none')window.closePhaserGame();});
