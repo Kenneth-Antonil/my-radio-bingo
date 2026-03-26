@@ -1169,6 +1169,38 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
             </div>
         </div>
 
+        <!-- Adsterra Earnings -->
+        <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+                <h2 style="margin:0;"><i data-lucide="line-chart"></i> Adsterra Earnings (Live API)</h2>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button onclick="loadAdsterraStats('today')" style="padding:7px 12px;border-radius:10px;border:1px solid rgba(59,130,246,0.35);background:rgba(59,130,246,0.12);color:#60a5fa;font-size:11px;font-weight:800;cursor:pointer;">Today</button>
+                    <button onclick="loadAdsterraStats('last7')" style="padding:7px 12px;border-radius:10px;border:1px solid rgba(139,92,246,0.35);background:rgba(139,92,246,0.12);color:#a78bfa;font-size:11px;font-weight:800;cursor:pointer;">Last 7 Days</button>
+                    <button onclick="loadAdsterraStats('last30')" style="padding:7px 12px;border-radius:10px;border:1px solid rgba(16,185,129,0.35);background:rgba(16,185,129,0.12);color:#34d399;font-size:11px;font-weight:800;cursor:pointer;">Last 30 Days</button>
+                </div>
+            </div>
+            <p id="adsterraMeta" style="font-size:11px;opacity:0.55;margin:0 0 14px 0;">Ready to fetch your Adsterra revenue data.</p>
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-val" id="adsterraRevenue">$0.00</div>
+                    <div class="stat-lbl">Revenue</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="adsterraImpressions">0</div>
+                    <div class="stat-lbl">Impressions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="adsterraClicks">0</div>
+                    <div class="stat-lbl">Clicks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="adsterraCtr">0.00%</div>
+                    <div class="stat-lbl">CTR</div>
+                </div>
+            </div>
+            <div id="adsterraStatus" style="font-size:11px;color:var(--text-muted);margin-top:10px;">No data loaded yet.</div>
+        </div>
+
         <!-- Ad Requests -->
         <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
@@ -3546,7 +3578,7 @@ function _paEsc(s) {
     window.openTab = function(tabId, btn) {
         _origOT(tabId, btn);
         if (tabId === 'influencers-tab') loadInfluencerApps();
-        if (tabId === 'ads-tab') { loadAdRequests(); loadAdBanners(); }
+        if (tabId === 'ads-tab') { loadAdRequests(); loadAdBanners(); loadAdsterraStats('today'); }
         if (tabId === 'support-tab') { /* supportMessages listener is always active via db.ref.on() */ }
         if (tabId === 'verification-tab') loadVerificationRequests();
         if (tabId === 'creators-tab') loadCreators();
@@ -3675,6 +3707,59 @@ function deleteBroadcast(key) {
 
 var _adsAll = [];
 var _adsFilter = 'pending';
+var _adsterraLoading = false;
+
+function _adsterraFormatNum(v) {
+    return (Number(v) || 0).toLocaleString('en-US');
+}
+
+function _adsterraApiUrl() {
+    return 'https://us-central1-' + firebaseConfig.projectId + '.cloudfunctions.net/getAdsterraStats';
+}
+
+async function loadAdsterraStats(range) {
+    if (_adsterraLoading) return;
+    _adsterraLoading = true;
+
+    var statusEl = document.getElementById('adsterraStatus');
+    var metaEl = document.getElementById('adsterraMeta');
+    if (statusEl) {
+        statusEl.textContent = '⏳ Loading Adsterra data...';
+        statusEl.style.color = '#fbbf24';
+    }
+
+    try {
+        var url = _adsterraApiUrl() + '?range=' + encodeURIComponent(range || 'today');
+        var res = await fetch(url, { method: 'GET' });
+        var payload = await res.json();
+
+        if (!res.ok || !payload.ok) {
+            throw new Error((payload && payload.error) || 'Failed to load Adsterra stats');
+        }
+
+        var s = payload.summary || {};
+        document.getElementById('adsterraRevenue').textContent = '$' + (Number(s.revenue || 0).toFixed(2));
+        document.getElementById('adsterraImpressions').textContent = _adsterraFormatNum(s.impressions || 0);
+        document.getElementById('adsterraClicks').textContent = _adsterraFormatNum(s.clicks || 0);
+        document.getElementById('adsterraCtr').textContent = (Number(s.ctr || 0).toFixed(2)) + '%';
+
+        if (metaEl) {
+            metaEl.textContent = 'Range: ' + (payload.start_date || '—') + ' → ' + (payload.finish_date || '—');
+        }
+        if (statusEl) {
+            statusEl.textContent = '✅ Synced from Adsterra API';
+            statusEl.style.color = '#10b981';
+        }
+    } catch (err) {
+        console.error('loadAdsterraStats error:', err);
+        if (statusEl) {
+            statusEl.textContent = '❌ ' + (err.message || 'Unable to fetch Adsterra data');
+            statusEl.style.color = '#ef4444';
+        }
+    } finally {
+        _adsterraLoading = false;
+    }
+}
 
 function loadAdRequests() {
     var list = document.getElementById('adRequestsList');

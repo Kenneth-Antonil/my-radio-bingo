@@ -14,6 +14,7 @@
 
 const { onSchedule }      = require('firebase-functions/v2/scheduler');
 const { onValueCreated }  = require('firebase-functions/v2/database');
+const { onRequest }       = require('firebase-functions/v2/https');
 const admin               = require('firebase-admin');
 
 admin.initializeApp();
@@ -201,6 +202,108 @@ function formatTime(ts) {
         timeZone: 'Asia/Manila',
     });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADSTERRA PUBLISHER STATS PROXY
+// - Keeps API key server-side
+// - Supports quick ranges for dashboard widgets
+// ─────────────────────────────────────────────────────────────────────────────
+function toISODate(dateInput) {
+    const d = new Date(dateInput);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString().slice(0, 10);
+}
+
+exports.getAdsterraStats = onRequest({ cors: true }, async (req, res) => {
+    try {
+        if (req.method !== 'GET') {
+            res.status(405).json({ ok: false, error: 'Method not allowed' });
+            return;
+        }
+
+        const apiKey = process.env.ADSTERRA_API_KEY || '3cd477234f12c637add412c3a29c3d94';
+        if (!apiKey) {
+            res.status(500).json({ ok: false, error: 'Missing ADSTERRA_API_KEY' });
+            return;
+        }
+
+        const range = String(req.query.range || 'today');
+        const now = new Date();
+        let finishDate = toISODate(now);
+        let startDate = finishDate;
+
+        if (range === 'last7') {
+            startDate = toISODate(new Date(now.getTime() - (6 * 86400000)));
+        } else if (range === 'last30') {
+            startDate = toISODate(new Date(now.getTime() - (29 * 86400000)));
+        } else if (range === 'custom') {
+            const customStart = toISODate(req.query.start_date);
+            const customFinish = toISODate(req.query.finish_date);
+            if (!customStart || !customFinish) {
+                res.status(400).json({ ok: false, error: 'Invalid custom date range' });
+                return;
+            }
+            startDate = customStart;
+            finishDate = customFinish;
+        }
+
+        const query = new URLSearchParams({
+            start_date: startDate,
+            finish_date: finishDate,
+            group_by: 'date',
+        });
+
+        const upstream = await fetch(`https://api3.adsterratools.com/publisher/stats.json?${query.toString()}`, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-API-Key': apiKey,
+            },
+        });
+
+        const rawText = await upstream.text();
+        let data = null;
+        try {
+            data = rawText ? JSON.parse(rawText) : null;
+        } catch (_) {
+            data = null;
+        }
+
+        if (!upstream.ok) {
+            res.status(upstream.status).json({
+                ok: false,
+                error: 'Adsterra API request failed',
+                details: data || rawText || null,
+            });
+            return;
+        }
+
+        const rows = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+        const summary = rows.reduce((acc, row) => {
+            const imp = Number(row.impressions || 0);
+            const clicks = Number(row.clicks || 0);
+            const revenue = Number(row.revenue || 0);
+            acc.impressions += imp;
+            acc.clicks += clicks;
+            acc.revenue += revenue;
+            return acc;
+        }, { impressions: 0, clicks: 0, revenue: 0 });
+
+        summary.ctr = summary.impressions > 0 ? (summary.clicks / summary.impressions) * 100 : 0;
+
+        res.json({
+            ok: true,
+            range,
+            start_date: startDate,
+            finish_date: finishDate,
+            summary,
+            rows,
+        });
+    } catch (err) {
+        console.error('[getAdsterraStats] error:', err);
+        res.status(500).json({ ok: false, error: err.message || 'Unknown server error' });
+    }
+});
 
 
 // ─────────────────────────────────────────────────────────────────────────────
