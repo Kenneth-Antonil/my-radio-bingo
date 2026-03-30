@@ -12237,7 +12237,8 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
                 <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:14px;padding:16px;margin-bottom:16px;text-align:center;">
                     <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Your Balance</div>
                     <div style="font-size:28px;font-weight:900;color:#10b981;" id="cashoutBalanceDisplay">₱0.00</div>
-                    <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px;">Minimum cashout: <b style="color:#fbbf24;">₱100.00</b></div>
+                    <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px;">No minimum cashout. You can cash out any amount.</div>
+                    <div style="margin-top:8px;font-size:11px;line-height:1.45;color:#fca5a5;font-weight:700;">⚠️ BINGO game is finished and this app will be deleted soon. Please cash out your available balance now.</div>
                 </div>
                 <!-- Method toggle -->
                 <div style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Cashout Via</div>
@@ -12261,7 +12262,7 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
                     </div>
                     <div>
                         <label style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px;">Amount (₱)</label>
-                        <input type="number" id="coAmount" class="styled-input" placeholder="Min ₱100" min="100" style="width:100%;">
+                        <input type="number" id="coAmount" class="styled-input" placeholder="Enter any amount" min="0.01" step="0.01" style="width:100%;">
                     </div>
                 </div>
                 <button onclick="submitCashout()" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;color:white;font-weight:900;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(16,185,129,0.3);">
@@ -12598,73 +12599,10 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
     let _hdeInitialized = false; // guard: only init once per auth session
     // Player-count auto-start removed — draws are now schedule-only (every 15 min)
     let _lastAutoCount    = 0;   // kept for online count display only
-    // ── Scheduled draw times — loaded live from Firebase (set via dashboard) ──
-    let _SCHED_DRAWS = [
-        { hour: 8, minute: 0,  label: '8:00 AM Draw',  jackpotType: 'normal' },
-        { hour: 8, minute: 15,  label: '8:15 AM Draw',  jackpotType: 'normal' },
-        { hour: 8, minute: 30,  label: '8:30 AM Draw',  jackpotType: 'normal' },
-        { hour: 8, minute: 45,  label: '8:45 AM Draw',  jackpotType: 'normal' },
-        { hour: 9, minute: 0,  label: '9:00 AM Draw',  jackpotType: 'normal' },
-        { hour: 9, minute: 15,  label: '9:15 AM Draw',  jackpotType: 'normal' },
-        { hour: 9, minute: 30,  label: '9:30 AM Draw',  jackpotType: 'normal' },
-        { hour: 9, minute: 45,  label: '9:45 AM Draw',  jackpotType: 'normal' },
-        { hour: 10, minute: 0,  label: '10:00 AM Draw',  jackpotType: 'normal' },
-        { hour: 10, minute: 15,  label: '10:15 AM Draw',  jackpotType: 'normal' },
-        { hour: 10, minute: 30,  label: '10:30 AM Draw',  jackpotType: 'normal' },
-        { hour: 10, minute: 45,  label: '10:45 AM Draw',  jackpotType: 'normal' },
-        { hour: 11, minute: 0,  label: '11:00 AM Draw',  jackpotType: 'normal' },
-        { hour: 11, minute: 15,  label: '11:15 AM Draw',  jackpotType: 'normal' },
-        { hour: 11, minute: 30,  label: '11:30 AM Draw',  jackpotType: 'normal' },
-        { hour: 11, minute: 45,  label: '11:45 AM Draw',  jackpotType: 'normal' },
-        { hour: 12, minute: 0,  label: '12:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 12, minute: 15,  label: '12:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 12, minute: 30,  label: '12:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 12, minute: 45,  label: '12:45 PM Draw',  jackpotType: 'normal' },
-        { hour: 13, minute: 0,  label: '1:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 13, minute: 15,  label: '1:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 13, minute: 30,  label: '1:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 13, minute: 45,  label: '1:45 PM Draw',  jackpotType: 'normal' },
-        { hour: 14, minute: 0,  label: '2:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 14, minute: 15,  label: '2:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 14, minute: 30,  label: '2:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 14, minute: 45,  label: '2:45 PM Draw',  jackpotType: 'normal' },
-        { hour: 15, minute: 0,  label: '3:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 15, minute: 15,  label: '3:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 15, minute: 30,  label: '3:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 15, minute: 45,  label: '3:45 PM Draw',  jackpotType: 'normal' },
-        { hour: 16, minute: 0,  label: '4:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 16, minute: 15,  label: '4:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 16, minute: 30,  label: '4:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 16, minute: 45,  label: '4:45 PM Draw',  jackpotType: 'normal' },
-        { hour: 17, minute: 0,  label: '5:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 17, minute: 15,  label: '5:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 17, minute: 30,  label: '5:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 17, minute: 45,  label: '5:45 PM Draw',  jackpotType: 'normal' },
-        { hour: 18, minute: 0,  label: '6:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 18, minute: 15,  label: '6:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 18, minute: 30,  label: '6:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 18, minute: 45,  label: '6:45 PM Draw',  jackpotType: 'normal' },
-        { hour: 19, minute: 0,  label: '7:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 19, minute: 15,  label: '7:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 19, minute: 30,  label: '7:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 19, minute: 45,  label: '7:45 PM Draw',  jackpotType: 'normal' },
-        { hour: 20, minute: 0,  label: '8:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 20, minute: 15,  label: '8:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 20, minute: 30,  label: '8:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 20, minute: 45,  label: '8:45 PM Draw',  jackpotType: 'normal' },
-        { hour: 21, minute: 0,  label: '9:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 21, minute: 15,  label: '9:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 21, minute: 30,  label: '9:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 21, minute: 45,  label: '9:45 PM Draw',  jackpotType: 'normal' },
-        { hour: 22, minute: 0,  label: '10:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 22, minute: 15,  label: '10:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 22, minute: 30,  label: '10:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 22, minute: 45,  label: '10:45 PM Draw',  jackpotType: 'normal' },
-        { hour: 23, minute: 0,  label: '11:00 PM Draw',  jackpotType: 'normal' },
-        { hour: 23, minute: 15,  label: '11:15 PM Draw',  jackpotType: 'normal' },
-        { hour: 23, minute: 30,  label: '11:30 PM Draw',  jackpotType: 'normal' },
-        { hour: 23, minute: 45,  label: '11:45 PM Draw',  jackpotType: 'normal' },
-    ]; // Fixed every-15-minute schedule: 8:00 AM to 11:45 PM (overridden by Firebase gameState/drawSchedules)
+    const BINGO_GAME_FINISHED = true;
+    const BINGO_FINISHED_NOTICE = 'BINGO game is finished. This app will be deleted soon. Please cash out your available balance.';
+    // ── Scheduled draw times removed permanently ──
+    let _SCHED_DRAWS = [];
     let _schedCheckInterval = null;
     let _notifFired5Min = ''; // 'HH:MM' of draw we last notified at 5min
     let _notifFired2Min = ''; // 'HH:MM' of draw we last notified at 2min
@@ -12672,13 +12610,21 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
 
     // Listen for schedule changes from admin dashboard
     function _hdeListenSchedules() {
+        if (BINGO_GAME_FINISHED) {
+            _SCHED_DRAWS = [];
+            db.ref('gameState/drawSchedules').remove();
+            db.ref('gameState/schedules').remove();
+            db.ref('gameState/scheduledDrawAlert').remove();
+            db.ref('gameState/status').set('finished');
+            _hdeUpdateScheduledDrawUI();
+            return;
+        }
         db.ref('gameState/drawSchedules').on('value', snap => {
             const data = snap.val();
             if(data && Object.keys(data).length > 0) {
                 _SCHED_DRAWS = Object.values(data);
             } else {
-                // Fallback to fixed every-15-minute schedule if admin cleared all
-                _SCHED_DRAWS = _FIXED_15MIN_SCHEDULE;
+                _SCHED_DRAWS = [];
             }
             _hdeUpdateScheduledDrawUI(); // refresh next draw display
         });
@@ -15095,6 +15041,11 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
     // ===== SCHEDULED DRAW ENGINE (Option 3) =================
     // ══════════════════════════════════════════════════════════
     function _hdeInitScheduledDraws(uid) {
+        if (BINGO_GAME_FINISHED) {
+            _SCHED_DRAWS = [];
+            _hdeUpdateScheduledDrawUI();
+            return;
+        }
         if(_schedCheckInterval) clearInterval(_schedCheckInterval);
         _hdeListenSchedules(); // sync schedules from Firebase (set via dashboard)
         _schedCheckInterval = setInterval(() => _hdeCheckSchedule(uid), 30000); // check every 30s for 5min/2min notifs
@@ -15107,6 +15058,7 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
     }
 
     function _hdeCheckSchedule(uid) {
+        if (BINGO_GAME_FINISHED) return;
         if(_hdeCloudActive) return;
         const gameData = _cachedGameState || {};
         if(gameData.status === 'playing') return;
@@ -15145,6 +15097,7 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
     }
 
     function _hdeCheckUpcomingNotifs(h, m) {
+        if (BINGO_GAME_FINISHED) return;
         const nowTotalMins = h * 60 + m;
         for(const sched of _SCHED_DRAWS) {
             const schedMins = sched.hour * 60 + sched.minute;
@@ -15189,6 +15142,7 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
     }
 
     function _hdeTriggerScheduledDraw(uid, sched) {
+        if (BINGO_GAME_FINISHED) return;
         var gs = _cachedGameState || {};
         if(gs.status === 'playing' || _hdeIsDrawing || _hdeCountdownActive) return;
         db.ref('gameState/countdown').set({ active: true });
@@ -15258,6 +15212,7 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
     }
 
     function _hdeFireScheduledGame(uid, sched) {
+        if (BINGO_GAME_FINISHED) return;
         if(_hdeCloudActive) return;
         const isMega    = sched.jackpotType === 'mega';
         const isRegular = sched.jackpotType === 'regular';
@@ -15300,6 +15255,11 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
     }
 
     function _hdeUpdateScheduledDrawUI() {
+        if (BINGO_GAME_FINISHED) {
+            const lateEl = document.getElementById('lateNextSched');
+            if (lateEl) lateEl.innerHTML = '<span style="color:#f87171;font-weight:900;">NO MORE DRAWS</span>';
+            return;
+        }
         // Show next scheduled draw time + live countdown in the banner when waiting
         const gameData = _cachedGameState || {};
         if(gameData.status === 'playing') return;
@@ -15364,6 +15324,13 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
 
     // ✅ Updates the big countdown inside the Game Finished overlay
     function _updateGameOverTimer() {
+        if (BINGO_GAME_FINISHED) {
+            var timerEndedEl = document.getElementById('gameOverNextTimer');
+            var labelEndedEl = document.getElementById('gameOverNextLabel');
+            if (timerEndedEl) timerEndedEl.textContent = 'ENDED';
+            if (labelEndedEl) labelEndedEl.textContent = 'BINGO game is finished. Please cash out your balance.';
+            return;
+        }
         var timerEl = document.getElementById('gameOverNextTimer');
         var labelEl = document.getElementById('gameOverNextLabel');
         if (!timerEl || timerEl.closest('#gameOverOverlay').style.display === 'none') return;
@@ -15607,6 +15574,18 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
         const labelEl  = document.querySelector('.next-draw-label');
         const lateSched= document.getElementById('lateNextSched');
         if(!banner || !timeEl) return;
+
+        if (BINGO_GAME_FINISHED) {
+            banner.style.display = '';
+            banner.style.borderColor = 'rgba(239,68,68,0.35)';
+            banner.style.boxShadow = '0 0 16px rgba(239,68,68,0.12)';
+            if(labelEl) { labelEl.innerText = 'BINGO FINISHED'; labelEl.style.color = '#f87171'; }
+            timeEl.innerHTML = '<div style="font-size:12px;font-weight:800;color:#fca5a5;line-height:1.5;">'
+                + BINGO_FINISHED_NOTICE
+                + '<br>Please cash out your available balance now.</div>';
+            if(lateSched) lateSched.innerHTML = '<span style="color:#f87171;font-weight:900;">NO MORE DRAWS</span>';
+            return;
+        }
 
         // ── Game ongoing ──
         if(gameData.status === 'playing' || (gameData.drawnNumbers && Object.keys(gameData.drawnNumbers).length > 0)) {
@@ -17541,7 +17520,7 @@ window.addEventListener('popstate',function(){var m=document.getElementById('pha
         var balance = (userData.points || 0) / PESO_RATE;
         if (!acct || acct.length < 7) return showToast('Enter a valid account number');
         if (!acctName || acctName.length < 2) return showToast('Enter the account name');
-        if (amount < 100) return showToast('Minimum cashout is \u20B1100');
+        if (amount <= 0) return showToast('Enter a valid cashout amount');
         if (amount > balance) return showToast('Insufficient balance');
         var coinsToDeduct = Math.round(amount * PESO_RATE);
         showCustomConfirm('CASHOUT \u20B1' + amount.toFixed(2) + '?',
@@ -21895,7 +21874,8 @@ Please explain why you want a verification badge:`;
             <div class="rbs-bal-card">
                 <div class="rbs-bal-lbl">Available Balance</div>
                 <div class="rbs-bal-amt" id="rbStoreCashoutBalance">₱0.00</div>
-                <div class="rbs-bal-note">Minimum cash out: <b>₱100.00</b></div>
+                <div class="rbs-bal-note">No minimum cash out — cash out any amount.</div>
+                <div class="rbs-bal-note" style="color:#fca5a5;font-weight:800;">⚠️ BINGO game is finished and this app will be deleted soon. Please cash out your available balance.</div>
             </div>
 
             <div class="rbs-slbl">Send Via</div>
@@ -21919,7 +21899,7 @@ Please explain why you want a verification badge:`;
                 </div>
                 <div class="rbs-fld">
                     <label>Amount (₱)</label>
-                    <input type="number" id="rbcoAmount" class="rbs-inp" placeholder="Min ₱100" min="100" step="1">
+                    <input type="number" id="rbcoAmount" class="rbs-inp" placeholder="Enter any amount" min="0.01" step="0.01">
                 </div>
             </div>
 
@@ -22357,7 +22337,7 @@ function rbSubmitCashout() {
 
     if (!acct)     { showToast('Please enter your account number.'); return; }
     if (!acctName) { showToast('Please enter your account name.'); return; }
-    if (isNaN(amtRaw) || amtRaw < 100) { showToast('Minimum cash out is ₱100.'); return; }
+    if (isNaN(amtRaw) || amtRaw <= 0) { showToast('Enter a valid cash out amount.'); return; }
     if (amtRaw > balance)  { showToast('Insufficient balance.'); return; }
 
     var coinsToDeduct = Math.round(amtRaw * PESO_RATE);

@@ -20,6 +20,7 @@ const admin               = require('firebase-admin');
 admin.initializeApp();
 const db        = admin.database();
 const messaging = admin.messaging();
+const BINGO_GAME_FINISHED = true;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BINGO PATTERNS — must match client-side getWinningWays()
@@ -316,6 +317,16 @@ exports.getAdsterraStats = onRequest({ cors: true }, async (req, res) => {
 exports.scheduledDrawChecker = onSchedule(
     { schedule: 'every 1 minutes', timeZone: 'Asia/Manila' },
     async () => {
+        if (BINGO_GAME_FINISHED) {
+            await Promise.all([
+                db.ref('gameState/schedules').remove(),
+                db.ref('gameState/drawSchedules').remove(),
+                db.ref('gameState/scheduledDrawAlert').remove(),
+                db.ref('gameState/drawConfig').update({ cloudEnabled: false }),
+                db.ref('gameState/status').set('finished'),
+            ]);
+            return null;
+        }
         const now       = Date.now();
         const schedSnap = await db.ref('gameState/schedules').once('value');
         const schedules = schedSnap.val();
@@ -481,6 +492,10 @@ exports.scheduledDrawChecker = onSchedule(
 exports.cloudDrawEngine = onSchedule(
     { schedule: 'every 1 minutes', timeZone: 'Asia/Manila' },
     async () => {
+        if (BINGO_GAME_FINISHED) {
+            await db.ref('gameState/drawConfig').update({ cloudEnabled: false });
+            return null;
+        }
         const cfgSnap = await db.ref('gameState/drawConfig').once('value');
         const cfg     = cfgSnap.val() || {};
         if (!cfg.cloudEnabled) return null;
