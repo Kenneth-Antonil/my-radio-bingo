@@ -3251,12 +3251,12 @@
             background: linear-gradient(145deg, #3b82f6, #1d4ed8) !important;
             color: #fff !important;
             font-weight: 900 !important;
-            transform: none !important;
             border: 1px solid rgba(96,165,250,0.5) !important;
             box-shadow: 0 0 12px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.15) !important;
             text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
             opacity: 1 !important;
         }
+        .cell.hit:not(.just-hit) { transform: none !important; }
         .cell.hit::before { display: none !important; }
         .cell.hit::after { display: none !important; }
 
@@ -10458,6 +10458,8 @@ body::before {
         color: #fff !important;
         box-shadow: 0 6px 16px rgba(37,99,235,0.32), inset 0 1px 0 rgba(255,255,255,0.28) !important;
         text-shadow: none !important;
+    }
+    .bento-slot .grid .cell.hit:not(.just-hit) {
         transform: none !important;
     }
     .bento-slot .grid .cell:nth-child(13),
@@ -10903,6 +10905,159 @@ body::before {
             bottom: calc(24px + env(safe-area-inset-bottom)) !important;
         }
         .bento-cards-wrapper { max-width: 480px; margin-left: auto; margin-right: auto; }
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       LIVE DRAW ANIMATION
+    ═══════════════════════════════════════════════════════ */
+    .bingo-hdr-draw-flash {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 4;
+        opacity: 0;
+        background: radial-gradient(circle at 86% 58%, var(--flash-color, #3b82f6) 0%, transparent 58%);
+    }
+    .bingo-hdr-draw-flash.flash {
+        animation: hdrDrawFlash 0.75s ease-out;
+    }
+    @keyframes hdrDrawFlash {
+        0% { opacity: 0.5; }
+        100% { opacity: 0; }
+    }
+
+    .bingo-hdr-ball-label {
+        font-size: 9px !important;
+        letter-spacing: 1.2px !important;
+        color: rgba(255,255,255,0.45) !important;
+        min-height: 12px;
+        font-family: 'Sora', sans-serif !important;
+    }
+    .bingo-hdr-ball-label .cb-call-letter {
+        color: var(--ball-accent, #93c5fd);
+        font-weight: 800;
+    }
+
+    .draw-ball-stage {
+        position: relative;
+        width: 86px !important;
+        height: 86px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        perspective: 520px;
+    }
+    .draw-ball-stage .cb-wrapper,
+    .draw-ball-stage .cb-ball {
+        width: 86px !important;
+        height: 86px !important;
+    }
+    .draw-ball-stage .cb-num { font-size: 32px !important; }
+    .draw-ball-stage .cb-letter { font-size: 10px !important; letter-spacing: 1.4px !important; }
+    .draw-ball-stage .cb-dash { font-size: 26px !important; }
+
+    .draw-ring {
+        position: absolute;
+        inset: -6px;
+        border-radius: 50%;
+        border: 2px solid var(--ball-accent, #60a5fa);
+        opacity: 0;
+        pointer-events: none;
+        z-index: 1;
+    }
+    .draw-ball-stage.revealed .draw-ring-1 { animation: drawRipple 0.7s ease-out both; }
+    .draw-ball-stage.revealed .draw-ring-2 { animation: drawRipple 0.7s ease-out 0.1s both; }
+    .draw-ball-stage.revealed .draw-ring-3 { animation: drawRipple 0.7s ease-out 0.2s both; }
+    @keyframes drawRipple {
+        0% { transform: scale(0.72); opacity: 0.65; }
+        100% { transform: scale(1.7); opacity: 0; }
+    }
+
+    #cbBall {
+        transform-origin: center;
+        will-change: transform, filter;
+    }
+    #cbBall.cb-idle {
+        animation: idleBallBreath 2.8s ease-in-out infinite;
+        border-color: rgba(255,255,255,0.12) !important;
+        box-shadow: inset -4px -4px 12px rgba(0,0,0,0.45), 0 8px 22px rgba(0,0,0,0.45) !important;
+    }
+    @keyframes idleBallBreath {
+        0%, 100% { transform: translateY(0) scale(1); filter: brightness(1); }
+        50% { transform: translateY(-2px) scale(1.03); filter: brightness(1.08); }
+    }
+
+    #cbBall.cb-scramble {
+        animation: ballScramble 0.07s linear infinite;
+        filter: saturate(1.15);
+    }
+    @keyframes ballScramble {
+        0% { transform: rotate(-7deg) scale(0.97); }
+        50% { transform: rotate(7deg) scale(1.04); }
+        100% { transform: rotate(-7deg) scale(0.97); }
+    }
+    .cb-num-blur { filter: blur(1.2px); opacity: 0.8; }
+
+    #cbBall.ball-reveal {
+        animation: ballRevealDrop 0.58s cubic-bezier(0.22, 1.18, 0.32, 1) both;
+    }
+    @keyframes ballRevealDrop {
+        0%   { transform: rotateX(-95deg) scale(0.55); opacity: 0.35; filter: blur(2px); }
+        58%  { transform: rotateX(14deg) scale(1.14); opacity: 1; filter: blur(0); }
+        78%  { transform: rotateX(-6deg) scale(0.97); }
+        100% { transform: rotateX(0) scale(1); opacity: 1; }
+    }
+
+    #cbBall.ball-pulse {
+        animation: ballLivePulse 1.7s ease-in-out infinite;
+    }
+    @keyframes ballLivePulse {
+        0%, 100% { transform: scale(1); filter: brightness(1); }
+        50% { transform: scale(1.05); filter: brightness(1.14); }
+    }
+
+    #cbBall.bb3-B { border-color: rgba(96,165,250,0.55) !important; box-shadow: inset -3px -3px 10px rgba(0,0,0,0.35), 0 8px 22px rgba(37,99,235,0.5) !important; }
+    #cbBall.bb3-I { border-color: rgba(248,113,113,0.55) !important; box-shadow: inset -3px -3px 10px rgba(0,0,0,0.35), 0 8px 22px rgba(220,38,38,0.5) !important; }
+    #cbBall.bb3-N { border-color: rgba(167,139,250,0.55) !important; box-shadow: inset -3px -3px 10px rgba(0,0,0,0.35), 0 8px 22px rgba(124,58,237,0.5) !important; }
+    #cbBall.bb3-G { border-color: rgba(74,222,128,0.55) !important; box-shadow: inset -3px -3px 10px rgba(0,0,0,0.35), 0 8px 22px rgba(22,163,74,0.5) !important; }
+    #cbBall.bb3-O { border-color: rgba(251,146,60,0.55) !important; box-shadow: inset -3px -3px 10px rgba(0,0,0,0.35), 0 8px 22px rgba(234,88,12,0.5) !important; }
+
+    .draw-ball-stage.drawing,
+    .draw-ball-stage.revealed { --ball-accent: #60a5fa; }
+
+    .bingo-hdr-prev-strip .bb3.bb3-newest {
+        animation: prevBallPop 0.42s cubic-bezier(0.22, 1.2, 0.32, 1) both;
+        outline: 1.5px solid rgba(255,255,255,0.35);
+        outline-offset: 1px;
+    }
+    @keyframes prevBallPop {
+        0% { transform: scale(0.4); opacity: 0; }
+        70% { transform: scale(1.16); opacity: 1; }
+        100% { transform: scale(1); }
+    }
+
+    .bento-slot .grid .cell.hit.just-hit {
+        animation: cellStamp 0.48s cubic-bezier(0.22, 1.2, 0.32, 1) both !important;
+    }
+    @keyframes cellStamp {
+        0% { transform: scale(0.72); }
+        58% { transform: scale(1.14); }
+        100% { transform: scale(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        #cbBall.cb-idle,
+        #cbBall.cb-scramble,
+        #cbBall.ball-reveal,
+        #cbBall.ball-pulse,
+        .bingo-hdr-draw-flash.flash,
+        .draw-ball-stage.revealed .draw-ring,
+        .bingo-hdr-prev-strip .bb3.bb3-newest,
+        .bento-slot .grid .cell.hit.just-hit {
+            animation: none !important;
+            filter: none !important;
+            transform: none !important;
+        }
     }
 
 
@@ -11540,8 +11695,7 @@ body::before {
 
             <!-- Glass fade at bottom -->
             <div class="bingo-hdr-glass"></div>
-
-
+            <div class="bingo-hdr-draw-flash" id="bingoHdrDrawFlash"></div>
 
             <!-- Text content -->
             <div class="bingo-hdr-content">
@@ -11560,10 +11714,13 @@ body::before {
                 </div>
                 <!-- Right: current draw ball -->
                 <div class="bingo-hdr-ball-area">
-                    <div class="bingo-hdr-ball-label">Draw</div>
-                    <div class="current-ball-box" style="width:78px;height:78px;">
-                        <div class="cb-wrapper" id="cbWrapper" style="width:78px;height:78px;">
-                            <div class="cb-ball cb-idle" id="cbBall" style="width:78px;height:78px;">
+                    <div class="bingo-hdr-ball-label" id="cbBallLabel">Draw</div>
+                    <div class="current-ball-box draw-ball-stage" id="drawBallStage">
+                        <span class="draw-ring draw-ring-1"></span>
+                        <span class="draw-ring draw-ring-2"></span>
+                        <span class="draw-ring draw-ring-3"></span>
+                        <div class="cb-wrapper" id="cbWrapper">
+                            <div class="cb-ball cb-idle" id="cbBall">
                                 <div class="cb-ball-inner">
                                     <span class="cb-dash">--</span>
                                 </div>
@@ -17405,17 +17562,43 @@ if (typeof window.openPhaserGame !== 'function') {
             container.className = 'card bingo-card-shell' + skin;
         }
     }
+    let _gridHitsReady = false;
     function updateGridHits() {
         marks = [12];
         const cells = document.querySelectorAll('#bingoGrid .cell');
-        cells.forEach((c, i) => { const val = c.innerText; if(gameDrawn.includes(val) || val === "\u2605") { c.classList.add('hit'); if(!marks.includes(i)) marks.push(i); } });
+        cells.forEach((c, i) => {
+            const val = c.innerText;
+            const shouldHit = gameDrawn.includes(val) || val === "\u2605";
+            if (shouldHit) {
+                const wasHit = c.classList.contains('hit');
+                c.classList.add('hit');
+                if (_gridHitsReady && !wasHit && val !== "\u2605") {
+                    c.classList.add('just-hit');
+                    setTimeout(() => c.classList.remove('just-hit'), 650);
+                }
+                if (!marks.includes(i)) marks.push(i);
+            }
+        });
+        _gridHitsReady = true;
     }
     function updateGridHitsExtra(cardIdx) {
         const ec = extraCards[cardIdx]; if(!ec) return;
         ec.marks = [12];
         const grid = document.getElementById('bingoGrid-extra-' + cardIdx); if(!grid) return;
         const cells = grid.querySelectorAll('.cell');
-        cells.forEach((c, i) => { const val = c.innerText; if(gameDrawn.includes(val) || val === "\u2605") { c.classList.add('hit'); if(!ec.marks.includes(i)) ec.marks.push(i); } });
+        cells.forEach((c, i) => {
+            const val = c.innerText;
+            const shouldHit = gameDrawn.includes(val) || val === "\u2605";
+            if (shouldHit) {
+                const wasHit = c.classList.contains('hit');
+                c.classList.add('hit');
+                if (_gridHitsReady && !wasHit && val !== "\u2605") {
+                    c.classList.add('just-hit');
+                    setTimeout(() => c.classList.remove('just-hit'), 650);
+                }
+                if (!ec.marks.includes(i)) ec.marks.push(i);
+            }
+        });
     }
     // ─── 3D BINGO BALL HELPERS ───────────────────────────────────────
     function getBingoLetter(n) {
@@ -17442,41 +17625,148 @@ if (typeof window.openPhaserGame !== 'function') {
         return div;
     }
 
+    let _lastPrevNewest = null;
+    let _prevBallsPainted = false;
     function renderPrevBalls() {
-        const row = document.getElementById('ballRow'); row.innerHTML = '';
+        const row = document.getElementById('ballRow'); if (!row) return;
+        row.innerHTML = '';
         var source = gameDrawnOrder.length > 0 ? gameDrawnOrder : gameDrawn;
         const last5 = source.slice(-5).reverse();
-        last5.forEach(n => {
+        const newest = last5.length ? last5[0] : null;
+        last5.forEach((n, i) => {
             const ball = make3dBall(n);
+            if (i === 0 && _prevBallsPainted && String(_lastPrevNewest) !== String(n)) {
+                ball.classList.add('bb3-newest');
+            }
             row.appendChild(ball);
         });
+        _prevBallsPainted = true;
+        _lastPrevNewest = newest;
+    }
+
+    let _drawAnimTimers = [];
+    let _drawAnimToken = 0;
+    let _drawAnimReady = false;
+    const BALL_ACCENTS = { B:'#3b82f6', I:'#ef4444', N:'#8b5cf6', G:'#22c55e', O:'#f97316' };
+    const BALL_RANGES = { B:[1,15], I:[16,30], N:[31,45], G:[46,60], O:[61,75] };
+
+    function _clearDrawAnim() {
+        _drawAnimTimers.forEach(clearTimeout);
+        _drawAnimTimers = [];
+    }
+    function _drawTimeout(fn, ms) {
+        const id = setTimeout(fn, ms);
+        _drawAnimTimers.push(id);
+        return id;
     }
 
     function updateCurrentBall(num) {
         const wrapper = document.getElementById('cbWrapper');
         const ball = document.getElementById('cbBall');
+        const label = document.getElementById('cbBallLabel');
+        const flash = document.getElementById('bingoHdrDrawFlash');
+        const stage = document.getElementById('drawBallStage');
         if (!wrapper || !ball) return;
+        _clearDrawAnim();
+        const token = ++_drawAnimToken;
+
         if (!num || num === '--') {
             ball.className = 'cb-ball cb-idle';
+            delete ball.dataset.called;
             ball.style.removeProperty('--glow');
+            ball.style.removeProperty('--ball-accent');
+            if (stage) {
+                stage.classList.remove('drawing', 'revealed');
+                stage.style.removeProperty('--ball-accent');
+            }
             ball.innerHTML = '<div class="cb-ball-inner"><span class="cb-dash">--</span></div>';
-            ball.classList.remove('ball-pulse');
+            if (label) label.textContent = 'Draw';
+            if (flash) flash.classList.remove('flash');
             return;
         }
-        const letter = getBingoLetter(num);
-        const colorClass = getBallColorClass(letter);
+
+        const n = parseInt(num, 10);
+        if (isNaN(n)) return;
+        if (String(ball.dataset.called) === String(n) && ball.classList.contains('bb3-' + getBingoLetter(n))) return;
+
+        const letter = getBingoLetter(n);
         const glow = getBallGlow(letter);
-        // Remove old animation class first
-        ball.classList.remove('ball-flip-in', 'ball-pulse');
-        // Update content and colors
-        ball.className = 'cb-ball bb3-' + letter;
+        const accent = BALL_ACCENTS[letter] || '#3b82f6';
+        const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const skipScramble = !_drawAnimReady || reduced;
+
+        function paintBall(value, blurred) {
+            ball.innerHTML = '<div class="cb-ball-inner"><span class="cb-letter">' + letter + '</span><span class="cb-num' + (blurred ? ' cb-num-blur' : '') + '">' + value + '</span></div>';
+        }
+
+        function reveal() {
+            if (token !== _drawAnimToken) return;
+            ball.dataset.called = String(n);
+            ball.className = 'cb-ball bb3-' + letter;
+            ball.style.setProperty('--glow', glow);
+            ball.style.setProperty('--ball-accent', accent);
+            if (stage) {
+                stage.style.setProperty('--ball-accent', accent);
+                stage.classList.remove('drawing');
+                stage.classList.add('revealed');
+            }
+            paintBall(n, false);
+            void ball.offsetWidth;
+            if (!reduced) ball.classList.add('ball-reveal');
+            if (label) {
+                label.style.setProperty('--ball-accent', accent);
+                label.innerHTML = '<span class="cb-call-letter">' + letter + '</span> ' + n;
+            }
+            if (flash) {
+                flash.style.setProperty('--flash-color', accent);
+                flash.classList.remove('flash');
+                void flash.offsetWidth;
+                flash.classList.add('flash');
+            }
+            if (navigator.vibrate) { try { navigator.vibrate(18); } catch (e) {} }
+            _drawTimeout(function() {
+                if (token !== _drawAnimToken) return;
+                ball.classList.remove('ball-reveal');
+                ball.classList.add('ball-pulse');
+            }, 580);
+            _drawTimeout(function() {
+                if (token !== _drawAnimToken) return;
+                if (stage) stage.classList.remove('revealed');
+                if (flash) flash.classList.remove('flash');
+            }, 900);
+        }
+
+        _drawAnimReady = true;
+        if (skipScramble) {
+            reveal();
+            return;
+        }
+
+        if (stage) {
+            stage.style.setProperty('--ball-accent', accent);
+            stage.classList.add('drawing');
+            stage.classList.remove('revealed');
+        }
+        ball.className = 'cb-ball cb-scramble bb3-' + letter;
         ball.style.setProperty('--glow', glow);
-        ball.innerHTML = '<div class="cb-ball-inner"><span class="cb-letter">' + letter + '</span><span class="cb-num">' + num + '</span></div>';
-        // Trigger reflow to restart animation
-        void ball.offsetWidth;
-        ball.classList.add('ball-flip-in');
-        // After flip, start pulse
-        setTimeout(() => { ball.classList.add('ball-pulse'); }, 700);
+        ball.style.setProperty('--ball-accent', accent);
+        if (label) {
+            label.style.setProperty('--ball-accent', accent);
+            label.innerHTML = '<span class="cb-call-letter">' + letter + '</span> · · ·';
+        }
+        const range = BALL_RANGES[letter] || [1, 75];
+        let ticks = 0;
+        const maxTicks = 8;
+        function tick() {
+            if (token !== _drawAnimToken) return;
+            let fake = range[0] + Math.floor(Math.random() * (range[1] - range[0] + 1));
+            if (fake === n && ticks < maxTicks - 1) fake = fake === range[1] ? fake - 1 : fake + 1;
+            paintBall(fake, true);
+            ticks++;
+            if (ticks >= maxTicks) reveal();
+            else _drawTimeout(tick, 42 + ticks * 14);
+        }
+        tick();
     }
     // === JOIN / SKIP ROUND ===
     function toggleRoundParticipation() {
