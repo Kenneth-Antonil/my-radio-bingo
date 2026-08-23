@@ -365,7 +365,7 @@ io.on('connection', (socket) => {
       sendPushNotificationToUser(
             playerUid, 
             "🎉 BINGO WINNER!", 
-            `Congrats ${name}! Nanalo ka ng ${prize} sa Radio Bingo Live online radio!`, 
+            `Congrats ${name}! Nanalo ka ng ${prize.toLocaleString('en-PH')} points sa Radio Bingo Live online radio!`, 
             "/" 
         );
     });

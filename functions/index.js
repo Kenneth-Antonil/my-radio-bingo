@@ -21,6 +21,12 @@ admin.initializeApp();
 const db        = admin.database();
 const messaging = admin.messaging();
 const BINGO_GAME_FINISHED = true;
+const POINTS_PER_PESO = 100000; // 100,000 points = ₱1 GCash cashout value
+const NORMAL_BINGO_PRIZE_POINTS = 5000;
+
+function formatPoints(points) {
+    return `${Math.round(Number(points) || 0).toLocaleString('en-PH')} pts`;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BINGO PATTERNS — must match client-side getWinningWays()
@@ -349,8 +355,8 @@ exports.scheduledDrawChecker = onSchedule(
                 if (!flagSnap.exists()) {
                     await flagRef.set(true);
                     const drawLabel = isJP
-                        ? `Jackpot · ₱${(jpAmt || 0).toLocaleString()}`
-                        : 'Regular Draw · ₱2';
+                        ? `Jackpot · ${formatPoints((jpAmt || 0) * POINTS_PER_PESO)}`
+                        : `Regular Draw · ${formatPoints(NORMAL_BINGO_PRIZE_POINTS)}`;
                     await sendPushToAll(
                         'Draw in 10 Minutes',
                         `${drawLabel} starts at ${formatTime(schedTime)}. Open your bingo card now.`,
@@ -367,8 +373,8 @@ exports.scheduledDrawChecker = onSchedule(
                 if (!flagSnap.exists()) {
                     await flagRef.set(true);
                     const drawLabel = isJP
-                        ? `Jackpot · ₱${(jpAmt || 0).toLocaleString()}`
-                        : 'Regular Draw · ₱2';
+                        ? `Jackpot · ${formatPoints((jpAmt || 0) * POINTS_PER_PESO)}`
+                        : `Regular Draw · ${formatPoints(NORMAL_BINGO_PRIZE_POINTS)}`;
                     await sendPushToAll(
                         'Draw in 5 Minutes',
                         `${drawLabel} magsisimula na sa ${formatTime(schedTime)}. Get your bingo card ready.`,
@@ -385,8 +391,8 @@ exports.scheduledDrawChecker = onSchedule(
                 if (!flagSnap.exists()) {
                     await flagRef.set(true);
                     const drawLabel = isJP
-                        ? `Jackpot · ₱${(jpAmt || 0).toLocaleString()}`
-                        : 'Regular Draw · ₱2';
+                        ? `Jackpot · ${formatPoints((jpAmt || 0) * POINTS_PER_PESO)}`
+                        : `Regular Draw · ${formatPoints(NORMAL_BINGO_PRIZE_POINTS)}`;
                     await sendPushToAll(
                         '2 Minutes to Draw!',
                         `${drawLabel} magsisimula na sa ${formatTime(schedTime)}. Buksan na ang iyong bingo card!`,
@@ -446,7 +452,7 @@ exports.scheduledDrawChecker = onSchedule(
             const sponsorSnap = await db.ref('gameState/sponsor').once('value');
             const sponsorData = sponsorSnap.val() || {};
             const sponsoredCoins = sponsorData.amount || 0;
-            const sponsoredPeso = sponsoredCoins > 0 ? Math.round(sponsoredCoins / 2500) : 0;
+            const sponsoredPoints = sponsoredCoins > 0 ? Math.round(sponsoredCoins) : 0;
             const sponsorNames = sponsorData.name ? sponsorData.name.split(' ')[0] : '';
 
             await db.ref('gameState').update({ status: 'playing', gameStartTime: now });
@@ -462,16 +468,14 @@ exports.scheduledDrawChecker = onSchedule(
             await db.ref('gameState/sponsor').remove();
 
             let patternLabel = pattern === 'Blackout'
-                ? `Blackout — Jackpot ₱${(jpAmt || 0).toLocaleString()}`
+                ? `Blackout — Jackpot ${formatPoints((jpAmt || 0) * POINTS_PER_PESO)}`
                 : pattern;
-            const prizeInfo = isJP
-                ? `₱${(jpAmt || 0).toLocaleString()}`
-                : '₱2';
-            const totalPrize = isJP
-                ? `₱${((jpAmt || 0) + sponsoredPeso).toLocaleString()}`
-                : `₱${(2 + sponsoredPeso).toLocaleString()}`;
-            const sponsorTag = sponsoredPeso > 0
-                ? ` (+₱${sponsoredPeso} sponsored by ${sponsorNames})`
+            const basePrizePoints = isJP
+                ? (jpAmt || 0) * POINTS_PER_PESO
+                : NORMAL_BINGO_PRIZE_POINTS;
+            const totalPrize = formatPoints(basePrizePoints + sponsoredPoints);
+            const sponsorTag = sponsoredPoints > 0
+                ? ` (+${formatPoints(sponsoredPoints)} sponsored by ${sponsorNames})`
                 : '';
             await sendPushToAll(
                 'Draw is Starting',
@@ -479,7 +483,7 @@ exports.scheduledDrawChecker = onSchedule(
                 { tag: 'rbl-draw-start', url: '/?tab=bingo', requireInteraction: 'true' }
             );
 
-            console.log(`[schedChecker] Started draw: key=${key}, pattern=${pattern}, isJP=${isJP}, sponsored=₱${sponsoredPeso}`);
+            console.log(`[schedChecker] Started draw: key=${key}, pattern=${pattern}, isJP=${isJP}, sponsored=${sponsoredPoints} pts`);
         }
 
         return null;
@@ -578,10 +582,8 @@ exports.onWinnerFound = onValueCreated(
 
         const winnerName    = winner.name    || 'A player';
         const winnerPattern = winner.pattern || 'Bingo';
-        const PESO_RATE     = 2500; // 2500 coins = ₱1
         const prizeCoins    = Number(winner.prize) || 0;
-        const prizePeso     = prizeCoins / PESO_RATE;
-        const prizeAmt      = prizeCoins > 0 ? ` · ₱${prizePeso.toFixed(2)}` : '';
+        const prizeAmt      = prizeCoins > 0 ? ` · ${formatPoints(prizeCoins)}` : '';
         const isJackpot     = winner.isJackpot || (winnerPattern === 'Blackout');
 
         await sendPushToAll(

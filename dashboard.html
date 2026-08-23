@@ -707,7 +707,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 <span style="font-size:16px;">⚡</span>
                 <div style="flex:1;">
                     <div style="font-size:10px; font-weight:900; color:#fbbf24; letter-spacing:0.5px;">REGULAR JACKPOT</div>
-                    <div style="font-size:9px; color:rgba(255,255,255,0.35); font-weight:600;">Blackout · ₱10–₱50 cash prize</div>
+                    <div style="font-size:9px; color:rgba(255,255,255,0.35); font-weight:600;">Blackout · 1M–5M pts (₱10–₱50)</div>
                 </div>
                 <div style="font-size:16px; font-weight:900; color:#fbbf24;">10+</div>
             </div>
@@ -715,7 +715,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
                 <span style="font-size:16px;">🔥</span>
                 <div style="flex:1;">
                     <div style="font-size:10px; font-weight:900; color:#fb923c; letter-spacing:0.5px;">MEGA JACKPOT</div>
-                    <div style="font-size:9px; color:rgba(255,255,255,0.35); font-weight:600;">Blackout · ₱50–₱200 cash prize</div>
+                    <div style="font-size:9px; color:rgba(255,255,255,0.35); font-weight:600;">Blackout · 5M–20M pts (₱50–₱200)</div>
                 </div>
                 <div style="font-size:16px; font-weight:900; color:#fb923c;">20+</div>
             </div>
@@ -1605,10 +1605,14 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
     let userPointsCache = {}; // For detecting live changes
     
     // === CURRENCY LOGIC (ADMIN SIDE) ===
-    const COIN_TO_PHP_RATE = 2500; // 2500 coins = ₱1 (50,000 coins = ₱20)
+    const POINTS_PER_PESO = 100000; // 100,000 pts = ₱1 GCash
+    const COIN_TO_PHP_RATE = POINTS_PER_PESO;
+    window.COIN_TO_PHP_RATE = COIN_TO_PHP_RATE;
+    window.POINTS_PER_PESO = POINTS_PER_PESO;
     function formatCurrency(amount) {
-        const pesoVal = (amount || 0) / COIN_TO_PHP_RATE;
-        return '₱' + pesoVal.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const pts = Math.round(Number(amount) || 0);
+        const pesoVal = pts / POINTS_PER_PESO;
+        return pts.toLocaleString('en-PH') + ' pts · ₱' + pesoVal.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
     function cleanName(name) { 
@@ -2420,7 +2424,7 @@ if (sessionStorage.getItem('admin_unlocked') === 'true') {
 
             // -- CASHOUT APPROVED: Push notification + share banner trigger --
             if (status === 'sent') {
-                var amtLabel = data.amount ? '\u20B1' + parseFloat(data.amount).toFixed(2) : (data.cost ? '\u20B1' + (data.cost / (window.COIN_TO_PHP_RATE || 1000)).toFixed(2) : '');
+                var amtLabel = data.amount ? '\u20B1' + parseFloat(data.amount).toFixed(2) : (data.cost ? '\u20B1' + (data.cost / (window.COIN_TO_PHP_RATE || 100000)).toFixed(2) : '');
                 var pushTitle = '\uD83C\uDF89 Cashout Approved!';
                 var pushBody  = 'Na-approve ang iyong cashout' + (amtLabel ? ' na ' + amtLabel : '') + '. Darating na sa iyong account!';
 
@@ -4382,9 +4386,9 @@ function _fmt12(h, m) {
 }
 
 function _jackpotLabel(type) {
-    if(type === 'mega') return '🔥 Mega (₱20)';
-    if(type === 'regular') return '⚡ Regular (₱5)';
-    return '🎯 Normal (₱1)';
+    if(type === 'mega') return '🔥 Mega (2,000,000 pts / ₱20)';
+    if(type === 'regular') return '⚡ Regular (500,000 pts / ₱5)';
+    return '🎯 Normal (5,000 pts)';
 }
 
 function _jackpotColor(type) {
@@ -4634,7 +4638,7 @@ function loadViolations() {
         var flags = flagsSnap.val() || {};
 
         // Also load users to cross-reference for abnormal points & status
-        db.ref('users').orderByChild('points').startAt(500000).once('value', function(usersSnap) {
+        db.ref('users').orderByChild('points').startAt(5000000).once('value', function(usersSnap) {
             var highBalUsers = usersSnap.val() || {};
 
             // Also load manually banned/warned
@@ -4662,16 +4666,16 @@ function loadViolations() {
                     });
                 });
 
-                // From abnormal points (balance > 500,000 coins = ₱200)
+                // From abnormal points (balance > 5,000,000 pts = ₱50)
                 Object.keys(highBalUsers).forEach(function(uid) {
                     if (flags[uid]) return; // already added
                     var u = highBalUsers[uid];
-                    if ((u.points || 0) < 500000) return;
+                    if ((u.points || 0) < 5000000) return;
                     entries.push({
                         uid: uid,
                         name: u.name || 'Unknown',
                         photo: u.photo || '',
-                        violations: [{ type: 'abnormal_points', detail: '₱' + ((u.points||0)/2500).toFixed(2) + ' balance' }],
+                        violations: [{ type: 'abnormal_points', detail: formatCurrency(u.points||0) + ' balance' }],
                         severity: 'low',
                         flaggedAt: 0,
                         action: (actions[uid] && actions[uid].action) || null,
@@ -4756,7 +4760,7 @@ function renderViolations(entries) {
         }).join(' ');
 
         var dateStr = e.flaggedAt ? new Date(e.flaggedAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Auto-detected';
-        var balStr = e.points ? ' · ₱' + (e.points/2500).toFixed(2) : '';
+        var balStr = e.points ? ' · ' + formatCurrency(e.points) : '';
 
         var severityColor = e.severity === 'high' ? '#ef4444' : e.severity === 'medium' ? '#f97316' : '#eab308';
         var severityDot = '<span style="width:7px;height:7px;border-radius:50%;background:' + severityColor + ';display:inline-block;flex-shrink:0;" title="' + (e.severity||'') + ' severity"></span>';
@@ -4808,7 +4812,7 @@ function openViolationModal(uid, name) {
                 (v.detail ? ' — ' + escHtml(v.detail) : '') +
                 '<div style="font-size:10px;color:rgba(255,255,255,0.4);">' + (def.desc||'') + '</div></div>';
         }).join('');
-        var pts = entry.points ? '<div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.5);">Current Balance: <b style="color:#fbbf24;">₱' + (entry.points/2500).toFixed(2) + '</b></div>' : '';
+        var pts = entry.points ? '<div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.5);">Current Balance: <b style="color:#fbbf24;">' + formatCurrency(entry.points) + '</b></div>' : '';
         flagsEl.innerHTML = (flagLines || '<div style="opacity:0.5;">No detailed flag info.</div>') + pts;
         if (entry.action) {
             flagsEl.innerHTML += '<div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,0.4);">Current status: <b>' + entry.action + '</b></div>';
@@ -4856,7 +4860,7 @@ function executeViolationAction(action) {
         db.ref('notifications/' + uid).push({ type: 'admin_warning', message: '⚠️ Your balance has been reset by an administrator due to a policy violation.', timestamp: ts, read: false });
 
     } else if (action === 'deduct_points') {
-        var amtStr = prompt('How many coins to deduct from ' + name + '? (e.g. 50000 = ₱20)');
+        var amtStr = prompt('How many points to deduct from ' + name + '? (e.g. 2,000,000 pts = ₱20)');
         if (!amtStr) return;
         var amt = parseInt(amtStr);
         if (isNaN(amt) || amt <= 0) { alert('Invalid amount.'); return; }
