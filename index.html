@@ -9718,27 +9718,6 @@ body::before {
         box-shadow: 0 0 14px rgba(71,118,244,0.18) !important;
     }
 
-    /* Live chat: stop sideways scroll only */
-    .chat-drawer,
-    #chatList {
-        overflow-x: hidden !important;
-        max-width: 100vw !important;
-        box-sizing: border-box !important;
-    }
-    #chatList .chat-row {
-        max-width: 100% !important;
-        min-width: 0 !important;
-        overflow: hidden !important;
-    }
-    #chatList .chat-content,
-    #chatList .bubble,
-    #chatList .chat-text {
-        min-width: 0 !important;
-        max-width: 100% !important;
-        overflow-wrap: anywhere !important;
-        word-break: break-word !important;
-    }
-
     /* ── STORE ── */
     .rbstore-page { background: var(--bg) !important; }
     .rbstore-header {
@@ -17111,51 +17090,27 @@ if (typeof window.openPhaserGame !== 'function') {
     }
 
     function setupChat() {
-        if (window._chatListenerBound) return;
-        window._chatListenerBound = true;
         const list = document.getElementById('chatList');
         if (!list) return;
-        const seen = window._seenChatKeys = window._seenChatKeys || new Set();
-
-        function appendChat(s, silent) {
-            const d = s.val();
-            const key = s.key;
-            if (!d || !key || seen.has(key)) return;
-            seen.add(key);
-            if (isUserMuted(d.uid)) return;
+        let isFirst = true;
+        const chatLastRead = parseInt(localStorage.getItem('chatLastRead') || '0');
+        db.ref('chats').limitToLast(50).on('child_added', s => {
+            const d = s.val(); const key = s.key; if (!d || isUserMuted(d.uid)) return;
             const isMe = auth.currentUser && d.uid === auth.currentUser.uid;
-            const div = document.createElement('div');
-            div.className = 'chat-row';
-            div.style.flexDirection = isMe ? 'row-reverse' : 'row';
+            const div = document.createElement('div'); div.className = 'chat-row'; div.style.flexDirection = isMe ? 'row-reverse' : 'row';
+            let replyHtml = ''; if(d.replyTo && d.replyMsg) { replyHtml = `<div style="font-size:10px; opacity:0.7; border-left:2px solid var(--accent); padding-left:5px; margin-bottom:5px; background:rgba(0,0,0,0.2); padding:4px; border-radius:4px;">Replying to: ${String(d.replyMsg).substring(0, 30)}...</div>`; }
+            const name = String(d.name || '');
+            const msg = String(d.msg || '');
+            const pfp = String(d.pfp || '');
+            div.innerHTML = `<img class="chat-pfp" src="${pfp}" onclick="showUserOptions('${d.uid}', '${name.replace(/'/g, "\\'")}', '${pfp.replace(/'/g, "\\'")}')"><div class="chat-content"><div class="bubble">${!isMe ? `<div class="chat-name" onclick="replyTo('${key}', '${msg.replace(/'/g, "\\'")}')">${name}</div>` : ''}${replyHtml}<div class="chat-text">${msg}</div></div></div>`;
+            list.appendChild(div); list.scrollTop = list.scrollHeight;
             const msgTime = d.time || 0;
-            const chatLastRead = parseInt(localStorage.getItem('chatLastRead') || '0', 10);
-            const isHistorical = !!silent || msgTime <= chatLastRead;
-            div.dataset.chatKey = key;
-            div.dataset.chatTime = String(msgTime);
-            if (isHistorical || isMe) div.dataset.chatSilent = '1';
-            let replyHtml = '';
-            if (d.replyTo && d.replyMsg) {
-                replyHtml = `<div style="font-size:10px; opacity:0.7; border-left:2px solid var(--accent); padding-left:5px; margin-bottom:5px; background:rgba(0,0,0,0.2); padding:4px; border-radius:4px;">Replying to: ${String(d.replyMsg).substring(0, 30)}...</div>`;
-            }
-            const safeName = String(d.name || '').replace(/'/g, "\\'");
-            const safeMsg = String(d.msg || '').replace(/'/g, "\\'");
-            const safePfp = String(d.pfp || '').replace(/'/g, "\\'");
-            div.innerHTML = `<img class="chat-pfp" src="${d.pfp || ''}" onclick="showUserOptions('${d.uid}', '${safeName}', '${safePfp}')"><div class="chat-content"><div class="bubble">${!isMe ? `<div class="chat-name" onclick="replyTo('${key}', '${safeMsg}')">${d.name || ''}</div>` : ''}${replyHtml}<div class="chat-text">${d.msg || ''}</div></div></div>`;
-            list.appendChild(div);
-            list.scrollTop = list.scrollHeight;
-            if (!isHistorical && !chatDrawerOpen && !isMe) {
+            if (!isFirst && !chatDrawerOpen && !isMe && msgTime > chatLastRead) {
                 chatUnreadCount++;
                 const badge = document.getElementById('chatBubbleBadge');
-                if (badge) {
-                    badge.textContent = chatUnreadCount > 9 ? '9+' : chatUnreadCount;
-                    badge.classList.add('show');
-                }
+                if(badge) { badge.textContent = chatUnreadCount > 9 ? '9+' : chatUnreadCount; badge.classList.add('show'); }
             }
-        }
-
-        db.ref('chats').limitToLast(50).once('value', snap => {
-            snap.forEach(child => appendChat(child, true));
-            db.ref('chats').limitToLast(50).on('child_added', s => appendChat(s, false));
+            isFirst = false;
         });
     }
 
@@ -26364,6 +26319,8 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
     var _kraShowing   = false;
     var _kraTimer     = null;
     var _kraSeen      = {};
+    var _kraInitPhase = true;
+    setTimeout(function() { _kraInitPhase = false; }, 2500);
 
     function _kraClearLiveComments() {
         _kraQueue = [];
@@ -26555,22 +26512,17 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
                     if (!node || node.nodeType !== 1) return;
                     _kraAddReactBtn(node);
 
-                    var key = node.getAttribute('data-chat-key');
-                    if (!key || _kraSeen[key]) return;
-                    _kraSeen[key] = true;
-                    if (node.getAttribute('data-chat-silent') === '1') return;
-
+                    if (_kraInitPhase) return;
                     var drawer = document.getElementById('chatDrawer');
                     if (drawer && drawer.classList.contains('open')) return;
-
-                    var lastRead = parseInt(localStorage.getItem('chatLastRead') || '0', 10);
-                    var t = parseInt(node.getAttribute('data-chat-time') || '0', 10);
-                    if (t && t <= lastRead) return;
 
                     var pfp  = node.querySelector('.chat-pfp');
                     var name = node.querySelector('.chat-name');
                     var msg  = node.querySelector('.chat-text');
                     if (!msg) return;
+                    var sig = (name ? name.textContent : '') + '|' + msg.textContent;
+                    if (_kraSeen[sig]) return;
+                    _kraSeen[sig] = true;
 
                     if (_kraQueue.length > 4) _kraQueue.shift();
                     _kraQueue.push({
