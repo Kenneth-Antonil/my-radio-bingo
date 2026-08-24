@@ -14042,6 +14042,7 @@ if (typeof window.openPhaserGame !== 'function') {
             document.getElementById('view-beats').style.display = 'block';
             document.getElementById('nav-beats').classList.add('active');
             initBeats();
+            if (currentBeatsVideo) currentBeatsVideo.play().catch(function(){});
         } else if(tab === 'games') {
             document.getElementById('view-games').style.display = 'block';
             document.getElementById('nav-games').classList.add('active');
@@ -14063,8 +14064,11 @@ if (typeof window.openPhaserGame !== 'function') {
     let beatsLiked = {};
     let currentBeatsVideo = null;
     let beatsVideoPosts = [];
+    let beatsLoaded = false;
+    let beatsScrollBound = false;
 
     function initBeats() {
+        if (beatsLoaded && document.querySelector('#beatsContainer .beats-video-container')) return;
         loadBeatsVideos();
     }
 
@@ -14135,6 +14139,7 @@ if (typeof window.openPhaserGame !== 'function') {
                     if(renderedCount === beatsVideoPosts.length) {
                         // All videos rendered, initialize scrolling
                         setTimeout(() => {
+                            beatsLoaded = true;
                             initBeatsScrolling();
                             _refreshIcons();
                         }, 100);
@@ -14313,6 +14318,9 @@ if (typeof window.openPhaserGame !== 'function') {
             // Add play button overlay if autoplay fails
             showPlayButton(currentBeatsVideo);
         });
+
+        if (beatsScrollBound) return;
+        beatsScrollBound = true;
 
         // Handle scroll to play/pause videos
         let scrollTimeout;
@@ -27951,8 +27959,21 @@ window.confirmPartnerRedeem = confirmPartnerRedeem;
     var indicator = document.getElementById('ptr-indicator');
     var ptrText   = document.getElementById('ptrText');
 
+    function isViewOpen(id) {
+        var el = document.getElementById(id);
+        if (!el) return false;
+        var d = el.style.display;
+        if (d === 'none') return false;
+        if (d === 'block' || d === 'flex') return true;
+        return window.getComputedStyle(el).display !== 'none';
+    }
     function canPull() {
-        return (window.scrollY || document.documentElement.scrollTop) === 0;
+        if (isRefreshing) return false;
+        if (isViewOpen('view-beats') || isViewOpen('view-games')) return false;
+        if (document.querySelector('.chat-drawer.open, #beatsCommentModal.show')) return false;
+        var login = document.getElementById('loginOverlay');
+        if (login && window.getComputedStyle(login).display !== 'none') return false;
+        return (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
     }
 
     document.addEventListener('touchstart', function(e) {
