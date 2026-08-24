@@ -10975,7 +10975,8 @@ body::before {
 
     #cbBall {
         transform-origin: center;
-        will-change: transform, filter;
+        will-change: transform;
+        overflow: hidden;
     }
     #cbBall.cb-idle {
         animation: idleBallBreath 2.8s ease-in-out infinite;
@@ -10987,25 +10988,111 @@ body::before {
         50% { transform: translateY(-2px) scale(1.03); filter: brightness(1.08); }
     }
 
-    #cbBall.cb-scramble {
-        animation: ballScramble 0.07s linear infinite;
-        filter: saturate(1.15);
+    /* White number disc painted on the sphere */
+    .cb-face {
+        position: absolute;
+        width: 68%;
+        height: 68%;
+        left: 16%;
+        top: 16%;
+        border-radius: 50%;
+        background: radial-gradient(circle at 38% 30%, #ffffff 0%, #f8fafc 58%, #dbe4ee 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 2px 6px rgba(0,0,0,0.22);
+        transform-origin: center;
     }
-    @keyframes ballScramble {
-        0% { transform: rotate(-7deg) scale(0.97); }
-        50% { transform: rotate(7deg) scale(1.04); }
-        100% { transform: rotate(-7deg) scale(0.97); }
+    .cb-face .cb-letter {
+        color: #1e293b !important;
+        text-shadow: none !important;
+        font-size: 9px !important;
+        font-weight: 800 !important;
+        letter-spacing: 1.2px !important;
+        line-height: 1;
+        margin-bottom: 1px;
     }
-    .cb-num-blur { filter: blur(1.2px); opacity: 0.8; }
+    .cb-face .cb-num {
+        color: #0f172a !important;
+        text-shadow: none !important;
+        font-size: 26px !important;
+        font-weight: 900 !important;
+        line-height: 0.95 !important;
+    }
+    #cbBall.bb3-B .cb-face .cb-letter, #cbBall.bb3-B .cb-face .cb-num { color: #1d4ed8 !important; }
+    #cbBall.bb3-I .cb-face .cb-letter, #cbBall.bb3-I .cb-face .cb-num { color: #b91c1c !important; }
+    #cbBall.bb3-N .cb-face .cb-letter, #cbBall.bb3-N .cb-face .cb-num { color: #6d28d9 !important; }
+    #cbBall.bb3-G .cb-face .cb-letter, #cbBall.bb3-G .cb-face .cb-num { color: #15803d !important; }
+    #cbBall.bb3-O .cb-face .cb-letter, #cbBall.bb3-O .cb-face .cb-num { color: #c2410c !important; }
 
-    #cbBall.ball-reveal {
-        animation: ballRevealDrop 0.58s cubic-bezier(0.22, 1.18, 0.32, 1) both;
+    /* Texture that rolls across the sphere while tumbling */
+    .cb-spin-tex {
+        position: absolute;
+        inset: -20%;
+        border-radius: 50%;
+        background: repeating-linear-gradient(
+            95deg,
+            rgba(255,255,255,0) 0 10px,
+            rgba(255,255,255,0.16) 10px 13px,
+            rgba(0,0,0,0.12) 13px 16px,
+            rgba(255,255,255,0) 16px 28px
+        );
+        opacity: 0;
+        pointer-events: none;
+        z-index: 1;
+        mix-blend-mode: overlay;
+        -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 46%, transparent 70%);
+        mask-image: radial-gradient(circle at 50% 50%, #000 46%, transparent 70%);
     }
-    @keyframes ballRevealDrop {
-        0%   { transform: rotateX(-95deg) scale(0.55); opacity: 0.35; filter: blur(2px); }
-        58%  { transform: rotateX(14deg) scale(1.14); opacity: 1; filter: blur(0); }
-        78%  { transform: rotateX(-6deg) scale(0.97); }
-        100% { transform: rotateX(0) scale(1); opacity: 1; }
+
+    /* Sphere toss (never rotateY — that would flatten the circle) */
+    #cbBall.ball-tumble {
+        animation: cbSphereToss 1.05s cubic-bezier(0.16, 0.72, 0.22, 1) both;
+    }
+    @keyframes cbSphereToss {
+        0%   { transform: translateY(-12px) scale(0.84) rotate(-22deg); }
+        18%  { transform: translateY(5px) scale(1.08) rotate(14deg); }
+        36%  { transform: translateY(-4px) scale(0.97) rotate(-10deg); }
+        54%  { transform: translateY(3px) scale(1.04) rotate(7deg); }
+        74%  { transform: translateY(-1px) scale(0.99) rotate(-3deg); }
+        100% { transform: translateY(0) scale(1) rotate(0); }
+    }
+    #cbBall.ball-tumble .cb-spin-tex {
+        opacity: 1;
+        animation: cbTexRoll 1.05s cubic-bezier(0.12, 0.65, 0.2, 1) both;
+    }
+    @keyframes cbTexRoll {
+        0% { transform: translateX(-45%) rotate(-8deg); }
+        100% { transform: translateX(45%) rotate(8deg); }
+    }
+    #cbBall.ball-tumble .cb-face {
+        animation: cbFaceWrap 1.05s cubic-bezier(0.14, 0.7, 0.2, 1) both;
+    }
+    @keyframes cbFaceWrap {
+        0%      { transform: translateX(78%) scaleX(0.08); opacity: 0.15; }
+        11%     { transform: translateX(0) scaleX(1); opacity: 1; }
+        22%     { transform: translateX(-78%) scaleX(0.08); opacity: 0.15; }
+        22.01%  { transform: translateX(78%) scaleX(0.08); opacity: 0; }
+        35%     { transform: translateX(0) scaleX(1); opacity: 1; }
+        48%     { transform: translateX(-78%) scaleX(0.08); opacity: 0.15; }
+        48.01%  { transform: translateX(78%) scaleX(0.08); opacity: 0; }
+        64%     { transform: translateX(0) scaleX(1); opacity: 1; }
+        76%     { transform: translateX(-58%) scaleX(0.18); opacity: 0.3; }
+        76.01%  { transform: translateX(42%) scaleX(0.28); opacity: 0.45; }
+        88%     { transform: translateX(-4%) scaleX(0.98); opacity: 1; }
+        95%     { transform: translateX(3%) scaleX(1.03); opacity: 1; }
+        100%    { transform: translateX(0) scaleX(1); opacity: 1; }
+    }
+
+    #cbBall.ball-settle .cb-face {
+        animation: cbFaceIn 0.48s cubic-bezier(0.22, 1.12, 0.32, 1) both;
+    }
+    @keyframes cbFaceIn {
+        0% { transform: translateX(62%) scaleX(0.12); opacity: 0.2; }
+        72% { transform: translateX(-3%) scaleX(1); opacity: 1; }
+        100% { transform: translateX(0) scaleX(1); opacity: 1; }
     }
 
     #cbBall.ball-pulse {
@@ -11013,7 +11100,7 @@ body::before {
     }
     @keyframes ballLivePulse {
         0%, 100% { transform: scale(1); filter: brightness(1); }
-        50% { transform: scale(1.05); filter: brightness(1.14); }
+        50% { transform: scale(1.045); filter: brightness(1.1); }
     }
 
     #cbBall.bb3-B { border-color: rgba(96,165,250,0.55) !important; box-shadow: inset -3px -3px 10px rgba(0,0,0,0.35), 0 8px 22px rgba(37,99,235,0.5) !important; }
@@ -11047,8 +11134,10 @@ body::before {
 
     @media (prefers-reduced-motion: reduce) {
         #cbBall.cb-idle,
-        #cbBall.cb-scramble,
-        #cbBall.ball-reveal,
+        #cbBall.ball-tumble,
+        #cbBall.ball-tumble .cb-face,
+        #cbBall.ball-tumble .cb-spin-tex,
+        #cbBall.ball-settle .cb-face,
         #cbBall.ball-pulse,
         .bingo-hdr-draw-flash.flash,
         .draw-ball-stage.revealed .draw-ring,
@@ -17745,7 +17834,6 @@ if (typeof window.openPhaserGame !== 'function') {
     let _drawAnimToken = 0;
     let _drawAnimReady = false;
     const BALL_ACCENTS = { B:'#3b82f6', I:'#ef4444', N:'#8b5cf6', G:'#22c55e', O:'#f97316' };
-    const BALL_RANGES = { B:[1,15], I:[16,30], N:[31,45], G:[46,60], O:[61,75] };
 
     function _clearDrawAnim() {
         _drawAnimTimers.forEach(clearTimeout);
@@ -17790,80 +17878,56 @@ if (typeof window.openPhaserGame !== 'function') {
         const glow = getBallGlow(letter);
         const accent = BALL_ACCENTS[letter] || '#3b82f6';
         const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const skipScramble = !_drawAnimReady || reduced;
-
-        function paintBall(value, blurred) {
-            ball.innerHTML = '<div class="cb-ball-inner"><span class="cb-letter">' + letter + '</span><span class="cb-num' + (blurred ? ' cb-num-blur' : '') + '">' + value + '</span></div>';
-        }
-
-        function reveal() {
-            if (token !== _drawAnimToken) return;
-            ball.dataset.called = String(n);
-            ball.className = 'cb-ball bb3-' + letter;
-            ball.style.setProperty('--glow', glow);
-            ball.style.setProperty('--ball-accent', accent);
-            if (stage) {
-                stage.style.setProperty('--ball-accent', accent);
-                stage.classList.remove('drawing');
-                stage.classList.add('revealed');
-            }
-            paintBall(n, false);
-            void ball.offsetWidth;
-            if (!reduced) ball.classList.add('ball-reveal');
-            if (label) {
-                label.style.setProperty('--ball-accent', accent);
-                label.innerHTML = '<span class="cb-call-letter">' + letter + '</span> ' + n;
-            }
-            if (flash) {
-                flash.style.setProperty('--flash-color', accent);
-                flash.classList.remove('flash');
-                void flash.offsetWidth;
-                flash.classList.add('flash');
-            }
-            if (navigator.vibrate) { try { navigator.vibrate(18); } catch (e) {} }
-            _drawTimeout(function() {
-                if (token !== _drawAnimToken) return;
-                ball.classList.remove('ball-reveal');
-                ball.classList.add('ball-pulse');
-            }, 580);
-            _drawTimeout(function() {
-                if (token !== _drawAnimToken) return;
-                if (stage) stage.classList.remove('revealed');
-                if (flash) flash.classList.remove('flash');
-            }, 900);
-        }
-
+        const isFirst = !_drawAnimReady;
         _drawAnimReady = true;
-        if (skipScramble) {
-            reveal();
-            return;
-        }
+
+        ball.dataset.called = String(n);
+        ball.style.setProperty('--glow', glow);
+        ball.style.setProperty('--ball-accent', accent);
+        ball.innerHTML =
+            '<div class="cb-spin-tex"></div>' +
+            '<div class="cb-face"><span class="cb-letter">' + letter + '</span><span class="cb-num">' + n + '</span></div>';
+        ball.className = 'cb-ball bb3-' + letter;
+        void ball.offsetWidth;
 
         if (stage) {
             stage.style.setProperty('--ball-accent', accent);
-            stage.classList.add('drawing');
-            stage.classList.remove('revealed');
+            stage.classList.remove('drawing', 'revealed');
         }
-        ball.className = 'cb-ball cb-scramble bb3-' + letter;
-        ball.style.setProperty('--glow', glow);
-        ball.style.setProperty('--ball-accent', accent);
         if (label) {
             label.style.setProperty('--ball-accent', accent);
-            label.innerHTML = '<span class="cb-call-letter">' + letter + '</span> · · ·';
+            label.innerHTML = '<span class="cb-call-letter">' + letter + '</span> ' + n;
         }
-        const range = BALL_RANGES[letter] || [1, 75];
-        let ticks = 0;
-        const maxTicks = 8;
-        function tick() {
+
+        if (reduced) {
+            ball.classList.add('ball-pulse');
+            return;
+        }
+
+        const motionClass = isFirst ? 'ball-settle' : 'ball-tumble';
+        const motionMs = isFirst ? 480 : 1050;
+        ball.classList.add(motionClass);
+        if (!isFirst && stage) stage.classList.add('drawing', 'revealed');
+
+        if (!isFirst && flash) {
+            flash.style.setProperty('--flash-color', accent);
+            flash.classList.remove('flash');
+            void flash.offsetWidth;
+            flash.classList.add('flash');
+        }
+        if (!isFirst && navigator.vibrate) { try { navigator.vibrate(18); } catch (e) {} }
+
+        _drawTimeout(function() {
             if (token !== _drawAnimToken) return;
-            let fake = range[0] + Math.floor(Math.random() * (range[1] - range[0] + 1));
-            if (fake === n && ticks < maxTicks - 1) fake = fake === range[1] ? fake - 1 : fake + 1;
-            paintBall(fake, true);
-            ticks++;
-            if (ticks >= maxTicks) reveal();
-            else _drawTimeout(tick, 42 + ticks * 14);
-        }
-        tick();
+            ball.classList.remove('ball-tumble', 'ball-settle');
+            ball.classList.add('ball-pulse');
+            if (stage) stage.classList.remove('drawing');
+        }, motionMs);
+        _drawTimeout(function() {
+            if (token !== _drawAnimToken) return;
+            if (stage) stage.classList.remove('revealed');
+            if (flash) flash.classList.remove('flash');
+        }, motionMs + 280);
     }
     // === JOIN / SKIP ROUND ===
     function toggleRoundParticipation() {
