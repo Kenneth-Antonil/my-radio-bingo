@@ -7,7 +7,7 @@ importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js')
 
 firebase.initializeApp({
     apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs",
-    authDomain: "radiobingo-9ac29.firebaseapp.com",
+    authDomain: "radiogames.online",
     databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "radiobingo-9ac29",
     storageBucket: "radiobingo-9ac29.firebasestorage.app",
