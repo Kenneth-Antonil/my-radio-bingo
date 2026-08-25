@@ -28,6 +28,22 @@
             });
         };
         window._lucideOpts = { attrs: { 'stroke-width': '1.65', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' } };
+
+        // iOS PWAs can freeze on the splash if ads/fonts block window.load.
+        // Hide it from the first paint path, independent of later scripts.
+        (function () {
+            function hideSplashEarly() {
+                var ss = document.getElementById('splash-screen');
+                if (!ss || ss.getAttribute('data-hidden') === '1') return;
+                ss.setAttribute('data-hidden', '1');
+                ss.style.opacity = '0';
+                ss.style.pointerEvents = 'none';
+                setTimeout(function () { ss.style.display = 'none'; }, 400);
+            }
+            window.hideSplashEarly = hideSplashEarly;
+            document.addEventListener('DOMContentLoaded', function () { setTimeout(hideSplashEarly, 700); });
+            setTimeout(hideSplashEarly, 1800);
+        })();
     </script>
 
     <link rel="icon" type="image/png" href="https://i.imgur.com/4nljOtR.png">
@@ -51,16 +67,16 @@
     
 
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
 
-    <!-- Adsterra: Social Bar -->
-    <script src="https://directoryeditorweep.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js"></script>
+    <!-- Adsterra: Social Bar (async so iOS is not blocked on first paint) -->
+    <script src="https://directoryeditorweep.com/9b/f5/85/9bf585b6ee39cb9b515e2fae1fa958c2.js" async></script>
 
     <!-- Removed suspicious scripts from effectivegatecpm.com -->
 
@@ -15184,9 +15200,16 @@ if (typeof window.openPhaserGame !== 'function') {
         localStorage.setItem('pesoBannerDismissed3', '1');
     }
 
-    window.addEventListener('load', () => { setTimeout(hideSplash, 2000); showPesoBanner(); checkNotifGate(); checkInstallGate(); initScheduleAnnouncementListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
-    setTimeout(hideSplash, 5000);
-    function hideSplash() { const ss = document.getElementById('splash-screen'); if(ss && ss.style.display !== 'none') { ss.style.opacity = '0'; setTimeout(() => ss.style.display = 'none', 800); } }
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(hideSplash, 800); });
+    window.addEventListener('load', () => { setTimeout(hideSplash, 1200); showPesoBanner(); checkNotifGate(); checkInstallGate(); initScheduleAnnouncementListener(); loadSocialFeed(); loadPYMK(); loadCustomSkin(); });
+    setTimeout(hideSplash, 2200);
+    function hideSplash() {
+        const ss = document.getElementById('splash-screen');
+        if (!ss || ss.style.display === 'none') return;
+        ss.style.opacity = '0';
+        ss.style.pointerEvents = 'none';
+        setTimeout(function () { ss.style.display = 'none'; }, 500);
+    }
     
     function isAppleTouchDevice() {
         return /iPad|iPhone|iPod/.test(navigator.userAgent || '')
@@ -15352,6 +15375,13 @@ if (typeof window.openPhaserGame !== 'function') {
     const firebaseConfig = { apiKey: "AIzaSyDIAQXJ15atKJxu7PtcFL1W9JnO1N14pVs", authDomain: "radiogames.online", databaseURL: "https://radiobingo-9ac29-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "radiobingo-9ac29", storageBucket: "radiobingo-9ac29.firebasestorage.app", messagingSenderId: "965903993397", appId: "1:965903993397:web:f6646fa05225f147eebf7c" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database(); const auth = firebase.auth();
+    auth.getRedirectResult().then(function (result) {
+        if (result && result.user) {
+            try { requestNotifyPermission(); checkNotifGate(); } catch (e) {}
+        }
+    }).catch(function (err) {
+        console.log('redirect result', err);
+    });
     var _lucideTimer = null;
     function _refreshIcons() { if (_lucideTimer) return; _lucideTimer = setTimeout(function() { _lucideTimer = null; try { lucide.createIcons(window._lucideOpts); } catch(e) {} }, 300); }
     window.db = db; window.auth = auth;
@@ -15481,9 +15511,21 @@ if (typeof window.openPhaserGame !== 'function') {
     function playSound(type) { if(sounds[type]) { sounds[type].currentTime = 0; if(type === 'drop') sounds[type].volume = 0.3; else sounds[type].volume = 1.0; sounds[type].play().catch(e => console.log("Audio play error", e)); } }
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .catch(err => console.log('SW Failed:', err));
-            // FCM Background Push — this file must be in the root directory
+            var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent || '')
+                || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            if (isIOS) {
+                navigator.serviceWorker.getRegistrations().then(function (regs) {
+                    regs.forEach(function (reg) {
+                        var src = ((reg.active || reg.waiting || reg.installing || {}).scriptURL || '');
+                        if (src.indexOf('firebase-messaging-sw') === -1) {
+                            reg.unregister();
+                        }
+                    });
+                }).catch(function () {});
+            } else {
+                navigator.serviceWorker.register('./sw.js')
+                    .catch(err => console.log('SW Failed:', err));
+            }
             navigator.serviceWorker.register('./firebase-messaging-sw.js')
                 .then(reg => console.log('FCM SW registered:', reg.scope))
                 .catch(err => console.log('FCM SW Failed:', err));
@@ -16310,7 +16352,9 @@ if (typeof window.openPhaserGame !== 'function') {
         playSound('click');
         var provider = new firebase.auth.GoogleAuthProvider();
         var afterLogin = function () { requestNotifyPermission(); checkNotifGate(); };
-        if (isAppleTouchDevice() || isStandalonePwa()) {
+        // iOS home-screen PWA cannot keep popups; redirect stays on radiogames.online.
+        // iOS Safari handles popups better than a full-page redirect.
+        if (isStandalonePwa()) {
             auth.signInWithRedirect(provider).catch(function (err) {
                 showToast('Login failed. Subukan ulit.');
                 console.log('redirect login', err);
