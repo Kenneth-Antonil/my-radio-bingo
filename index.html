@@ -9424,7 +9424,8 @@ body::before {
         bottom: var(--ios-vv-gap, 0px) !important;
     }
     @media (max-width: 520px) {
-        #nav-games { display: none !important; }
+        .nav-item { padding-left: 2px !important; padding-right: 2px !important; }
+        .nav-label { font-size: 9px !important; }
     }
     .nav-item {
         display: flex !important;
@@ -13956,7 +13957,7 @@ body::before {
             <div style="font-size:13px;color:rgba(255,255,255,0.5);font-weight:600;">Loading game...</div>
         </div>
         <iframe id="phaserIframe" src="about:blank"
-            style="position:absolute;inset:0;width:100%;height:100%;border:none;display:none;"
+            style="position:absolute;inset:0;width:100%;height:100%;border:none;display:block;opacity:0;pointer-events:none;"
             allow="fullscreen; autoplay" allowfullscreen scrolling="no">
         </iframe>
     </div>
@@ -13969,12 +13970,12 @@ body::before {
 <script>
 (function(){
 'use strict';
-var PHASER_CDN='https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js';
+var PHASER_URL=new URL('vendor/phaser-3.70.0.min.js',window.location.href).href;
 
 var games={
 
 flappy:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Flappy Wing</title><style>*{margin:0;padding:0}body{background:#0a0c14;overflow:hidden;width:100vw;height:100vh}</style></head><body>'
-+'<script src="'+PHASER_CDN+'"><\/script>'
++'<script src="'+PHASER_URL+'"><\/script>'
 +'<script>'
 +'var W=window.innerWidth,H=window.innerHeight;'
 +'var bird,pipes,scoreText,alive=false,dead=false,score=0,pipeTimer;'
@@ -14029,7 +14030,7 @@ flappy:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta
 +'<\/script></body></html>';},
 
 bricks:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Brick Blast</title><style>*{margin:0;padding:0}body{background:#080c18;overflow:hidden;width:100vw;height:100vh}</style></head><body>'
-+'<script src="'+PHASER_CDN+'"><\/script>'
++'<script src="'+PHASER_URL+'"><\/script>'
 +'<script>'
 +'var W=window.innerWidth,H=window.innerHeight;'
 +'var paddle,ball,bricks,scoreText,livesText,score=0,lives=3,started=false,dead=false;'
@@ -14074,7 +14075,7 @@ bricks:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta
 +'<\/script></body></html>';},
 
 space:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Space Blaster</title><style>*{margin:0;padding:0}body{background:#020408;overflow:hidden;width:100vw;height:100vh}</style></head><body>'
-+'<script src="'+PHASER_CDN+'"><\/script>'
++'<script src="'+PHASER_URL+'"><\/script>'
 +'<script>'
 +'var W=window.innerWidth,H=window.innerHeight;'
 +'var ship,bullets,enemies,scoreText,score=0,dead=false,shootTimer;'
@@ -14114,7 +14115,7 @@ space:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta 
 +'<\/script></body></html>';},
 
 dash:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Dash Rush</title><style>*{margin:0;padding:0}body{background:#0a0c14;overflow:hidden;width:100vw;height:100vh}</style></head><body>'
-+'<script src="'+PHASER_CDN+'"><\/script>'
++'<script src="'+PHASER_URL+'"><\/script>'
 +'<script>'
 +'var W=window.innerWidth,H=window.innerHeight;'
 +'var runner,obstacles,scoreText,score=0,dead=false,started=false,spawnTimer,speed=290;'
@@ -14161,7 +14162,7 @@ dash:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta n
 +'<\/script></body></html>';},
 
 stars:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Star Catcher</title><style>*{margin:0;padding:0}body{background:#020410;overflow:hidden;width:100vw;height:100vh}</style></head><body>'
-+'<script src="'+PHASER_CDN+'"><\/script>'
++'<script src="'+PHASER_URL+'"><\/script>'
 +'<script>'
 +'var W=window.innerWidth,H=window.innerHeight;'
 +'var basket,stars,scoreText,livesText,score=0,lives=3,dead=false,spawnTimer;'
@@ -14198,7 +14199,7 @@ stars:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta 
 +'<\/script></body></html>';},
 
 target:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Target Tap</title><style>*{margin:0;padding:0}body{background:#0a0c14;overflow:hidden;width:100vw;height:100vh}</style></head><body>'
-+'<script src="'+PHASER_CDN+'"><\/script>'
++'<script src="'+PHASER_URL+'"><\/script>'
 +'<script>'
 +'var W=window.innerWidth,H=window.innerHeight;'
 +'var scoreText,timerText,score=0,timeLeft=30,done=false,spawnTimer,countTimer;'
@@ -14234,30 +14235,105 @@ target:function(){return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta
 
 };
 
+var activeGameId='';
+var activeBlobUrl='';
+var activeFrameWindow=null;
+var gameReadyTimer=null;
+var loadingMarkup=document.getElementById('phaserLoading').innerHTML;
+
+function resetGameLoading(){
+  var loading=document.getElementById('phaserLoading');
+  loading.innerHTML=loadingMarkup;
+  loading.style.display='flex';
+}
+
+function clearGameReadyTimer(){
+  if(gameReadyTimer){clearTimeout(gameReadyTimer);gameReadyTimer=null;}
+}
+
+function revokeActiveBlob(){
+  if(!activeBlobUrl)return;
+  var oldUrl=activeBlobUrl;
+  activeBlobUrl='';
+  setTimeout(function(){URL.revokeObjectURL(oldUrl);},0);
+}
+
+function showGameError(message){
+  clearGameReadyTimer();
+  var loading=document.getElementById('phaserLoading');
+  var iframe=document.getElementById('phaserIframe');
+  iframe.style.opacity='0';
+  iframe.style.pointerEvents='none';
+  loading.style.display='flex';
+  loading.innerHTML='';
+  var warning=document.createElement('div');
+  warning.style.fontSize='30px';
+  warning.textContent='!';
+  var errorText=document.createElement('div');
+  errorText.style.cssText='color:#fca5a5;padding:0 24px;text-align:center;font-size:14px;font-weight:700;';
+  errorText.textContent=message;
+  var retry=document.createElement('button');
+  retry.id='phaserRetryButton';
+  retry.style.cssText='margin-top:4px;border:0;border-radius:10px;padding:10px 18px;background:#4f46e5;color:white;font-weight:800;cursor:pointer;';
+  retry.textContent='Retry';
+  retry.onclick=function(){window.openPhaserGame(activeGameId);};
+  loading.appendChild(warning);
+  loading.appendChild(errorText);
+  loading.appendChild(retry);
+}
+
+function addRuntimeMonitor(html){
+  var monitor='<script>(function(){var finished=false;function report(type,message){if(finished&&type==="ready")return;if(type==="ready")finished=true;parent.postMessage({source:"rb-phaser",type:type,message:message||""},"*");}window.addEventListener("error",function(e){report("error",e.message||"Game runtime error.");},true);window.addEventListener("unhandledrejection",function(e){report("error",String(e.reason||"Game runtime error."));});var checks=0,timer=setInterval(function(){checks++;var canvas=document.querySelector("canvas");if(window.Phaser&&canvas&&canvas.width>0&&canvas.height>0){clearInterval(timer);report("ready");}else if(checks>=100){clearInterval(timer);report("error",window.Phaser?"Game canvas did not initialize.":"Phaser runtime did not load.");}},100);})();<\/script>';
+  return html.replace('<body>','<body>'+monitor);
+}
+
+window.addEventListener('message',function(event){
+  if(event.source!==activeFrameWindow)return;
+  var data=event.data;
+  if(!data||data.source!=='rb-phaser')return;
+  if(data.type==='ready'){
+    clearGameReadyTimer();
+    var iframe=document.getElementById('phaserIframe');
+    document.getElementById('phaserLoading').style.display='none';
+    iframe.style.opacity='1';
+    iframe.style.pointerEvents='auto';
+  }else if(data.type==='error'){
+    showGameError(data.message||'Error loading game.');
+  }
+});
+
 window.openPhaserGame=function(id){
   var titles={flappy:'🐤 Flappy Wing',bricks:'🧱 Brick Blast',space:'🚀 Space Blaster',dash:'🏃 Dash Rush',stars:'⭐ Star Catcher',target:'🎯 Target Tap'};
   var modal=document.getElementById('phaserModal');
   var iframe=document.getElementById('phaserIframe');
-  var loading=document.getElementById('phaserLoading');
+  if(!games[id])return;
+  activeGameId=id;
+  clearGameReadyTimer();
+  revokeActiveBlob();
   document.getElementById('phaserModalTitle').textContent=titles[id]||'Game';
-  modal.style.display='flex';loading.style.display='flex';iframe.style.display='none';
-  iframe.removeAttribute('src');
+  modal.style.display='flex';
+  resetGameLoading();
+  iframe.style.display='block';
+  iframe.style.opacity='0';
+  iframe.style.pointerEvents='none';
   try{
-    var html=games[id]();
+    var html=addRuntimeMonitor(games[id]());
     var blob=new Blob([html],{type:'text/html'});
-    var blobUrl=URL.createObjectURL(blob);
-    iframe.onload=function(){
-      URL.revokeObjectURL(blobUrl);
-      loading.style.display='none';
-      iframe.style.display='block';
-    };
-    iframe.src=blobUrl;
-  }catch(e){loading.innerHTML='<div style="color:#ef4444;padding:20px;font-size:14px;">Error loading game.</div>';}
+    activeBlobUrl=URL.createObjectURL(blob);
+    activeFrameWindow=iframe.contentWindow;
+    iframe.src=activeBlobUrl;
+    gameReadyTimer=setTimeout(function(){showGameError('The game took too long to start. Please retry.');},12000);
+  }catch(e){showGameError('Error loading game.');}
 };
 window.closePhaserGame=function(){
   var modal=document.getElementById('phaserModal');
   var iframe=document.getElementById('phaserIframe');
+  clearGameReadyTimer();
+  activeFrameWindow=null;
   iframe.src='about:blank';
+  iframe.style.opacity='0';
+  iframe.style.pointerEvents='none';
+  revokeActiveBlob();
   modal.style.display='none';
 };
 window.addEventListener('popstate',function(){var m=document.getElementById('phaserModal');if(m&&m.style.display!=='none')window.closePhaserGame();});
@@ -14276,12 +14352,31 @@ if (typeof window.openPhaserGame !== 'function') {
     title.textContent = names[id] || 'Phaser Arcade';
     modal.style.display = 'flex';
     loading.style.display = 'flex';
-    iframe.style.display = 'none';
+    iframe.style.display = 'block';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+    var phaserFallbackUrl = new URL('vendor/phaser-3.70.0.min.js', window.location.href).href;
     var gameHtml = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080c18}</style></head><body>'
-      + '<script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"><\/script>'
+      + '<script src="' + phaserFallbackUrl + '"><\/script>'
       + '<script>var W=innerWidth,H=innerHeight;new Phaser.Game({type:Phaser.AUTO,width:W,height:H,backgroundColor:"#080c18",scene:{create(){var s=this;s.add.text(W/2,H/2-70,"PHASER READY",{fontSize:"24px",fontFamily:"Arial",color:"#a5b4fc"}).setOrigin(0.5);s.add.text(W/2,H/2+55,"TAP TO PLAY",{fontSize:"20px",fontFamily:"Arial",color:"#60a5fa"}).setOrigin(0.5);}}});<\/script></body></html>';
     var url = URL.createObjectURL(new Blob([gameHtml], {type:'text/html'}));
-    iframe.onload = function() { URL.revokeObjectURL(url); loading.style.display='none'; iframe.style.display='block'; };
+    iframe.onload = function() {
+      var checks = 0;
+      var readyTimer = setInterval(function() {
+        var canvas;
+        try { canvas = iframe.contentDocument.querySelector('canvas'); } catch (e) {}
+        if (canvas && canvas.width > 0 && canvas.height > 0) {
+          clearInterval(readyTimer);
+          URL.revokeObjectURL(url);
+          loading.style.display='none';
+          iframe.style.opacity='1';
+          iframe.style.pointerEvents='auto';
+        } else if (++checks >= 100) {
+          clearInterval(readyTimer);
+          loading.innerHTML='<div style="color:#ef4444;padding:20px;font-size:14px;">Error loading game.</div>';
+        }
+      }, 100);
+    };
     iframe.src = url;
   };
 }
